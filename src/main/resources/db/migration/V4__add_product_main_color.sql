@@ -1,0 +1,2 @@
+ALTER TABLE products
+ADD COLUMN main_color VARCHAR(100);

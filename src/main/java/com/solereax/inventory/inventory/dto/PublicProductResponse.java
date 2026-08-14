@@ -1,0 +1,21 @@
+package com.solereax.inventory.inventory.dto;
+
+import java.util.List;
+import java.util.Map;
+
+public record PublicProductResponse(
+        Long id,
+        String name,
+        String brand,
+        String description,
+        String mainColor,
+        String department,
+        String category,
+        String productType,
+        String imageUrl,
+        Map<String, String> colorwayImages,
+        List<SizeStockResponse> stocks,
+        Map<String, Map<String, Integer>> stockStates,
+        Map<String, Map<String, Map<String, Integer>>> stockStateBySize
+) {
+}
