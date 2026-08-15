@@ -30,4 +30,11 @@ public class AdminMediaController {
         brandingService.updateLogoUrl(url);
         return Map.of("url", url);
     }
+
+    @PostMapping("/logo-dark")
+    public Map<String, String> uploadLogoDark(@RequestParam("file") MultipartFile file) {
+        String url = mediaStorageService.storeImage(file, "branding");
+        brandingService.updateLogoDarkUrl(url);
+        return Map.of("url", url);
+    }
 }

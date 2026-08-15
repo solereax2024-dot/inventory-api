@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { LogOut, Moon, Search, Sun, UserRound } from "lucide-react";
+import { LogOut, Palette, Search, UserRound } from "lucide-react";
+import { THEMES } from "../constants/themes";
+import "../styles/header.css";
 
 export default function SiteHeader({
   logoUrl,
@@ -9,28 +11,31 @@ export default function SiteHeader({
   onSearchChange,
   isAdminLoggedIn,
   onAdminSignOut,
-  themeMode,
-  onToggleTheme
+  themeColor,
+  onThemeColorClick
 }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const isAdminPath = location.pathname.startsWith("/admin");
   const isCatalogPath = location.pathname === "/shop";
+  const currentTheme = THEMES[themeColor];
   return (
     <header className="site-header">
       <div className="site-header-inner">
         <div>
           <h1 className="site-title">
-            {logoUrl && isAdminPath && isAdminLoggedIn ? (
+            {isAdminPath && isAdminLoggedIn ? (
               <button
                 type="button"
-                className="site-logo-button"
+                className="site-logo-button quick-tooltip"
                 onClick={onLogoClick}
-                title="Update logo"
+                data-tooltip="Update logo"
                 aria-label="Update logo"
               >
-                <img className="site-logo" src={logoUrl} alt="Sole Reax logo" />
+                {logoUrl
+                  ? <img className="site-logo" src={logoUrl} alt="Sole Reax logo" />
+                  : <span className="site-logo-placeholder">🖼</span>}
               </button>
             ) : null}
             {logoUrl && (!isAdminPath || !isAdminLoggedIn) ? (
@@ -56,9 +61,9 @@ export default function SiteHeader({
               ) : (
                 <button
                   type="button"
-                  className="nav-search-icon"
+                  className="nav-search-icon quick-tooltip"
                   onClick={() => setIsSearchOpen(true)}
-                  title="Search"
+                  data-tooltip="Search"
                   aria-label="Open search"
                 >
                   <Search size={18} />
@@ -69,8 +74,8 @@ export default function SiteHeader({
           {isAdminLoggedIn ? (
             <button
               type="button"
-              className="nav-link"
-              title="Sign Out"
+              className="nav-link quick-tooltip"
+                  data-tooltip="Logout"
               aria-label="Sign out admin"
               onClick={() => {
                 onAdminSignOut();
@@ -80,19 +85,24 @@ export default function SiteHeader({
               <LogOut size={18} />
             </button>
           ) : (
-            <Link className={`nav-link ${isAdminPath ? "active" : ""}`} to="/admin" title="Admin Sign In" aria-label="Admin sign in">
+            <Link
+              className={`nav-link quick-tooltip ${isAdminPath ? "active" : ""}`}
+              to="/admin"
+              data-tooltip="Admin"
+              aria-label="Admin sign in"
+            >
               <UserRound size={18} />
             </Link>
           )}
           <button
             type="button"
-            className={`nav-theme-toggle ${themeMode === "dark" ? "active" : ""}`}
-            title={themeMode === "dark" ? "Switch to light mode" : "Switch to night mode"}
-            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to night mode"}
-            onClick={onToggleTheme}
+            className={`nav-theme-toggle quick-tooltip`}
+            aria-label="Choose theme color"
+            data-tooltip="Theme"
+            onClick={onThemeColorClick}
+            style={{ '--theme-accent': currentTheme?.hex || '#4f46e5' }}
           >
-            {themeMode === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            <span>{themeMode === "dark" ? "Day Mode" : "Night Mode"}</span>
+            <Palette size={16} />
           </button>
         </nav>
       </div>

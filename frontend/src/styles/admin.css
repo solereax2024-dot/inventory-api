@@ -1,0 +1,319 @@
+.admin-subnav {
+  padding: 10px;
+}
+
+.admin-subnav-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-subnav-tab {
+  margin-top: 0;
+  width: auto;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, #cbd5e1);
+  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--primary-soft-2) 44%, #f1f5f9));
+  color: #1f2937;
+  font-weight: 600;
+  padding: 0 14px;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.admin-subnav-tab.active {
+  background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+  border-color: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--primary) 34%, transparent);
+}
+
+.products-card {
+  padding: 20px;
+}
+
+.admin-section {
+  height: 72vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.products-table-wrap {
+  margin-top: 10px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: scroll;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  scrollbar-gutter: stable both-edges;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.admin-table-wrap {
+  margin-top: 10px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: scroll;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  scrollbar-gutter: stable both-edges;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.admin-section .pagination-bar {
+  flex-shrink: 0;
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 980px;
+  table-layout: auto;
+  font-size: 13px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.admin-table thead th {
+  background: linear-gradient(180deg, #f8fafc, color-mix(in srgb, var(--primary-soft-2) 75%, #eef2ff));
+  color: color-mix(in srgb, var(--primary-dark) 38%, #334155);
+  font-weight: 700;
+}
+
+.admin-table tbody tr:nth-child(even) {
+  background: #fcfdff;
+}
+
+.admin-table tbody tr:hover {
+  background: color-mix(in srgb, var(--primary-soft-2) 48%, #f8fafc);
+}
+
+.reservation-status-select {
+  margin-top: 0;
+  width: 150px;
+  min-width: 150px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border-color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.reservation-status-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.order-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 132px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+}
+
+.order-status-chip.status-ordered {
+  background: color-mix(in srgb, var(--primary-soft-2) 82%, #eef2ff);
+  border-color: color-mix(in srgb, var(--primary) 36%, #c7d2fe);
+  color: var(--primary-dark);
+}
+
+.order-status-chip.status-preparing {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.order-status-chip.status-shipped {
+  background: #ecfeff;
+  border-color: #a5f3fc;
+  color: #155e75;
+}
+
+.order-status-chip.status-delivered {
+  background: #ecfdf3;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.admin-summary-grid {
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.admin-summary-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  padding: 12px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+.admin-summary-card p {
+  margin: 0 0 4px;
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.admin-summary-card h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.products-table {
+  width: 100%;
+  min-width: 1100px;
+  table-layout: auto;
+  font-size: 13px;
+}
+
+.products-table th,
+.products-table td {
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+.products-table thead th {
+  background: linear-gradient(180deg, #f8fafc, color-mix(in srgb, var(--primary-soft-2) 75%, #eef2ff));
+  color: color-mix(in srgb, var(--primary-dark) 38%, #334155);
+  font-weight: 700;
+}
+
+.products-table thead tr:nth-child(2) th {
+  border-top: 1px solid #e5e7eb;
+}
+
+.products-table tbody tr:nth-child(even) {
+  background: #fcfdff;
+}
+
+.products-table tbody tr:hover {
+  background: color-mix(in srgb, var(--primary-soft-2) 48%, #f8fafc);
+}
+
+.products-table thead input,
+.products-table thead select {
+  margin-top: 0;
+  min-width: 120px;
+}
+
+.products-state,
+.products-stocks {
+  min-width: 190px;
+  line-height: 1.4;
+  color: #374151;
+}
+
+.products-table .actions-inline {
+  flex-wrap: nowrap;
+}
+
+.admin-login-card {
+  max-width: 460px;
+  margin-inline: auto;
+}
+
+@media (max-width: 1024px) {
+  .admin-section {
+    height: auto;
+    min-height: 72vh;
+  }
+
+  .admin-table {
+    min-width: 860px;
+  }
+
+  .products-table {
+    min-width: 920px;
+  }
+}
+
+@media (max-width: 720px) {
+  .products-card {
+    padding: 14px;
+  }
+
+  .admin-subnav-tabs {
+    width: 100%;
+  }
+
+  .admin-subnav-tab {
+    flex: 1 1 48%;
+    text-align: center;
+    min-height: 40px;
+  }
+
+  .products-table-wrap,
+  .admin-table-wrap {
+    border-radius: 10px;
+  }
+
+  .admin-table,
+  .products-table {
+    min-width: 760px;
+    font-size: 12px;
+  }
+
+  .admin-table th,
+  .admin-table td,
+  .products-table th,
+  .products-table td {
+    padding: 8px;
+  }
+
+  .products-table .actions-inline {
+    flex-wrap: wrap;
+  }
+
+  .reservation-status-cell {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reservation-status-select,
+  .order-status-chip {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-subnav-tab {
+    flex-basis: 100%;
+  }
+
+  .admin-table,
+  .products-table {
+    min-width: 680px;
+  }
+}
+

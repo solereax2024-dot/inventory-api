@@ -1,24 +1,53 @@
+import { useRef, useState } from "react";
 import { getColorwayImageUrl } from "../../utils/colorway";
 import { formatColorwayLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks, buildSizeStateRows } from "../../utils/stock";
 
+const ZOOM_LEVELS = [1, 2, 3];
+const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
+
 export default function ReserveModal({ reserveModal, setReserveModal, products, reserve, setReserve, reserveNow, setMessage }) {
+  const [zoomIdx, setZoomIdx] = useState(0);
+  const [origin, setOrigin] = useState({ x: 50, y: 50 });
+  const imgWrapRef = useRef(null);
+
   if (!reserveModal.isOpen) return null;
 
   const product = products.find((p) => String(p.id) === String(reserveModal.productId));
   const colorways = product ? getSortedColorwaysFromStocks(product.stocks) : [];
+  const zoomLevel = ZOOM_LEVELS[zoomIdx];
+
+  const handleMouseMove = (e) => {
+    const el = imgWrapRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+    setOrigin({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    if (zoomLevel === 1) setOrigin({ x: 50, y: 50 });
+  };
+
+  const handleClick = () => {
+    setZoomIdx((prev) => (prev + 1) % ZOOM_LEVELS.length);
+  };
+
+  const resetZoom = () => {
+    setZoomIdx(0);
+    setOrigin({ x: 50, y: 50 });
+  };
 
   return (
-    <div className="modal-backdrop" onClick={() => setReserveModal({ isOpen: false, productId: "" })}>
+    <div className="modal-backdrop" onClick={() => { setReserveModal({ isOpen: false, productId: "" }); resetZoom(); }}>
       <section className="modal-panel reserve-modal" onClick={(e) => e.stopPropagation()}>
         <div className="breakdown-header">
-          <h2>
-            {product?.name || "Product"}
-          </h2>
+          <h2>{product?.name || "Product"}</h2>
           <button
             type="button"
             className="modal-close-btn"
-            onClick={() => setReserveModal({ isOpen: false, productId: "" })}
+            onClick={() => { setReserveModal({ isOpen: false, productId: "" }); resetZoom(); }}
           >
             ✕
           </button>
@@ -26,38 +55,44 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
 
         {product ? (
           <div className="reserve-modal-content">
-            <div className="reserve-modal-image" key={reserve.colorway}>
+            <div
+              ref={imgWrapRef}
+              className={`reserve-modal-image${zoomLevel > 1 ? " zoomed" : ""}`}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleClick}
+            >
               {(() => {
                 const imgUrl = getColorwayImageUrl(product, reserve.colorway);
                 if (imgUrl) {
-                  return <img src={imgUrl} alt={reserve.colorway} />;
+                  return (
+                    <img
+                      src={imgUrl}
+                      alt={reserve.colorway}
+                      style={{
+                        transform: `scale(${zoomLevel})`,
+                        transformOrigin: `${origin.x}% ${origin.y}%`,
+                      }}
+                    />
+                  );
                 }
                 return (
-                  <div style={{
-                    width: "100%",
-                    height: "100%",
-                    background: "linear-gradient(135deg, #1F2937 0%, #374151 100%)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#F3F4F6",
-                    textAlign: "center",
-                    padding: "24px"
-                  }}>
-                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>👟</div>
-                    <div style={{ fontSize: "16px", fontWeight: "600" }}>{product?.name}</div>
-                    <div style={{ fontSize: "12px", marginTop: "8px", opacity: "0.8" }}>{reserve.colorway}</div>
+                  <div className="reserve-image-fallback">
+                    <div className="reserve-image-fallback-icon">👟</div>
+                    <div className="reserve-image-fallback-name">{product?.name}</div>
+                    <div className="reserve-image-fallback-colorway">{reserve.colorway}</div>
                   </div>
                 );
               })()}
+              <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span>
             </div>
+
             <div className="reserve-modal-form">
               <div className="form-section">
                 <label>Colorway</label>
                 <select
                   value={reserve.colorway}
-                  onChange={(e) => setReserve({ ...reserve, colorway: e.target.value })}
+                  onChange={(e) => { setReserve({ ...reserve, colorway: e.target.value }); resetZoom(); }}
                 >
                   {colorways.map((colorway) => (
                     <option key={colorway} value={colorway}>
@@ -83,8 +118,8 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
                         <span className="size-label">US {row.size}</span>
                         <span className="size-stock">
                           {row.onHand > 0 ? `${row.onHand}H` : ""}
-                          {row.inTransit > 0 ? `${row.inTransit > 0 ? " " : ""}${row.inTransit}T` : ""}
-                          {row.preOrder > 0 ? `${row.preOrder > 0 ? " " : ""}${row.preOrder}P` : ""}
+                          {row.inTransit > 0 ? ` ${row.inTransit}T` : ""}
+                          {row.preOrder > 0 ? ` ${row.preOrder}P` : ""}
                           {row.total === 0 ? "Out" : ""}
                         </span>
                       </button>
@@ -133,12 +168,14 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
                 />
               </div>
 
-              <button
-                className="btn-primary"
-                onClick={() => reserveNow().catch((err) => setMessage(err.message))}
-              >
-                Reserve Now
-              </button>
+              <div className="reserve-form-actions">
+                <button
+                  className="btn-primary reserve-submit-btn"
+                  onClick={() => reserveNow().catch((err) => setMessage(err.message))}
+                >
+                  Reserve Now
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BrandingService {
     public static final String SITE_LOGO_URL_KEY = "SITE_LOGO_URL";
+     public static final String SITE_LOGO_DARK_URL_KEY = "SITE_LOGO_DARK_URL";
 
     private final AppSettingRepository appSettingRepository;
 
@@ -27,6 +28,26 @@ public class BrandingService {
                 .orElseGet(() -> {
                     AppSetting created = new AppSetting();
                     created.setSettingKey(SITE_LOGO_URL_KEY);
+                    return created;
+                });
+        setting.setSettingValue(logoUrl);
+        setting.setUpdatedAt(Instant.now());
+        return appSettingRepository.save(setting).getSettingValue();
+    }
+
+    @Transactional(readOnly = true)
+    public String getLogoDarkUrl() {
+        return appSettingRepository.findById(SITE_LOGO_DARK_URL_KEY)
+                .map(AppSetting::getSettingValue)
+                .orElse(null);
+    }
+
+    @Transactional
+    public String updateLogoDarkUrl(String logoUrl) {
+        AppSetting setting = appSettingRepository.findById(SITE_LOGO_DARK_URL_KEY)
+                .orElseGet(() -> {
+                    AppSetting created = new AppSetting();
+                    created.setSettingKey(SITE_LOGO_DARK_URL_KEY);
                     return created;
                 });
         setting.setSettingValue(logoUrl);

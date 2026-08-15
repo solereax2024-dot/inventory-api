@@ -328,10 +328,10 @@ export default function CustomerPage({ searchText, setSearchText }) {
           <div className="filter-bar-actions">
             <button
               type="button"
-              className={`filter-drawer-btn${isFilterDrawerOpen ? " active" : ""}`}
+              className={`filter-drawer-btn quick-tooltip${isFilterDrawerOpen ? " active" : ""}`}
               onClick={() => setIsFilterDrawerOpen(true)}
               aria-label="Open filter and sort panel"
-              title="Filter & Sort"
+              data-tooltip="Filter & sort"
             >
               <SlidersHorizontal size={16} />
               <span>Filters</span>

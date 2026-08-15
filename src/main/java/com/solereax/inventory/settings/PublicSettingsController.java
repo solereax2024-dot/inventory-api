@@ -19,6 +19,7 @@ public class PublicSettingsController {
     public Map<String, String> branding() {
         Map<String, String> response = new HashMap<>();
         response.put("logoUrl", brandingService.getLogoUrl());
+        response.put("logoDarkUrl", brandingService.getLogoDarkUrl());
         return response;
     }
 }

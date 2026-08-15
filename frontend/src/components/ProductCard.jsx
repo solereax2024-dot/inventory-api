@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getColorwayImageUrl, sanitizeColorways, colorwayPriority } from "../utils/colorway";
 import { formatColorwayLabel, formatEnumLabel } from "../utils/format";
+import "../styles/product-card.css";
 
 export default function ProductCard({ product, onReserveClick }) {
   const colorways = useMemo(() => {
@@ -39,9 +40,10 @@ export default function ProductCard({ product, onReserveClick }) {
             <button
               key={`${product.id}-${colorway}`}
               type="button"
-              className={`thumb-btn ${selectedColorway === colorway ? "active" : ""}`}
+              className={`thumb-btn quick-tooltip ${selectedColorway === colorway ? "active" : ""}`}
               onClick={(e) => { e.stopPropagation(); setSelectedColorway(colorway); }}
-              title={formatColorwayLabel(colorway)}
+              data-tooltip={formatColorwayLabel(colorway)}
+              aria-label={formatColorwayLabel(colorway)}
             >
               {(() => {
                 const thumbUrl = getColorwayImageUrl(product, colorway);

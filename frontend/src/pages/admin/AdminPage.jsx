@@ -5,6 +5,7 @@ import { apiRequest, uploadImage } from "../../utils/api";
 import { formatEnumLabel, formatColorwayLabel, getProductTypeOptions } from "../../utils/format";
 import { sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
 import { getSortedColorwaysFromStocks, buildSizeStateRows } from "../../utils/stock";
+import "../../styles/admin.css";
 import DeleteModal from "./DeleteModal";
 import NewBrandModal from "./NewBrandModal";
 import NewAdminModal from "./NewAdminModal";
