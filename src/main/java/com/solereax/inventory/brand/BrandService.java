@@ -40,4 +40,15 @@ public class BrandService {
                 .orElseThrow(() -> new NotFoundException("Brand not found: " + id));
         brandRepository.delete(brand);
     }
+
+    @Transactional
+    public void deleteBrandByName(String name) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("Brand name cannot be empty.");
+        }
+        Brand brand = brandRepository.findByNameIgnoreCase(trimmed)
+                .orElseThrow(() -> new NotFoundException("Brand not found: " + trimmed));
+        brandRepository.delete(brand);
+    }
 }

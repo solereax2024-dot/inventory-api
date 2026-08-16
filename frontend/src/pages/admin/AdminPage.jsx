@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Boxes, Pencil, RotateCcw, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { US_SIZES, COLORWAY_OPTIONS, STOCK_SOURCE_TYPES, STOCK_SOURCE_LABELS, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
 import { apiRequest, uploadImage } from "../../utils/api";
@@ -58,13 +59,14 @@ function decodeRoleFromToken(token) {
 }
 
 export default function AdminPage({ onAdminAuthChange = () => {} }) {
+  const UNDO_WINDOW_MS = 5000;
   const navigate = useNavigate();
   const [token, setToken] = useState(() => localStorage.getItem("adminToken") || "");
   const [adminRole, setAdminRole] = useState(() => {
     const storedRole = localStorage.getItem("adminRole") || "";
     return storedRole || decodeRoleFromToken(localStorage.getItem("adminToken") || "");
   });
-  const [loginForm, setLoginForm] = useState({ username: "admin", password: "admin123" });
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [productForm, setProductForm] = useState({
     name: "",
     brand: "",
@@ -88,6 +90,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [orders, setOrders] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [undoQueue, setUndoQueue] = useState([]);
+  const [undoNow, setUndoNow] = useState(Date.now());
   const [selectedProductColorways, setSelectedProductColorways] = useState({});
   const [productActionModal, setProductActionModal] = useState({ type: null, productId: "" });
   const [productImageFile, setProductImageFile] = useState(null);
@@ -122,19 +126,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [savedBrands, setSavedBrands] = useState([]);
   const [savedProductNames, setSavedProductNames] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
-  const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "" });
+  const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
   const [activeAdminSection, setActiveAdminSection] = useState("products");
 
   const isLoggedIn = useMemo(() => token.length > 0, [token]);
   const isSuperAdmin = useMemo(() => adminRole === "SUPER_ADMIN", [adminRole]);
-  const adminSections = useMemo(
-    () => [
-      { key: "products", label: "Products" },
-      ...(isSuperAdmin ? [{ key: "users", label: "Admin Users" }] : []),
-      { key: "reservations", label: "Customer Reservations" }
-    ],
-    [isSuperAdmin]
-  );
+   const adminSections = useMemo(
+      () => [
+        { key: "products", label: "Products" },
+        { key: "reservations", label: "Reservations" },
+        ...(isSuperAdmin ? [{ key: "users", label: "Admin Users" }] : [])
+      ],
+      [isSuperAdmin]
+    );
   const adminColorwayOptions = useMemo(() => {
     const dynamicColorways =
       products.find((product) => String(product.id) === String(stockForm.productId))?.stocks?.map((stock) => stock.colorway) || [];
@@ -228,6 +232,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     description: product?.description || ""
   });
 
+  const pushUndoEntry = (type, value, label) => {
+    const entry = {
+      id: `${type}-${value}-${Date.now()}`,
+      type,
+      value,
+      label,
+      expiresAt: Date.now() + UNDO_WINDOW_MS
+    };
+    setUndoQueue((prev) => [entry, ...prev].slice(0, 3));
+  };
+
   const deleteProduct = (productId) => {
     if (!isSuperAdmin) {
       setMessage("Only SUPER_ADMIN can delete stocks/products.");
@@ -277,6 +292,23 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+  const deleteSavedBrand = async (brandName) => {
+    const trimmedName = (brandName || "").trim();
+    if (!trimmedName) {
+      return;
+    }
+    try {
+      await apiRequest(`/api/admin/brands/by-name?name=${encodeURIComponent(trimmedName)}`, "DELETE", undefined, token);
+      setSavedBrands((prev) => prev.filter((brand) => brand.toLowerCase() !== trimmedName.toLowerCase()));
+      setProductForm((prev) => (prev.brand.toLowerCase() === trimmedName.toLowerCase() ? { ...prev, brand: "" } : prev));
+      setEditProductForm((prev) => (prev.brand.toLowerCase() === trimmedName.toLowerCase() ? { ...prev, brand: "" } : prev));
+      pushUndoEntry("brand", trimmedName, `Brand "${trimmedName}" deleted.`);
+      setMessage("Delete completed. Undo available below.");
+    } catch (err) {
+      setMessage("Failed to delete brand: " + err.message);
+    }
+  };
+
   const addNewProductName = async () => {
     const trimmedName = newProductNameModal.productName.trim();
     if (!trimmedName) {
@@ -298,6 +330,45 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+  const deleteSavedProductName = async (productName) => {
+    const trimmedName = (productName || "").trim();
+    if (!trimmedName) {
+      return;
+    }
+    try {
+      await apiRequest(`/api/admin/product-names/by-name?name=${encodeURIComponent(trimmedName)}`, "DELETE", undefined, token);
+      setSavedProductNames((prev) => prev.filter((name) => name.toLowerCase() !== trimmedName.toLowerCase()));
+      setProductForm((prev) => (prev.name.toLowerCase() === trimmedName.toLowerCase() ? { ...prev, name: "" } : prev));
+      setEditProductForm((prev) => (prev.name.toLowerCase() === trimmedName.toLowerCase() ? { ...prev, name: "" } : prev));
+      pushUndoEntry("name", trimmedName, `Product name "${trimmedName}" deleted.`);
+      setMessage("Delete completed. Undo available below.");
+    } catch (err) {
+      setMessage("Failed to delete product name: " + err.message);
+    }
+  };
+
+  const undoDelete = async (entryId) => {
+    const entry = undoQueue.find((item) => item.id === entryId);
+    if (!entry) {
+      return;
+    }
+
+    try {
+      if (entry.type === "brand") {
+        await apiRequest("/api/admin/brands", "POST", { name: entry.value }, token);
+        setSavedBrands((prev) => [...new Set([...prev, entry.value])].sort());
+        setMessage(`Restored brand "${entry.value}".`);
+      } else if (entry.type === "name") {
+        await apiRequest("/api/admin/product-names", "POST", { name: entry.value }, token);
+        setSavedProductNames((prev) => [...new Set([...prev, entry.value])].sort());
+        setMessage(`Restored product name "${entry.value}".`);
+      }
+      setUndoQueue((prev) => prev.filter((item) => item.id !== entryId));
+    } catch (err) {
+      setMessage("Failed to undo delete: " + err.message);
+    }
+  };
+
   useEffect(() => {
     if (!token) {
       return;
@@ -314,9 +385,25 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   useEffect(() => {
     if (!message) return undefined;
-    const timer = window.setTimeout(() => setMessage(""), 2800);
+    const timer = window.setTimeout(() => {
+      setMessage("");
+    }, undoQueue.length > 0 ? UNDO_WINDOW_MS : 2800);
     return () => window.clearTimeout(timer);
-  }, [message]);
+  }, [message, undoQueue.length]);
+
+  useEffect(() => {
+    if (undoQueue.length === 0) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      const now = Date.now();
+      setUndoNow(now);
+      setUndoQueue((prev) => prev.filter((item) => item.expiresAt > now));
+    }, 250);
+
+    return () => window.clearInterval(interval);
+  }, [undoQueue.length]);
 
   const login = async () => {
     const data = await apiRequest("/api/auth/login", "POST", loginForm);
@@ -476,14 +563,15 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     const payload = {
       username: newAdminForm.username.trim(),
-      password: newAdminForm.password
+      password: newAdminForm.password,
+      role: newAdminForm.role
     };
     if (!payload.username || !payload.password) {
       throw new Error("Username and password are required.");
     }
     await apiRequest("/api/admin/users/admins", "POST", payload, token);
     setNewAdminModal({ isOpen: false });
-    setNewAdminForm({ username: "", password: "" });
+    setNewAdminForm({ username: "", password: "", role: "ADMIN" });
     setMessage("New admin user added.");
     await loadAdminData(token, adminRole);
   };
@@ -642,12 +730,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             placeholder="Username"
             value={loginForm.username}
             onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
           />
           <input
             type="password"
             placeholder="Password"
             value={loginForm.password}
             onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+            autoComplete="current-password"
           />
           <button onClick={() => login().catch((err) => setMessage(err.message))}>Login</button>
           <button type="button" className="button-secondary" onClick={() => navigate("/")}>
@@ -808,11 +901,38 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     </select>
                   </td>
                   <td>
-                    <div className="actions-inline">
-                      <button type="button" onClick={() => openEditModal(product.id, selectedColorway)}>Edit</button>
-                      <button type="button" onClick={() => openStockModal(product.id, selectedColorway)}>Stock & Breakdown</button>
+                    <div className="actions-inline admin-actions-inline">
+                      <button
+                        type="button"
+                        className="admin-action-btn quick-tooltip"
+                        data-tooltip="Edit"
+                        aria-label="Edit product"
+                        onClick={() => openEditModal(product.id, selectedColorway)}
+                      >
+                        <Pencil size={15} />
+                        <span className="admin-action-label">Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-action-btn quick-tooltip"
+                        data-tooltip="Stock"
+                        aria-label="Open stock and breakdown"
+                        onClick={() => openStockModal(product.id, selectedColorway)}
+                      >
+                        <Boxes size={15} />
+                        <span className="admin-action-label">Stock &amp; Breakdown</span>
+                      </button>
                       {isSuperAdmin ? (
-                        <button type="button" className="btn-delete" onClick={() => deleteProduct(product.id)}>Delete</button>
+                        <button
+                          type="button"
+                          className="btn-delete admin-action-btn quick-tooltip"
+                          data-tooltip="Delete"
+                          aria-label="Delete product"
+                          onClick={() => deleteProduct(product.id)}
+                        >
+                          <Trash2 size={15} />
+                          <span className="admin-action-label">Delete</span>
+                        </button>
                       ) : null}
                     </div>
                   </td>
@@ -870,7 +990,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             <button
               type="button"
               onClick={() => {
-                setNewAdminForm({ username: "", password: "" });
+                setNewAdminForm({ username: "", password: "", role: "ADMIN" });
                 setNewAdminModal({ isOpen: true });
               }}
             >
@@ -895,22 +1015,31 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     <td>{user.enabled ? "Active" : "Disabled"}</td>
                     <td>
                       {user.role === "ADMIN" ? (
-                        user.enabled ? (
-                          <button
-                            type="button"
-                            className="btn-delete"
-                            onClick={() => setAdminUserStatus(user.id, false).catch((err) => setMessage(err.message))}
-                          >
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setAdminUserStatus(user.id, true).catch((err) => setMessage(err.message))}
-                          >
-                            Enable
-                          </button>
-                        )
+                        <div className="admin-user-action">
+                          {user.enabled ? (
+                            <button
+                              type="button"
+                              className="btn-delete admin-action-btn quick-tooltip"
+                              data-tooltip="Disable"
+                              aria-label="Disable admin"
+                              onClick={() => setAdminUserStatus(user.id, false).catch((err) => setMessage(err.message))}
+                            >
+                              <ShieldX size={15} />
+                              <span className="admin-action-label">Disable</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="admin-action-btn quick-tooltip"
+                              data-tooltip="Enable"
+                              aria-label="Enable admin"
+                              onClick={() => setAdminUserStatus(user.id, true).catch((err) => setMessage(err.message))}
+                            >
+                              <ShieldCheck size={15} />
+                              <span className="admin-action-label">Enable</span>
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         "-"
                       )}
@@ -941,28 +1070,39 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
             {productActionModal.type === "create" ? (
               <>
-                <select
-                  value={productForm.name}
-                  onChange={(e) => {
-                    if (e.target.value === "@@ADD_NEW_NAME@@") {
-                      setNewProductNameModal({ isOpen: true, productName: "" });
-                    } else {
-                      setProductForm({ ...productForm, name: e.target.value });
-                    }
-                  }}
-                >
-                  <option value="">Select Name...</option>
-                  {nameOptions.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <select
+                    value={productForm.name}
+                    onChange={(e) => {
+                      if (e.target.value === "@@ADD_NEW_NAME@@") {
+                        setNewProductNameModal({ isOpen: true, productName: "" });
+                      } else {
+                        setProductForm({ ...productForm, name: e.target.value });
+                      }
+                    }}
+                    style={{ flex: 1, marginTop: 0 }}
+                  >
+                    <option value="">Select Name...</option>
+                    {nameOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                    <option value="@@ADD_NEW_NAME@@" style={{ fontWeight: "bold", background: "#e3f2fd" }}>
+                      + Add New Name
                     </option>
-                  ))}
-                  <option value="@@ADD_NEW_NAME@@" style={{ fontWeight: "bold", background: "#e3f2fd" }}>
-                    + Add New Name
-                  </option>
-                </select>
+                  </select>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    style={{ width: "auto", whiteSpace: "nowrap", marginTop: 0 }}
+                    onClick={() => setNewProductNameModal({ isOpen: true, productName: "" })}
+                  >
+                    Manage Names
+                  </button>
+                </div>
                 <div className="row">
-                  <div style={{ display: "flex", gap: "8px" }}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                     <select
                       value={productForm.brand}
                       onChange={(e) => {
@@ -972,7 +1112,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                           setProductForm({ ...productForm, brand: e.target.value });
                         }
                       }}
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, marginTop: 0 }}
                     >
                       <option value="">Select Brand...</option>
                       {brandOptions.map((brand) => (
@@ -984,6 +1124,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                         + Add New Brand
                       </option>
                     </select>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      style={{ width: "auto", whiteSpace: "nowrap", marginTop: 0 }}
+                      onClick={() => setNewBrandModal({ isOpen: true, brandName: "" })}
+                    >
+                      Manage Brands
+                    </button>
                   </div>
                   <input
                     placeholder="Color (ex: Black/White)"
@@ -1328,24 +1476,24 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                           .join(", ")}
                       </td>
                       <td>{order.statusUpdatedBy || "-"}</td>
-                      <td>
-                        <div className="reservation-status-cell">
-                          <span className={`order-status-chip ${statusChipClass(order.status)}`}>
-                            {normalizeReservationStatus(order.status)}
-                          </span>
-                          <select
-                            className="reservation-status-select"
-                            value={normalizeReservationStatus(order.status)}
-                            onChange={(e) => updateReservationStatus(order.id, e.target.value).catch((err) => setMessage(err.message))}
-                          >
-                            {RESERVATION_STATUS_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </td>
+                       <td>
+                         <div className="reservation-status-cell">
+                           <span className={`order-status-chip ${statusChipClass(order.status)}`}>
+                             {normalizeReservationStatus(order.status)}
+                           </span>
+                           <select
+                             className="reservation-status-select"
+                             value={normalizeReservationStatus(order.status)}
+                             onChange={(e) => updateReservationStatus(order.id, e.target.value).catch((err) => setMessage(err.message))}
+                           >
+                             {RESERVATION_STATUS_OPTIONS.map((option) => (
+                               <option key={option.value} value={option.value}>
+                                 {option.label}
+                               </option>
+                             ))}
+                           </select>
+                         </div>
+                       </td>
                     </>
                   )}
                 </tr>
@@ -1366,6 +1514,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         newBrandModal={newBrandModal}
         setNewBrandModal={setNewBrandModal}
         addNewBrand={addNewBrand}
+        savedBrands={savedBrands}
+        deleteSavedBrand={deleteSavedBrand}
       />
 
       <NewAdminModal
@@ -1380,8 +1530,37 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         newProductNameModal={newProductNameModal}
         setNewProductNameModal={setNewProductNameModal}
         addNewProductName={addNewProductName}
+        savedProductNames={savedProductNames}
+        deleteSavedProductName={deleteSavedProductName}
       />
-      {message ? <div className="toast-banner">{message}</div> : null}
+      {message || undoQueue.length > 0 ? (
+        <div className="toast-banner">
+          {message ? <span className="toast-message-text">{message}</span> : null}
+          {undoQueue.length > 0 ? (
+            <div className="toast-undo-list">
+              {undoQueue.map((entry) => {
+                const secondsLeft = Math.max(1, Math.ceil((entry.expiresAt - undoNow) / 1000));
+                return (
+                  <div className="toast-undo-item" key={entry.id}>
+                    <div className="toast-undo-copy">
+                      <span className="toast-undo-label">{entry.label}</span>
+                      <span className="toast-undo-timer">Undo in {secondsLeft}s</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="toast-undo-btn"
+                      onClick={() => undoDelete(entry.id).catch((err) => setMessage(err.message))}
+                    >
+                      <RotateCcw size={13} />
+                      <span>Undo</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </main>
   );
 }

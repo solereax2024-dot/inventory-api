@@ -36,11 +36,14 @@ public class AdminUserManagementService {
         if (appUserRepository.existsByUsernameIgnoreCase(username)) {
             throw new IllegalArgumentException("Username already exists: " + username);
         }
+        if (request.role() != UserRole.ADMIN && request.role() != UserRole.SUPER_ADMIN) {
+            throw new IllegalArgumentException("Only ADMIN or SUPER_ADMIN roles can be assigned here.");
+        }
 
         AppUser user = new AppUser();
         user.setUsername(username);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(UserRole.ADMIN);
+        user.setRole(request.role());
         user.setEnabled(true);
         return toResponse(appUserRepository.save(user));
     }

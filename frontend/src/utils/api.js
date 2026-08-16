@@ -8,11 +8,27 @@ export async function apiRequest(path, method = "GET", body, token) {
     ...(body ? { body: JSON.stringify(body) } : {})
   });
 
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+
+  const readBodySafely = async () => {
+    if (isJson) {
+      return response.json().catch(() => null);
+    }
+    const text = await response.text().catch(() => "");
+    return text ? { message: text } : null;
+  };
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Request failed" }));
-    throw new Error(error.message || "Request failed");
+    const error = await readBodySafely();
+    throw new Error((error && error.message) || "Request failed");
   }
-  return response.json();
+
+  if (response.status === 204 || response.status === 205) {
+    return null;
+  }
+
+  return readBodySafely();
 }
 
 export async function uploadImage(path, file, token) {

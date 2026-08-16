@@ -36,6 +36,17 @@ export default function NewAdminModal({
           }}
           style={{ marginBottom: "16px" }}
         />
+        <select
+          value={newAdminForm.role}
+          onChange={(e) => setNewAdminForm((prev) => ({ ...prev, role: e.target.value }))}
+          style={{ marginTop: 0, marginBottom: "8px" }}
+        >
+          <option value="ADMIN">ADMIN</option>
+          <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+        </select>
+        <p className="field-hint" style={{ marginTop: 0, marginBottom: "12px" }}>
+          Only <strong>SUPER_ADMIN</strong> can open this modal and assign whether the new user should be <strong>ADMIN</strong> or <strong>SUPER_ADMIN</strong>.
+        </p>
         <button type="button" className="btn-primary" onClick={createAdminUser}>
           Add Admin
         </button>

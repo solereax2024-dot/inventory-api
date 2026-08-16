@@ -24,8 +24,13 @@ public class AdminBrandController {
         return Map.of("name", name);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     public void deleteBrand(@PathVariable Long id) {
         brandService.deleteBrand(id);
+    }
+
+    @DeleteMapping("/by-name")
+    public void deleteBrandByName(@RequestParam("name") String name) {
+        brandService.deleteBrandByName(name);
     }
 }

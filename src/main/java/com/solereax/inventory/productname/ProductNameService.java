@@ -1,6 +1,7 @@
 package com.solereax.inventory.productname;
 
 import java.util.List;
+import com.solereax.inventory.shared.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,5 +34,16 @@ public class ProductNameService {
         ProductName productName = new ProductName();
         productName.setName(trimmed);
         return productNameRepository.save(productName).getName();
+    }
+
+    @Transactional
+    public void deleteProductNameByName(String name) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("Product name cannot be empty.");
+        }
+        ProductName productName = productNameRepository.findByNameIgnoreCase(trimmed)
+                .orElseThrow(() -> new NotFoundException("Product name not found: " + trimmed));
+        productNameRepository.delete(productName);
     }
 }

@@ -74,66 +74,118 @@
 }
 
 .admin-table {
-  width: 100%;
-  min-width: 980px;
-  table-layout: auto;
-  font-size: 13px;
+   width: 100%;
+   min-width: 1200px;
+   table-layout: auto;
+   font-size: 13px;
+   border-collapse: collapse;
 }
 
 .admin-table th,
 .admin-table td {
-  padding: 10px 12px;
-  vertical-align: middle;
+   padding: 10px 12px;
+   vertical-align: middle;
+   text-align: left;
 }
 
 .admin-table thead th {
-  background: linear-gradient(180deg, #f8fafc, color-mix(in srgb, var(--primary-soft-2) 75%, #eef2ff));
-  color: color-mix(in srgb, var(--primary-dark) 38%, #334155);
-  font-weight: 700;
+   background: linear-gradient(180deg, #f8fafc, color-mix(in srgb, var(--primary-soft-2) 75%, #eef2ff));
+   color: color-mix(in srgb, var(--primary-dark) 38%, #334155);
+   font-weight: 700;
+   text-align: left;
+   height: 44px;
 }
 
 .admin-table tbody tr:nth-child(even) {
-  background: #fcfdff;
+   background: #fcfdff;
 }
 
 .admin-table tbody tr:hover {
-  background: color-mix(in srgb, var(--primary-soft-2) 48%, #f8fafc);
+   background: color-mix(in srgb, var(--primary-soft-2) 48%, #f8fafc);
+}
+
+.admin-table tbody td {
+   padding: 12px;
+   height: auto;
+   min-height: 50px;
+}
+
+/* Column widths for reservation table */
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) {
+   width: 8%;
+   min-width: 80px;
+}
+
+.admin-table th:nth-child(2),
+.admin-table td:nth-child(2) {
+   width: 15%;
+   min-width: 140px;
+}
+
+.admin-table th:nth-child(3),
+.admin-table td:nth-child(3) {
+   width: 15%;
+   min-width: 140px;
+}
+
+.admin-table th:nth-child(4),
+.admin-table td:nth-child(4) {
+   width: 35%;
+   min-width: 280px;
+}
+
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) {
+   width: 12%;
+   min-width: 120px;
+}
+
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6) {
+   width: 15%;
+   min-width: 140px;
 }
 
 .reservation-status-select {
-  margin-top: 0;
-  width: 150px;
-  min-width: 150px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  border-color: #cbd5e1;
-  font-size: 12px;
-  font-weight: 600;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+   margin-top: 0;
+   width: 140px;
+   min-width: 140px;
+   padding: 7px 10px;
+   border-radius: 8px;
+   border-color: #cbd5e1;
+   font-size: 12px;
+   font-weight: 600;
+   background: linear-gradient(180deg, #ffffff, #f8fafc);
 }
 
 .reservation-status-cell {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
+   display: flex;
+   flex-direction: row;
+   align-items: center;
+   gap: 8px;
+   flex-wrap: nowrap;
+   width: 100%;
 }
 
 .order-status-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: auto;
-  min-width: 132px;
-  min-height: 30px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  border: 1px solid transparent;
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   width: auto;
+   min-width: 100px;
+   min-height: 30px;
+   padding: 4px 10px;
+   border-radius: 999px;
+   font-size: 11px;
+   font-weight: 700;
+   letter-spacing: 0.03em;
+   border: 1px solid transparent;
+   text-align: center;
+   line-height: 1.25;
+   flex-shrink: 0;
 }
+
 
 .order-status-chip.status-ordered {
   background: color-mix(in srgb, var(--primary-soft-2) 82%, #eef2ff);
@@ -199,7 +251,7 @@
 .products-table th,
 .products-table td {
   padding: 10px 12px;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .products-table thead th {
@@ -235,6 +287,42 @@
 
 .products-table .actions-inline {
   flex-wrap: nowrap;
+  align-items: center;
+}
+
+.products-table tbody td > select {
+  margin-top: 0;
+  min-height: 38px;
+}
+
+.admin-actions-inline,
+.admin-user-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.admin-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  min-height: 38px;
+}
+
+.admin-action-label {
+  display: inline;
+}
+
+.admin-user-action {
+  justify-content: flex-start;
+}
+
+.admin-user-action button {
+  margin-top: 0;
+  width: auto;
 }
 
 .admin-login-card {
@@ -243,77 +331,150 @@
 }
 
 @media (max-width: 1024px) {
-  .admin-section {
-    height: auto;
-    min-height: 72vh;
-  }
+   .admin-section {
+     height: auto;
+     min-height: 72vh;
+   }
 
-  .admin-table {
-    min-width: 860px;
-  }
+   .admin-table {
+     min-width: 1100px;
+   }
 
-  .products-table {
-    min-width: 920px;
-  }
+   .products-table {
+     min-width: 920px;
+   }
 }
 
 @media (max-width: 720px) {
-  .products-card {
-    padding: 14px;
-  }
+   .products-card {
+     padding: 14px;
+   }
 
-  .admin-subnav-tabs {
-    width: 100%;
-  }
+   .admin-subnav-tabs {
+     width: 100%;
+   }
 
-  .admin-subnav-tab {
-    flex: 1 1 48%;
-    text-align: center;
-    min-height: 40px;
-  }
+   .admin-subnav-tab {
+     flex: 1 1 48%;
+     text-align: center;
+     min-height: 40px;
+   }
 
-  .products-table-wrap,
-  .admin-table-wrap {
-    border-radius: 10px;
-  }
+   .products-table-wrap,
+   .admin-table-wrap {
+     border-radius: 10px;
+   }
 
-  .admin-table,
-  .products-table {
-    min-width: 760px;
-    font-size: 12px;
-  }
+   .admin-table,
+   .products-table {
+     min-width: 880px;
+     font-size: 12px;
+   }
 
-  .admin-table th,
-  .admin-table td,
-  .products-table th,
-  .products-table td {
-    padding: 8px;
-  }
+   .admin-table th,
+   .admin-table td,
+   .products-table th,
+   .products-table td {
+     padding: 8px;
+   }
 
-  .products-table .actions-inline {
-    flex-wrap: wrap;
-  }
+   /* Adjust column widths for mobile */
+   .admin-table th:nth-child(1),
+   .admin-table td:nth-child(1) {
+     width: 7%;
+     min-width: 70px;
+   }
 
-  .reservation-status-cell {
-    flex-direction: column;
-    align-items: stretch;
-  }
+   .admin-table th:nth-child(2),
+   .admin-table td:nth-child(2) {
+     width: 14%;
+     min-width: 120px;
+   }
 
-  .reservation-status-select,
-  .order-status-chip {
-    width: 100%;
-    min-width: 0;
-  }
+   .admin-table th:nth-child(3),
+   .admin-table td:nth-child(3) {
+     width: 14%;
+     min-width: 120px;
+   }
+
+   .admin-table th:nth-child(4),
+   .admin-table td:nth-child(4) {
+     width: 32%;
+     min-width: 240px;
+   }
+
+   .admin-table th:nth-child(5),
+   .admin-table td:nth-child(5) {
+     width: 11%;
+     min-width: 100px;
+   }
+
+   .admin-table th:nth-child(6),
+   .admin-table td:nth-child(6) {
+     width: 14%;
+     min-width: 120px;
+   }
+
+   .products-table .actions-inline {
+     flex-direction: row;
+     align-items: center;
+     gap: 6px;
+     min-width: 0;
+   }
+
+   .products-table .actions-inline button,
+   .admin-user-action button {
+     width: auto;
+     min-width: 36px;
+     justify-content: center;
+     padding-inline: 8px;
+     min-height: 36px;
+     padding-block: 0;
+     font-size: 11px;
+     border-radius: 10px;
+   }
+
+   .admin-user-action {
+     min-width: 0;
+   }
+
+   .admin-action-btn {
+     gap: 5px;
+   }
+
+    .reservation-status-cell {
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+      min-width: 148px;
+    }
+
+    .reservation-status-select,
+    .order-status-chip {
+      width: auto;
+      min-width: 0;
+      flex-shrink: 0;
+    }
+
+    .order-status-chip {
+      min-height: 36px;
+      padding-inline: 8px;
+    }
+
+    .reservation-status-select {
+      min-height: 36px;
+      min-width: 110px;
+    }
 }
 
 @media (max-width: 480px) {
-  .admin-subnav-tab {
-    flex-basis: 100%;
-  }
+   .admin-subnav-tab {
+     flex-basis: 100%;
+   }
 
-  .admin-table,
-  .products-table {
-    min-width: 680px;
-  }
+   .admin-table,
+   .products-table {
+     min-width: 780px;
+   }
 }
 
