@@ -9,10 +9,18 @@
   overflow: hidden;
 }
 
-.product-card {
+.card.product-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   animation: fade-up 280ms ease-out;
   animation-fill-mode: both;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
 }
 
 .product-card:nth-child(2n) {
@@ -25,12 +33,13 @@
 
 .product-card:hover {
   transform: translateY(-3px);
-  border-color: var(--primary);
-  box-shadow: 0 18px 30px color-mix(in srgb, var(--primary) 26%, transparent);
+  border-color: transparent;
+  box-shadow: none !important;
 }
 
 .product-card-footer {
   padding: 8px 4px 4px;
+  margin-top: auto;
 }
 
 .product-card-meta {
@@ -106,13 +115,13 @@
 .product-image-wrap {
   width: 100%;
   aspect-ratio: 1 / 1;
-  min-height: clamp(220px, 38vw, 320px);
-  border-radius: 12px;
+  min-height: clamp(240px, 40vw, 340px);
+  border-radius: 0;
   overflow: hidden;
   margin-bottom: 8px;
-  padding: 10px;
-  background: linear-gradient(180deg, #ffffff, #f1f5f9);
-  border: 1px solid #cbd5e1;
+  padding: 0;
+  background: transparent;
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -141,61 +150,40 @@
   transform: scale(1.04);
 }
 
-.thumbnail-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-  overflow-x: auto;
-}
-
-.thumb-btn {
-  width: 52px;
-  min-width: 52px;
-  height: 52px;
-  margin-top: 0;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  overflow: hidden;
-}
-
-.thumb-btn img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.thumb-btn.active {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 34%, transparent);
-}
-
 .brand {
   color: #64748b;
 }
 
+
 @media (max-width: 720px) {
-  .product-card {
-    padding: 14px;
+  .product-image-wrap {
+    height: 170px;
+    min-height: 0;
+    padding: 0;
+    aspect-ratio: 1 / 1;
+    margin-bottom: 6px;
   }
 
-  .thumbnail-row {
-    gap: 6px;
+  .product-image {
+    object-fit: cover;
+    object-position: center;
   }
 
-  .thumb-btn {
-    width: 46px;
-    min-width: 46px;
-    height: 46px;
+  .product-card h3 {
+    font-size: 13px;
   }
+
 }
 
 @media (max-width: 420px) {
-  .product-card {
-    padding: 12px;
+
+  .product-image-wrap {
+    height: 150px;
+    min-height: 0;
+    padding: 0;
+    aspect-ratio: 1 / 1;
   }
+
 
   .product-card-meta {
     align-items: flex-start;

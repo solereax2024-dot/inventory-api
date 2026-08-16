@@ -14,7 +14,7 @@ export default function HeroPage() {
             <span>Cash on Delivery</span>
           </div>
           <div className="hero-actions">
-            <Link className="hero-cta" to="/shop">
+            <Link className="hero-cta" to="/collection">
               Browse Collections
             </Link>
           </div>

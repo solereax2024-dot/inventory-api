@@ -1359,8 +1359,8 @@ body.theme-dark .reservation-status-cell {
 body.theme-dark .product-image-wrap,
 body.theme-dark .reserve-modal-image,
 body.theme-dark .thumb-btn {
-  background: #0b1220;
-  border-color: #334155;
+  background: transparent;
+  border-color: transparent;
 }
 
 body.theme-dark .product-card h3,
@@ -1590,7 +1590,8 @@ body.theme-dark .reserve-form-actions {
   }
 
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .section-head {

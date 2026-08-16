@@ -48,3 +48,26 @@ export function getColorwayImageUrl(product, colorway) {
   console.log("[IMAGE] No image found for", product?.name, normalizedColorway, "colorwayImages:", colorwayImages);
   return null;
 }
+
+export function getColorwayDetails(product, colorway) {
+  if (!product) {
+    return {
+      description: "",
+      department: "",
+      category: "",
+      productType: ""
+    };
+  }
+
+  const normalizedColorway = normalizeColorwayValue(colorway);
+  const colorwayDetails = product?.colorwayDetails || {};
+  const matched = colorwayDetails[normalizedColorway] || colorwayDetails.DEFAULT || {};
+
+  return {
+    description: matched.description || product.description || "",
+    department: matched.department || product.department || "",
+    category: matched.category || product.category || "",
+    productType: matched.productType || product.productType || ""
+  };
+}
+

@@ -11,6 +11,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             select distinct p from Product p
             left join fetch p.stocks s
             left join fetch p.colorwayImages c
+            left join fetch p.colorwayDetails d
             where p.active = true
             order by p.name
             """)
@@ -20,6 +21,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             select distinct p from Product p
             left join fetch p.stocks s
             left join fetch p.colorwayImages c
+            left join fetch p.colorwayDetails d
             order by p.name
             """)
     List<Product> findAllWithStocks();

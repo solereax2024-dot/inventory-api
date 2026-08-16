@@ -14,6 +14,7 @@ public record PublicProductResponse(
         String productType,
         String imageUrl,
         Map<String, String> colorwayImages,
+        Map<String, ColorwayDetailsResponse> colorwayDetails,
         List<SizeStockResponse> stocks,
         Map<String, Map<String, Integer>> stockStates,
         Map<String, Map<String, Map<String, Integer>>> stockStateBySize

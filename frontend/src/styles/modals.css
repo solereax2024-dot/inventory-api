@@ -52,9 +52,171 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.reserve-page-panel {
+  width: min(1840px, 100%);
+  margin: 0 auto 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: grid;
+  gap: 12px;
+  overflow: visible;
+}
+
+.reserve-page-shell {
+  margin-top: 10px;
+  padding-inline: clamp(10px, 2vw, 24px);
+}
+
+.reserve-page-content {
+  display: grid;
+  width: min(1460px, 100%);
+  margin-inline: auto;
+  grid-template-columns: minmax(420px, 1.15fr) minmax(320px, 0.85fr);
+  gap: clamp(14px, 1.8vw, 22px);
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .reserve-page-panel {
+    width: min(1960px, 100%);
+  }
+
+  .reserve-page-content {
+    width: min(1580px, 100%);
+  }
+}
+
+.reserve-page-media-column {
+  display: grid;
+  gap: 8px;
+}
+
+.reserve-page-media-column .reserve-modal-image,
+.reserve-page-media-column .reserve-thumbnail-row {
+  width: 100%;
+  margin-inline: 0;
+}
+
+.reserve-page-media-column .reserve-modal-image {
+  aspect-ratio: auto;
+  height: clamp(300px, 46vh, 520px);
+}
+
+.reserve-page-form-column {
+  align-self: start;
+  width: 100%;
+  gap: 12px;
+}
+
+.reserve-page-form-column .form-section label {
+  font-size: 13px;
+}
+
+.reserve-page-form-column input,
+.reserve-page-form-column select {
+  margin-top: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  border-radius: 9px;
+}
+
+.reserve-page-form-column .field-hint {
+  font-size: 11px;
+}
+
+.reserve-page-form-column .size-grid {
+  grid-template-columns: repeat(auto-fit, minmax(66px, 1fr));
+  gap: 7px;
+}
+
+.reserve-page-form-column .size-btn {
+  min-height: 42px;
+  padding: 5px 5px;
+  font-size: 10px;
+  gap: 2px;
+}
+
+.reserve-page-form-column .size-stock {
+  font-size: 9px;
+}
+
+.reserve-page-back-btn {
+  width: auto;
+  min-width: 72px;
+  margin-top: 0;
+  padding: 6px 10px;
+  min-height: 34px;
+  font-size: 11px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.reserve-confirm-modal {
+  width: min(560px, 100%);
+}
+
+.reserve-confirm-header {
+  margin-bottom: 4px;
+}
+
+.reserve-confirm-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.reserve-confirm-product,
+.reserve-confirm-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, #cbd5e1);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--primary-soft-2) 36%, #f8fafc));
+}
+
+.reserve-confirm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.reserve-confirm-item-wide {
+  grid-column: 1 / -1;
+}
+
+.reserve-confirm-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.reserve-confirm-subtle {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.reserve-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.reserve-confirm-cancel-btn,
+.reserve-confirm-submit-btn {
+  width: auto;
+  min-width: 150px;
+  margin-top: 0;
+}
+
 .reserve-modal-content {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: clamp(16px, 2.4vw, 28px);
 }
 
@@ -62,12 +224,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: transparent;
+  border: 0;
   border-radius: 12px;
   overflow: hidden;
   aspect-ratio: 1 / 1;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  box-shadow: none;
   position: relative;
   cursor: zoom-in;
   user-select: none;
@@ -104,6 +266,54 @@
   transition: opacity 0.2s;
 }
 
+.reserve-thumbnail-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.reserve-thumb-btn {
+  width: 110px;
+  min-width: 110px;
+  height: 110px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  overflow: hidden;
+  opacity: 0.7;
+  transition: opacity 0.2s, box-shadow 0.2s;
+  box-shadow: none;
+}
+
+.reserve-thumb-btn img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.reserve-thumb-btn:hover {
+  transform: none;
+  opacity: 0.85;
+  box-shadow: none;
+}
+
+.reserve-thumb-btn.active {
+  opacity: 1;
+  box-shadow: none;
+}
+
+.reserve-thumb-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
 .reserve-modal-form {
   display: grid;
   grid-template-columns: 1fr;
@@ -137,24 +347,24 @@
 
 .size-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
 }
 
 .size-btn {
-  min-height: 64px;
-  padding: 10px 8px;
+  min-height: 48px;
+  padding: 6px 6px;
   border: 2px solid color-mix(in srgb, var(--primary) 24%, #cbd5e1);
   background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--primary-soft-2) 52%, #f1f5f9));
   color: #0b1220;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   transition: all 0.2s;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
 }
@@ -183,7 +393,7 @@
 }
 
 .size-stock {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #475569;
   letter-spacing: 0.01em;
@@ -708,6 +918,33 @@ body.theme-dark .saved-entry-cancel-btn:hover {
 }
 
 @media (max-width: 720px) {
+  .reserve-page-media-column .reserve-modal-image {
+    aspect-ratio: 1 / 1;
+    height: auto;
+  }
+
+  .reserve-confirm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reserve-confirm-item-wide {
+    grid-column: auto;
+  }
+
+  .reserve-confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .reserve-confirm-cancel-btn,
+  .reserve-confirm-submit-btn {
+    width: 100%;
+  }
+
+  .reserve-page-content {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
   .modal-backdrop,
   .modal-overlay {
     padding:
@@ -740,6 +977,17 @@ body.theme-dark .saved-entry-cancel-btn:hover {
     aspect-ratio: 1 / 1;
   }
 
+  .reserve-thumbnail-row {
+    gap: 6px;
+  }
+
+  .reserve-thumb-btn {
+    width: 88px;
+    min-width: 88px;
+    height: 88px;
+    border-radius: 6px;
+  }
+
   .reserve-modal .form-section {
     padding: 10px;
   }
@@ -750,15 +998,14 @@ body.theme-dark .saved-entry-cancel-btn:hover {
   }
 
   .size-btn {
-    min-height: 60px;
-    padding: 8px 6px;
+    min-height: 44px;
+    padding: 4px 4px;
   }
 
   .reserve-form-actions {
-    position: sticky;
-    bottom: 0;
-    padding-top: 8px;
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0), rgba(248, 250, 252, 0.95) 24%, #f8fafc);
+    margin-top: 8px;
+    padding-top: 0;
+    background: transparent;
   }
 
   .reserve-submit-btn {
@@ -781,6 +1028,13 @@ body.theme-dark .saved-entry-cancel-btn:hover {
   .reserve-image-fallback-icon {
     font-size: 40px;
   }
+
+  .reserve-thumb-btn {
+    width: 70px;
+    min-width: 70px;
+    height: 70px;
+    border-radius: 5px;
+  }
 }
 
 @media (min-width: 721px) and (max-width: 980px) {
@@ -789,12 +1043,31 @@ body.theme-dark .saved-entry-cancel-btn:hover {
   }
 
   .reserve-modal-content {
-    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    grid-template-columns: 1fr;
     gap: 16px;
+  }
+
+  .reserve-modal-image,
+  .reserve-thumbnail-row {
+    width: min(100%, 530px);
+    margin-inline: auto;
   }
 
   .size-grid {
     grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+  }
+}
+
+@media (min-width: 981px) {
+  .reserve-modal-content {
+    grid-template-columns: 1fr;
+    gap: clamp(16px, 2.4vw, 28px);
+  }
+
+  .reserve-modal-image,
+  .reserve-thumbnail-row {
+    width: min(100%, 510px);
+    margin-inline: auto;
   }
 }
 

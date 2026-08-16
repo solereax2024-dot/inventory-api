@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { US_SIZES, CATALOG_PAGE_SIZE, COLORWAY_OPTIONS } from "../../constants";
+import { useNavigate } from "react-router-dom";
+import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
-import { sanitizeColorways } from "../../utils/colorway";
-import { getSortedColorwaysFromStocks } from "../../utils/stock";
+import { getColorwayDetails, sanitizeColorways } from "../../utils/colorway";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
-import ReserveModal from "./ReserveModal";
 
 export default function CustomerPage({ searchText, setSearchText }) {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState("");
   const [brandFilter, setBrandFilter] = useState("ALL");
@@ -23,22 +23,39 @@ export default function CustomerPage({ searchText, setSearchText }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [reserveModal, setReserveModal] = useState({ isOpen: false, productId: "" });
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null, confirmCode: "", userInput: "" });
-  const [reserve, setReserve] = useState({
-    customerName: "",
-    customerContact: "",
-    notes: "",
-    colorway: "",
-    size: US_SIZES[0],
-    quantity: 1
-  });
+
+  // Transform products into colorway variants
+  const expandProductsByColorway = (productsData) => {
+    const expanded = [];
+    productsData.forEach((product) => {
+      const colorways = [...new Set((product.stocks || []).map((stock) => stock.colorway))];
+      if (colorways.length === 0) {
+        expanded.push(product);
+        return;
+      }
+      colorways.forEach((colorway) => {
+        const colorwayDetails = getColorwayDetails(product, colorway);
+        expanded.push({
+          ...product,
+          description: colorwayDetails.description || product.description,
+          department: colorwayDetails.department || product.department,
+          category: colorwayDetails.category || product.category,
+          productType: colorwayDetails.productType || product.productType,
+          _colorwayVariant: colorway,
+          _variantId: `${product.id}-${colorway}`,
+        });
+      });
+    });
+    return expanded;
+  };
 
   const loadProducts = async () => {
     setIsLoadingProducts(true);
     try {
       const data = await apiRequest("/api/public/products");
-      setProducts(data);
+      const expandedProducts = expandProductsByColorway(data);
+      setProducts(expandedProducts);
     } finally {
       setIsLoadingProducts(false);
     }
@@ -58,10 +75,16 @@ export default function CustomerPage({ searchText, setSearchText }) {
     () => ["ALL", ...new Set(products.map((product) => (product.brand || "").trim()).filter(Boolean))],
     [products]
   );
-  const colorwayOptions = useMemo(
-    () => ["ALL", ...sanitizeColorways(products.flatMap((product) => (product.stocks || []).map((stock) => stock.colorway)))],
-    [products]
-  );
+   const colorwayOptions = useMemo(() => {
+     // Get all unique colorways from the original products, not variants
+     const uniqueColorways = new Set();
+     products.forEach((variant) => {
+       if (variant._colorwayVariant) {
+         uniqueColorways.add(variant._colorwayVariant);
+       }
+     });
+     return ["ALL", ...sanitizeColorways(Array.from(uniqueColorways))];
+   }, [products]);
   const departmentOptions = useMemo(
     () => ["ALL", ...new Set(products.map((product) => (product.department || "").trim()).filter(Boolean))],
     [products]
@@ -106,55 +129,81 @@ export default function CustomerPage({ searchText, setSearchText }) {
       next = next.filter((product) => (product.stocks || []).some((stock) => stock.size === sizeFilter));
     }
 
-    if (colorwayFilter !== "ALL") {
-      next = next.filter((product) => (product.stocks || []).some((stock) => stock.colorway === colorwayFilter));
-    }
+     if (colorwayFilter !== "ALL") {
+       next = next.filter((product) => {
+         const variantColorway = product._colorwayVariant;
+         if (variantColorway) {
+           return variantColorway === colorwayFilter;
+         }
+         return (product.stocks || []).some((stock) => stock.colorway === colorwayFilter);
+       });
+     }
 
-    if (stockFilter !== "ALL") {
-      next = next.filter((product) => {
-        const stocks = product.stocks || [];
-        const scopedStocks = colorwayFilter === "ALL" ? stocks : stocks.filter((stock) => stock.colorway === colorwayFilter);
-        const sizeStock = sizeFilter === "ALL"
-          ? null
-          : scopedStocks.find((stock) => String(stock.size) === String(sizeFilter));
-        const sizeQty = sizeStock ? Number(sizeStock.quantity) : 0;
+     if (stockFilter !== "ALL") {
+       next = next.filter((product) => {
+         const stocks = product.stocks || [];
+         let scopedStocks = stocks;
+         
+         // If this is a variant, filter to only that colorway
+         if (product._colorwayVariant) {
+           scopedStocks = stocks.filter((stock) => stock.colorway === product._colorwayVariant);
+         } else if (colorwayFilter !== "ALL") {
+           scopedStocks = stocks.filter((stock) => stock.colorway === colorwayFilter);
+         }
+         
+         const sizeStock = sizeFilter === "ALL"
+           ? null
+           : scopedStocks.find((stock) => String(stock.size) === String(sizeFilter));
+         const sizeQty = sizeStock ? Number(sizeStock.quantity) : 0;
 
-        if (sizeFilter !== "ALL") {
-          if (stockFilter === "OUT_OF_STOCK") {
-            return sizeQty <= 0;
-          }
-          if (stockFilter === "LOW_STOCK") {
-            return sizeQty > 0 && sizeQty <= 3;
-          }
-          return sizeQty > 0;
-        }
+         if (sizeFilter !== "ALL") {
+           if (stockFilter === "OUT_OF_STOCK") {
+             return sizeQty <= 0;
+           }
+           if (stockFilter === "LOW_STOCK") {
+             return sizeQty > 0 && sizeQty <= 3;
+           }
+           return sizeQty > 0;
+         }
 
-        if (stockFilter === "OUT_OF_STOCK") {
-          return scopedStocks.every((stock) => Number(stock.quantity) <= 0);
-        }
-        if (stockFilter === "LOW_STOCK") {
-          return scopedStocks.some((stock) => Number(stock.quantity) > 0 && Number(stock.quantity) <= 3);
-        }
-        return scopedStocks.some((stock) => Number(stock.quantity) > 0);
-      });
-    }
+         if (stockFilter === "OUT_OF_STOCK") {
+           return scopedStocks.every((stock) => Number(stock.quantity) <= 0);
+         }
+         if (stockFilter === "LOW_STOCK") {
+           return scopedStocks.some((stock) => Number(stock.quantity) > 0 && Number(stock.quantity) <= 3);
+         }
+         return scopedStocks.some((stock) => Number(stock.quantity) > 0);
+       });
+     }
 
-    if (stateFilter !== "ALL") {
-      next = next.filter((product) => {
-        if (sizeFilter !== "ALL") {
-          const sizeStatesByColorway = product.stockStateBySize || {};
-          const scopedColorways = colorwayFilter === "ALL"
-            ? Object.keys(sizeStatesByColorway)
-            : [colorwayFilter];
-          return scopedColorways.some((colorway) => Number(sizeStatesByColorway?.[colorway]?.[sizeFilter]?.[stateFilter] || 0) > 0);
-        }
-        const stateByColorway = product.stockStates || {};
-        const scopedColorways = colorwayFilter === "ALL"
-          ? Object.keys(stateByColorway)
-          : [colorwayFilter];
-        return scopedColorways.some((colorway) => Number(stateByColorway?.[colorway]?.[stateFilter] || 0) > 0);
-      });
-    }
+     if (stateFilter !== "ALL") {
+       next = next.filter((product) => {
+         if (sizeFilter !== "ALL") {
+           const sizeStatesByColorway = product.stockStateBySize || {};
+           let scopedColorways = colorwayFilter === "ALL"
+             ? Object.keys(sizeStatesByColorway)
+             : [colorwayFilter];
+           
+           // If this is a variant, only use the variant colorway
+           if (product._colorwayVariant) {
+             scopedColorways = [product._colorwayVariant];
+           }
+           
+           return scopedColorways.some((colorway) => Number(sizeStatesByColorway?.[colorway]?.[sizeFilter]?.[stateFilter] || 0) > 0);
+         }
+         const stateByColorway = product.stockStates || {};
+         let scopedColorways = colorwayFilter === "ALL"
+           ? Object.keys(stateByColorway)
+           : [colorwayFilter];
+         
+         // If this is a variant, only use the variant colorway
+         if (product._colorwayVariant) {
+           scopedColorways = [product._colorwayVariant];
+         }
+         
+         return scopedColorways.some((colorway) => Number(stateByColorway?.[colorway]?.[stateFilter] || 0) > 0);
+       });
+     }
 
     next.sort((a, b) => {
       const brandA = (a.brand || "").toLowerCase();
@@ -233,67 +282,11 @@ export default function CustomerPage({ searchText, setSearchText }) {
     return visibleProducts.slice(start, start + CATALOG_PAGE_SIZE);
   }, [visibleProducts, activePage]);
 
-  const reserveNow = async () => {
-    if (!reserveModal.productId || !reserve.colorway || !reserve.size) {
-      throw new Error("Please select a product, colorway, and size.");
-    }
-    if (!reserve.customerName || reserve.customerName.trim() === "") {
-      throw new Error("Please enter your name.");
-    }
-    if (!reserve.customerContact || reserve.customerContact.trim() === "") {
-      throw new Error("Please enter your contact (number, FB, or IG).");
-    }
-    await apiRequest("/api/public/orders/reserve", "POST", {
-      customerName: reserve.customerName.trim(),
-      customerContact: reserve.customerContact.trim(),
-      notes: reserve.notes.trim(),
-      items: [
-        {
-          productId: Number(reserveModal.productId),
-          colorway: reserve.colorway,
-          size: reserve.size,
-          quantity: Number(reserve.quantity)
-        }
-      ]
-    });
-    setMessage("Reservation created successfully.");
-    setReserveModal({ isOpen: false, productId: "" });
-    setReserve({
-      customerName: "",
-      customerContact: "",
-      notes: "",
-      colorway: "",
-      size: US_SIZES[0],
-      quantity: 1
-    });
-    await loadProducts();
-  };
-
-  const openReserveModal = (productId, initialColorway, preferredSize = US_SIZES[0]) => {
-    const product = products.find((p) => String(p.id) === String(productId));
-    if (!product) return;
-
-    const stockColorways = getSortedColorwaysFromStocks(product.stocks);
-
-    let selectedColorway = initialColorway;
-    if (initialColorway && stockColorways.includes(initialColorway)) {
-      selectedColorway = initialColorway;
-    } else if (stockColorways.length > 0) {
-      selectedColorway = stockColorways[0];
-    } else {
-      selectedColorway = "DEFAULT";
-    }
-
-    setReserve({
-      customerName: "",
-      customerContact: "",
-      notes: "",
-      colorway: selectedColorway,
-      size: preferredSize,
-      quantity: 1
-    });
-
-    setReserveModal({ isOpen: true, productId: String(productId) });
+  const openReservePage = (productId, initialColorway, preferredSize = US_SIZES[0]) => {
+    const params = new URLSearchParams();
+    if (initialColorway) params.set("colorway", initialColorway);
+    if (preferredSize) params.set("size", preferredSize);
+    navigate(`/reserve/${productId}?${params.toString()}`);
   };
 
   const resetCatalogFilters = () => {
@@ -427,24 +420,25 @@ export default function CustomerPage({ searchText, setSearchText }) {
         </div>
       ) : null}
 
-      <section className="grid">
-        {isLoadingProducts
-          ? Array.from({ length: 8 }, (_, index) => (
-            <article key={`skeleton-${index}`} className="card product-card skeleton-card">
-              <div className="skeleton-media" />
-              <div className="skeleton-line" />
-              <div className="skeleton-line short" />
-            </article>
-          ))
-          : paginatedProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onReserveClick={openReserveModal}
-            />
-          ))}
-        {visibleProducts.length === 0 ? <p className="field-hint">No products match your filters.</p> : null}
-      </section>
+       <section className="grid">
+         {isLoadingProducts
+           ? Array.from({ length: 8 }, (_, index) => (
+             <article key={`skeleton-${index}`} className="card product-card skeleton-card">
+               <div className="skeleton-media" />
+               <div className="skeleton-line" />
+               <div className="skeleton-line short" />
+             </article>
+           ))
+           : paginatedProducts.map((product) => (
+             <ProductCard
+               key={product._variantId || product.id}
+               product={product}
+               onReserveClick={openReservePage}
+               initialColorway={product._colorwayVariant}
+             />
+           ))}
+         {visibleProducts.length === 0 ? <p className="field-hint">No products match your filters.</p> : null}
+       </section>
 
       <section className="pagination-bar card">
         <div className="pagination-numbers">
@@ -483,15 +477,6 @@ export default function CustomerPage({ searchText, setSearchText }) {
         </div>
       </section>
 
-      <ReserveModal
-        reserveModal={reserveModal}
-        setReserveModal={setReserveModal}
-        products={products}
-        reserve={reserve}
-        setReserve={setReserve}
-        reserveNow={reserveNow}
-        setMessage={setMessage}
-      />
 
       {deleteModal.isOpen && (
         <div className="modal-overlay" onClick={() => setDeleteModal({ isOpen: false, productId: null, confirmCode: "", userInput: "" })}>

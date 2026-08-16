@@ -272,6 +272,44 @@
   background: color-mix(in srgb, var(--primary-soft-2) 48%, #f8fafc);
 }
 
+.products-table tbody tr.clickable-product-row {
+  cursor: pointer;
+}
+
+.edit-modal-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.edit-modal-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.edit-modal-section {
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  background: #ffffff;
+}
+
+.edit-modal-section h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #334155;
+}
+
+.edit-modal-section .field-hint {
+  margin: 0;
+}
+
 .products-table thead input,
 .products-table thead select {
   margin-top: 0;

@@ -5,6 +5,7 @@ import SiteHeader from "./components/SiteHeader";
 import SiteFooter from "./components/SiteFooter";
 import HeroPage from "./pages/customer/HeroPage";
 import CustomerPage from "./pages/customer/CustomerPage";
+import ReservePage from "./pages/customer/ReservePage";
 import AdminPage from "./pages/admin/AdminPage";
 import ThemeColorPicker from "./components/ThemeColorPicker";
 import { DEFAULT_THEME, THEMES } from "./constants/themes";
@@ -43,7 +44,6 @@ export default function App() {
   const [logoModalMessage, setLogoModalMessage] = useState("");
   const [searchText, setSearchText] = useState("");
   const [adminToken, setAdminToken] = useState(() => localStorage.getItem("adminToken") || "");
-  const [adminRole, setAdminRole] = useState(() => localStorage.getItem("adminRole") || "");
   const [themeColor, setThemeColor] = useState(() => localStorage.getItem("themeColor") || DEFAULT_THEME);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
 
@@ -70,7 +70,6 @@ export default function App() {
   useEffect(() => {
     const syncAdminAuth = () => {
       setAdminToken(localStorage.getItem("adminToken") || "");
-      setAdminRole(localStorage.getItem("adminRole") || "");
     };
     window.addEventListener("storage", syncAdminAuth);
     window.addEventListener("admin-auth-changed", syncAdminAuth);
@@ -147,7 +146,6 @@ export default function App() {
     localStorage.removeItem("adminRole");
     window.dispatchEvent(new Event("admin-auth-changed"));
     setAdminToken("");
-    setAdminRole("");
   };
 
   const uploadLogoDay = async () => {
@@ -189,14 +187,15 @@ export default function App() {
       />
       <Routes>
         <Route path="/" element={<HeroPage />} />
-        <Route path="/shop" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} />} />
+        <Route path="/collection" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} />} />
+        <Route path="/shop" element={<Navigate to="/collection" replace />} />
+        <Route path="/reserve/:productId" element={<ReservePage />} />
         <Route
           path="/admin/*"
           element={
             <AdminPage
               onAdminAuthChange={() => {
                 setAdminToken(localStorage.getItem("adminToken") || "");
-                setAdminRole(localStorage.getItem("adminRole") || "");
               }}
             />
           }

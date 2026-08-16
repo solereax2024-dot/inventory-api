@@ -18,7 +18,7 @@ export default function SiteHeader({
   const location = useLocation();
   const navigate = useNavigate();
   const isAdminPath = location.pathname.startsWith("/admin");
-  const isCatalogPath = location.pathname === "/shop";
+  const isCatalogPath = location.pathname === "/collection";
   const currentTheme = THEMES[themeColor];
   return (
     <header className="site-header">

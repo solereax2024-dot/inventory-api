@@ -2,6 +2,8 @@ package com.solereax.inventory.inventory;
 
 import com.solereax.inventory.inventory.dto.AdminAdjustStockRequest;
 import com.solereax.inventory.inventory.dto.AdminCreateProductRequest;
+import com.solereax.inventory.inventory.dto.AdminUpdateColorwayDetailsRequest;
+import com.solereax.inventory.inventory.dto.ColorwayDetailsResponse;
 import com.solereax.inventory.inventory.dto.PublicProductResponse;
 import com.solereax.inventory.inventory.dto.SizeStockResponse;
 import com.solereax.inventory.shared.NotFoundException;
@@ -57,6 +59,7 @@ public class InventoryService {
             mergeProductFields(product, request);
         }
         applyColorwayImages(product, request, true);
+        upsertColorwayDetails(product, product.getMainColor(), request.description(), request.department(), request.category(), request.productType());
         Product saved = productRepository.save(product);
         initializeDefaultStocks(saved);
         return toAdminResponse(saved);
@@ -77,6 +80,22 @@ public class InventoryService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
         upsertColorwayImage(product, colorway, imageUrl);
+        Product saved = productRepository.save(product);
+        return toAdminResponse(saved);
+    }
+
+    @Transactional
+    public PublicProductResponse updateProductColorwayDetails(Long productId, AdminUpdateColorwayDetailsRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
+        upsertColorwayDetails(
+                product,
+                request.colorway(),
+                request.description(),
+                request.department(),
+                request.category(),
+                request.productType()
+        );
         Product saved = productRepository.save(product);
         return toAdminResponse(saved);
     }
@@ -223,6 +242,32 @@ public class InventoryService {
         target.setUpdatedAt(Instant.now());
     }
 
+    private void upsertColorwayDetails(
+            Product product,
+            String colorwayInput,
+            String descriptionInput,
+            String departmentInput,
+            String categoryInput,
+            String productTypeInput
+    ) {
+        String normalizedColorway = normalizeColorway(colorwayInput);
+        ProductColorwayDetail target = product.getColorwayDetails().stream()
+                .filter(entry -> normalizedColorway.equals(normalizeColorway(entry.getColorway())))
+                .findFirst()
+                .orElse(null);
+        if (target == null) {
+            target = new ProductColorwayDetail();
+            target.setProduct(product);
+            product.getColorwayDetails().add(target);
+        }
+        target.setColorway(normalizedColorway);
+        target.setDescription(trimToNull(descriptionInput));
+        target.setDepartment(trimToNull(departmentInput));
+        target.setCategory(trimToNull(categoryInput));
+        target.setProductType(trimToNull(productTypeInput));
+        target.setUpdatedAt(Instant.now());
+    }
+
     private String normalizeColorway(String value) {
         String normalized = trimToNull(value);
         if (normalized == null || "DEFAULT".equalsIgnoreCase(normalized)) {
@@ -248,6 +293,7 @@ public class InventoryService {
                 product.getProductType(),
                 product.getImageUrl(),
                 mapColorwayImages(product),
+                mapColorwayDetails(product),
                 stocks,
                 aggregateStateByColorway(stateByColorwayAndSize),
                 stateByColorwayAndSize
@@ -271,6 +317,7 @@ public class InventoryService {
                 product.getProductType(),
                 product.getImageUrl(),
                 mapColorwayImages(product),
+                mapColorwayDetails(product),
                 stocks,
                 aggregateStateByColorway(stateByColorwayAndSize),
                 stateByColorwayAndSize
@@ -286,6 +333,38 @@ public class InventoryService {
             values.put(entry.getColorway(), entry.getImageUrl());
         });
         return values;
+    }
+
+    private Map<String, ColorwayDetailsResponse> mapColorwayDetails(Product product) {
+        Map<String, ColorwayDetailsResponse> values = new LinkedHashMap<>();
+        product.getStocks().forEach(stock -> values.putIfAbsent(stock.getColorway(), fallbackColorwayDetails(product)));
+        product.getColorwayImages().forEach(entry -> values.putIfAbsent(entry.getColorway(), fallbackColorwayDetails(product)));
+        values.putIfAbsent(normalizeColorway(product.getMainColor()), fallbackColorwayDetails(product));
+
+        product.getColorwayDetails().forEach(entry -> {
+            if (entry.getColorway() == null) {
+                return;
+            }
+            values.put(
+                    normalizeColorway(entry.getColorway()),
+                    new ColorwayDetailsResponse(
+                            firstNonBlank(entry.getDescription(), product.getDescription()),
+                            firstNonBlank(entry.getDepartment(), product.getDepartment()),
+                            firstNonBlank(entry.getCategory(), product.getCategory()),
+                            firstNonBlank(entry.getProductType(), product.getProductType())
+                    )
+            );
+        });
+        return values;
+    }
+
+    private ColorwayDetailsResponse fallbackColorwayDetails(Product product) {
+        return new ColorwayDetailsResponse(
+                product.getDescription(),
+                product.getDepartment(),
+                product.getCategory(),
+                product.getProductType()
+        );
     }
 
     private Map<String, Map<String, Integer>> aggregateStateByColorway(
@@ -362,6 +441,11 @@ public class InventoryService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        String normalizedPrimary = trimToNull(primary);
+        return normalizedPrimary != null ? normalizedPrimary : trimToNull(fallback);
     }
 
     private void initializeDefaultStocks(Product product) {

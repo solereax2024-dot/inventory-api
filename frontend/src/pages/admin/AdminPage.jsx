@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Boxes, Pencil, RotateCcw, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
+import { Boxes, RotateCcw, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { US_SIZES, COLORWAY_OPTIONS, STOCK_SOURCE_TYPES, STOCK_SOURCE_LABELS, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
 import { apiRequest, uploadImage } from "../../utils/api";
 import { formatEnumLabel, formatColorwayLabel, getProductTypeOptions } from "../../utils/format";
-import { sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
+import { getColorwayDetails, sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
 import { getSortedColorwaysFromStocks, buildSizeStateRows } from "../../utils/stock";
 import "../../styles/admin.css";
 import DeleteModal from "./DeleteModal";
@@ -92,7 +92,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [message, setMessage] = useState("");
   const [undoQueue, setUndoQueue] = useState([]);
   const [undoNow, setUndoNow] = useState(Date.now());
-  const [selectedProductColorways, setSelectedProductColorways] = useState({});
   const [productActionModal, setProductActionModal] = useState({ type: null, productId: "" });
   const [productImageFile, setProductImageFile] = useState(null);
   const [editProductImageFile, setEditProductImageFile] = useState(null);
@@ -110,13 +109,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   });
   const [productImageColorway, setProductImageColorway] = useState("DEFAULT");
   const [editImageColorway, setEditImageColorway] = useState("DEFAULT");
+  const [editDetailColorway, setEditDetailColorway] = useState("DEFAULT");
   const [tableFilters, setTableFilters] = useState({
     product: "",
-    brand: "ALL",
-    department: "ALL",
-    category: "ALL",
-    productType: "ALL",
-    colorway: "ALL"
+    brand: "ALL"
   });
   const [adminPage, setAdminPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null, confirmCode: "", userInput: "" });
@@ -131,6 +127,27 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const isLoggedIn = useMemo(() => token.length > 0, [token]);
   const isSuperAdmin = useMemo(() => adminRole === "SUPER_ADMIN", [adminRole]);
+  const getProductColorways = (product) => {
+    const values = sanitizeColorways([
+      ...((product?.stocks || []).map((stock) => stock.colorway)),
+      ...Object.keys(product?.colorwayImages || {}),
+      ...Object.keys(product?.colorwayDetails || {}),
+      product?.mainColor
+    ]).map(normalizeColorwayValue);
+    return values.length > 0 ? [...new Set(values)] : ["DEFAULT"];
+  };
+
+  const getAdminScopedColorway = (product, explicitColorway) => {
+    const available = getProductColorways(product);
+    const preferred = normalizeColorwayValue(
+      explicitColorway || product?.mainColor || available[0] || "DEFAULT"
+    );
+    return available.includes(preferred) ? preferred : available[0] || "DEFAULT";
+  };
+
+  const getAdminScopedDetails = (product, explicitColorway) =>
+    getColorwayDetails(product, getAdminScopedColorway(product, explicitColorway));
+
    const adminSections = useMemo(
       () => [
         { key: "products", label: "Products" },
@@ -144,22 +161,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       products.find((product) => String(product.id) === String(stockForm.productId))?.stocks?.map((stock) => stock.colorway) || [];
     return sanitizeColorways([...COLORWAY_OPTIONS, ...dynamicColorways]);
   }, [products, stockForm.productId]);
-  const tableDepartmentOptions = useMemo(
-    () => ["ALL", ...new Set(products.map((product) => product.department).filter(Boolean))],
-    [products]
-  );
-  const tableCategoryOptions = useMemo(
-    () => ["ALL", ...new Set(products.map((product) => product.category).filter(Boolean))],
-    [products]
-  );
-  const tableTypeOptions = useMemo(
-    () => ["ALL", ...new Set(products.map((product) => product.productType).filter(Boolean))],
-    [products]
-  );
-  const tableColorwayOptions = useMemo(
-    () => ["ALL", ...sanitizeColorways(products.flatMap((product) => (product.stocks || []).map((stock) => stock.colorway)))],
-    [products]
-  );
   const createImageColorwayOptions = useMemo(
     () =>
       [...new Set(["DEFAULT", ...sanitizeColorways([...COLORWAY_OPTIONS, productForm.mainColor, ...Object.keys(productForm.colorwayImages || {})]).map(normalizeColorwayValue)])],
@@ -171,6 +172,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const fromMapped = Object.keys(editProductForm.colorwayImages || {});
     return [...new Set(["DEFAULT", ...sanitizeColorways([...COLORWAY_OPTIONS, editProductForm.mainColor, ...fromStocks, ...fromMapped]).map(normalizeColorwayValue)])];
   }, [products, editProductId, editProductForm.mainColor, editProductForm.colorwayImages]);
+  const editDetailColorwayOptions = useMemo(() => {
+    const product = products.find((item) => String(item.id) === String(editProductId));
+    return getProductColorways(product);
+  }, [products, editProductId]);
 
   const brandOptions = useMemo(() => {
     const fromProducts = products.map((p) => (p.brand || "").trim()).filter(Boolean);
@@ -198,17 +203,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setSavedProductNames(productNameData);
       setEditProductId((prev) => prev || (productData[0]?.id?.toString() ?? ""));
       setStockForm((prev) => ({ ...prev, productId: prev.productId || (productData[0]?.id?.toString() ?? "") }));
-      setSelectedProductColorways((prev) => {
-        const next = { ...prev };
-        productData.forEach((product) => {
-          const key = String(product.id);
-          const options = getSortedColorwaysFromStocks(product.stocks);
-          if (!next[key] || !options.includes(next[key])) {
-            next[key] = options[0] || "DEFAULT";
-          }
-        });
-        return next;
-      });
       if (role === "SUPER_ADMIN") {
         const users = await apiRequest("/api/admin/users", "GET", undefined, authToken);
         setAdminUsers(users);
@@ -220,17 +214,20 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
-  const mapProductToForm = (product) => ({
+  const mapProductToForm = (product, colorway) => {
+    const details = getAdminScopedDetails(product, colorway);
+    return ({
     name: product?.name || "",
     brand: product?.brand || "",
     mainColor: product?.mainColor || "",
-    department: product?.department || "UNISEX",
-    category: product?.category || "FOOTWEAR",
-    productType: product?.productType || "LIFESTYLE_SNEAKERS",
+    department: details.department || "UNISEX",
+    category: details.category || "FOOTWEAR",
+    productType: details.productType || "LIFESTYLE_SNEAKERS",
     imageUrl: product?.imageUrl || "",
     colorwayImages: product?.colorwayImages || {},
-    description: product?.description || ""
+    description: details.description || ""
   });
+  };
 
   const pushUndoEntry = (type, value, label) => {
     const entry = {
@@ -474,7 +471,40 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     if (!editProductId) {
       throw new Error("Please choose a product to update.");
     }
-    await apiRequest(`/api/admin/products/${editProductId}`, "PUT", { ...editProductForm, active: true }, token);
+    const selectedProduct = products.find((product) => String(product.id) === String(editProductId));
+    if (!selectedProduct) {
+      throw new Error("Selected product could not be found.");
+    }
+    const targetColorway = getAdminScopedColorway(selectedProduct, editDetailColorway);
+    await apiRequest(
+      `/api/admin/products/${editProductId}`,
+      "PUT",
+      {
+        name: editProductForm.name,
+        brand: editProductForm.brand,
+        description: selectedProduct.description || "",
+        mainColor: editProductForm.mainColor,
+        department: selectedProduct.department || "UNISEX",
+        category: selectedProduct.category || "FOOTWEAR",
+        productType: selectedProduct.productType || "LIFESTYLE_SNEAKERS",
+        imageUrl: editProductForm.imageUrl,
+        colorwayImages: editProductForm.colorwayImages || {},
+        active: true
+      },
+      token
+    );
+    await apiRequest(
+      `/api/admin/products/${editProductId}/colorway-details`,
+      "PUT",
+      {
+        colorway: targetColorway,
+        description: editProductForm.description,
+        department: editProductForm.department,
+        category: editProductForm.category,
+        productType: editProductForm.productType
+      },
+      token
+    );
     setMessage("Product updated.");
     await loadAdminData(token, adminRole);
   };
@@ -489,14 +519,21 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   useEffect(() => {
     const selected = products.find((product) => String(product.id) === String(editProductId));
     if (selected) {
-      setEditProductForm(mapProductToForm(selected));
+      const scopedColorway = getAdminScopedColorway(selected, editDetailColorway);
+      if (scopedColorway !== editDetailColorway) {
+        setEditDetailColorway(scopedColorway);
+        return;
+      }
+      setEditProductForm(mapProductToForm(selected, scopedColorway));
       return;
     }
     if (!editProductId && products.length > 0) {
       setEditProductId(String(products[0].id));
-      setEditProductForm(mapProductToForm(products[0]));
+      const scopedColorway = getAdminScopedColorway(products[0]);
+      setEditDetailColorway(scopedColorway);
+      setEditProductForm(mapProductToForm(products[0], scopedColorway));
     }
-  }, [products, editProductId]);
+  }, [products, editProductId, editDetailColorway]);
 
   useEffect(() => {
     const options = getProductTypeOptions(editProductForm.category);
@@ -522,6 +559,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setEditImageColorway(editImageColorwayOptions[0] || "DEFAULT");
     }
   }, [editImageColorwayOptions, editImageColorway]);
+
+  useEffect(() => {
+    if (!editDetailColorwayOptions.includes(editDetailColorway)) {
+      setEditDetailColorway(editDetailColorwayOptions[0] || "DEFAULT");
+    }
+  }, [editDetailColorwayOptions, editDetailColorway]);
+
+  // Keep image preview target in sync with the selected details colorway.
+  useEffect(() => {
+    if (editImageColorway !== editDetailColorway) {
+      setEditImageColorway(editDetailColorway);
+    }
+  }, [editDetailColorway, editImageColorway]);
 
   const adjustStock = async () => {
     let quantityChange = Number(stockForm.quantityChange);
@@ -614,10 +664,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     if (!selected) {
       return;
     }
+    const scopedColorway = getAdminScopedColorway(selected, selectedColorway);
     setEditProductImageFile(null);
     setEditProductId(String(productId));
-    setEditProductForm(mapProductToForm(selected));
-    setEditImageColorway(normalizeColorwayValue(selectedColorway || selectedProductColorways[String(productId)] || selected.mainColor));
+    setEditDetailColorway(scopedColorway);
+    setEditProductForm(mapProductToForm(selected, scopedColorway));
+    setEditImageColorway(scopedColorway);
     setProductActionModal({ type: "edit", productId: String(productId) });
   };
 
@@ -642,23 +694,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       if (tableFilters.brand !== "ALL" && (product.brand || "") !== tableFilters.brand) {
         return false;
       }
-      if (tableFilters.department !== "ALL" && product.department !== tableFilters.department) {
-        return false;
-      }
-      if (tableFilters.category !== "ALL" && product.category !== tableFilters.category) {
-        return false;
-      }
-      if (tableFilters.productType !== "ALL" && product.productType !== tableFilters.productType) {
-        return false;
-      }
-      const selectedColorway = selectedProductColorways[String(product.id)] || getSortedColorwaysFromStocks(product.stocks)[0] || "DEFAULT";
-      const colorways = (product.stocks || []).map((stock) => stock.colorway);
-      if (tableFilters.colorway !== "ALL" && !colorways.includes(tableFilters.colorway)) {
-        return false;
-      }
       return true;
     });
-  }, [products, tableFilters, selectedProductColorways]);
+  }, [products, tableFilters]);
 
   const stockModalProduct = useMemo(
     () => products.find((item) => String(item.id) === String(productActionModal.productId)),
@@ -784,10 +822,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             <tr>
               <th>Product</th>
               <th>Brand</th>
-              <th>Gender</th>
-              <th>Category</th>
-              <th>Type</th>
-              <th>Color</th>
               <th>Actions</th>
             </tr>
             <tr>
@@ -811,54 +845,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   ))}
                 </select>
               </th>
-              <th>
-                <select
-                  value={tableFilters.department}
-                  onChange={(e) => setTableFilters((prev) => ({ ...prev, department: e.target.value }))}
-                >
-                  {tableDepartmentOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === "ALL" ? "All" : formatEnumLabel(option)}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th>
-                <select
-                  value={tableFilters.category}
-                  onChange={(e) => setTableFilters((prev) => ({ ...prev, category: e.target.value }))}
-                >
-                  {tableCategoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === "ALL" ? "All" : formatEnumLabel(option)}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th>
-                <select
-                  value={tableFilters.productType}
-                  onChange={(e) => setTableFilters((prev) => ({ ...prev, productType: e.target.value }))}
-                >
-                  {tableTypeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === "ALL" ? "All" : formatEnumLabel(option)}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th>
-                <select
-                  value={tableFilters.colorway}
-                  onChange={(e) => setTableFilters((prev) => ({ ...prev, colorway: e.target.value }))}
-                >
-                  {tableColorwayOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === "ALL" ? "All" : formatColorwayLabel(option)}
-                    </option>
-                  ))}
-                </select>
-              </th>
               <th />
             </tr>
           </thead>
@@ -870,54 +856,31 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               if (isAdminLoading) {
                 return (
                   <tr key={product.id}>
-                    <td colSpan="7"><div className="skeleton-line" /></td>
+                    <td colSpan="3"><div className="skeleton-line" /></td>
                   </tr>
                 );
               }
               const selectedColorway =
-                selectedProductColorways[String(product.id)] || getSortedColorwaysFromStocks(product.stocks)[0] || "DEFAULT";
+                getAdminScopedColorway(product);
               return (
-                <tr key={product.id}>
+                <tr
+                  key={product.id}
+                  className="clickable-product-row"
+                  onClick={() => openEditModal(product.id, selectedColorway)}
+                >
                   <td>{product.name}</td>
                   <td>{product.brand}</td>
-                  <td>{formatEnumLabel(product.department) || "-"}</td>
-                  <td>{formatEnumLabel(product.category) || "-"}</td>
-                  <td>{formatEnumLabel(product.productType) || "-"}</td>
-                  <td>
-                    <select
-                      value={selectedColorway}
-                      onChange={(e) =>
-                        setSelectedProductColorways((prev) => ({
-                          ...prev,
-                          [String(product.id)]: e.target.value
-                        }))
-                      }
-                    >
-                      {getSortedColorwaysFromStocks(product.stocks).map((colorway) => (
-                        <option key={`${product.id}-${colorway}`} value={colorway}>
-                          {colorway}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
                   <td>
                     <div className="actions-inline admin-actions-inline">
                       <button
                         type="button"
                         className="admin-action-btn quick-tooltip"
-                        data-tooltip="Edit"
-                        aria-label="Edit product"
-                        onClick={() => openEditModal(product.id, selectedColorway)}
-                      >
-                        <Pencil size={15} />
-                        <span className="admin-action-label">Edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="admin-action-btn quick-tooltip"
                         data-tooltip="Stock"
                         aria-label="Open stock and breakdown"
-                        onClick={() => openStockModal(product.id, selectedColorway)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openStockModal(product.id, selectedColorway);
+                        }}
                       >
                         <Boxes size={15} />
                         <span className="admin-action-label">Stock &amp; Breakdown</span>
@@ -928,7 +891,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                           className="btn-delete admin-action-btn quick-tooltip"
                           data-tooltip="Delete"
                           aria-label="Delete product"
-                          onClick={() => deleteProduct(product.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteProduct(product.id);
+                          }}
                         >
                           <Trash2 size={15} />
                           <span className="admin-action-label">Delete</span>
@@ -1212,102 +1178,128 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             ) : null}
 
             {productActionModal.type === "edit" ? (
-              <>
-                <p className="field-hint">
-                  Editing: <strong>{editProductForm.brand || "-"}</strong> <strong>{editProductForm.name || "-"}</strong>
-                  {" "}- Colorway image target: <strong>{formatColorwayLabel(editImageColorway)}</strong>
-                </p>
-                <p className="field-hint">
-                  Note: default product color and colorway image target are different fields.
-                  Image upload updates only the selected colorway.
-                </p>
-                <input
-                  placeholder="Name"
-                  value={editProductForm.name}
-                  onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })}
-                />
-                <div className="row">
-                  <select
-                    value={editProductForm.brand}
-                    onChange={(e) => {
-                      if (e.target.value === "@@ADD_NEW@@") {
-                        setNewBrandModal({ isOpen: true, brandName: "" });
-                      } else {
-                        setEditProductForm({ ...editProductForm, brand: e.target.value });
-                      }
-                    }}
-                  >
-                    <option value="">Select Brand...</option>
-                    {brandOptions.map((brand) => (
-                      <option key={brand} value={brand}>
-                        {brand}
-                      </option>
-                    ))}
-                    <option value="@@ADD_NEW@@" style={{ fontWeight: "bold", background: "#e3f2fd" }}>
-                      + Add New Brand
-                    </option>
-                  </select>
+              <div className="edit-modal-shell">
+                <div className="edit-modal-sticky-head">
+                  <p className="field-hint" style={{ margin: 0 }}>
+                    Editing: <strong>{editProductForm.brand || "-"}</strong> <strong>{editProductForm.name || "-"}</strong>
+                  </p>
+                  <p className="field-hint" style={{ margin: 0 }}>
+                    Details target: <strong>{formatColorwayLabel(editDetailColorway)}</strong>
+                    {" "}· Image target: <strong>{formatColorwayLabel(editImageColorway)}</strong>
+                  </p>
                 </div>
-                <div className="row">
-                  <select value={editProductForm.department} onChange={(e) => setEditProductForm({ ...editProductForm, department: e.target.value })}>
-                    {DEPARTMENT_OPTIONS.map((department) => (
-                      <option key={department} value={department}>
-                        {formatEnumLabel(department)}
-                      </option>
-                    ))}
-                  </select>
-                  <select value={editProductForm.category} onChange={(e) => setEditProductForm({ ...editProductForm, category: e.target.value })}>
-                    {CATEGORY_OPTIONS.map((category) => (
-                      <option key={category} value={category}>
-                        {formatEnumLabel(category)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="row">
-                  <select value={editProductForm.productType} onChange={(e) => setEditProductForm({ ...editProductForm, productType: e.target.value })}>
-                    {getProductTypeOptions(editProductForm.category).map((productType) => (
-                      <option key={productType} value={productType}>
-                        {formatEnumLabel(productType)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="row">
+
+                <section className="edit-modal-section">
+                  <h3>Basic Info (Shared)</h3>
+                  <p className="field-hint">These fields apply to the whole product.</p>
                   <input
-                    placeholder="Image URL"
-                    value={editProductForm.imageUrl}
-                    onChange={(e) => setEditProductForm({ ...editProductForm, imageUrl: e.target.value })}
+                    placeholder="Name"
+                    value={editProductForm.name}
+                    onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })}
                   />
-                </div>
-                <div className="row">
-                  <select value={editImageColorway} onChange={(e) => setEditImageColorway(e.target.value)}>
-                    {editImageColorwayOptions.map((colorway) => (
-                      <option key={`edit-image-${colorway}`} value={colorway}>
-                        {formatColorwayLabel(colorway)}
+                  <div className="row">
+                    <select
+                      value={editProductForm.brand}
+                      onChange={(e) => {
+                        if (e.target.value === "@@ADD_NEW@@") {
+                          setNewBrandModal({ isOpen: true, brandName: "" });
+                        } else {
+                          setEditProductForm({ ...editProductForm, brand: e.target.value });
+                        }
+                      }}
+                    >
+                      <option value="">Select Brand...</option>
+                      {brandOptions.map((brand) => (
+                        <option key={brand} value={brand}>
+                          {brand}
+                        </option>
+                      ))}
+                      <option value="@@ADD_NEW@@" style={{ fontWeight: "bold", background: "#e3f2fd" }}>
+                        + Add New Brand
                       </option>
-                    ))}
-                  </select>
-                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => setEditProductImageFile(e.target.files?.[0] || null)} />
-                  <small className="field-hint">📐 Recommended: <strong>800×800px</strong> square (JPG/PNG/WEBP/AVIF, max 5MB).</small>
-                  <button type="button" onClick={() => uploadEditProductImage().catch((err) => setMessage(err.message))}>
-                    Upload New Image
-                  </button>
-                </div>
-                {(editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl)
-                  ? (
-                    <img
-                      className="logo-preview"
-                      src={editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl}
-                      alt="Edit product preview"
+                    </select>
+                  </div>
+                </section>
+
+                <section className="edit-modal-section">
+                  <h3>Details by Colorway</h3>
+                  <p className="field-hint">Department, category, type, and description save only for the selected colorway.</p>
+                  <div className="row">
+                    <select value={editDetailColorway} onChange={(e) => setEditDetailColorway(e.target.value)}>
+                      {editDetailColorwayOptions.map((colorway) => (
+                        <option key={`edit-details-${colorway}`} value={colorway}>
+                          Details: {formatColorwayLabel(colorway)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="row">
+                    <select value={editProductForm.department} onChange={(e) => setEditProductForm({ ...editProductForm, department: e.target.value })}>
+                      {DEPARTMENT_OPTIONS.map((department) => (
+                        <option key={department} value={department}>
+                          {formatEnumLabel(department)}
+                        </option>
+                      ))}
+                    </select>
+                    <select value={editProductForm.category} onChange={(e) => setEditProductForm({ ...editProductForm, category: e.target.value })}>
+                      {CATEGORY_OPTIONS.map((category) => (
+                        <option key={category} value={category}>
+                          {formatEnumLabel(category)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="row">
+                    <select value={editProductForm.productType} onChange={(e) => setEditProductForm({ ...editProductForm, productType: e.target.value })}>
+                      {getProductTypeOptions(editProductForm.category).map((productType) => (
+                        <option key={productType} value={productType}>
+                          {formatEnumLabel(productType)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <input
+                    placeholder="Description"
+                    value={editProductForm.description}
+                    onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })}
+                  />
+                </section>
+
+                <section className="edit-modal-section">
+                  <h3>Image by Colorway</h3>
+                  <p className="field-hint">Image preview follows the selected colorway target in real time.</p>
+                  <div className="row">
+                    <input
+                      placeholder="Image URL"
+                      value={editProductForm.imageUrl}
+                      onChange={(e) => setEditProductForm({ ...editProductForm, imageUrl: e.target.value })}
                     />
-                    )
-                  : null}
-                <input
-                  placeholder="Description"
-                  value={editProductForm.description}
-                  onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })}
-                />
+                  </div>
+                  <div className="row">
+                    <select value={editImageColorway} disabled>
+                      {editImageColorwayOptions.map((colorway) => (
+                        <option key={`edit-image-${colorway}`} value={colorway}>
+                          {formatColorwayLabel(colorway)}
+                        </option>
+                      ))}
+                    </select>
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => setEditProductImageFile(e.target.files?.[0] || null)} />
+                    <small className="field-hint">📐 Recommended: <strong>800×800px</strong> square (JPG/PNG/WEBP/AVIF, max 5MB).</small>
+                    <button type="button" onClick={() => uploadEditProductImage().catch((err) => setMessage(err.message))}>
+                      Upload New Image
+                    </button>
+                  </div>
+                  {(editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl)
+                    ? (
+                      <img
+                        className="logo-preview"
+                        src={editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl}
+                        alt="Edit product preview"
+                      />
+                      )
+                    : null}
+                </section>
+
                 <button
                   onClick={() =>
                     updateProduct()
@@ -1317,7 +1309,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                 >
                   Update Product
                 </button>
-              </>
+              </div>
             ) : null}
 
             {productActionModal.type === "stock" ? (

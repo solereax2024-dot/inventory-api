@@ -2,6 +2,7 @@ package com.solereax.inventory.inventory;
 
 import com.solereax.inventory.inventory.dto.AdminAdjustStockRequest;
 import com.solereax.inventory.inventory.dto.AdminCreateProductRequest;
+import com.solereax.inventory.inventory.dto.AdminUpdateColorwayDetailsRequest;
 import com.solereax.inventory.inventory.dto.AdminUpdateColorwayImageRequest;
 import com.solereax.inventory.inventory.dto.PublicProductResponse;
 import jakarta.validation.Valid;
@@ -49,6 +50,14 @@ public class AdminInventoryController {
             @Valid @RequestBody AdminUpdateColorwayImageRequest request
     ) {
         return inventoryService.updateProductColorwayImage(productId, request.colorway(), request.imageUrl());
+    }
+
+    @PutMapping("/{productId}/colorway-details")
+    public PublicProductResponse updateColorwayDetails(
+            @PathVariable Long productId,
+            @Valid @RequestBody AdminUpdateColorwayDetailsRequest request
+    ) {
+        return inventoryService.updateProductColorwayDetails(productId, request);
     }
 
     @PostMapping("/{productId}/stocks")
