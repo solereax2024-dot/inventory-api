@@ -35,3 +35,10 @@ build/
 frontend/node_modules/
 uploads/
 .DS_Store
+GET_STARTED_WITH_THEMES.md
+IMPLEMENTATION_SUMMARY.md
+MULTICOLOR_THEME_IMPLEMENTATION.md
+THEME_QUICK_REFERENCE.md
+THEME_TESTING_GUIDE.md
+doc.txt
+server.log

@@ -1179,8 +1179,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       </option>
                     ))}
                   </select>
-                  <input type="file" accept="image/*" onChange={(e) => setProductImageFile(e.target.files?.[0] || null)} />
-                  <small className="field-hint">📐 Recommended: <strong>800×800px</strong> square image (JPG/PNG/WEBP, max 5MB) for best display.</small>
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => setProductImageFile(e.target.files?.[0] || null)} />
+                  <small className="field-hint">📐 Recommended: <strong>800×800px</strong> square image (JPG/PNG/WEBP/AVIF, max 5MB) for best display.</small>
                   <button type="button" onClick={() => uploadProductImage().catch((err) => setMessage(err.message))}>
                     Upload Product Image
                   </button>
@@ -1288,8 +1288,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       </option>
                     ))}
                   </select>
-                  <input type="file" accept="image/*" onChange={(e) => setEditProductImageFile(e.target.files?.[0] || null)} />
-                  <small className="field-hint">📐 Recommended: <strong>800×800px</strong> square (JPG/PNG/WEBP, max 5MB).</small>
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => setEditProductImageFile(e.target.files?.[0] || null)} />
+                  <small className="field-hint">📐 Recommended: <strong>800×800px</strong> square (JPG/PNG/WEBP/AVIF, max 5MB).</small>
                   <button type="button" onClick={() => uploadEditProductImage().catch((err) => setMessage(err.message))}>
                     Upload New Image
                   </button>

@@ -15,7 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class MediaStorageService {
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif", "avif");
 
     private final Path uploadBaseDirectory;
 
@@ -35,7 +35,7 @@ public class MediaStorageService {
 
         String extension = resolveExtension(file.getOriginalFilename());
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("Supported formats: jpg, jpeg, png, webp, gif.");
+            throw new IllegalArgumentException("Supported formats: jpg, jpeg, png, webp, gif, avif.");
         }
 
         String safeFolder = folderName.replaceAll("[^a-zA-Z0-9_-]", "");

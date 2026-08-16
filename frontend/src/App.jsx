@@ -229,7 +229,7 @@ export default function App() {
                   : <div className="logo-preview-empty">No logo</div>}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                   onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
                 />
                 <button
@@ -248,7 +248,7 @@ export default function App() {
                   : <div className="logo-preview-empty">No logo</div>}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                   onChange={(e) => setLogoDarkFile(e.target.files?.[0] || null)}
                 />
                 <button

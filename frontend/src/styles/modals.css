@@ -76,6 +76,7 @@
 
 .reserve-modal-image.zoomed {
   cursor: crosshair;
+  touch-action: none;
 }
 
 .reserve-modal-image img {

@@ -17,17 +17,34 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
   const colorways = product ? getSortedColorwaysFromStocks(product.stocks) : [];
   const zoomLevel = ZOOM_LEVELS[zoomIdx];
 
-  const handleMouseMove = (e) => {
+  const getOriginFromPoint = (clientX, clientY) => {
     const el = imgWrapRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+    const x = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((clientY - rect.top) / rect.height) * 100));
     setOrigin({ x, y });
+  };
+
+  const handleMouseMove = (e) => {
+    getOriginFromPoint(e.clientX, e.clientY);
   };
 
   const handleMouseLeave = () => {
     if (zoomLevel === 1) setOrigin({ x: 50, y: 50 });
+  };
+
+  const handleTouchMove = (e) => {
+    if (zoomLevel <= 1) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    getOriginFromPoint(touch.clientX, touch.clientY);
+  };
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    getOriginFromPoint(touch.clientX, touch.clientY);
   };
 
   const handleClick = () => {
@@ -60,6 +77,8 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
               className={`reserve-modal-image${zoomLevel > 1 ? " zoomed" : ""}`}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
               onClick={handleClick}
             >
               {(() => {
