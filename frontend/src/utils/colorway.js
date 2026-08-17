@@ -22,6 +22,17 @@ export function normalizeColorwayValue(value) {
   return normalized || "DEFAULT";
 }
 
+export function sortColorways(colorways) {
+  return [...(colorways || [])]
+    .filter(Boolean)
+    .sort((a, b) => {
+      const normalizedA = normalizeColorwayValue(a);
+      const normalizedB = normalizeColorwayValue(b);
+      const priorityDiff = colorwayPriority(normalizedA) - colorwayPriority(normalizedB);
+      return priorityDiff !== 0 ? priorityDiff : normalizedA.localeCompare(normalizedB);
+    });
+}
+
 export function getColorwayImageUrl(product, colorway) {
   if (!product) return null;
 
@@ -33,8 +44,10 @@ export function getColorwayImageUrl(product, colorway) {
     return colorwayImages[normalizedColorway];
   }
 
-  // Fall back to first available colorway image
-  const firstAvailableImage = Object.values(colorwayImages).find(url => url);
+  // Fall back to the first available image using a stable colorway order.
+  const firstAvailableImage = sortColorways(Object.keys(colorwayImages))
+    .map((key) => colorwayImages[key])
+    .find((url) => url);
   if (firstAvailableImage) {
     console.log("[IMAGE] No image for", normalizedColorway, "→ using fallback:", firstAvailableImage);
     return firstAvailableImage;

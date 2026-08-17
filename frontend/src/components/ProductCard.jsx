@@ -1,15 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { getColorwayDetails, getColorwayImageUrl, sanitizeColorways, colorwayPriority } from "../utils/colorway";
+import { getColorwayDetails, getColorwayImageUrl, sanitizeColorways, sortColorways } from "../utils/colorway";
 import { formatEnumLabel } from "../utils/format";
 import "../styles/product-card.css";
 
 export default function ProductCard({ product, onReserveClick, initialColorway }) {
   const colorways = useMemo(() => {
-    const list = sanitizeColorways((product.stocks || []).map((stock) => stock.colorway));
-    return list.sort((a, b) => {
-      const p = colorwayPriority(a) - colorwayPriority(b);
-      return p !== 0 ? p : a.localeCompare(b);
-    });
+    return sortColorways(sanitizeColorways((product.stocks || []).map((stock) => stock.colorway)));
   }, [product.stocks]);
 
   const [selectedColorway, setSelectedColorway] = useState(initialColorway || colorways[0] || "DEFAULT");

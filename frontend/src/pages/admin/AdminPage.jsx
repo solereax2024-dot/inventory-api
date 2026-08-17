@@ -7,6 +7,7 @@ import { formatEnumLabel, formatColorwayLabel, getProductTypeOptions } from "../
 import { getColorwayDetails, sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
 import { getSortedColorwaysFromStocks, buildSizeStateRows, getStockStorageGroup } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
+import { buildDefaultProductDescription } from "../../utils/productDescription";
 import "../../styles/admin.css";
 import DeleteModal from "./DeleteModal";
 import ConfirmActionModal from "./ConfirmActionModal";
@@ -118,6 +119,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [adminUsers, setAdminUsers] = useState([]);
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
   const [activeAdminSection, setActiveAdminSection] = useState("products");
+  const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
 
   const isLoggedIn = useMemo(() => token.length > 0, [token]);
   const isSuperAdmin = useMemo(() => adminRole === "SUPER_ADMIN", [adminRole]);
@@ -175,6 +177,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const fromProducts = products.map((p) => (p.brand || "").trim()).filter(Boolean);
     return [...new Set([...fromProducts, ...savedBrands])].sort();
   }, [products, savedBrands]);
+
+  const generatedCreateDescription = useMemo(
+    () => buildDefaultProductDescription(productForm),
+    [productForm.brand, productForm.name, productForm.mainColor, productForm.department, productForm.category, productForm.productType]
+  );
 
   const nameOptions = useMemo(() => {
     const fromProducts = products.map((p) => (p.name || "").trim()).filter(Boolean);
@@ -419,6 +426,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       colorwayImages: {},
       description: ""
     });
+    setIsCreateDescriptionEdited(false);
     setProductImageColorway("DEFAULT");
     setMessage("Product created.");
     await loadAdminData(token, adminRole);
@@ -547,6 +555,15 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setProductForm((prev) => ({ ...prev, productType: options[0] || "" }));
     }
   }, [productForm.category, productForm.productType]);
+
+  useEffect(() => {
+    if (isCreateDescriptionEdited && productForm.description.trim()) {
+      return;
+    }
+    if (productForm.description !== generatedCreateDescription) {
+      setProductForm((prev) => ({ ...prev, description: generatedCreateDescription }));
+    }
+  }, [generatedCreateDescription, isCreateDescriptionEdited, productForm.description]);
 
   useEffect(() => {
     const selected = products.find((product) => String(product.id) === String(editProductId));
@@ -681,6 +698,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       colorwayImages: {},
       description: ""
     });
+    setIsCreateDescriptionEdited(false);
     setProductActionModal({ type: "create", productId: "" });
   };
 
@@ -1268,8 +1286,21 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                 <input
                   placeholder="Description"
                   value={productForm.description}
-                  onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                  onChange={(e) => {
+                    setIsCreateDescriptionEdited(true);
+                    setProductForm({ ...productForm, description: e.target.value });
+                  }}
                 />
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => {
+                    setIsCreateDescriptionEdited(false);
+                    setProductForm((prev) => ({ ...prev, description: buildDefaultProductDescription(prev) }));
+                  }}
+                >
+                  Use Default Description
+                </button>
                 <button
                   onClick={() =>
                     createProduct()

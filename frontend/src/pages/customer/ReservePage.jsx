@@ -6,6 +6,7 @@ import { getColorwayImageUrl } from "../../utils/colorway";
 import { formatColorwayLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
+import { getBrandSizeGuide, getGuideRowsForSizeGroup } from "../../utils/sizeGuide";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
@@ -91,6 +92,11 @@ export default function ReservePage() {
   const selectedSizeLabel = useMemo(
     () => formatSelectedSizeLabel(reserve.size, activeSizeGroup, selectedDepartment),
     [reserve.size, activeSizeGroup, selectedDepartment]
+  );
+  const sizeGuide = useMemo(() => getBrandSizeGuide(product?.brand), [product?.brand]);
+  const sizeGuideRows = useMemo(
+    () => getGuideRowsForSizeGroup(sizeGuide, activeSizeGroup),
+    [sizeGuide, activeSizeGroup]
   );
   const zoomLevel = ZOOM_LEVELS[zoomIdx];
 
@@ -393,6 +399,35 @@ export default function ReservePage() {
               ) : null}
               <small className="field-hint">H=On-hand, T=In-transit, P=Pre-order</small>
             </div>
+
+            {sizeGuide ? (
+              <div className="form-section size-guide-section">
+                <label>{sizeGuide.brandLabel} Size Guide</label>
+                <small className="field-hint">Reference from {sizeGuide.sourceLabel}. Sizes can still vary by model.</small>
+                <div className="size-guide-table-wrap">
+                  <table className="size-guide-table">
+                    <thead>
+                      <tr>
+                        <th>{activeSizeGroup === "WOMEN" ? "US Women" : "US Men"}</th>
+                        <th>{activeSizeGroup === "WOMEN" ? "US Men" : "US Women"}</th>
+                        <th>EU</th>
+                        <th>CM</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sizeGuideRows.map((row) => (
+                        <tr key={`${sizeGuide.brandLabel}-${activeSizeGroup}-${row.usPrimary}`}>
+                          <td>{row.usPrimary}</td>
+                          <td>{row.usSecondary}</td>
+                          <td>{row.eu}</td>
+                          <td>{row.cm}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
 
             <div className="form-section">
               <label>Quantity</label>

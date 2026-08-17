@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
-import { getColorwayDetails, sanitizeColorways } from "../../utils/colorway";
+import { getColorwayDetails, sanitizeColorways, sortColorways } from "../../utils/colorway";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
 
@@ -29,7 +29,7 @@ export default function CustomerPage({ searchText, setSearchText }) {
   const expandProductsByColorway = (productsData) => {
     const expanded = [];
     productsData.forEach((product) => {
-      const colorways = [...new Set((product.stocks || []).map((stock) => stock.colorway))];
+      const colorways = sortColorways(sanitizeColorways((product.stocks || []).map((stock) => stock.colorway)));
       if (colorways.length === 0) {
         expanded.push(product);
         return;
@@ -83,7 +83,7 @@ export default function CustomerPage({ searchText, setSearchText }) {
          uniqueColorways.add(variant._colorwayVariant);
        }
      });
-     return ["ALL", ...sanitizeColorways(Array.from(uniqueColorways))];
+     return ["ALL", ...sortColorways(sanitizeColorways(Array.from(uniqueColorways)))];
    }, [products]);
   const departmentOptions = useMemo(
     () => ["ALL", ...new Set(products.map((product) => (product.department || "").trim()).filter(Boolean))],
