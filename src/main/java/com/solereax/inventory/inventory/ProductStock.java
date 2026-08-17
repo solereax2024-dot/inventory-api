@@ -32,6 +32,9 @@ public class ProductStock {
     @Column(nullable = false, length = 80)
     private String colorway;
 
+    @Column(name = "size_group", nullable = false, length = 20)
+    private String sizeGroup = StockSizeGroup.STANDARD.name();
+
     @Column(nullable = false)
     private int quantity;
 

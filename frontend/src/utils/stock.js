@@ -2,6 +2,18 @@ import { formatColorwayLabel } from "./format";
 import { colorwayPriority, sanitizeColorways } from "./colorway";
 import { US_SIZES } from "../constants";
 
+export function normalizeStockSizeGroup(value) {
+  if (value === "WOMEN") return "WOMEN";
+  if (value === "MEN") return "MEN";
+  return "STANDARD";
+}
+
+export function getStockStorageGroup(department, requestedSizeGroup) {
+  return String(department || "").toUpperCase() === "UNISEX"
+    ? (requestedSizeGroup === "WOMEN" ? "WOMEN" : "MEN")
+    : "STANDARD";
+}
+
 export function buildColorwayStockLine(stocks, selectedColorway) {
   const selectedStocks = (stocks || [])
     .filter((stock) => stock.colorway === selectedColorway)
@@ -47,13 +59,22 @@ export function buildStateValuesLine(stockStates, selectedColorway) {
   return `On-hand: ${onHand}, In-transit: ${inTransit}, Pre-order: ${preOrder}`;
 }
 
-export function buildSizeStateRows(product, selectedColorway) {
-  const stocks = (product?.stocks || []).filter((stock) => stock.colorway === selectedColorway);
+export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup = null, department = "") {
+  const storageGroup = requestedSizeGroup ? getStockStorageGroup(department, requestedSizeGroup) : null;
+  const stocks = (product?.stocks || []).filter((stock) => {
+    if (stock.colorway !== selectedColorway) {
+      return false;
+    }
+    return !storageGroup || normalizeStockSizeGroup(stock.sizeGroup) === storageGroup;
+  });
   const quantityBySize = new Map();
   stocks.forEach((stock) => {
-    quantityBySize.set(String(stock.size), Number(stock.quantity || 0));
+    const key = String(stock.size);
+    quantityBySize.set(key, Number(quantityBySize.get(key) || 0) + Number(stock.quantity || 0));
   });
-  const bySize = product?.stockStateBySize?.[selectedColorway] || {};
+  const bySize = storageGroup
+    ? product?.stockStateBySizeGroup?.[selectedColorway]?.[storageGroup] || {}
+    : product?.stockStateBySize?.[selectedColorway] || {};
   return US_SIZES.map((size) => {
     const stateValues = bySize?.[size] || {};
     const onHand = Number(stateValues.ON_HAND || 0);

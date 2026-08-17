@@ -5,7 +5,7 @@ import { US_SIZES, COLORWAY_OPTIONS, STOCK_SOURCE_TYPES, STOCK_SOURCE_LABELS, DE
 import { apiRequest, uploadImage } from "../../utils/api";
 import { formatEnumLabel, formatColorwayLabel, getProductTypeOptions } from "../../utils/format";
 import { getColorwayDetails, sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
-import { getSortedColorwaysFromStocks, buildSizeStateRows } from "../../utils/stock";
+import { getSortedColorwaysFromStocks, buildSizeStateRows, getStockStorageGroup } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import "../../styles/admin.css";
 import DeleteModal from "./DeleteModal";
@@ -78,7 +78,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     quantityChange: 1,
     stockSourceType: "ON_HAND"
   });
-  const [stockMode, setStockMode] = useState("adjust");
+  const [stockAction, setStockAction] = useState("add");
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
@@ -601,37 +601,34 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   }, [editDetailColorway, editImageColorway]);
 
   const adjustStock = async () => {
-    let quantityChange = Number(stockForm.quantityChange);
-    if (stockMode === "set") {
-      const currentRow = buildSizeStateRows(stockModalProduct, stockForm.colorway)
-        .find((r) => r.size === stockForm.size);
-      const currentQty = currentRow
-        ? (stockForm.stockSourceType === "ON_HAND" ? currentRow.onHand
-          : stockForm.stockSourceType === "IN_TRANSIT" ? currentRow.inTransit
-          : currentRow.preOrder)
-        : 0;
-      quantityChange = quantityChange - currentQty;
+    const requestedQuantity = Number(stockForm.quantityChange);
+    if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
+      throw new Error("Enter a stock quantity of at least 1.");
     }
+
+    const quantityChange = stockAction === "remove" ? -requestedQuantity : requestedQuantity;
+
     await apiRequest(
       `/api/admin/products/${stockForm.productId}/stocks`,
       "POST",
       {
         colorway: stockForm.colorway,
         size: stockForm.size,
+        sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
         quantityChange,
         stockSourceType: stockForm.stockSourceType
       },
       token
     );
+    // Preserve selected size and group so user can continue adjusting same size
     setStockForm((prev) => ({
       ...prev,
-      colorway: prev.colorway,
-      size: US_SIZES[0],
+      size: prev.size,
       sizeGroup: prev.sizeGroup,
-      quantityChange: stockMode === "set" ? 0 : 1,
-      stockSourceType: "ON_HAND"
+      quantityChange: 1,
+      stockSourceType: prev.stockSourceType
     }));
-    setMessage("Stock updated.");
+    setMessage(stockAction === "remove" ? "Stock removed." : "Stock added.");
     await loadAdminData(token, adminRole);
   };
 
@@ -753,7 +750,22 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     () => formatSelectedSizeLabel(stockForm.size, activeStockSizeGroup, stockModalDepartment),
     [stockForm.size, activeStockSizeGroup, stockModalDepartment]
   );
-
+  const selectedStockRow = useMemo(
+    () => activeStockSizeSection?.rows?.find((row) => row.baseSize === stockForm.size) || null,
+    [activeStockSizeSection, stockForm.size]
+  );
+  const selectedStockSourceQuantity = useMemo(() => {
+    if (!selectedStockRow) {
+      return 0;
+    }
+    if (stockForm.stockSourceType === "IN_TRANSIT") {
+      return selectedStockRow.inTransit;
+    }
+    if (stockForm.stockSourceType === "PRE_ORDER") {
+      return selectedStockRow.preOrder;
+    }
+    return selectedStockRow.onHand;
+  }, [selectedStockRow, stockForm.stockSourceType]);
   const handleStockSizeGroupChange = (nextSizeGroup) => {
     const targetSection = stockSizeSections.find((section) => section.key === nextSizeGroup);
     const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === stockForm.size);
@@ -1407,21 +1419,21 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
             {productActionModal.type === "stock" ? (
               <>
-                <p className="field-hint">Choose a colorway, size view, and stock source before applying changes.</p>
+                <p className="field-hint">Choose a colorway, size view, and stock source, then add or remove stock from the selected size.</p>
                 <div className="row">
                   <button
                     type="button"
-                    className={`stock-mode-toggle ${stockMode === "adjust" ? "active" : ""}`}
-                    onClick={() => { setStockMode("adjust"); setStockForm((f) => ({ ...f, quantityChange: 1 })); }}
+                    className={`stock-mode-toggle ${stockAction === "add" ? "active" : ""}`}
+                    onClick={() => setStockAction("add")}
                   >
-                    ± Adjust
+                    + Add Stock
                   </button>
                   <button
                     type="button"
-                    className={`stock-mode-toggle ${stockMode === "set" ? "active" : ""}`}
-                    onClick={() => { setStockMode("set"); setStockForm((f) => ({ ...f, quantityChange: 0 })); }}
+                    className={`stock-mode-toggle ${stockAction === "remove" ? "active" : ""}`}
+                    onClick={() => setStockAction("remove")}
                   >
-                    = Set to
+                    − Remove Stock
                   </button>
                 </div>
                 <div className="row">
@@ -1434,15 +1446,26 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   </select>
                   <input
                     type="number"
-                    placeholder={stockMode === "adjust" ? "±qty" : "exact qty"}
+                    min="1"
+                    step="1"
+                    placeholder="qty"
                     value={stockForm.quantityChange}
-                    onChange={(e) => setStockForm({ ...stockForm, quantityChange: e.target.value })}
+                    onChange={(e) => setStockForm({ ...stockForm, quantityChange: Number(e.target.value) || 0 })}
                   />
                 </div>
                 <div className="stock-size-picker">
                   <p className="field-hint stock-size-selection-note">
                     Selected size: <strong>{selectedStockSizeLabel || `US ${stockForm.size}`}</strong>
-                    {isUnisexDepartment(stockModalDepartment) ? ` · shared stock saved on base US ${stockForm.size}` : ""}
+                    {isUnisexDepartment(stockModalDepartment) ? ` · stored in ${activeStockSizeGroup === "WOMEN" ? "women's" : "men's"} unisex stock` : ""}
+                  </p>
+                  {isUnisexDepartment(stockModalDepartment) ? (
+                    <p className="field-hint stock-size-selection-note">
+                      Men&apos;s and women&apos;s unisex sizes are tracked separately.
+                    </p>
+                  ) : null}
+                  <p className="field-hint stock-size-selection-note">
+                    Current {STOCK_SOURCE_LABELS[stockForm.stockSourceType]}: <strong>{selectedStockSourceQuantity}</strong>
+                    {selectedStockRow ? ` · Total: ${selectedStockRow.total}` : ""}
                   </p>
                   {isUnisexDepartment(stockModalDepartment) ? (
                     <div className="size-group-toggle" role="tablist" aria-label="Choose sizing view">
@@ -1495,7 +1518,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       .catch((err) => setMessage(err.message))
                   }
                 >
-                  {stockMode === "adjust" ? "Apply Stock Change" : "Set Stock Quantity"}
+                  {stockAction === "remove" ? "Remove Stock" : "Add Stock"}
                 </button>
                 {stockModalProduct ? (
                   <div className="stock-breakdown-sections">
@@ -1599,7 +1622,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       <td>{order.customerContact}</td>
                       <td>
                         {(order.items || [])
-                          .map((item) => `${item.productName} (${item.colorway}, US ${item.size}) x${item.quantity}`)
+                          .map((item) => `${item.productName} (${item.colorway}, ${formatSelectedSizeLabel(item.size, item.sizeGroup === "WOMEN" ? "WOMEN" : "MEN", item.sizeGroup === "WOMEN" ? "UNISEX" : "")}) x${item.quantity}`)
                           .join(", ")}
                       </td>
                       <td>{order.statusUpdatedBy || "-"}</td>

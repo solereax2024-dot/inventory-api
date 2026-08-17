@@ -107,13 +107,15 @@ public class InventoryService {
 
         String normalizedSize = UsSizeStandard.normalizeAndValidate(request.size());
         String normalizedColorway = ColorwayStandard.normalizeAndValidate(request.colorway());
+        StockSizeGroup sizeGroup = resolveStockSizeGroup(product, normalizedColorway, request.sizeGroup());
         ProductStock stock = productStockRepository
-                .findByProductIdAndColorwayAndSizeLabel(productId, normalizedColorway, normalizedSize)
+                .findByProductIdAndColorwayAndSizeLabelAndSizeGroup(productId, normalizedColorway, normalizedSize, sizeGroup.name())
                 .orElseGet(() -> {
                     ProductStock createdStock = new ProductStock();
                     createdStock.setProduct(product);
                     createdStock.setColorway(normalizedColorway);
                     createdStock.setSizeLabel(normalizedSize);
+                    createdStock.setSizeGroup(sizeGroup.name());
                     createdStock.setQuantity(0);
                     return createdStock;
                 });
@@ -279,9 +281,10 @@ public class InventoryService {
     private PublicProductResponse toPublicResponse(Product product) {
         List<SizeStockResponse> stocks = product.getStocks().stream()
                 .sorted(UsSizeStandard.stockComparator())
-                .map(stock -> new SizeStockResponse(stock.getColorway(), stock.getSizeLabel(), stock.getQuantity()))
+                .map(stock -> new SizeStockResponse(stock.getColorway(), stock.getSizeLabel(), stock.getSizeGroup(), stock.getQuantity()))
                 .toList();
-        Map<String, Map<String, Map<String, Integer>>> stateByColorwayAndSize = buildStateByColorwayAndSize(product);
+        Map<String, Map<String, Map<String, Map<String, Integer>>>> stateByColorwayAndSizeGroup = buildStateByColorwayAndSizeGroup(product);
+        Map<String, Map<String, Map<String, Integer>>> stateByColorwayAndSize = aggregateStateByColorwayAndSize(stateByColorwayAndSizeGroup);
         return new PublicProductResponse(
                 product.getId(),
                 product.getName(),
@@ -296,16 +299,18 @@ public class InventoryService {
                 mapColorwayDetails(product),
                 stocks,
                 aggregateStateByColorway(stateByColorwayAndSize),
-                stateByColorwayAndSize
+                stateByColorwayAndSize,
+                stateByColorwayAndSizeGroup
         );
     }
 
     private PublicProductResponse toAdminResponse(Product product) {
         List<SizeStockResponse> stocks = product.getStocks().stream()
                 .sorted(UsSizeStandard.stockComparator())
-                .map(stock -> new SizeStockResponse(stock.getColorway(), stock.getSizeLabel(), stock.getQuantity()))
+                .map(stock -> new SizeStockResponse(stock.getColorway(), stock.getSizeLabel(), stock.getSizeGroup(), stock.getQuantity()))
                 .toList();
-        Map<String, Map<String, Map<String, Integer>>> stateByColorwayAndSize = buildStateByColorwayAndSize(product);
+        Map<String, Map<String, Map<String, Map<String, Integer>>>> stateByColorwayAndSizeGroup = buildStateByColorwayAndSizeGroup(product);
+        Map<String, Map<String, Map<String, Integer>>> stateByColorwayAndSize = aggregateStateByColorwayAndSize(stateByColorwayAndSizeGroup);
         return new PublicProductResponse(
                 product.getId(),
                 product.getName(),
@@ -320,7 +325,8 @@ public class InventoryService {
                 mapColorwayDetails(product),
                 stocks,
                 aggregateStateByColorway(stateByColorwayAndSize),
-                stateByColorwayAndSize
+                stateByColorwayAndSize,
+                stateByColorwayAndSizeGroup
         );
     }
 
@@ -389,33 +395,37 @@ public class InventoryService {
         return values;
     }
 
-    private Map<String, Map<String, Map<String, Integer>>> buildStateByColorwayAndSize(Product product) {
-        Map<String, Map<String, Map<String, Integer>>> stateByColorwaySize = new LinkedHashMap<>();
-        product.getStocks().forEach(stock -> stateByColorwaySize
+    private Map<String, Map<String, Map<String, Map<String, Integer>>>> buildStateByColorwayAndSizeGroup(Product product) {
+        Map<String, Map<String, Map<String, Map<String, Integer>>>> stateByColorwaySizeGroup = new LinkedHashMap<>();
+        product.getStocks().forEach(stock -> stateByColorwaySizeGroup
                 .computeIfAbsent(stock.getColorway(), ignored -> new LinkedHashMap<>())
+                .computeIfAbsent(stock.getSizeGroup(), ignored -> new LinkedHashMap<>())
                 .put(stock.getSizeLabel(), emptyStateValues()));
 
         stockMovementRepository.summarizeStateByProductAndSize(product.getId()).forEach(aggregate -> {
             String colorway = aggregate.getColorway();
+            String sizeGroup = aggregate.getSizeGroup();
             String sizeLabel = aggregate.getSizeLabel();
             String reason = aggregate.getReason();
             Integer quantity = aggregate.getQuantity();
-            if (colorway == null || sizeLabel == null || reason == null || quantity == null) {
+            if (colorway == null || sizeGroup == null || sizeLabel == null || reason == null || quantity == null) {
                 return;
             }
             if (!isKnownStockState(reason)) {
                 return;
             }
-            stateByColorwaySize
+            stateByColorwaySizeGroup
                     .computeIfAbsent(colorway, ignored -> new LinkedHashMap<>())
+                    .computeIfAbsent(sizeGroup, ignored -> new LinkedHashMap<>())
                     .computeIfAbsent(sizeLabel, ignored -> emptyStateValues())
                     .put(reason, quantity);
         });
 
         // Keep matrix totals aligned with current stock quantities.
         product.getStocks().forEach(stock -> {
-            Map<String, Integer> byState = stateByColorwaySize
+            Map<String, Integer> byState = stateByColorwaySizeGroup
                     .computeIfAbsent(stock.getColorway(), ignored -> new LinkedHashMap<>())
+                    .computeIfAbsent(stock.getSizeGroup(), ignored -> new LinkedHashMap<>())
                     .computeIfAbsent(stock.getSizeLabel(), ignored -> emptyStateValues());
             int tracked = byState.values().stream().mapToInt(Integer::intValue).sum();
             int diff = stock.getQuantity() - tracked;
@@ -423,7 +433,22 @@ public class InventoryService {
                 byState.put(StockSourceType.ON_HAND.name(), byState.getOrDefault(StockSourceType.ON_HAND.name(), 0) + diff);
             }
         });
-        return stateByColorwaySize;
+        return stateByColorwaySizeGroup;
+    }
+
+    private Map<String, Map<String, Map<String, Integer>>> aggregateStateByColorwayAndSize(
+            Map<String, Map<String, Map<String, Map<String, Integer>>>> stateByColorwayAndSizeGroup
+    ) {
+        Map<String, Map<String, Map<String, Integer>>> aggregated = new LinkedHashMap<>();
+        stateByColorwayAndSizeGroup.forEach((colorway, byGroup) -> {
+            Map<String, Map<String, Integer>> bySize = new LinkedHashMap<>();
+            byGroup.values().forEach(groupSizes -> groupSizes.forEach((sizeLabel, stateValues) -> {
+                Map<String, Integer> totals = bySize.computeIfAbsent(sizeLabel, ignored -> emptyStateValues());
+                stateValues.forEach((state, quantity) -> totals.put(state, totals.getOrDefault(state, 0) + quantity));
+            }));
+            aggregated.put(colorway, bySize);
+        });
+        return aggregated;
     }
 
     private boolean isKnownStockState(String reason) {
@@ -433,6 +458,31 @@ public class InventoryService {
             }
         }
         return false;
+    }
+
+    private StockSizeGroup resolveStockSizeGroup(Product product, String normalizedColorway, String requestedGroup) {
+        return StockSizeGroup.forDepartment(resolveDepartmentForColorway(product, normalizedColorway), requestedGroup);
+    }
+
+    private String resolveDepartmentForColorway(Product product, String normalizedColorway) {
+        String fallbackDepartment = trimToNull(product.getDepartment());
+        String exactDepartment = product.getColorwayDetails().stream()
+                .filter(entry -> normalizedColorway.equals(normalizeColorway(entry.getColorway())))
+                .map(ProductColorwayDetail::getDepartment)
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
+        if (exactDepartment != null) {
+            return exactDepartment;
+        }
+        return product.getColorwayDetails().stream()
+                .filter(entry -> "DEFAULT".equals(normalizeColorway(entry.getColorway())))
+                .map(ProductColorwayDetail::getDepartment)
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(fallbackDepartment);
     }
 
     private String trimToNull(String value) {
@@ -453,14 +503,21 @@ public class InventoryService {
         String normalizedColorway = initialColorway == null
                 ? "DEFAULT"
                 : ColorwayStandard.normalizeAndValidate(initialColorway);
+        StockSizeGroup defaultGroup = resolveStockSizeGroup(product, normalizedColorway, "MEN");
         for (String size : UsSizeStandard.US_SIZES) {
-            if (productStockRepository.findByProductIdAndColorwayAndSizeLabel(product.getId(), normalizedColorway, size).isPresent()) {
+            if (productStockRepository.findByProductIdAndColorwayAndSizeLabelAndSizeGroup(
+                    product.getId(),
+                    normalizedColorway,
+                    size,
+                    defaultGroup.name()
+            ).isPresent()) {
                 continue;
             }
             ProductStock stock = new ProductStock();
             stock.setProduct(product);
             stock.setColorway(normalizedColorway);
             stock.setSizeLabel(size);
+            stock.setSizeGroup(defaultGroup.name());
             stock.setQuantity(0);
             stock.setUpdatedAt(Instant.now());
             productStockRepository.save(stock);

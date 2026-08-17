@@ -5,6 +5,7 @@ public record OrderItemResponse(
         String productName,
         String colorway,
         String size,
+        String sizeGroup,
         int quantity
 ) {
 }

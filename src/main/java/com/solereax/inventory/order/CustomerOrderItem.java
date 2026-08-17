@@ -36,6 +36,9 @@ public class CustomerOrderItem {
     @Column(name = "size_label", nullable = false, length = 20)
     private String sizeLabel;
 
+    @Column(name = "size_group", nullable = false, length = 20)
+    private String sizeGroup;
+
     @Column(nullable = false, length = 80)
     private String colorway;
 

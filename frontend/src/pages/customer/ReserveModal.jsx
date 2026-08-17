@@ -182,7 +182,7 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
                 ) : null}
                 {activeSizeSection ? (
                   <div className="size-section-card">
-                    {isUnisexDepartment(selectedDepartment) ? <p className="size-section-heading">{activeSizeSection.label}</p> : null}
+                    <p className="size-section-heading">{activeSizeSection.label}</p>
                     <div className="size-grid">
                       {activeSizeSection.rows.map((row) => {
                         const available = row.total > 0;
@@ -210,6 +210,10 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
                 ) : null}
                 {isUnisexDepartment(selectedDepartment) ? (
                   <small className="field-hint">Unisex pairs show equivalent men&apos;s and women&apos;s US sizing.</small>
+                ) : selectedDepartment === "MEN" ? (
+                  <small className="field-hint">Men&apos;s only sizing.</small>
+                ) : selectedDepartment === "WOMEN" ? (
+                  <small className="field-hint">Women&apos;s only sizing.</small>
                 ) : null}
                 <small className="field-hint">H=On-hand, T=In-transit, P=Pre-order</small>
               </div>

@@ -39,10 +39,9 @@ export function convertMenSizeToWomen(size) {
 }
 
 export function buildSizeSections(product, colorway) {
-  const rows = buildSizeStateRows(product, colorway);
   const department = getDepartmentForColorway(product, colorway);
 
-  const mapRows = (sizeGroup) => rows
+  const mapRows = (sizeGroup) => buildSizeStateRows(product, colorway, sizeGroup, department)
     .map((row) => ({
       ...row,
       baseSize: row.size,
@@ -70,7 +69,9 @@ export function buildSizeSections(product, colorway) {
     ? "Women's US"
     : department === "KIDS"
       ? "Kids' US"
-      : "US Sizes";
+      : department === "MEN"
+        ? "Men's US"
+        : "US Sizes";
 
   return [{
     key: getDefaultSizeGroup(department),

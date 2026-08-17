@@ -4,6 +4,8 @@ import com.solereax.inventory.inventory.Product;
 import com.solereax.inventory.inventory.ProductRepository;
 import com.solereax.inventory.inventory.ProductStock;
 import com.solereax.inventory.inventory.ProductStockRepository;
+import com.solereax.inventory.inventory.ProductColorwayDetail;
+import com.solereax.inventory.inventory.StockSizeGroup;
 import com.solereax.inventory.inventory.StockMovement;
 import com.solereax.inventory.inventory.StockMovementRepository;
 import com.solereax.inventory.inventory.UsSizeStandard;
@@ -56,7 +58,8 @@ public class OrderService {
 
             String size = UsSizeStandard.normalizeAndValidate(itemRequest.size());
             String colorway = ColorwayStandard.normalizeAndValidate(itemRequest.colorway());
-            ProductStock stock = productStockRepository.findForUpdate(product.getId(), colorway, size)
+            StockSizeGroup sizeGroup = StockSizeGroup.forDepartment(resolveDepartmentForColorway(product, colorway), itemRequest.sizeGroup());
+            ProductStock stock = productStockRepository.findForUpdate(product.getId(), colorway, size, sizeGroup.name())
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Colorway " + colorway + " size " + size + " is not available for " + product.getName()));
 
@@ -77,6 +80,7 @@ public class OrderService {
             item.setProductName(product.getName());
             item.setColorway(colorway);
             item.setSizeLabel(size);
+            item.setSizeGroup(sizeGroup.name());
             item.setQuantity(quantity);
             order.getItems().add(item);
 
@@ -117,6 +121,7 @@ public class OrderService {
                         item.getProductName(),
                         item.getColorway(),
                         item.getSizeLabel(),
+                        item.getSizeGroup(),
                         item.getQuantity()
                 ))
                 .toList();
@@ -138,6 +143,34 @@ public class OrderService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String resolveDepartmentForColorway(Product product, String normalizedColorway) {
+        String fallbackDepartment = trimToNull(product.getDepartment());
+        String exactDepartment = product.getColorwayDetails().stream()
+                .filter(entry -> normalizedColorway.equals(normalizeColorway(entry.getColorway())))
+                .map(ProductColorwayDetail::getDepartment)
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
+        if (exactDepartment != null) {
+            return exactDepartment;
+        }
+        return product.getColorwayDetails().stream()
+                .filter(entry -> "DEFAULT".equals(normalizeColorway(entry.getColorway())))
+                .map(ProductColorwayDetail::getDepartment)
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(fallbackDepartment);
+    }
+
+    private String normalizeColorway(String value) {
+        if (value == null || value.trim().isEmpty() || "DEFAULT".equalsIgnoreCase(value)) {
+            return "DEFAULT";
+        }
+        return ColorwayStandard.normalizeAndValidate(value);
     }
 
     private OrderStatus parseStatus(String rawStatus) {

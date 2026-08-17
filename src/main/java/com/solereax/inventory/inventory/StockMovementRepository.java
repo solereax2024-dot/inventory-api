@@ -13,6 +13,7 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
 
     interface StockStateSizeAggregate {
         String getColorway();
+        String getSizeGroup();
         String getSizeLabel();
         String getReason();
         Integer getQuantity();
@@ -28,11 +29,11 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
     List<StockStateAggregate> summarizeStateByProduct(Long productId);
 
     @Query("""
-            select ps.colorway as colorway, ps.sizeLabel as sizeLabel, sm.reason as reason, sum(sm.quantityChange) as quantity
+            select ps.colorway as colorway, ps.sizeGroup as sizeGroup, ps.sizeLabel as sizeLabel, sm.reason as reason, sum(sm.quantityChange) as quantity
             from StockMovement sm
             join sm.productStock ps
             where ps.product.id = :productId
-            group by ps.colorway, ps.sizeLabel, sm.reason
+            group by ps.colorway, ps.sizeGroup, ps.sizeLabel, sm.reason
             """)
     List<StockStateSizeAggregate> summarizeStateByProductAndSize(Long productId);
 }

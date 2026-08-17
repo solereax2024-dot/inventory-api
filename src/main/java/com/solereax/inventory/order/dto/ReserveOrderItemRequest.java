@@ -9,6 +9,7 @@ public record ReserveOrderItemRequest(
         @NotNull Long productId,
         @NotBlank @Size(max = 80) String colorway,
         @NotBlank @Size(max = 20) String size,
+        @NotBlank @Size(max = 20) String sizeGroup,
         @NotNull @Min(1) Integer quantity
 ) {
 }

@@ -9,6 +9,8 @@ public record AdminAdjustStockRequest(
         String size,
         @NotBlank
         String colorway,
+        @NotBlank
+        String sizeGroup,
         @NotNull
         Integer quantityChange,
         @NotNull
