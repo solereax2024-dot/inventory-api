@@ -23,6 +23,7 @@ export default function ReservePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [reserve, setReserve] = useState({
     customerName: "",
     customerContact: "",
@@ -143,6 +144,10 @@ export default function ReservePage() {
     const timer = window.setTimeout(() => setMessage(""), 2800);
     return () => window.clearTimeout(timer);
   }, [message]);
+
+  useEffect(() => {
+    setIsSizeGuideOpen(false);
+  }, [product?.id, product?.brand]);
 
   const getOriginFromPoint = (clientX, clientY) => {
     const el = imgWrapRef.current;
@@ -345,7 +350,18 @@ export default function ReservePage() {
             </div>
 
             <div className="form-section">
-              <label>Size & Availability</label>
+              <div className="size-label-row">
+                <label>Size &amp; Availability</label>
+                {sizeGuide ? (
+                  <button
+                    type="button"
+                    className="size-guide-pill-btn"
+                    onClick={() => setIsSizeGuideOpen(true)}
+                  >
+                    📏 Size Guide
+                  </button>
+                ) : null}
+              </div>
               {isUnisexDepartment(selectedDepartment) ? (
                 <div className="size-group-toggle" role="tablist" aria-label="Choose sizing view">
                   {sizeSections.map((section) => (
@@ -400,34 +416,6 @@ export default function ReservePage() {
               <small className="field-hint">H=On-hand, T=In-transit, P=Pre-order</small>
             </div>
 
-            {sizeGuide ? (
-              <div className="form-section size-guide-section">
-                <label>{sizeGuide.brandLabel} Size Guide</label>
-                <small className="field-hint">Reference from {sizeGuide.sourceLabel}. Sizes can still vary by model.</small>
-                <div className="size-guide-table-wrap">
-                  <table className="size-guide-table">
-                    <thead>
-                      <tr>
-                        <th>{activeSizeGroup === "WOMEN" ? "US Women" : "US Men"}</th>
-                        <th>{activeSizeGroup === "WOMEN" ? "US Men" : "US Women"}</th>
-                        <th>EU</th>
-                        <th>CM</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sizeGuideRows.map((row) => (
-                        <tr key={`${sizeGuide.brandLabel}-${activeSizeGroup}-${row.usPrimary}`}>
-                          <td>{row.usPrimary}</td>
-                          <td>{row.usSecondary}</td>
-                          <td>{row.eu}</td>
-                          <td>{row.cm}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : null}
 
             <div className="form-section">
               <label>Quantity</label>
@@ -479,6 +467,55 @@ export default function ReservePage() {
           </div>
         </div>
       </section>
+      {isSizeGuideOpen && sizeGuide ? (
+        <div className="modal-overlay" onClick={() => setIsSizeGuideOpen(false)}>
+          <section className="modal-panel modal-panel-compact size-guide-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="breakdown-header">
+              <h2>{sizeGuide.brandLabel} Size Guide</h2>
+              <button type="button" className="modal-close-btn" aria-label="Close size guide" onClick={() => setIsSizeGuideOpen(false)}>✕</button>
+            </div>
+            <div className="size-guide-modal-tabs">
+              {sizeSections.length > 1 ? sizeSections.map((section) => (
+                <button
+                  key={`guide-tab-${section.key}`}
+                  type="button"
+                  className={`size-group-btn ${activeSizeGroup === section.key ? "active" : ""}`}
+                  onClick={() => handleSizeGroupChange(section.key)}
+                >
+                  {section.key === "WOMEN" ? "Women's" : "Men's"}
+                </button>
+              )) : null}
+            </div>
+            <div className="size-guide-table-wrap">
+              <table className="size-guide-table">
+                <thead>
+                  <tr>
+                    <th>{activeSizeGroup === "WOMEN" ? "US Women" : "US Men"}</th>
+                    <th>{activeSizeGroup === "WOMEN" ? "US Men" : "US Women"}</th>
+                    <th>EU</th>
+                    <th>CM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sizeGuideRows.map((row) => (
+                    <tr
+                      key={`${sizeGuide.brandLabel}-${activeSizeGroup}-${row.usPrimary}`}
+                      className={reserve.size === row.usPrimary ? "size-guide-row-active" : ""}
+                    >
+                      <td><strong>{row.usPrimary}</strong></td>
+                      <td>{row.usSecondary}</td>
+                      <td>{row.eu}</td>
+                      <td>{row.cm}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <small className="field-hint" style={{ marginTop: 4 }}>Reference from {sizeGuide.sourceLabel}. Actual fit may vary by model.</small>
+          </section>
+        </div>
+      ) : null}
+
       {isConfirmOpen ? (
         <div className="modal-overlay" onClick={() => !isSubmitting && setIsConfirmOpen(false)}>
           <section className="modal-panel reserve-confirm-modal" onClick={(e) => e.stopPropagation()}>
