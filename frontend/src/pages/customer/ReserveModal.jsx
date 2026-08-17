@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { getColorwayImageUrl } from "../../utils/colorway";
 import { formatColorwayLabel } from "../../utils/format";
-import { getSortedColorwaysFromStocks, buildSizeStateRows } from "../../utils/stock";
+import { getSortedColorwaysFromStocks } from "../../utils/stock";
+import { buildSizeSections, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
@@ -15,7 +16,24 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
 
   const product = products.find((p) => String(p.id) === String(reserveModal.productId));
   const colorways = product ? getSortedColorwaysFromStocks(product.stocks) : [];
+  const selectedDepartment = getDepartmentForColorway(product, reserve.colorway);
+  const sizeSections = buildSizeSections(product, reserve.colorway);
+  const activeSizeGroup = isUnisexDepartment(selectedDepartment)
+    ? (reserve.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
+    : getDefaultSizeGroup(selectedDepartment);
+  const activeSizeSection = sizeSections.find((section) => section.key === activeSizeGroup) || sizeSections[0] || null;
   const zoomLevel = ZOOM_LEVELS[zoomIdx];
+
+  const handleSizeGroupChange = (nextSizeGroup) => {
+    const targetSection = sizeSections.find((section) => section.key === nextSizeGroup);
+    const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === reserve.size);
+    const fallbackSize = (targetSection?.rows?.find((row) => row.total > 0) || targetSection?.rows?.[0])?.baseSize || reserve.size;
+    setReserve({
+      ...reserve,
+      sizeGroup: nextSizeGroup,
+      size: hasCurrentSize ? reserve.size : fallbackSize
+    });
+  };
 
   const getOriginFromPoint = (clientX, clientY) => {
     const el = imgWrapRef.current;
@@ -146,28 +164,53 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
 
               <div className="form-section">
                 <label>Size & Availability</label>
-                <div className="size-grid">
-                  {buildSizeStateRows(product, reserve.colorway).map((row) => {
-                    const available = row.total > 0;
-                    return (
+                {isUnisexDepartment(selectedDepartment) ? (
+                  <div className="size-group-toggle" role="tablist" aria-label="Choose sizing view">
+                    {sizeSections.map((section) => (
                       <button
-                        key={row.size}
+                        key={section.key}
                         type="button"
-                        className={`size-btn ${reserve.size === row.size ? "active" : ""} ${!available ? "unavailable" : ""}`}
-                        onClick={() => available && setReserve({ ...reserve, size: row.size })}
-                        disabled={!available}
+                        role="tab"
+                        aria-selected={activeSizeGroup === section.key}
+                        className={`size-group-btn ${activeSizeGroup === section.key ? "active" : ""}`}
+                        onClick={() => handleSizeGroupChange(section.key)}
                       >
-                        <span className="size-label">US {row.size}</span>
-                        <span className="size-stock">
-                          {row.onHand > 0 ? `${row.onHand}H` : ""}
-                          {row.inTransit > 0 ? ` ${row.inTransit}T` : ""}
-                          {row.preOrder > 0 ? ` ${row.preOrder}P` : ""}
-                          {row.total === 0 ? "Out" : ""}
-                        </span>
+                        {section.key === "WOMEN" ? "Women's" : "Men's"}
                       </button>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : null}
+                {activeSizeSection ? (
+                  <div className="size-section-card">
+                    {isUnisexDepartment(selectedDepartment) ? <p className="size-section-heading">{activeSizeSection.label}</p> : null}
+                    <div className="size-grid">
+                      {activeSizeSection.rows.map((row) => {
+                        const available = row.total > 0;
+                        const isActive = reserve.size === row.baseSize && activeSizeGroup === activeSizeSection.key;
+                        return (
+                          <button
+                            key={`${activeSizeSection.key}-${row.baseSize}`}
+                            type="button"
+                            className={`size-btn ${isActive ? "active" : ""} ${!available ? "unavailable" : ""}`}
+                            onClick={() => available && setReserve({ ...reserve, size: row.baseSize, sizeGroup: activeSizeSection.key })}
+                            disabled={!available}
+                          >
+                            <span className="size-label">US {row.displaySize}</span>
+                            <span className="size-stock">
+                              {row.onHand > 0 ? `${row.onHand}H` : ""}
+                              {row.inTransit > 0 ? ` ${row.inTransit}T` : ""}
+                              {row.preOrder > 0 ? ` ${row.preOrder}P` : ""}
+                              {row.total === 0 ? "Out" : ""}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+                {isUnisexDepartment(selectedDepartment) ? (
+                  <small className="field-hint">Unisex pairs show equivalent men&apos;s and women&apos;s US sizing.</small>
+                ) : null}
                 <small className="field-hint">H=On-hand, T=In-transit, P=Pre-order</small>
               </div>
 

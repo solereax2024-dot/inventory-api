@@ -5,6 +5,7 @@ import { apiRequest } from "../../utils/api";
 import { getColorwayImageUrl } from "../../utils/colorway";
 import { formatColorwayLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks, buildSizeStateRows } from "../../utils/stock";
+import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
@@ -27,6 +28,7 @@ export default function ReservePage() {
     notes: "",
     colorway: "",
     size: String(US_SIZES[0]),
+    sizeGroup: "MEN",
     quantity: 1
   });
   const [zoomIdx, setZoomIdx] = useState(0);
@@ -67,6 +69,29 @@ export default function ReservePage() {
     () => (product ? getSortedColorwaysFromStocks(product.stocks) : []),
     [product]
   );
+  const selectedDepartment = useMemo(
+    () => getDepartmentForColorway(product, reserve.colorway),
+    [product, reserve.colorway]
+  );
+  const defaultSizeGroup = useMemo(
+    () => getDefaultSizeGroup(selectedDepartment),
+    [selectedDepartment]
+  );
+  const sizeSections = useMemo(
+    () => buildSizeSections(product, reserve.colorway),
+    [product, reserve.colorway]
+  );
+  const activeSizeGroup = isUnisexDepartment(selectedDepartment)
+    ? (reserve.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
+    : defaultSizeGroup;
+  const activeSizeSection = useMemo(
+    () => sizeSections.find((section) => section.key === activeSizeGroup) || sizeSections[0] || null,
+    [sizeSections, activeSizeGroup]
+  );
+  const selectedSizeLabel = useMemo(
+    () => formatSelectedSizeLabel(reserve.size, activeSizeGroup, selectedDepartment),
+    [reserve.size, activeSizeGroup, selectedDepartment]
+  );
   const zoomLevel = ZOOM_LEVELS[zoomIdx];
 
   useEffect(() => {
@@ -81,9 +106,31 @@ export default function ReservePage() {
     setReserve((prev) => ({
       ...prev,
       colorway: prev.colorway && colorways.includes(prev.colorway) ? prev.colorway : selectedColorway,
-      size: prev.size || preferredSize
+      size: prev.size || preferredSize,
+      sizeGroup: prev.sizeGroup || "MEN"
     }));
   }, [product, colorways, searchParams]);
+
+  useEffect(() => {
+    if (!product || sizeSections.length === 0) return;
+
+    const activeSection = sizeSections.find((section) => section.key === activeSizeGroup) || sizeSections[0];
+    const availableRows = activeSection?.rows || [];
+    const hasCurrentSize = availableRows.some((row) => row.baseSize === reserve.size);
+    const fallbackRow = availableRows.find((row) => row.total > 0) || availableRows[0];
+    const nextSize = hasCurrentSize ? reserve.size : (fallbackRow?.baseSize || "");
+    const nextSizeGroup = isUnisexDepartment(selectedDepartment)
+      ? (reserve.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
+      : defaultSizeGroup;
+
+    if (nextSize !== reserve.size || nextSizeGroup !== reserve.sizeGroup) {
+      setReserve((prev) => ({
+        ...prev,
+        size: nextSize,
+        sizeGroup: nextSizeGroup
+      }));
+    }
+  }, [product, reserve.size, reserve.sizeGroup, sizeSections, selectedDepartment, defaultSizeGroup, activeSizeGroup]);
 
   useEffect(() => {
     if (!message) return undefined;
@@ -105,10 +152,27 @@ export default function ReservePage() {
     setOrigin({ x: 50, y: 50 });
   };
 
+  const handleSizeGroupChange = (nextSizeGroup) => {
+    const targetSection = sizeSections.find((section) => section.key === nextSizeGroup);
+    const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === reserve.size);
+    const fallbackSize = (targetSection?.rows?.find((row) => row.total > 0) || targetSection?.rows?.[0])?.baseSize || reserve.size;
+    setReserve({
+      ...reserve,
+      sizeGroup: nextSizeGroup,
+      size: hasCurrentSize ? reserve.size : fallbackSize
+    });
+  };
+
   const validateReserve = () => {
     if (!product || !reserve.colorway || !reserve.size) {
       throw new Error("Please select a product, colorway, and size.");
     }
+
+    const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
+    if (!selectedRow || selectedRow.total <= 0) {
+      throw new Error("Please select an available size.");
+    }
+
     if (!reserve.customerName || reserve.customerName.trim() === "") {
       throw new Error("Please enter your name.");
     }
@@ -275,28 +339,53 @@ export default function ReservePage() {
 
             <div className="form-section">
               <label>Size & Availability</label>
-              <div className="size-grid">
-                {buildSizeStateRows(product, reserve.colorway).map((row) => {
-                  const available = row.total > 0;
-                  return (
+              {isUnisexDepartment(selectedDepartment) ? (
+                <div className="size-group-toggle" role="tablist" aria-label="Choose sizing view">
+                  {sizeSections.map((section) => (
                     <button
-                      key={row.size}
+                      key={section.key}
                       type="button"
-                      className={`size-btn ${reserve.size === row.size ? "active" : ""} ${!available ? "unavailable" : ""}`}
-                      onClick={() => available && setReserve({ ...reserve, size: row.size })}
-                      disabled={!available}
+                      role="tab"
+                      aria-selected={activeSizeGroup === section.key}
+                      className={`size-group-btn ${activeSizeGroup === section.key ? "active" : ""}`}
+                      onClick={() => handleSizeGroupChange(section.key)}
                     >
-                      <span className="size-label">US {row.size}</span>
-                      <span className="size-stock">
-                        {row.onHand > 0 ? `${row.onHand}H` : ""}
-                        {row.inTransit > 0 ? ` ${row.inTransit}T` : ""}
-                        {row.preOrder > 0 ? ` ${row.preOrder}P` : ""}
-                        {row.total === 0 ? "Out" : ""}
-                      </span>
+                      {section.key === "WOMEN" ? "Women's" : "Men's"}
                     </button>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              ) : null}
+              {activeSizeSection ? (
+                <div className="size-section-card">
+                  {isUnisexDepartment(selectedDepartment) ? <p className="size-section-heading">{activeSizeSection.label}</p> : null}
+                  <div className="size-grid">
+                    {activeSizeSection.rows.map((row) => {
+                      const available = row.total > 0;
+                      const isActive = reserve.size === row.baseSize && activeSizeGroup === activeSizeSection.key;
+                      return (
+                        <button
+                          key={`${activeSizeSection.key}-${row.baseSize}`}
+                          type="button"
+                          className={`size-btn ${isActive ? "active" : ""} ${!available ? "unavailable" : ""}`}
+                          onClick={() => available && setReserve({ ...reserve, size: row.baseSize, sizeGroup: activeSizeSection.key })}
+                          disabled={!available}
+                        >
+                          <span className="size-label">US {row.displaySize}</span>
+                          <span className="size-stock">
+                            {row.onHand > 0 ? `${row.onHand}H` : ""}
+                            {row.inTransit > 0 ? ` ${row.inTransit}T` : ""}
+                            {row.preOrder > 0 ? ` ${row.preOrder}P` : ""}
+                            {row.total === 0 ? "Out" : ""}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {isUnisexDepartment(selectedDepartment) ? (
+                <small className="field-hint">Unisex pairs show equivalent men&apos;s and women&apos;s US sizing.</small>
+              ) : null}
               <small className="field-hint">H=On-hand, T=In-transit, P=Pre-order</small>
             </div>
 
@@ -380,7 +469,7 @@ export default function ReservePage() {
                 </div>
                 <div className="reserve-confirm-item">
                   <span className="reserve-confirm-label">Size</span>
-                  <strong>US {reserve.size}</strong>
+                  <strong>{selectedSizeLabel || `US ${reserve.size}`}</strong>
                 </div>
                 <div className="reserve-confirm-item">
                   <span className="reserve-confirm-label">Quantity</span>

@@ -310,6 +310,41 @@
   margin: 0;
 }
 
+.stock-size-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.stock-size-selection-note {
+  margin: 0;
+}
+
+.stock-breakdown-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.stock-breakdown-panel {
+  margin-top: 0;
+}
+
+.stock-breakdown-panel .size-section-heading {
+  padding: 10px 10px 0;
+}
+
+.remove-colorway-btn {
+  width: auto;
+  justify-self: start;
+  border-color: #fca5a5;
+  color: #991b1b;
+  background: linear-gradient(180deg, #ffffff, #fef2f2);
+}
+
+.remove-colorway-btn:hover:not(:disabled) {
+  border-color: #ef4444;
+  background: linear-gradient(180deg, #fef2f2, #fee2e2);
+}
+
 .products-table thead input,
 .products-table thead select {
   margin-top: 0;

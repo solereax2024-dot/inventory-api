@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { apiRequest, uploadImage } from "./utils/api";
 import SiteHeader from "./components/SiteHeader";
 import SiteFooter from "./components/SiteFooter";
@@ -36,6 +36,7 @@ function rgbToCss(rgb) {
 }
 
 export default function App() {
+  const location = useLocation();
   const [branding, setBranding] = useState({ logoUrl: null, logoDarkUrl: null });
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
@@ -140,6 +141,23 @@ export default function App() {
     document.body.classList.toggle("theme-dark", isDarkMode);
     localStorage.setItem("darkMode", String(isDarkMode));
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const pathname = location.pathname.toLowerCase();
+    let title = "Sole Reax Official";
+
+    if (pathname === "/" || pathname === "") {
+      title = "Sole Reax Official | Home";
+    } else if (pathname.startsWith("/collection") || pathname.startsWith("/shop")) {
+      title = "Sole Reax Official | Collection";
+    } else if (pathname.startsWith("/reserve")) {
+      title = "Sole Reax Official | Reserve";
+    } else if (pathname.startsWith("/admin")) {
+      title = "Sole Reax Official | Admin";
+    }
+
+    document.title = title;
+  }, [location.pathname]);
 
   const handleAdminSignOut = () => {
     localStorage.removeItem("adminToken");

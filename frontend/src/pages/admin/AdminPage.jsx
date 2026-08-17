@@ -6,21 +6,13 @@ import { apiRequest, uploadImage } from "../../utils/api";
 import { formatEnumLabel, formatColorwayLabel, getProductTypeOptions } from "../../utils/format";
 import { getColorwayDetails, sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
 import { getSortedColorwaysFromStocks, buildSizeStateRows } from "../../utils/stock";
+import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import "../../styles/admin.css";
 import DeleteModal from "./DeleteModal";
+import ConfirmActionModal from "./ConfirmActionModal";
 import NewBrandModal from "./NewBrandModal";
 import NewAdminModal from "./NewAdminModal";
 import NewProductNameModal from "./NewProductNameModal";
-
-function chipClass(quantity) {
-  if (quantity <= 0) {
-    return "chip out";
-  }
-  if (quantity <= 3) {
-    return "chip low";
-  }
-  return "chip ok";
-}
 
 const RESERVATION_STATUS_OPTIONS = [
   { value: "ORDERED", label: "Ordered" },
@@ -82,6 +74,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     productId: "",
     colorway: COLORWAY_OPTIONS[0],
     size: US_SIZES[0],
+    sizeGroup: "MEN",
     quantityChange: 1,
     stockSourceType: "ON_HAND"
   });
@@ -116,6 +109,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   });
   const [adminPage, setAdminPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null, confirmCode: "", userInput: "" });
+  const [colorwayDeleteModal, setColorwayDeleteModal] = useState({ isOpen: false, colorway: "DEFAULT" });
   const [newBrandModal, setNewBrandModal] = useState({ isOpen: false, brandName: "" });
   const [newAdminModal, setNewAdminModal] = useState({ isOpen: false });
   const [newProductNameModal, setNewProductNameModal] = useState({ isOpen: false, productName: "" });
@@ -163,14 +157,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   }, [products, stockForm.productId]);
   const createImageColorwayOptions = useMemo(
     () =>
-      [...new Set(["DEFAULT", ...sanitizeColorways([...COLORWAY_OPTIONS, productForm.mainColor, ...Object.keys(productForm.colorwayImages || {})]).map(normalizeColorwayValue)])],
+      [...new Set(["DEFAULT", ...sanitizeColorways([productForm.mainColor, ...Object.keys(productForm.colorwayImages || {})]).map(normalizeColorwayValue)])],
     [productForm.mainColor, productForm.colorwayImages]
   );
   const editImageColorwayOptions = useMemo(() => {
     const product = products.find((item) => String(item.id) === String(editProductId));
     const fromStocks = (product?.stocks || []).map((stock) => stock.colorway);
     const fromMapped = Object.keys(editProductForm.colorwayImages || {});
-    return [...new Set(["DEFAULT", ...sanitizeColorways([...COLORWAY_OPTIONS, editProductForm.mainColor, ...fromStocks, ...fromMapped]).map(normalizeColorwayValue)])];
+    return [...new Set(["DEFAULT", ...sanitizeColorways([editProductForm.mainColor, ...fromStocks, ...fromMapped]).map(normalizeColorwayValue)])];
   }, [products, editProductId, editProductForm.mainColor, editProductForm.colorwayImages]);
   const editDetailColorwayOptions = useMemo(() => {
     const product = products.find((item) => String(item.id) === String(editProductId));
@@ -179,8 +173,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const brandOptions = useMemo(() => {
     const fromProducts = products.map((p) => (p.brand || "").trim()).filter(Boolean);
-    const merged = [...new Set([...fromProducts, ...savedBrands])].sort();
-    return merged;
+    return [...new Set([...fromProducts, ...savedBrands])].sort();
   }, [products, savedBrands]);
 
   const nameOptions = useMemo(() => {
@@ -444,6 +437,45 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setMessage(`Product image uploaded for ${formatColorwayLabel(targetColorway)}. Save Product to apply it.`);
   };
 
+  const closeCreateColorwayDeleteModal = () => {
+    setColorwayDeleteModal({ isOpen: false, colorway: "DEFAULT" });
+  };
+
+  const removeCreateColorway = () => {
+    const targetColorway = normalizeColorwayValue(productImageColorway || productForm.mainColor);
+    if (targetColorway === "DEFAULT") {
+      setMessage("DEFAULT colorway cannot be removed.");
+      return;
+    }
+    setColorwayDeleteModal({ isOpen: true, colorway: targetColorway });
+  };
+
+  const confirmRemoveCreateColorway = () => {
+    const targetColorway = normalizeColorwayValue(colorwayDeleteModal.colorway);
+    if (targetColorway === "DEFAULT") {
+      closeCreateColorwayDeleteModal();
+      setMessage("DEFAULT colorway cannot be removed.");
+      return;
+    }
+
+    const nextImages = { ...(productForm.colorwayImages || {}) };
+    const hadDraftImage = Object.prototype.hasOwnProperty.call(nextImages, targetColorway);
+    delete nextImages[targetColorway];
+    setProductForm((prev) => ({
+      ...prev,
+      colorwayImages: nextImages
+    }));
+    if (productImageColorway === targetColorway) {
+      setProductImageColorway("DEFAULT");
+    }
+    closeCreateColorwayDeleteModal();
+    setMessage(
+      hadDraftImage
+        ? `Removed ${formatColorwayLabel(targetColorway)} from draft colorways.`
+        : `Cleared ${formatColorwayLabel(targetColorway)} selection (no draft image was attached).`
+    );
+  };
+
   const uploadEditProductImage = async () => {
     if (!editProductImageFile) {
       throw new Error("Please choose an image file first.");
@@ -548,11 +580,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   }, [createImageColorwayOptions, productImageColorway]);
 
-  useEffect(() => {
-    if (productImageColorway === "DEFAULT" && (productForm.mainColor || "").trim()) {
-      setProductImageColorway(normalizeColorwayValue(productForm.mainColor));
-    }
-  }, [productForm.mainColor, productImageColorway]);
 
   useEffect(() => {
     if (!editImageColorwayOptions.includes(editImageColorway)) {
@@ -600,6 +627,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       ...prev,
       colorway: prev.colorway,
       size: US_SIZES[0],
+      sizeGroup: prev.sizeGroup,
       quantityChange: stockMode === "set" ? 0 : 1,
       stockSourceType: "ON_HAND"
     }));
@@ -674,11 +702,15 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   };
 
   const openStockModal = (productId, selectedColorway) => {
+    const selectedProduct = products.find((item) => String(item.id) === String(productId));
+    const nextColorway = selectedColorway || stockForm.colorway;
+    const nextDepartment = getDepartmentForColorway(selectedProduct, nextColorway);
     setStockForm((prev) => ({
       ...prev,
       productId: String(productId),
-      colorway: selectedColorway || prev.colorway,
+      colorway: nextColorway,
       size: US_SIZES[0],
+      sizeGroup: getDefaultSizeGroup(nextDepartment),
       quantityChange: 1,
       stockSourceType: "ON_HAND"
     }));
@@ -702,6 +734,59 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     () => products.find((item) => String(item.id) === String(productActionModal.productId)),
     [products, productActionModal.productId]
   );
+  const stockModalDepartment = useMemo(
+    () => getDepartmentForColorway(stockModalProduct, stockForm.colorway),
+    [stockModalProduct, stockForm.colorway]
+  );
+  const stockSizeSections = useMemo(
+    () => buildSizeSections(stockModalProduct, stockForm.colorway),
+    [stockModalProduct, stockForm.colorway]
+  );
+  const activeStockSizeGroup = isUnisexDepartment(stockModalDepartment)
+    ? (stockForm.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
+    : getDefaultSizeGroup(stockModalDepartment);
+  const activeStockSizeSection = useMemo(
+    () => stockSizeSections.find((section) => section.key === activeStockSizeGroup) || stockSizeSections[0] || null,
+    [stockSizeSections, activeStockSizeGroup]
+  );
+  const selectedStockSizeLabel = useMemo(
+    () => formatSelectedSizeLabel(stockForm.size, activeStockSizeGroup, stockModalDepartment),
+    [stockForm.size, activeStockSizeGroup, stockModalDepartment]
+  );
+
+  const handleStockSizeGroupChange = (nextSizeGroup) => {
+    const targetSection = stockSizeSections.find((section) => section.key === nextSizeGroup);
+    const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === stockForm.size);
+    const fallbackSize = (targetSection?.rows?.find((row) => row.total > 0) || targetSection?.rows?.[0])?.baseSize || stockForm.size;
+    setStockForm({
+      ...stockForm,
+      sizeGroup: nextSizeGroup,
+      size: hasCurrentSize ? stockForm.size : fallbackSize
+    });
+  };
+
+  useEffect(() => {
+    if (!stockModalProduct || stockSizeSections.length === 0) {
+      return;
+    }
+
+    const activeSection = stockSizeSections.find((section) => section.key === activeStockSizeGroup) || stockSizeSections[0];
+    const availableRows = activeSection?.rows || [];
+    const hasCurrentSize = availableRows.some((row) => row.baseSize === stockForm.size);
+    const fallbackSize = availableRows[0]?.baseSize || US_SIZES[0];
+    const nextSize = hasCurrentSize ? stockForm.size : fallbackSize;
+    const nextSizeGroup = isUnisexDepartment(stockModalDepartment)
+      ? (stockForm.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
+      : getDefaultSizeGroup(stockModalDepartment);
+
+    if (nextSize !== stockForm.size || nextSizeGroup !== stockForm.sizeGroup) {
+      setStockForm((prev) => ({
+        ...prev,
+        size: nextSize,
+        sizeGroup: nextSizeGroup
+      }));
+    }
+  }, [stockModalProduct, stockSizeSections, stockModalDepartment, stockForm.size, stockForm.sizeGroup, activeStockSizeGroup]);
 
   const adminTotalPages = useMemo(
     () => Math.ceil(filteredAdminProducts.length / ADMIN_PAGE_SIZE),
@@ -1150,6 +1235,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   <button type="button" onClick={() => uploadProductImage().catch((err) => setMessage(err.message))}>
                     Upload Product Image
                   </button>
+                  <button
+                    type="button"
+                    className="button-secondary remove-colorway-btn"
+                    onClick={removeCreateColorway}
+                    disabled={normalizeColorwayValue(productImageColorway || productForm.mainColor) === "DEFAULT"}
+                  >
+                    Remove Selected Colorway
+                  </button>
                 </div>
                 {(productForm.colorwayImages?.[normalizeColorwayValue(productImageColorway)] || productForm.imageUrl)
                   ? (
@@ -1314,7 +1407,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
             {productActionModal.type === "stock" ? (
               <>
-                <p className="field-hint">Choose US size and stock source before applying changes.</p>
+                <p className="field-hint">Choose a colorway, size view, and stock source before applying changes.</p>
                 <div className="row">
                   <button
                     type="button"
@@ -1339,19 +1432,52 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       </option>
                     ))}
                   </select>
-                  <select aria-label="US Size" value={stockForm.size} onChange={(e) => setStockForm({ ...stockForm, size: e.target.value })}>
-                    {US_SIZES.map((size) => (
-                      <option key={size} value={size}>
-                        US size {size}
-                      </option>
-                    ))}
-                  </select>
                   <input
                     type="number"
                     placeholder={stockMode === "adjust" ? "±qty" : "exact qty"}
                     value={stockForm.quantityChange}
                     onChange={(e) => setStockForm({ ...stockForm, quantityChange: e.target.value })}
                   />
+                </div>
+                <div className="stock-size-picker">
+                  <p className="field-hint stock-size-selection-note">
+                    Selected size: <strong>{selectedStockSizeLabel || `US ${stockForm.size}`}</strong>
+                    {isUnisexDepartment(stockModalDepartment) ? ` · shared stock saved on base US ${stockForm.size}` : ""}
+                  </p>
+                  {isUnisexDepartment(stockModalDepartment) ? (
+                    <div className="size-group-toggle" role="tablist" aria-label="Choose sizing view">
+                      {stockSizeSections.map((section) => (
+                        <button
+                          key={section.key}
+                          type="button"
+                          role="tab"
+                          aria-selected={activeStockSizeGroup === section.key}
+                          className={`size-group-btn ${activeStockSizeGroup === section.key ? "active" : ""}`}
+                          onClick={() => handleStockSizeGroupChange(section.key)}
+                        >
+                          {section.key === "WOMEN" ? "Women's" : "Men's"}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  {activeStockSizeSection ? (
+                    <div className="size-section-card">
+                      {isUnisexDepartment(stockModalDepartment) ? <p className="size-section-heading">{activeStockSizeSection.label}</p> : null}
+                      <div className="size-grid">
+                        {activeStockSizeSection.rows.map((row) => (
+                          <button
+                            key={`${activeStockSizeSection.key}-${row.baseSize}`}
+                            type="button"
+                            className={`size-btn ${stockForm.size === row.baseSize && activeStockSizeGroup === activeStockSizeSection.key ? "active" : ""}`}
+                            onClick={() => setStockForm({ ...stockForm, size: row.baseSize, sizeGroup: activeStockSizeSection.key })}
+                          >
+                            <span className="size-label">US {row.displaySize}</span>
+                            <span className="size-stock">Total {row.total}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
                 <select
                   value={stockForm.stockSourceType}
@@ -1372,35 +1498,44 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   {stockMode === "adjust" ? "Apply Stock Change" : "Set Stock Quantity"}
                 </button>
                 {stockModalProduct ? (
-                  <div className="modal-table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>US Size</th>
-                          <th>On-hand</th>
-                          <th>In-transit</th>
-                          <th>Pre-order</th>
-                          <th>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {buildSizeStateRows(stockModalProduct, stockForm.colorway).length > 0 ? (
-                          buildSizeStateRows(stockModalProduct, stockForm.colorway).map((row) => (
-                            <tr key={`${stockModalProduct.id}-${stockForm.colorway}-${row.size}`}>
-                              <td>US{row.size}</td>
-                              <td>{row.onHand}</td>
-                              <td>{row.inTransit}</td>
-                              <td>{row.preOrder}</td>
-                              <td>{row.total}</td>
+                  <div className="stock-breakdown-sections">
+                    {activeStockSizeSection ? (
+                      <div key={`breakdown-${activeStockSizeSection.key}`} className="stock-breakdown-panel modal-table-wrap">
+                        {isUnisexDepartment(stockModalDepartment) ? <p className="size-section-heading">{activeStockSizeSection.label}</p> : null}
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>US Size</th>
+                              <th>On-hand</th>
+                              <th>In-transit</th>
+                              <th>Pre-order</th>
+                              <th>Total</th>
                             </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="5">No size breakdown yet for this colorway.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                          </thead>
+                          <tbody>
+                            {activeStockSizeSection.rows.map((row) => (
+                              <tr key={`${stockModalProduct.id}-${stockForm.colorway}-${activeStockSizeSection.key}-${row.baseSize}`}>
+                                <td>US {row.displaySize}</td>
+                                <td>{row.onHand}</td>
+                                <td>{row.inTransit}</td>
+                                <td>{row.preOrder}</td>
+                                <td>{row.total}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="modal-table-wrap">
+                        <table>
+                          <tbody>
+                            <tr>
+                              <td>No size breakdown yet for this colorway.</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </>
@@ -1500,6 +1635,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         deleteModal={deleteModal}
         setDeleteModal={setDeleteModal}
         confirmDelete={confirmDelete}
+      />
+
+      <ConfirmActionModal
+        isOpen={colorwayDeleteModal.isOpen}
+        title="Remove Draft Colorway"
+        description="This removes the selected colorway from the current Add Product draft."
+        targetLabel={formatColorwayLabel(colorwayDeleteModal.colorway)}
+        confirmLabel="Remove Colorway"
+        onCancel={closeCreateColorwayDeleteModal}
+        onConfirm={confirmRemoveCreateColorway}
       />
 
       <NewBrandModal

@@ -440,7 +440,7 @@ export default function CustomerPage({ searchText, setSearchText }) {
          {visibleProducts.length === 0 ? <p className="field-hint">No products match your filters.</p> : null}
        </section>
 
-      <section className="pagination-bar card">
+      <nav className="pagination-inline" aria-label="Collection pages">
         <div className="pagination-numbers">
           <button
             type="button"
@@ -460,6 +460,7 @@ export default function CustomerPage({ searchText, setSearchText }) {
                 type="button"
                 className={`page-number-btn ${activePage === item.value ? "active" : ""}`}
                 onClick={() => setCurrentPage(item.value)}
+                aria-current={activePage === item.value ? "page" : undefined}
               >
                 {item.value}
               </button>
@@ -475,7 +476,7 @@ export default function CustomerPage({ searchText, setSearchText }) {
             ›
           </button>
         </div>
-      </section>
+      </nav>
 
 
       {deleteModal.isOpen && (

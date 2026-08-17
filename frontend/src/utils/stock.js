@@ -1,5 +1,6 @@
 import { formatColorwayLabel } from "./format";
 import { colorwayPriority, sanitizeColorways } from "./colorway";
+import { US_SIZES } from "../constants";
 
 export function buildColorwayStockLine(stocks, selectedColorway) {
   const selectedStocks = (stocks || [])
@@ -47,16 +48,18 @@ export function buildStateValuesLine(stockStates, selectedColorway) {
 }
 
 export function buildSizeStateRows(product, selectedColorway) {
-  const stocks = (product?.stocks || [])
-    .filter((stock) => stock.colorway === selectedColorway)
-    .sort((a, b) => Number(a.size) - Number(b.size));
+  const stocks = (product?.stocks || []).filter((stock) => stock.colorway === selectedColorway);
+  const quantityBySize = new Map();
+  stocks.forEach((stock) => {
+    quantityBySize.set(String(stock.size), Number(stock.quantity || 0));
+  });
   const bySize = product?.stockStateBySize?.[selectedColorway] || {};
-  return stocks.map((stock) => {
-    const stateValues = bySize?.[stock.size] || {};
+  return US_SIZES.map((size) => {
+    const stateValues = bySize?.[size] || {};
     const onHand = Number(stateValues.ON_HAND || 0);
     const inTransit = Number(stateValues.IN_TRANSIT || 0);
     const preOrder = Number(stateValues.PRE_ORDER || 0);
-    const total = Number(stock.quantity || 0);
-    return { size: stock.size, onHand, inTransit, preOrder, total };
+    const total = Number(quantityBySize.get(size) || 0);
+    return { size, onHand, inTransit, preOrder, total };
   });
 }

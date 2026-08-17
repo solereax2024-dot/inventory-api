@@ -753,6 +753,17 @@ td {
   background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--primary-soft-2) 40%, #f1f5f9));
 }
 
+.pagination-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.pagination-inline .pagination-numbers {
+  width: auto;
+}
+
 .pagination-numbers {
   display: flex;
   gap: 8px;
@@ -1612,6 +1623,10 @@ body.theme-dark .reserve-form-actions {
 
   .pagination-bar {
     padding: 8px;
+  }
+
+  .pagination-inline {
+    padding-top: 8px;
   }
 
   .pagination-numbers {
