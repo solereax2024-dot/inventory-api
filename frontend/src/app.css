@@ -1355,8 +1355,8 @@ body.theme-dark .reservation-status-cell {
 
 body.theme-dark .product-image-wrap,
 body.theme-dark .reserve-modal-image,
-body.theme-dark .thumb-btn {
-  background: transparent;
+body.theme-dark .reserve-thumb-btn {
+  background: #ffffff;
   border-color: transparent;
 }
 
