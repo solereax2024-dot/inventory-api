@@ -7,7 +7,7 @@ import { getColorwayDetails, sanitizeColorways, sortColorways } from "../../util
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
 
-export default function CustomerPage({ searchText, setSearchText }) {
+export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState("");
@@ -23,10 +23,13 @@ export default function CustomerPage({ searchText, setSearchText }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null, confirmCode: "", userInput: "" });
+  const [isDesktopCatalog, setIsDesktopCatalog] = useState(() => window.innerWidth > 720);
 
   // Transform products into colorway variants
   const expandProductsByColorway = (productsData) => {
+    if (!Array.isArray(productsData) || productsData.length === 0) {
+      return [];
+    }
     const expanded = [];
     productsData.forEach((product) => {
       const colorways = sortColorways(sanitizeColorways((product.stocks || []).map((stock) => stock.colorway)));
@@ -54,7 +57,7 @@ export default function CustomerPage({ searchText, setSearchText }) {
     setIsLoadingProducts(true);
     try {
       const data = await apiRequest("/api/public/products");
-      const expandedProducts = expandProductsByColorway(data);
+      const expandedProducts = expandProductsByColorway(Array.isArray(data) ? data : []);
       setProducts(expandedProducts);
     } finally {
       setIsLoadingProducts(false);
@@ -63,6 +66,13 @@ export default function CustomerPage({ searchText, setSearchText }) {
 
   useEffect(() => {
     loadProducts().catch((err) => setMessage(err.message));
+  }, []);
+
+  useEffect(() => {
+    const updateLayoutMode = () => setIsDesktopCatalog(window.innerWidth > 720);
+    window.addEventListener("resize", updateLayoutMode);
+    updateLayoutMode();
+    return () => window.removeEventListener("resize", updateLayoutMode);
   }, []);
 
   useEffect(() => {
@@ -97,6 +107,15 @@ export default function CustomerPage({ searchText, setSearchText }) {
     () => ["ALL", ...new Set(products.map((product) => (product.productType || "").trim()).filter(Boolean))],
     [products]
   );
+
+  useEffect(() => {
+    onCatalogNavChange({
+      brandOptions,
+      brandFilter,
+      onBrandChange: setBrandFilter
+    });
+  }, [brandOptions, brandFilter, onCatalogNavChange]);
+
   const visibleProducts = useMemo(() => {
     let next = [...products];
 
@@ -244,7 +263,8 @@ export default function CustomerPage({ searchText, setSearchText }) {
     setCurrentPage(1);
   }, [brandFilter, departmentFilter, categoryFilter, productTypeFilter, sortBy, searchText, sizeFilter, stockFilter, colorwayFilter, stateFilter]);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(visibleProducts.length / CATALOG_PAGE_SIZE)), [visibleProducts]);
+  const catalogPageSize = isDesktopCatalog ? CATALOG_PAGE_SIZE : 12;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(visibleProducts.length / catalogPageSize)), [visibleProducts.length, catalogPageSize]);
   const activePage = Math.min(currentPage, totalPages);
   const activeFilterCount = [
     brandFilter !== "ALL",
@@ -278,9 +298,9 @@ export default function CustomerPage({ searchText, setSearchText }) {
     return items;
   }, [activePage, totalPages]);
   const paginatedProducts = useMemo(() => {
-    const start = (activePage - 1) * CATALOG_PAGE_SIZE;
-    return visibleProducts.slice(start, start + CATALOG_PAGE_SIZE);
-  }, [visibleProducts, activePage]);
+    const start = (activePage - 1) * catalogPageSize;
+    return visibleProducts.slice(start, start + catalogPageSize);
+  }, [visibleProducts, activePage, catalogPageSize]);
 
   const openReservePage = (productId, initialColorway, preferredSize = US_SIZES[0]) => {
     const params = new URLSearchParams();
@@ -477,58 +497,6 @@ export default function CustomerPage({ searchText, setSearchText }) {
           </button>
         </div>
       </nav>
-
-
-      {deleteModal.isOpen && (
-        <div className="modal-overlay" onClick={() => setDeleteModal({ isOpen: false, productId: null, confirmCode: "", userInput: "" })}>
-          <section className="modal-panel delete-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="delete-modal-header">
-              <h2>Delete Product</h2>
-              <button className="close-btn" onClick={() => setDeleteModal({ isOpen: false, productId: null, confirmCode: "", userInput: "" })}>×</button>
-            </div>
-
-            <div className="delete-modal-body">
-              <div className="warning-box">
-                <div className="warning-icon">⚠️</div>
-                <div className="warning-text">
-                  <p><strong>This action cannot be undone.</strong></p>
-                  <p>This will permanently delete the product and all associated stock records.</p>
-                </div>
-              </div>
-
-              <div className="confirm-code-section">
-                <p className="confirm-instruction">To confirm deletion, enter the code below:</p>
-                <div className="confirm-code-display">{deleteModal.confirmCode}</div>
-
-                <input
-                  type="text"
-                  className="confirm-code-input"
-                  placeholder="Enter the code here"
-                  value={deleteModal.userInput}
-                  onChange={(e) => setDeleteModal({ ...deleteModal, userInput: e.target.value.toUpperCase() })}
-                  autoFocus
-                />
-              </div>
-
-              <div className="delete-modal-footer">
-                <button
-                  className="btn-cancel"
-                  onClick={() => setDeleteModal({ isOpen: false, productId: null, confirmCode: "", userInput: "" })}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn-delete-confirm"
-                  onClick={confirmDelete}
-                  disabled={deleteModal.userInput !== deleteModal.confirmCode}
-                >
-                  Delete Product
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
       {message ? <div className="toast-banner">{message}</div> : null}
     </main>
   );

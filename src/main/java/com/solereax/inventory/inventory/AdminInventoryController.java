@@ -60,6 +60,14 @@ public class AdminInventoryController {
         return inventoryService.updateProductColorwayDetails(productId, request);
     }
 
+    @DeleteMapping("/{productId}/colorways/{colorway}")
+    public PublicProductResponse deleteColorway(
+            @PathVariable Long productId,
+            @PathVariable String colorway
+    ) {
+        return inventoryService.deleteProductColorway(productId, colorway);
+    }
+
     @PostMapping("/{productId}/stocks")
     public PublicProductResponse adjustStock(
             @PathVariable Long productId,

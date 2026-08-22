@@ -6,7 +6,7 @@ import { getColorwayImageUrl } from "../../utils/colorway";
 import { formatColorwayLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
-import { getBrandSizeGuide, getGuideRowsForSizeGroup } from "../../utils/sizeGuide";
+import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
@@ -71,6 +71,18 @@ export default function ReservePage() {
     () => (product ? getSortedColorwaysFromStocks(product.stocks) : []),
     [product]
   );
+  const prioritizedColorways = useMemo(() => {
+    if (colorways.length === 0) return [];
+
+    const clickedColorway = searchParams.get("colorway");
+    const pinnedColorway =
+      (clickedColorway && colorways.includes(clickedColorway) && clickedColorway)
+      || (reserve.colorway && colorways.includes(reserve.colorway) && reserve.colorway)
+      || null;
+
+    if (!pinnedColorway) return colorways;
+    return [pinnedColorway, ...colorways.filter((colorway) => colorway !== pinnedColorway)];
+  }, [colorways, reserve.colorway, searchParams]);
   const selectedDepartment = useMemo(
     () => getDepartmentForColorway(product, reserve.colorway),
     [product, reserve.colorway]
@@ -95,9 +107,9 @@ export default function ReservePage() {
     [reserve.size, activeSizeGroup, selectedDepartment]
   );
   const sizeGuide = useMemo(() => getBrandSizeGuide(product?.brand), [product?.brand]);
-  const sizeGuideRows = useMemo(
-    () => getGuideRowsForSizeGroup(sizeGuide, activeSizeGroup),
-    [sizeGuide, activeSizeGroup]
+  const sizeGuideSection = useMemo(
+    () => getGuideSectionForContext(sizeGuide, { sizeGroup: activeSizeGroup, department: selectedDepartment }),
+    [sizeGuide, activeSizeGroup, selectedDepartment]
   );
   const zoomLevel = ZOOM_LEVELS[zoomIdx];
 
@@ -309,7 +321,7 @@ export default function ReservePage() {
 
             {colorways.length > 1 ? (
               <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails">
-                {colorways.map((colorway) => {
+                {prioritizedColorways.map((colorway) => {
                   const thumbUrl = getColorwayImageUrl(product, colorway);
                   return (
                     <button
@@ -341,7 +353,7 @@ export default function ReservePage() {
                   resetZoom();
                 }}
               >
-                {colorways.map((colorway) => (
+                {prioritizedColorways.map((colorway) => (
                   <option key={colorway} value={colorway}>
                     {formatColorwayLabel(colorway)}
                   </option>
@@ -356,9 +368,9 @@ export default function ReservePage() {
                   <button
                     type="button"
                     className="size-guide-pill-btn"
-                    onClick={() => setIsSizeGuideOpen(true)}
+                    onClick={() => setIsSizeGuideOpen((prev) => !prev)}
                   >
-                    📏 Size Guide
+                    {isSizeGuideOpen ? "✕ Hide Size Guide" : "📏 Size Guide"}
                   </button>
                 ) : null}
               </div>
@@ -414,6 +426,42 @@ export default function ReservePage() {
                 <small className="field-hint">Women&apos;s only sizing.</small>
               ) : null}
               <small className="field-hint">H=On-hand, T=In-transit, P=Pre-order</small>
+              {isSizeGuideOpen && sizeGuide && sizeGuideSection ? (
+                <div className="modal-overlay" onClick={() => setIsSizeGuideOpen(false)}>
+                  <section className="modal-panel modal-panel-compact size-guide-modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="breakdown-header">
+                      <h2>{sizeGuide.brandLabel} Size Guide</h2>
+                      <button type="button" className="modal-close-btn" aria-label="Close size guide" onClick={() => setIsSizeGuideOpen(false)}>✕</button>
+                    </div>
+                    <div className="size-guide-table-wrap">
+                      <table className="size-guide-table">
+                        <thead>
+                          <tr>
+                            {sizeGuideSection.columns.map((column) => (
+                              <th key={`guide-head-${column.key}`}>{column.label}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sizeGuideSection.rows.map((row, index) => (
+                            <tr key={`${sizeGuide.brandLabel}-${sizeGuideSection.label || "guide"}-${index}`}>
+                              {sizeGuideSection.columns.map((column) => (
+                                <td key={`guide-cell-${column.key}-${index}`}>{row[column.key] || "-"}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <small className="field-hint" style={{ marginTop: 4 }}>
+                      Reference from {sizeGuide.sourceLabel}. Actual fit may vary by model.
+                    </small>
+                    {sizeGuide.fitNote ? (
+                      <small className="field-hint" style={{ marginTop: 0 }}>{sizeGuide.fitNote}</small>
+                    ) : null}
+                  </section>
+                </div>
+              ) : null}
             </div>
 
 
@@ -467,54 +515,6 @@ export default function ReservePage() {
           </div>
         </div>
       </section>
-      {isSizeGuideOpen && sizeGuide ? (
-        <div className="modal-overlay" onClick={() => setIsSizeGuideOpen(false)}>
-          <section className="modal-panel modal-panel-compact size-guide-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="breakdown-header">
-              <h2>{sizeGuide.brandLabel} Size Guide</h2>
-              <button type="button" className="modal-close-btn" aria-label="Close size guide" onClick={() => setIsSizeGuideOpen(false)}>✕</button>
-            </div>
-            <div className="size-guide-modal-tabs">
-              {sizeSections.length > 1 ? sizeSections.map((section) => (
-                <button
-                  key={`guide-tab-${section.key}`}
-                  type="button"
-                  className={`size-group-btn ${activeSizeGroup === section.key ? "active" : ""}`}
-                  onClick={() => handleSizeGroupChange(section.key)}
-                >
-                  {section.key === "WOMEN" ? "Women's" : "Men's"}
-                </button>
-              )) : null}
-            </div>
-            <div className="size-guide-table-wrap">
-              <table className="size-guide-table">
-                <thead>
-                  <tr>
-                    <th>{activeSizeGroup === "WOMEN" ? "US Women" : "US Men"}</th>
-                    <th>{activeSizeGroup === "WOMEN" ? "US Men" : "US Women"}</th>
-                    <th>EU</th>
-                    <th>CM</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sizeGuideRows.map((row) => (
-                    <tr
-                      key={`${sizeGuide.brandLabel}-${activeSizeGroup}-${row.usPrimary}`}
-                      className={reserve.size === row.usPrimary ? "size-guide-row-active" : ""}
-                    >
-                      <td><strong>{row.usPrimary}</strong></td>
-                      <td>{row.usSecondary}</td>
-                      <td>{row.eu}</td>
-                      <td>{row.cm}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <small className="field-hint" style={{ marginTop: 4 }}>Reference from {sizeGuide.sourceLabel}. Actual fit may vary by model.</small>
-          </section>
-        </div>
-      ) : null}
 
       {isConfirmOpen ? (
         <div className="modal-overlay" onClick={() => !isSubmitting && setIsConfirmOpen(false)}>
@@ -592,4 +592,3 @@ export default function ReservePage() {
     </main>
   );
 }
-

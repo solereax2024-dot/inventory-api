@@ -13,5 +13,5 @@ export const PRODUCT_TYPE_OPTIONS = {
   APPAREL: ["T_SHIRT", "JACKET", "HOODIE", "PANTS", "SHORTS", "JERSEY"],
   ACCESSORIES: ["CAP", "SOCKS", "BAG"]
 };
-export const CATALOG_PAGE_SIZE = 24;
+export const CATALOG_PAGE_SIZE = 16;
 export const ADMIN_PAGE_SIZE = 12;

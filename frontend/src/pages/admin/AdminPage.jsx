@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Boxes, RotateCcw, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
+import { Boxes, ImagePlus, RotateCcw, Ruler, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { US_SIZES, COLORWAY_OPTIONS, STOCK_SOURCE_TYPES, STOCK_SOURCE_LABELS, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
 import { apiRequest, uploadImage } from "../../utils/api";
@@ -9,11 +9,12 @@ import { getSortedColorwaysFromStocks, buildSizeStateRows, getStockStorageGroup 
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { buildDefaultProductDescription } from "../../utils/productDescription";
 import "../../styles/admin.css";
-import DeleteModal from "./DeleteModal";
 import ConfirmActionModal from "./ConfirmActionModal";
+import DeleteModal from "./DeleteModal";
 import NewBrandModal from "./NewBrandModal";
 import NewAdminModal from "./NewAdminModal";
 import NewProductNameModal from "./NewProductNameModal";
+import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 
 const RESERVATION_STATUS_OPTIONS = [
   { value: "ORDERED", label: "Ordered" },
@@ -51,6 +52,23 @@ function decodeRoleFromToken(token) {
   }
 }
 
+function formatFileSize(bytes) {
+  const value = Number(bytes || 0);
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function getFileFormatLabel(file) {
+  if (!file) return "";
+  const byType = (file.type || "").split("/")[1];
+  if (byType) return byType.toUpperCase();
+  const name = String(file.name || "");
+  const ext = name.includes(".") ? name.split(".").pop() : "";
+  return ext ? ext.toUpperCase() : "UNKNOWN";
+}
+
 export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const UNDO_WINDOW_MS = 5000;
   const navigate = useNavigate();
@@ -79,7 +97,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     quantityChange: 1,
     stockSourceType: "ON_HAND"
   });
-  const [stockAction, setStockAction] = useState("add");
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
@@ -110,7 +127,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   });
   const [adminPage, setAdminPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null, confirmCode: "", userInput: "" });
-  const [colorwayDeleteModal, setColorwayDeleteModal] = useState({ isOpen: false, colorway: "DEFAULT" });
+  const [colorwayDeleteModal, setColorwayDeleteModal] = useState({ isOpen: false, productId: null, colorway: "" });
   const [newBrandModal, setNewBrandModal] = useState({ isOpen: false, brandName: "" });
   const [newAdminModal, setNewAdminModal] = useState({ isOpen: false });
   const [newProductNameModal, setNewProductNameModal] = useState({ isOpen: false, productName: "" });
@@ -120,6 +137,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
   const [activeAdminSection, setActiveAdminSection] = useState("products");
   const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
+  const [isStockGuideOpen, setIsStockGuideOpen] = useState(false);
+  const [isStockSummaryOpen, setIsStockSummaryOpen] = useState(false);
+  const [hasStockGuideOnboardingShown, setHasStockGuideOnboardingShown] = useState(
+    () => localStorage.getItem("adminStockGuideOnboardingShown") === "1"
+  );
 
   const isLoggedIn = useMemo(() => token.length > 0, [token]);
   const isSuperAdmin = useMemo(() => adminRole === "SUPER_ADMIN", [adminRole]);
@@ -143,6 +165,24 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const getAdminScopedDetails = (product, explicitColorway) =>
     getColorwayDetails(product, getAdminScopedColorway(product, explicitColorway));
+
+  const getPreferredStockSelection = (product, colorway, preferredSize = null, preferredGroup = null) => {
+    const department = getDepartmentForColorway(product, colorway);
+    const sizeSections = buildSizeSections(product, colorway);
+    const defaultGroup = getDefaultSizeGroup(department);
+    const targetSection =
+      sizeSections.find((section) => section.key === preferredGroup)
+      || sizeSections.find((section) => section.key === defaultGroup)
+      || sizeSections[0]
+      || null;
+    const rows = targetSection?.rows || [];
+    const preferredRow = preferredSize ? rows.find((row) => row.baseSize === preferredSize) : null;
+
+    return {
+      sizeGroup: targetSection?.key || defaultGroup,
+      size: preferredRow?.baseSize || rows[0]?.baseSize || US_SIZES[0]
+    };
+  };
 
    const adminSections = useMemo(
       () => [
@@ -445,44 +485,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setMessage(`Product image uploaded for ${formatColorwayLabel(targetColorway)}. Save Product to apply it.`);
   };
 
-  const closeCreateColorwayDeleteModal = () => {
-    setColorwayDeleteModal({ isOpen: false, colorway: "DEFAULT" });
-  };
-
-  const removeCreateColorway = () => {
-    const targetColorway = normalizeColorwayValue(productImageColorway || productForm.mainColor);
-    if (targetColorway === "DEFAULT") {
-      setMessage("DEFAULT colorway cannot be removed.");
-      return;
-    }
-    setColorwayDeleteModal({ isOpen: true, colorway: targetColorway });
-  };
-
-  const confirmRemoveCreateColorway = () => {
-    const targetColorway = normalizeColorwayValue(colorwayDeleteModal.colorway);
-    if (targetColorway === "DEFAULT") {
-      closeCreateColorwayDeleteModal();
-      setMessage("DEFAULT colorway cannot be removed.");
-      return;
-    }
-
-    const nextImages = { ...(productForm.colorwayImages || {}) };
-    const hadDraftImage = Object.prototype.hasOwnProperty.call(nextImages, targetColorway);
-    delete nextImages[targetColorway];
-    setProductForm((prev) => ({
-      ...prev,
-      colorwayImages: nextImages
-    }));
-    if (productImageColorway === targetColorway) {
-      setProductImageColorway("DEFAULT");
-    }
-    closeCreateColorwayDeleteModal();
-    setMessage(
-      hadDraftImage
-        ? `Removed ${formatColorwayLabel(targetColorway)} from draft colorways.`
-        : `Cleared ${formatColorwayLabel(targetColorway)} selection (no draft image was attached).`
-    );
-  };
 
   const uploadEditProductImage = async () => {
     if (!editProductImageFile) {
@@ -546,6 +548,46 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       token
     );
     setMessage("Product updated.");
+    await loadAdminData(token, adminRole);
+  };
+
+  const openDeleteProductColorwayModal = () => {
+    if (!editProductId) {
+      setMessage("Please choose a product first.");
+      return;
+    }
+    const selectedProduct = products.find((product) => String(product.id) === String(editProductId));
+    if (!selectedProduct) {
+      setMessage("Selected product could not be found.");
+      return;
+    }
+
+    const targetColorway = getAdminScopedColorway(selectedProduct, editDetailColorway);
+    setColorwayDeleteModal({
+      isOpen: true,
+      productId: String(editProductId),
+      colorway: targetColorway
+    });
+  };
+
+  const closeColorwayDeleteModal = () => {
+    setColorwayDeleteModal({ isOpen: false, productId: null, colorway: "" });
+  };
+
+  const confirmDeleteProductColorway = async () => {
+    if (!colorwayDeleteModal.productId || !colorwayDeleteModal.colorway) {
+      return;
+    }
+
+    const colorwayLabel = formatColorwayLabel(colorwayDeleteModal.colorway);
+    await apiRequest(
+      `/api/admin/products/${colorwayDeleteModal.productId}/colorways/${encodeURIComponent(colorwayDeleteModal.colorway)}`,
+      "DELETE",
+      undefined,
+      token
+    );
+    closeColorwayDeleteModal();
+    setMessage(`Colorway "${colorwayLabel}" deleted.`);
     await loadAdminData(token, adminRole);
   };
 
@@ -617,13 +659,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   }, [editDetailColorway, editImageColorway]);
 
-  const adjustStock = async () => {
+  const adjustStock = async (mode) => {
     const requestedQuantity = Number(stockForm.quantityChange);
     if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
       throw new Error("Enter a stock quantity of at least 1.");
     }
 
-    const quantityChange = stockAction === "remove" ? -requestedQuantity : requestedQuantity;
+    const quantityChange = mode === "remove" ? -requestedQuantity : requestedQuantity;
 
     await apiRequest(
       `/api/admin/products/${stockForm.productId}/stocks`,
@@ -645,7 +687,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       quantityChange: 1,
       stockSourceType: prev.stockSourceType
     }));
-    setMessage(stockAction === "remove" ? "Stock removed." : "Stock added.");
+    setMessage(mode === "remove" ? "Stock removed." : "Stock added.");
     await loadAdminData(token, adminRole);
   };
 
@@ -720,15 +762,28 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const selectedProduct = products.find((item) => String(item.id) === String(productId));
     const nextColorway = selectedColorway || stockForm.colorway;
     const nextDepartment = getDepartmentForColorway(selectedProduct, nextColorway);
+    const preferredSelection = getPreferredStockSelection(
+      selectedProduct,
+      nextColorway,
+      String(stockForm.productId) === String(productId) ? stockForm.size : null,
+      String(stockForm.productId) === String(productId) ? stockForm.sizeGroup : null
+    );
     setStockForm((prev) => ({
       ...prev,
       productId: String(productId),
       colorway: nextColorway,
-      size: US_SIZES[0],
-      sizeGroup: getDefaultSizeGroup(nextDepartment),
+      size: preferredSelection.size,
+      sizeGroup: preferredSelection.sizeGroup || getDefaultSizeGroup(nextDepartment),
       quantityChange: 1,
       stockSourceType: "ON_HAND"
     }));
+    const shouldAutoOpenGuide = !hasStockGuideOnboardingShown && Boolean(getBrandSizeGuide(selectedProduct?.brand));
+    setIsStockGuideOpen(shouldAutoOpenGuide);
+    if (shouldAutoOpenGuide) {
+      setHasStockGuideOnboardingShown(true);
+      localStorage.setItem("adminStockGuideOnboardingShown", "1");
+    }
+    setIsStockSummaryOpen(false);
     setProductActionModal({ type: "stock", productId: String(productId) });
   };
 
@@ -757,6 +812,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     () => buildSizeSections(stockModalProduct, stockForm.colorway),
     [stockModalProduct, stockForm.colorway]
   );
+  const stockSizeGuide = useMemo(
+    () => getBrandSizeGuide(stockModalProduct?.brand),
+    [stockModalProduct?.brand]
+  );
   const activeStockSizeGroup = isUnisexDepartment(stockModalDepartment)
     ? (stockForm.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
     : getDefaultSizeGroup(stockModalDepartment);
@@ -784,15 +843,34 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     return selectedStockRow.onHand;
   }, [selectedStockRow, stockForm.stockSourceType]);
+  const stockGuideSection = useMemo(
+    () => getGuideSectionForContext(stockSizeGuide, { sizeGroup: activeStockSizeGroup, department: stockModalDepartment }),
+    [stockSizeGuide, activeStockSizeGroup, stockModalDepartment]
+  );
+  const activeStockRows = useMemo(() => {
+    if (!activeStockSizeSection?.rows) return [];
+    return activeStockSizeSection.rows;
+  }, [activeStockSizeSection]);
+  const stockSummaryTotals = useMemo(() => activeStockRows.reduce((acc, row) => ({
+    onHand: acc.onHand + (row.onHand || 0),
+    inTransit: acc.inTransit + (row.inTransit || 0),
+    preOrder: acc.preOrder + (row.preOrder || 0),
+    total: acc.total + (row.total || 0)
+  }), {
+    onHand: 0,
+    inTransit: 0,
+    preOrder: 0,
+    total: 0
+  }), [activeStockRows]);
   const handleStockSizeGroupChange = (nextSizeGroup) => {
     const targetSection = stockSizeSections.find((section) => section.key === nextSizeGroup);
     const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === stockForm.size);
-    const fallbackSize = (targetSection?.rows?.find((row) => row.total > 0) || targetSection?.rows?.[0])?.baseSize || stockForm.size;
-    setStockForm({
-      ...stockForm,
+    const fallbackSize = targetSection?.rows?.[0]?.baseSize || stockForm.size;
+    setStockForm((prev) => ({
+      ...prev,
       sizeGroup: nextSizeGroup,
-      size: hasCurrentSize ? stockForm.size : fallbackSize
-    });
+      size: hasCurrentSize ? prev.size : fallbackSize
+    }));
   };
 
   useEffect(() => {
@@ -800,8 +878,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       return;
     }
 
-    const activeSection = stockSizeSections.find((section) => section.key === activeStockSizeGroup) || stockSizeSections[0];
-    const availableRows = activeSection?.rows || [];
+    const availableRows = activeStockRows;
     const hasCurrentSize = availableRows.some((row) => row.baseSize === stockForm.size);
     const fallbackSize = availableRows[0]?.baseSize || US_SIZES[0];
     const nextSize = hasCurrentSize ? stockForm.size : fallbackSize;
@@ -816,7 +893,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         sizeGroup: nextSizeGroup
       }));
     }
-  }, [stockModalProduct, stockSizeSections, stockModalDepartment, stockForm.size, stockForm.sizeGroup, activeStockSizeGroup]);
+  }, [stockModalProduct, stockSizeSections, stockModalDepartment, stockForm.size, stockForm.sizeGroup, activeStockSizeGroup, activeStockRows]);
 
   const adminTotalPages = useMemo(
     () => Math.ceil(filteredAdminProducts.length / ADMIN_PAGE_SIZE),
@@ -991,14 +1068,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                         type="button"
                         className="admin-action-btn quick-tooltip"
                         data-tooltip="Stock"
-                        aria-label="Open stock and breakdown"
+                        aria-label="Open stock manager"
                         onClick={(event) => {
                           event.stopPropagation();
                           openStockModal(product.id, selectedColorway);
                         }}
                       >
                         <Boxes size={15} />
-                        <span className="admin-action-label">Stock &amp; Breakdown</span>
+                        <span className="admin-action-label">Manage Stock</span>
                       </button>
                       {isSuperAdmin ? (
                         <button
@@ -1142,7 +1219,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                 {productActionModal.type === "edit"
                   ? `Update Product${editProductForm.name ? ` - ${editProductForm.name}` : ""}${editImageColorway ? ` (${formatColorwayLabel(editImageColorway)})` : ""}`
                   : null}
-                {productActionModal.type === "stock" ? "Stock & Breakdown" : null}
+                {productActionModal.type === "stock"
+                  ? `Manage Stock${stockModalProduct ? ` - ${(stockModalProduct.brand || "").trim()} ${(stockModalProduct.name || "").trim()}`.trim() : ""}${stockForm.colorway ? ` (${formatColorwayLabel(stockForm.colorway)})` : ""}`
+                  : null}
               </h2>
               <button type="button" className="modal-close-btn" onClick={() => setProductActionModal({ type: null, productId: "" })}>
                 ✕
@@ -1151,39 +1230,39 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
             {productActionModal.type === "create" ? (
               <>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <select
-                    value={productForm.name}
-                    onChange={(e) => {
-                      if (e.target.value === "@@ADD_NEW_NAME@@") {
-                        setNewProductNameModal({ isOpen: true, productName: "" });
-                      } else {
-                        setProductForm({ ...productForm, name: e.target.value });
-                      }
-                    }}
-                    style={{ flex: 1, marginTop: 0 }}
-                  >
-                    <option value="">Select Name...</option>
-                    {nameOptions.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
+                <section className="edit-modal-section create-modal-section">
+                  <h3>Identity</h3>
+                  <p className="field-hint">Choose product name, brand, and main color.</p>
+                  <div className="add-product-manage-row">
+                    <select
+                      value={productForm.name}
+                      onChange={(e) => {
+                        if (e.target.value === "@@ADD_NEW_NAME@@") {
+                          setNewProductNameModal({ isOpen: true, productName: "" });
+                        } else {
+                          setProductForm({ ...productForm, name: e.target.value });
+                        }
+                      }}
+                    >
+                      <option value="">Select Name...</option>
+                      {nameOptions.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                      <option value="@@ADD_NEW_NAME@@" style={{ fontWeight: "bold", background: "#e3f2fd" }}>
+                        + Add New Name
                       </option>
-                    ))}
-                    <option value="@@ADD_NEW_NAME@@" style={{ fontWeight: "bold", background: "#e3f2fd" }}>
-                      + Add New Name
-                    </option>
-                  </select>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    style={{ width: "auto", whiteSpace: "nowrap", marginTop: 0 }}
-                    onClick={() => setNewProductNameModal({ isOpen: true, productName: "" })}
-                  >
-                    Manage Names
-                  </button>
-                </div>
-                <div className="row">
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    </select>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => setNewProductNameModal({ isOpen: true, productName: "" })}
+                    >
+                      Manage Names
+                    </button>
+                  </div>
+                  <div className="add-product-manage-row">
                     <select
                       value={productForm.brand}
                       onChange={(e) => {
@@ -1193,7 +1272,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                           setProductForm({ ...productForm, brand: e.target.value });
                         }
                       }}
-                      style={{ flex: 1, marginTop: 0 }}
                     >
                       <option value="">Select Brand...</option>
                       {brandOptions.map((brand) => (
@@ -1208,7 +1286,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     <button
                       type="button"
                       className="button-secondary"
-                      style={{ width: "auto", whiteSpace: "nowrap", marginTop: 0 }}
                       onClick={() => setNewBrandModal({ isOpen: true, brandName: "" })}
                     >
                       Manage Brands
@@ -1219,60 +1296,84 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     value={productForm.mainColor}
                     onChange={(e) => setProductForm({ ...productForm, mainColor: e.target.value })}
                   />
-                </div>
-                <div className="row">
-                  <select value={productForm.department} onChange={(e) => setProductForm({ ...productForm, department: e.target.value })}>
-                    {DEPARTMENT_OPTIONS.map((department) => (
-                      <option key={department} value={department}>
-                        {formatEnumLabel(department)}
-                      </option>
-                    ))}
-                  </select>
-                  <select value={productForm.category} onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}>
-                    {CATEGORY_OPTIONS.map((category) => (
-                      <option key={category} value={category}>
-                        {formatEnumLabel(category)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="row">
-                  <select value={productForm.productType} onChange={(e) => setProductForm({ ...productForm, productType: e.target.value })}>
-                    {getProductTypeOptions(productForm.category).map((productType) => (
-                      <option key={productType} value={productType}>
-                        {formatEnumLabel(productType)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="row">
-                  <input
-                    placeholder="Image URL"
-                    value={productForm.imageUrl}
-                    onChange={(e) => setProductForm({ ...productForm, imageUrl: e.target.value })}
-                  />
-                </div>
-                <div className="row">
-                  <select value={productImageColorway} onChange={(e) => setProductImageColorway(e.target.value)}>
-                    {createImageColorwayOptions.map((colorway) => (
-                      <option key={`create-image-${colorway}`} value={colorway}>
-                        {formatColorwayLabel(colorway)}
-                      </option>
-                    ))}
-                  </select>
-                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => setProductImageFile(e.target.files?.[0] || null)} />
-                  <small className="field-hint">📐 Recommended: <strong>800×800px</strong> square image (JPG/PNG/WEBP/AVIF, max 5MB) for best display.</small>
-                  <button type="button" onClick={() => uploadProductImage().catch((err) => setMessage(err.message))}>
-                    Upload Product Image
-                  </button>
-                  <button
-                    type="button"
-                    className="button-secondary remove-colorway-btn"
-                    onClick={removeCreateColorway}
-                    disabled={normalizeColorwayValue(productImageColorway || productForm.mainColor) === "DEFAULT"}
-                  >
-                    Remove Selected Colorway
-                  </button>
+                </section>
+
+                <section className="edit-modal-section create-modal-section">
+                  <h3>Classification</h3>
+                  <p className="field-hint">Set department, category, and product type.</p>
+                  <div className="row">
+                    <select value={productForm.department} onChange={(e) => setProductForm({ ...productForm, department: e.target.value })}>
+                      {DEPARTMENT_OPTIONS.map((department) => (
+                        <option key={department} value={department}>
+                          {formatEnumLabel(department)}
+                        </option>
+                      ))}
+                    </select>
+                    <select value={productForm.category} onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}>
+                      {CATEGORY_OPTIONS.map((category) => (
+                        <option key={category} value={category}>
+                          {formatEnumLabel(category)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="row">
+                    <select value={productForm.productType} onChange={(e) => setProductForm({ ...productForm, productType: e.target.value })}>
+                      {getProductTypeOptions(productForm.category).map((productType) => (
+                        <option key={productType} value={productType}>
+                          {formatEnumLabel(productType)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </section>
+                <div className="row add-product-upload-row">
+                  <div className="image-upload-stack">
+                    <div className="image-upload-headline">
+                      <strong>Product Image</strong>
+                      <small>Attach an image to the selected colorway.</small>
+                    </div>
+                    <div className="image-upload-section">
+                      <span className="image-upload-field-label">Colorway target</span>
+                      <select value={productImageColorway} onChange={(e) => setProductImageColorway(e.target.value)}>
+                        {createImageColorwayOptions.map((colorway) => (
+                          <option key={`create-image-${colorway}`} value={colorway}>
+                            {colorway === "DEFAULT" ? "Main Color (Default)" : formatColorwayLabel(colorway)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="image-upload-section">
+                      <input
+                        id="create-product-image-file"
+                        className="sr-only-file-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                        onChange={(e) => setProductImageFile(e.target.files?.[0] || null)}
+                      />
+                      <span className="image-upload-field-label">Image file</span>
+                      <label htmlFor="create-product-image-file" className="image-upload-trigger-enterprise">
+                        <ImagePlus size={16} />
+                        <span>{productImageFile ? "Change Image File" : "Choose Product Image"}</span>
+                      </label>
+                      <div className="image-upload-meta-row">
+                        <small className="field-hint image-upload-name">
+                          {productImageFile
+                            ? `${productImageFile.name} · ${formatFileSize(productImageFile.size)} · ${getFileFormatLabel(productImageFile)}`
+                            : "No file selected"}
+                        </small>
+                        <button
+                          type="button"
+                          className="image-upload-submit-btn"
+                          onClick={() => uploadProductImage().catch((err) => setMessage(err.message))}
+                          disabled={!productImageFile}
+                        >
+                          Upload Product Image
+                        </button>
+                      </div>
+                      <small className="field-hint image-upload-note">Recommended: 800 x 800 square image (JPG/PNG/WEBP/AVIF, max 5MB).</small>
+                    </div>
+                  </div>
                 </div>
                 {(productForm.colorwayImages?.[normalizeColorwayValue(productImageColorway)] || productForm.imageUrl)
                   ? (
@@ -1283,33 +1384,40 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     />
                     )
                   : null}
-                <input
-                  placeholder="Description"
-                  value={productForm.description}
-                  onChange={(e) => {
-                    setIsCreateDescriptionEdited(true);
-                    setProductForm({ ...productForm, description: e.target.value });
-                  }}
-                />
-                <button
-                  type="button"
-                  className="button-secondary"
-                  onClick={() => {
-                    setIsCreateDescriptionEdited(false);
-                    setProductForm((prev) => ({ ...prev, description: buildDefaultProductDescription(prev) }));
-                  }}
-                >
-                  Use Default Description
-                </button>
-                <button
-                  onClick={() =>
-                    createProduct()
-                      .then(() => setProductActionModal({ type: null, productId: "" }))
-                      .catch((err) => setMessage(err.message))
-                  }
-                >
-                  Save Product
-                </button>
+                <section className="edit-modal-section create-modal-section">
+                  <h3>Description</h3>
+                  <p className="field-hint">Use a clear customer-facing description. You can generate a default draft anytime.</p>
+                  <input
+                    placeholder="Description"
+                    value={productForm.description}
+                    onChange={(e) => {
+                      setIsCreateDescriptionEdited(true);
+                      setProductForm({ ...productForm, description: e.target.value });
+                    }}
+                  />
+                  <div className="create-product-actions-row">
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => {
+                        setIsCreateDescriptionEdited(false);
+                        setProductForm((prev) => ({ ...prev, description: buildDefaultProductDescription(prev) }));
+                      }}
+                    >
+                      Use Default Description
+                    </button>
+                    <button
+                      className="create-product-save-btn"
+                      onClick={() =>
+                        createProduct()
+                          .then(() => setProductActionModal({ type: null, productId: "" }))
+                          .catch((err) => setMessage(err.message))
+                      }
+                    >
+                      Save Product
+                    </button>
+                  </div>
+                </section>
               </>
             ) : null}
 
@@ -1327,7 +1435,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
                 <section className="edit-modal-section">
                   <h3>Basic Info (Shared)</h3>
-                  <p className="field-hint">These fields apply to the whole product.</p>
+                  <p className="field-hint">These fields apply to the whole product, across all colorways.</p>
+                  <p className="field-hint">If only one colorway has incorrect info, edit it under Details by Colorway below so other variants are not affected.</p>
                   <input
                     placeholder="Name"
                     value={editProductForm.name}
@@ -1399,6 +1508,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     value={editProductForm.description}
                     onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })}
                   />
+                  <div className="row">
+                    <button
+                      type="button"
+                      className="btn-delete-confirm"
+                      onClick={openDeleteProductColorwayModal}
+                      disabled={!editProductId || editDetailColorwayOptions.length === 0}
+                    >
+                      <Trash2 size={16} />
+                      <span>Delete Selected Colorway</span>
+                    </button>
+                  </div>
                 </section>
 
                 <section className="edit-modal-section">
@@ -1419,11 +1539,33 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                         </option>
                       ))}
                     </select>
-                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => setEditProductImageFile(e.target.files?.[0] || null)} />
-                    <small className="field-hint">📐 Recommended: <strong>800×800px</strong> square (JPG/PNG/WEBP/AVIF, max 5MB).</small>
-                    <button type="button" onClick={() => uploadEditProductImage().catch((err) => setMessage(err.message))}>
-                      Upload New Image
-                    </button>
+                    <input
+                      id="edit-product-image-file"
+                      className="sr-only-file-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                      onChange={(e) => setEditProductImageFile(e.target.files?.[0] || null)}
+                    />
+                    <label htmlFor="edit-product-image-file" className="image-upload-trigger-enterprise">
+                      <ImagePlus size={16} />
+                      <span>{editProductImageFile ? "Change Image File" : "Choose Product Image"}</span>
+                    </label>
+                    <div className="image-upload-meta-row">
+                      <small className="field-hint image-upload-name">
+                        {editProductImageFile
+                          ? `${editProductImageFile.name} · ${formatFileSize(editProductImageFile.size)} · ${getFileFormatLabel(editProductImageFile)}`
+                          : "No file selected"}
+                      </small>
+                      <button
+                        type="button"
+                        className="image-upload-submit-btn"
+                        onClick={() => uploadEditProductImage().catch((err) => setMessage(err.message))}
+                        disabled={!editProductImageFile}
+                      >
+                        Upload New Image
+                      </button>
+                    </div>
+                    <small className="field-hint image-upload-note">Recommended: 800 x 800 square image (JPG/PNG/WEBP/AVIF, max 5MB).</small>
                   </div>
                   {(editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl)
                     ? (
@@ -1450,19 +1592,24 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
             {productActionModal.type === "stock" ? (
               <>
-                <p className="field-hint">Choose a colorway, size view, and stock source, then add or remove stock from the selected size.</p>
+                <p className="field-hint">Simple stock update: choose colorway, size, source, and quantity, then add or remove.</p>
+                {stockModalProduct ? (
+                  <p className="field-hint stock-size-selection-note">
+                    Product: <strong>{`${stockModalProduct.brand || ""} ${stockModalProduct.name || ""}`.trim() || `#${stockModalProduct.id}`}</strong>
+                  </p>
+                ) : null}
                 <div className="row">
                   <button
                     type="button"
-                    className={`stock-mode-toggle ${stockAction === "add" ? "active" : ""}`}
-                    onClick={() => setStockAction("add")}
+                    className="stock-mode-toggle"
+                    onClick={() => adjustStock("add").catch((err) => setMessage(err.message))}
                   >
                     + Add Stock
                   </button>
                   <button
                     type="button"
-                    className={`stock-mode-toggle ${stockAction === "remove" ? "active" : ""}`}
-                    onClick={() => setStockAction("remove")}
+                    className="stock-mode-toggle"
+                    onClick={() => adjustStock("remove").catch((err) => setMessage(err.message))}
                   >
                     − Remove Stock
                   </button>
@@ -1471,9 +1618,46 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   <select value={stockForm.colorway} onChange={(e) => setStockForm({ ...stockForm, colorway: e.target.value })}>
                     {adminColorwayOptions.map((colorway) => (
                       <option key={colorway} value={colorway}>
-                        {colorway}
+                        {formatColorwayLabel(colorway)}
                       </option>
                     ))}
+                  </select>
+                  <select
+                    value={stockForm.stockSourceType}
+                    onChange={(e) => setStockForm({ ...stockForm, stockSourceType: e.target.value })}
+                  >
+                    {STOCK_SOURCE_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {STOCK_SOURCE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {isUnisexDepartment(stockModalDepartment) ? (
+                  <div className="row">
+                    <select value={activeStockSizeGroup} onChange={(e) => handleStockSizeGroupChange(e.target.value)}>
+                      {stockSizeSections.map((section) => (
+                        <option key={`stock-group-${section.key}`} value={section.key}>
+                          {section.key === "WOMEN" ? "Women's size group" : "Men's size group"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <div className="row">
+                  <select
+                    value={stockForm.size}
+                    onChange={(e) => setStockForm({ ...stockForm, size: e.target.value, sizeGroup: activeStockSizeGroup })}
+                  >
+                    {activeStockRows.length === 0 ? (
+                      <option value={stockForm.size}>US {stockForm.size}</option>
+                    ) : (
+                      activeStockRows.map((row) => (
+                        <option key={`stock-size-${activeStockSizeGroup}-${row.baseSize}`} value={row.baseSize}>
+                          US {row.displaySize}
+                        </option>
+                      ))
+                    )}
                   </select>
                   <input
                     type="number"
@@ -1484,113 +1668,31 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     onChange={(e) => setStockForm({ ...stockForm, quantityChange: Number(e.target.value) || 0 })}
                   />
                 </div>
-                <div className="stock-size-picker">
-                  <p className="field-hint stock-size-selection-note">
-                    Selected size: <strong>{selectedStockSizeLabel || `US ${stockForm.size}`}</strong>
-                    {isUnisexDepartment(stockModalDepartment) ? ` · stored in ${activeStockSizeGroup === "WOMEN" ? "women's" : "men's"} unisex stock` : ""}
-                  </p>
-                  {isUnisexDepartment(stockModalDepartment) ? (
-                    <p className="field-hint stock-size-selection-note">
-                      Men&apos;s and women&apos;s unisex sizes are tracked separately.
-                    </p>
-                  ) : null}
-                  <p className="field-hint stock-size-selection-note">
-                    Current {STOCK_SOURCE_LABELS[stockForm.stockSourceType]}: <strong>{selectedStockSourceQuantity}</strong>
-                    {selectedStockRow ? ` · Total: ${selectedStockRow.total}` : ""}
-                  </p>
-                  {isUnisexDepartment(stockModalDepartment) ? (
-                    <div className="size-group-toggle" role="tablist" aria-label="Choose sizing view">
-                      {stockSizeSections.map((section) => (
-                        <button
-                          key={section.key}
-                          type="button"
-                          role="tab"
-                          aria-selected={activeStockSizeGroup === section.key}
-                          className={`size-group-btn ${activeStockSizeGroup === section.key ? "active" : ""}`}
-                          onClick={() => handleStockSizeGroupChange(section.key)}
-                        >
-                          {section.key === "WOMEN" ? "Women's" : "Men's"}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                  {activeStockSizeSection ? (
-                    <div className="size-section-card">
-                      {isUnisexDepartment(stockModalDepartment) ? <p className="size-section-heading">{activeStockSizeSection.label}</p> : null}
-                      <div className="size-grid">
-                        {activeStockSizeSection.rows.map((row) => (
-                          <button
-                            key={`${activeStockSizeSection.key}-${row.baseSize}`}
-                            type="button"
-                            className={`size-btn ${stockForm.size === row.baseSize && activeStockSizeGroup === activeStockSizeSection.key ? "active" : ""}`}
-                            onClick={() => setStockForm({ ...stockForm, size: row.baseSize, sizeGroup: activeStockSizeSection.key })}
-                          >
-                            <span className="size-label">US {row.displaySize}</span>
-                            <span className="size-stock">Total {row.total}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
+                <p className="field-hint stock-size-selection-note">
+                  Selected size: <strong>{selectedStockSizeLabel || `US ${stockForm.size}`}</strong>
+                  {isUnisexDepartment(stockModalDepartment) ? ` · ${activeStockSizeGroup === "WOMEN" ? "women's" : "men's"} stock group` : ""}
+                </p>
+                <p className="field-hint stock-size-selection-note">
+                  Current {STOCK_SOURCE_LABELS[stockForm.stockSourceType]}: <strong>{selectedStockSourceQuantity}</strong>
+                  {selectedStockRow ? ` · Total: ${selectedStockRow.total}` : ""}
+                </p>
+                <p className="field-hint stock-size-guide-helper">
+                  Tip: Check the brand size guide before updating stock so sizes stay accurate.
+                </p>
+                <div className="row">
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setIsStockSummaryOpen(true)}
+                  >
+                    View Stock Summary
+                  </button>
                 </div>
-                <select
-                  value={stockForm.stockSourceType}
-                  onChange={(e) => setStockForm({ ...stockForm, stockSourceType: e.target.value })}
-                >
-                  {STOCK_SOURCE_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {STOCK_SOURCE_LABELS[type]}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() =>
-                    adjustStock()
-                      .catch((err) => setMessage(err.message))
-                  }
-                >
-                  {stockAction === "remove" ? "Remove Stock" : "Add Stock"}
-                </button>
-                {stockModalProduct ? (
-                  <div className="stock-breakdown-sections">
-                    {activeStockSizeSection ? (
-                      <div key={`breakdown-${activeStockSizeSection.key}`} className="stock-breakdown-panel modal-table-wrap">
-                        {isUnisexDepartment(stockModalDepartment) ? <p className="size-section-heading">{activeStockSizeSection.label}</p> : null}
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>US Size</th>
-                              <th>On-hand</th>
-                              <th>In-transit</th>
-                              <th>Pre-order</th>
-                              <th>Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {activeStockSizeSection.rows.map((row) => (
-                              <tr key={`${stockModalProduct.id}-${stockForm.colorway}-${activeStockSizeSection.key}-${row.baseSize}`}>
-                                <td>US {row.displaySize}</td>
-                                <td>{row.onHand}</td>
-                                <td>{row.inTransit}</td>
-                                <td>{row.preOrder}</td>
-                                <td>{row.total}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <div className="modal-table-wrap">
-                        <table>
-                          <tbody>
-                            <tr>
-                              <td>No size breakdown yet for this colorway.</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
+                {stockSizeGuide && stockGuideSection ? (
+                  <button type="button" className="button-secondary stock-size-guide-cta" onClick={() => setIsStockGuideOpen(true)}>
+                    <Ruler size={16} />
+                    <span>Open Size Guide</span>
+                  </button>
                 ) : null}
               </>
             ) : null}
@@ -1599,90 +1701,94 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         </div>
       ) : null}
 
-      {activeAdminSection === "reservations" ? (
-      <section className="card products-card admin-section">
-        <div className="section-head">
-          <h2>Customer Reservations</h2>
+      {isStockGuideOpen && stockSizeGuide && stockGuideSection ? (
+        <div className="modal-overlay" onClick={() => setIsStockGuideOpen(false)}>
+          <section className="modal-panel modal-panel-compact size-guide-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="breakdown-header">
+              <h2>{stockSizeGuide.brandLabel} Size Guide</h2>
+              <button type="button" className="modal-close-btn" aria-label="Close size guide" onClick={() => setIsStockGuideOpen(false)}>✕</button>
+            </div>
+            <div className="size-guide-table-wrap">
+              <table className="size-guide-table">
+                <thead>
+                  <tr>
+                    {stockGuideSection.columns.map((column) => (
+                      <th key={`stock-guide-head-modal-${column.key}`}>{column.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockGuideSection.rows.map((row, index) => (
+                    <tr key={`stock-guide-row-modal-${index}`}>
+                      {stockGuideSection.columns.map((column) => (
+                        <td key={`stock-guide-cell-modal-${column.key}-${index}`}>{row[column.key] || "-"}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <small className="field-hint" style={{ marginTop: 4 }}>
+              Reference from {stockSizeGuide.sourceLabel}. Actual fit may vary by model.
+            </small>
+            {stockSizeGuide.fitNote ? (
+              <small className="field-hint" style={{ marginTop: 0 }}>{stockSizeGuide.fitNote}</small>
+            ) : null}
+          </section>
         </div>
-        <div className="admin-summary-grid">
-          <article className="admin-summary-card">
-            <p>Total Reservations</p>
-            <h3>{reservationStats.totalReservations}</h3>
-          </article>
-          <article className="admin-summary-card">
-            <p>Preparing / Shipped</p>
-            <h3>{reservationStats.preparingCount} / {reservationStats.shippedCount}</h3>
-          </article>
-          <article className="admin-summary-card">
-            <p>Delivered</p>
-            <h3>{reservationStats.deliveredCount}</h3>
-          </article>
-          <article className="admin-summary-card">
-            <p>Low-stock Sizes</p>
-            <h3>{reservationStats.lowStockSizes}</h3>
-          </article>
-          <article className="admin-summary-card">
-            <p>Active Products</p>
-            <h3>{reservationStats.activeProducts}</h3>
-          </article>
+      ) : null}
+
+      {isStockSummaryOpen && productActionModal.type === "stock" ? (
+        <div className="modal-overlay" onClick={() => setIsStockSummaryOpen(false)}>
+          <section className="modal-panel stock-summary-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="breakdown-header">
+              <h2>
+                Stock Summary - {formatColorwayLabel(stockForm.colorway)}
+                {isUnisexDepartment(stockModalDepartment) ? ` (${activeStockSizeGroup === "WOMEN" ? "Women's" : "Men's"})` : ""}
+              </h2>
+              <button
+                type="button"
+                className="modal-close-btn"
+                aria-label="Close stock summary"
+                onClick={() => setIsStockSummaryOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>US Size</th>
+                    <th>On-hand</th>
+                    <th>In-transit</th>
+                    <th>Pre-order</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeStockRows.map((row) => (
+                    <tr key={`stock-summary-${activeStockSizeGroup}-${row.baseSize}`}>
+                      <td>US {row.displaySize}</td>
+                      <td>{row.onHand}</td>
+                      <td>{row.inTransit}</td>
+                      <td>{row.preOrder}</td>
+                      <td>{row.total}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td><strong>Total</strong></td>
+                    <td><strong>{stockSummaryTotals.onHand}</strong></td>
+                    <td><strong>{stockSummaryTotals.inTransit}</strong></td>
+                    <td><strong>{stockSummaryTotals.preOrder}</strong></td>
+                    <td><strong>{stockSummaryTotals.total}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Ref</th>
-                <th>Customer</th>
-                <th>Contact</th>
-                <th>Items</th>
-                <th>Updated By</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(isAdminLoading
-                ? Array.from({ length: 6 }, (_, index) => ({ id: `order-loading-${index}` }))
-                : orders
-              ).map((order) => (
-                <tr key={order.id}>
-                  {isAdminLoading ? (
-                    <td colSpan="6"><div className="skeleton-line" /></td>
-                  ) : (
-                    <>
-                      <td>#{order.id}</td>
-                      <td>{order.customerName}</td>
-                      <td>{order.customerContact}</td>
-                      <td>
-                        {(order.items || [])
-                          .map((item) => `${item.productName} (${item.colorway}, ${formatSelectedSizeLabel(item.size, item.sizeGroup === "WOMEN" ? "WOMEN" : "MEN", item.sizeGroup === "WOMEN" ? "UNISEX" : "")}) x${item.quantity}`)
-                          .join(", ")}
-                      </td>
-                      <td>{order.statusUpdatedBy || "-"}</td>
-                       <td>
-                         <div className="reservation-status-cell">
-                           <span className={`order-status-chip ${statusChipClass(order.status)}`}>
-                             {normalizeReservationStatus(order.status)}
-                           </span>
-                           <select
-                             className="reservation-status-select"
-                             value={normalizeReservationStatus(order.status)}
-                             onChange={(e) => updateReservationStatus(order.id, e.target.value).catch((err) => setMessage(err.message))}
-                           >
-                             {RESERVATION_STATUS_OPTIONS.map((option) => (
-                               <option key={option.value} value={option.value}>
-                                 {option.label}
-                               </option>
-                             ))}
-                           </select>
-                         </div>
-                       </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
       ) : null}
 
       <DeleteModal
@@ -1693,13 +1799,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
       <ConfirmActionModal
         isOpen={colorwayDeleteModal.isOpen}
-        title="Remove Draft Colorway"
-        description="This removes the selected colorway from the current Add Product draft."
-        targetLabel={formatColorwayLabel(colorwayDeleteModal.colorway)}
-        confirmLabel="Remove Colorway"
-        onCancel={closeCreateColorwayDeleteModal}
-        onConfirm={confirmRemoveCreateColorway}
+        title="Delete Colorway"
+        description="This will permanently remove the selected colorway’s details, images, and stock rows. Other colorways on the product will remain unchanged."
+        targetLabel={colorwayDeleteModal.colorway ? formatColorwayLabel(colorwayDeleteModal.colorway) : ""}
+        confirmLabel="Delete Colorway"
+        onCancel={closeColorwayDeleteModal}
+        onConfirm={() => confirmDeleteProductColorway().catch((err) => setMessage(err.message))}
       />
+
 
       <NewBrandModal
         newBrandModal={newBrandModal}

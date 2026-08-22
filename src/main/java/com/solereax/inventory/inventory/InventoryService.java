@@ -9,6 +9,7 @@ import com.solereax.inventory.inventory.dto.SizeStockResponse;
 import com.solereax.inventory.shared.NotFoundException;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -96,6 +97,35 @@ public class InventoryService {
                 request.category(),
                 request.productType()
         );
+        Product saved = productRepository.save(product);
+        return toAdminResponse(saved);
+    }
+
+    @Transactional
+    public PublicProductResponse deleteProductColorway(Long productId, String colorwayInput) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
+
+        String normalizedColorway = normalizeColorway(colorwayInput);
+        boolean hasMatchingData = product.getStocks().stream().anyMatch(stock -> normalizedColorway.equals(stock.getColorway()))
+                || product.getColorwayImages().stream().anyMatch(image -> normalizedColorway.equals(image.getColorway()))
+                || product.getColorwayDetails().stream().anyMatch(detail -> normalizedColorway.equals(normalizeColorway(detail.getColorway())))
+                || normalizedColorway.equals(normalizeColorway(product.getMainColor()));
+
+        if (!hasMatchingData) {
+            throw new NotFoundException("Colorway not found: " + normalizedColorway);
+        }
+
+        product.getStocks().removeIf(stock -> normalizedColorway.equals(stock.getColorway()));
+        product.getColorwayImages().removeIf(image -> normalizedColorway.equals(image.getColorway()));
+        product.getColorwayDetails().removeIf(detail -> normalizedColorway.equals(normalizeColorway(detail.getColorway())));
+
+        if (normalizedColorway.equals(normalizeColorway(product.getMainColor()))) {
+            product.setMainColor(findReplacementMainColor(product));
+            product.setImageUrl(findReplacementImageUrl(product));
+        }
+
+        product.setUpdatedAt(Instant.now());
         Product saved = productRepository.save(product);
         return toAdminResponse(saved);
     }
@@ -268,6 +298,32 @@ public class InventoryService {
         target.setCategory(trimToNull(categoryInput));
         target.setProductType(trimToNull(productTypeInput));
         target.setUpdatedAt(Instant.now());
+    }
+
+    private String findReplacementMainColor(Product product) {
+        LinkedHashSet<String> colorways = new LinkedHashSet<>();
+        product.getStocks().stream()
+                .map(ProductStock::getColorway)
+                .map(this::normalizeColorway)
+                .forEach(colorways::add);
+        product.getColorwayImages().stream()
+                .map(ProductColorwayImage::getColorway)
+                .map(this::normalizeColorway)
+                .forEach(colorways::add);
+        product.getColorwayDetails().stream()
+                .map(ProductColorwayDetail::getColorway)
+                .map(this::normalizeColorway)
+                .forEach(colorways::add);
+        return colorways.stream().findFirst().orElse(null);
+    }
+
+    private String findReplacementImageUrl(Product product) {
+        return product.getColorwayImages().stream()
+                .map(ProductColorwayImage::getImageUrl)
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
     }
 
     private String normalizeColorway(String value) {

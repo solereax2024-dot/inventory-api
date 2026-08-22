@@ -59,7 +59,7 @@ export function buildStateValuesLine(stockStates, selectedColorway) {
   return `On-hand: ${onHand}, In-transit: ${inTransit}, Pre-order: ${preOrder}`;
 }
 
-export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup = null, department = "") {
+export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup = null, department = "", sizeValues = US_SIZES) {
   const storageGroup = requestedSizeGroup ? getStockStorageGroup(department, requestedSizeGroup) : null;
   const stocks = (product?.stocks || []).filter((stock) => {
     if (stock.colorway !== selectedColorway) {
@@ -75,7 +75,10 @@ export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup
   const bySize = storageGroup
     ? product?.stockStateBySizeGroup?.[selectedColorway]?.[storageGroup] || {}
     : product?.stockStateBySize?.[selectedColorway] || {};
-  return US_SIZES.map((size) => {
+  const sizeList = (Array.isArray(sizeValues) && sizeValues.length > 0 ? sizeValues : US_SIZES)
+    .map((size) => String(size).trim())
+    .filter(Boolean);
+  return [...new Set(sizeList)].map((size) => {
     const stateValues = bySize?.[size] || {};
     const onHand = Number(stateValues.ON_HAND || 0);
     const inTransit = Number(stateValues.IN_TRANSIT || 0);

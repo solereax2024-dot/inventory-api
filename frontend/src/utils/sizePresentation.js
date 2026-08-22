@@ -1,5 +1,6 @@
 import { getColorwayDetails } from "./colorway";
 import { buildSizeStateRows } from "./stock";
+import { getBrandSizeGuide, getGuideSectionForContext, getGuideSizeValues } from "./sizeGuide";
 
 const WOMENS_SIZE_OFFSET = -1.5;
 const WOMENS_MIN_SIZE = 5;
@@ -40,9 +41,14 @@ export function convertMenSizeToWomen(size) {
 
 export function buildSizeSections(product, colorway) {
   const department = getDepartmentForColorway(product, colorway);
+  const guide = getBrandSizeGuide(product?.brand);
 
-  const mapRows = (sizeGroup) => buildSizeStateRows(product, colorway, sizeGroup, department)
-    .map((row) => ({
+  const mapRows = (sizeGroup) => {
+    const guideSection = getGuideSectionForContext(guide, { sizeGroup, department });
+    const sizeValues = getGuideSizeValues(guideSection, sizeGroup);
+    const sizeRows = buildSizeStateRows(product, colorway, sizeGroup, department, sizeValues);
+
+    return sizeRows.map((row) => ({
       ...row,
       baseSize: row.size,
       displaySize: sizeGroup === "WOMEN" && isUnisexDepartment(department)
@@ -57,6 +63,7 @@ export function buildSizeSections(product, colorway) {
       const numericSize = toNumericSize(row.displaySize);
       return numericSize !== null && numericSize >= WOMENS_MIN_SIZE && numericSize <= WOMENS_MAX_SIZE;
     });
+  };
 
   if (isUnisexDepartment(department)) {
     return [

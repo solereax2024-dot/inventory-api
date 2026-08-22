@@ -3,7 +3,6 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { apiRequest, uploadImage } from "./utils/api";
 import SiteHeader from "./components/SiteHeader";
 import SiteFooter from "./components/SiteFooter";
-import HeroPage from "./pages/customer/HeroPage";
 import CustomerPage from "./pages/customer/CustomerPage";
 import ReservePage from "./pages/customer/ReservePage";
 import AdminPage from "./pages/admin/AdminPage";
@@ -44,6 +43,11 @@ export default function App() {
   const [logoDarkFile, setLogoDarkFile] = useState(null);
   const [logoModalMessage, setLogoModalMessage] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [catalogNav, setCatalogNav] = useState({
+    brandOptions: ["ALL"],
+    brandFilter: "ALL",
+    onBrandChange: () => {}
+  });
   const [adminToken, setAdminToken] = useState(() => localStorage.getItem("adminToken") || "");
   const [themeColor, setThemeColor] = useState(() => localStorage.getItem("themeColor") || DEFAULT_THEME);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
@@ -143,20 +147,7 @@ export default function App() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    const pathname = location.pathname.toLowerCase();
-    let title = "Sole Reax Official";
-
-    if (pathname === "/" || pathname === "") {
-      title = "Sole Reax Official | Home";
-    } else if (pathname.startsWith("/collection") || pathname.startsWith("/shop")) {
-      title = "Sole Reax Official | Collection";
-    } else if (pathname.startsWith("/reserve")) {
-      title = "Sole Reax Official | Reserve";
-    } else if (pathname.startsWith("/admin")) {
-      title = "Sole Reax Official | Admin";
-    }
-
-    document.title = title;
+    document.title = "Sole Reax PH | Official Site";
   }, [location.pathname]);
 
   const handleAdminSignOut = () => {
@@ -191,6 +182,7 @@ export default function App() {
       <SiteHeader
         logoUrl={activeLogoUrl}
         isAdminLoggedIn={Boolean(adminToken)}
+        catalogNav={catalogNav}
         onLogoClick={() => {
           setLogoFile(null);
           setLogoDarkFile(null);
@@ -204,8 +196,8 @@ export default function App() {
         onThemeColorClick={() => setIsThemePickerOpen(true)}
       />
       <Routes>
-        <Route path="/" element={<HeroPage />} />
-        <Route path="/collection" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} />} />
+        <Route path="/" element={<Navigate to="/collection" replace />} />
+        <Route path="/collection" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} />} />
         <Route path="/shop" element={<Navigate to="/collection" replace />} />
         <Route path="/reserve/:productId" element={<ReservePage />} />
         <Route
@@ -219,7 +211,7 @@ export default function App() {
           }
         />
         <Route path="/admin.html/*" element={<Navigate to="/admin" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/collection" replace />} />
       </Routes>
 
       {isLogoModalOpen ? (

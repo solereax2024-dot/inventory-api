@@ -343,7 +343,7 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -470,16 +470,6 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-}
-
-th,
-td {
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 8px;
-}
-
-.message {
   margin: 8px 0 0;
   color: #2563eb;
 }
@@ -845,10 +835,6 @@ td {
 @media (max-width: 900px) {
   .row {
     grid-template-columns: 1fr;
-  }
-
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
 }
 
@@ -1457,15 +1443,6 @@ body.theme-dark .size-btn:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--primary-soft) 74%, #e0f2fe);
 }
 
-body.theme-dark .size-btn.active {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 40%, transparent), color-mix(in srgb, var(--primary) 34%, transparent)),
-    linear-gradient(135deg, var(--primary), #0f172a);
-  color: #ffffff;
-  border-color: color-mix(in srgb, var(--primary-soft) 78%, #f0f9ff);
-  box-shadow: 0 12px 24px color-mix(in srgb, var(--primary) 48%, transparent), 0 0 0 1px color-mix(in srgb, var(--primary-soft) 22%, transparent);
-}
-
 body.theme-dark .confirm-code-display {
   color: #f8fafc;
   letter-spacing: 3px;
@@ -1546,17 +1523,10 @@ body.theme-dark .size-label {
   color: #e2e8f0;
 }
 
-body.theme-dark .size-btn.active .size-label {
-  color: #ffffff;
-}
-
 body.theme-dark .size-stock {
   color: #94a3b8;
 }
 
-body.theme-dark .size-btn.active .size-stock {
-  color: color-mix(in srgb, var(--primary-soft) 82%, #bfdbfe);
-}
 
 /* Reserve form actions sticky bg in dark mode (mobile) */
 body.theme-dark .reserve-form-actions {
@@ -1604,6 +1574,7 @@ body.theme-dark .reserve-form-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
+
 
   .section-head {
     flex-direction: column;

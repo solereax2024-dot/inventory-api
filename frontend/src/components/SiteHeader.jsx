@@ -1,7 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { LogOut, Palette, Search, UserRound } from "lucide-react";
-import { THEMES } from "../constants/themes";
+import { useEffect, useState } from "react";
+import { LayoutDashboard, LogOut, Menu, Palette, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import "../styles/header.css";
 
 export default function SiteHeader({
@@ -11,19 +10,44 @@ export default function SiteHeader({
   onSearchChange,
   isAdminLoggedIn,
   onAdminSignOut,
-  themeColor,
-  onThemeColorClick
+  onThemeColorClick,
+  catalogNav = { brandOptions: ["ALL"], brandFilter: "ALL", onBrandChange: () => {} }
 }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isBrandsExpanded, setIsBrandsExpanded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const isAdminPath = location.pathname.startsWith("/admin");
-  const isCatalogPath = location.pathname === "/collection";
-  const currentTheme = THEMES[themeColor];
+  const isCatalogPath = location.pathname === "/collection" || location.pathname.startsWith("/collection/");
+  const effectiveBrandOptions = Array.isArray(catalogNav.brandOptions) && catalogNav.brandOptions.length > 0
+    ? catalogNav.brandOptions
+    : ["ALL"];
+  const selectableBrandOptions = effectiveBrandOptions.filter((brand) => brand !== "ALL");
+  const brandsReady = selectableBrandOptions.length > 0;
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setIsBrandsExpanded(false);
+  }, [location.pathname]);
+
   return (
     <header className="site-header">
       <div className="site-header-inner">
-        <div>
+        <div className="site-header-left">
+          <button
+            type="button"
+            className={`menu-trigger quick-tooltip${isMenuOpen ? " active" : ""}`}
+            data-tooltip="Menu"
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMenuOpen}
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+          >
+            <Menu size={18} />
+          </button>
+        </div>
+
+        <div className="site-header-center">
           <h1 className="site-title">
             {isAdminPath && isAdminLoggedIn ? (
               <button
@@ -39,13 +63,14 @@ export default function SiteHeader({
               </button>
             ) : null}
             {logoUrl && (!isAdminPath || !isAdminLoggedIn) ? (
-              <Link className="site-logo-link" to="/" aria-label="Go to hero page">
+              <Link className="site-logo-link" to="/collection" aria-label="Go to collections">
                 <img className="site-logo" src={logoUrl} alt="Sole Reax logo" />
               </Link>
             ) : null}
           </h1>
         </div>
-        <nav className="nav">
+
+        <div className="site-header-right">
           {isCatalogPath && (
             <div className="nav-search-container">
               {isSearchOpen ? (
@@ -71,41 +96,118 @@ export default function SiteHeader({
               )}
             </div>
           )}
-          {isAdminLoggedIn ? (
+        </div>
+      </div>
+
+      {isMenuOpen ? (
+        <div className="site-menu-backdrop" onClick={() => setIsMenuOpen(false)}>
+          <aside className="site-menu-panel" role="menu" aria-label="Header menu" onClick={(e) => e.stopPropagation()}>
+            <div className="site-menu-panel-header">
+              <button
+                type="button"
+                className="site-menu-close-btn"
+                aria-label="Close menu"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+          <div className="site-menu-brands" role="group" aria-label="Brand selections">
+            {!isAdminPath ? (
+              brandsReady ? (
+              <>
+                <button
+                  type="button"
+                  className="site-menu-action site-menu-action-disclosure"
+                  onClick={() => setIsBrandsExpanded((prev) => !prev)}
+                  aria-expanded={isBrandsExpanded}
+                >
+                  <span>Brands</span>
+                  <span className="site-menu-disclosure-icon" aria-hidden="true">{isBrandsExpanded ? "−" : "+"}</span>
+                </button>
+                {isBrandsExpanded ? (
+                  <div className="site-menu-brand-list">
+                    {selectableBrandOptions.map((brand) => (
+                      <button
+                        key={brand}
+                        type="button"
+                        className={`site-menu-brand-item ${catalogNav.brandFilter === brand ? "active" : ""}`}
+                        onClick={() => {
+                          catalogNav.onBrandChange?.(brand);
+                          setIsMenuOpen(false);
+                        }}
+                      >
+                        {brand}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <span className="site-menu-brands-loading">Loading brands…</span>
+            )
+            ) : null}
+          </div>
+
+          <div className="site-menu-lower">
             <button
               type="button"
-              className="nav-link quick-tooltip"
-                  data-tooltip="Logout"
-              aria-label="Sign out admin"
+              className="site-menu-action"
               onClick={() => {
-                onAdminSignOut();
-                navigate("/");
+                onThemeColorClick();
+                setIsMenuOpen(false);
               }}
             >
-              <LogOut size={18} />
+              <Palette size={16} />
+              <span>Theme</span>
             </button>
-          ) : (
-            <Link
-              className={`nav-link quick-tooltip ${isAdminPath ? "active" : ""}`}
-              to="/admin"
-              data-tooltip="Admin"
-              aria-label="Admin sign in"
-            >
-              <UserRound size={18} />
-            </Link>
-          )}
-          <button
-            type="button"
-            className={`nav-theme-toggle quick-tooltip`}
-            aria-label="Choose theme color"
-            data-tooltip="Theme"
-            onClick={onThemeColorClick}
-            style={{ '--theme-accent': currentTheme?.hex || '#4f46e5' }}
-          >
-            <Palette size={16} />
-          </button>
-        </nav>
-      </div>
+            {isAdminLoggedIn && isAdminPath && (
+              <Link
+                className="site-menu-action"
+                to="/collection"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <ShoppingBag size={16} />
+                <span>View Collection</span>
+              </Link>
+            )}
+            {isAdminLoggedIn && !isAdminPath && (
+              <Link
+                className="site-menu-action"
+                to="/admin"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <LayoutDashboard size={16} />
+                <span>Admin Dashboard</span>
+              </Link>
+            )}
+            {isAdminLoggedIn ? (
+              <button
+                type="button"
+                className="site-menu-action"
+                onClick={() => {
+                  onAdminSignOut();
+                  navigate("/collection");
+                  setIsMenuOpen(false);
+                }}
+              >
+                <LogOut size={16} />
+                <span>Logout Admin</span>
+              </button>
+            ) : (
+              <Link
+                className="site-menu-action"
+                to="/admin"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <UserRound size={16} />
+                <span>Admin Login</span>
+              </Link>
+            )}
+          </div>
+          </aside>
+        </div>
+      ) : null}
     </header>
   );
 }
