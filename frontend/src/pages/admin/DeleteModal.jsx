@@ -14,7 +14,7 @@ export default function DeleteModal({ deleteModal, setDeleteModal, confirmDelete
             <div className="warning-icon">⚠️</div>
             <div className="warning-text">
               <p><strong>This action cannot be undone.</strong></p>
-              <p>This will permanently delete the product and all associated stock records.</p>
+              <p>This will permanently delete the product and all its colorways, stock records, and related data.</p>
             </div>
           </div>
 
