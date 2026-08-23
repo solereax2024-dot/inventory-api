@@ -3,12 +3,13 @@
   top: 0;
   z-index: 20;
   background:
-    linear-gradient(to bottom, color-mix(in srgb, var(--surface) 96%, #ffffff), color-mix(in srgb, var(--surface-2) 92%, #f8fafc)),
-    linear-gradient(90deg, color-mix(in srgb, var(--primary) 22%, transparent), color-mix(in srgb, var(--primary-strong) 14%, transparent));
+    linear-gradient(to bottom, var(--primary-soft-2), var(--primary-soft)),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 40%, transparent), color-mix(in srgb, var(--primary-strong) 26%, transparent));
   backdrop-filter: blur(20px);
   border-bottom: 1px solid color-mix(in srgb, var(--primary) 28%, rgba(203, 213, 225, 0.7));
   box-shadow: 0 6px 14px color-mix(in srgb, var(--primary-dark) 10%, rgba(15, 23, 42, 0.06));
   overflow: visible;
+  transition: background .3s ease, border-color .3s ease;
 }
 
 .site-header::after {
@@ -60,9 +61,12 @@
 .menu-trigger {
   width: 40px;
   height: 40px;
+  padding: 0;
+  margin: 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
+  box-shadow: none;
   color: color-mix(in srgb, var(--primary-dark) 32%, #64748b);
   display: inline-flex;
   align-items: center;
@@ -128,9 +132,12 @@
 .site-menu-close-btn {
   width: 36px;
   height: 36px;
+  padding: 0;
+  margin: 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
+  box-shadow: none;
   color: #0f172a;
   display: inline-flex;
   align-items: center;
@@ -203,32 +210,48 @@
 }
 
 .site-menu-brand-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
 }
 
 .site-menu-brand-item {
-  min-height: 36px;
-  border: 1px solid transparent;
-  border-radius: 9px;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
   background: transparent;
-  padding: 0 10px;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
   text-align: left;
-  color: #0f172a;
+  color: color-mix(in srgb, var(--primary-dark) 60%, #334155);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease;
+  box-shadow: none;
 }
 
 .site-menu-brand-item:hover {
-  background: color-mix(in srgb, var(--primary-soft-2) 78%, #f8fafc);
-  border-color: color-mix(in srgb, var(--primary) 22%, transparent);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  transform: none;
 }
 
 .site-menu-brand-item.active {
   background: transparent;
   border-color: transparent;
-  color: color-mix(in srgb, var(--primary) 72%, #1d4ed8);
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  box-shadow: none;
 }
 
 .site-logo-link {
@@ -503,3 +526,64 @@
     font-size: 13px;
   }
 }
+
+/* ── Header dark-mode overrides ──────────────────────────────────────── */
+
+body.theme-dark .site-menu-panel {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--dark-surface) 92%, transparent), color-mix(in srgb, var(--dark-bg-mid) 98%, transparent));
+  border-color: var(--dark-border);
+  box-shadow: 20px 0 44px rgba(2, 6, 23, 0.4);
+}
+
+body.theme-dark .site-menu-panel-header {
+  border-bottom-color: var(--dark-border);
+}
+
+body.theme-dark .site-menu-close-btn {
+  color: #e2e8f0;
+}
+
+body.theme-dark .site-menu-action {
+  color: #e2e8f0;
+}
+
+body.theme-dark .site-menu-action:hover {
+  background: color-mix(in srgb, var(--primary) 18%, rgba(255, 255, 255, 0.05));
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .site-menu-brands-label {
+  color: #94a3b8;
+}
+
+body.theme-dark .site-menu-lower {
+  border-top-color: var(--dark-border);
+}
+
+body.theme-dark .site-menu-brand-item {
+  color: color-mix(in srgb, var(--primary-soft) 68%, #cbd5e1);
+}
+
+body.theme-dark .site-menu-brand-item:hover {
+  color: color-mix(in srgb, var(--primary-soft) 88%, #ffffff);
+}
+
+body.theme-dark .site-menu-brand-item.active {
+  color: color-mix(in srgb, var(--primary-soft) 88%, #ffffff);
+}
+
+body.theme-dark .menu-trigger {
+  color: color-mix(in srgb, var(--primary-soft) 54%, #cbd5e1);
+}
+
+body.theme-dark .menu-trigger.active {
+  color: #f8fafc;
+}
+
+body.theme-dark .nav-link.active {
+  background: color-mix(in srgb, var(--primary) 24%, rgba(30, 41, 59, 0.9));
+  border-color: var(--dark-border);
+  color: #f8fafc;
+}
+

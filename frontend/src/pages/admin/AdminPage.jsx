@@ -1100,43 +1100,76 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
           </tbody>
         </table>
         </div>
-        <div className="pagination-bar card" style={{ marginTop: '8px' }}>
-          <div className="pagination-numbers">
-            <button
-              type="button"
-              className="page-number-btn page-nav-btn"
-              disabled={adminPage === 1}
-              onClick={() => setAdminPage((prev) => Math.max(1, prev - 1))}
-              aria-label="Previous page"
-            >
-              ‹
-            </button>
-            {adminPaginationItems.map((item) =>
-              item.type === "ellipsis" ? (
-                <span key={item.value} className="page-ellipsis">…</span>
-              ) : (
-                <button
-                  key={item.value}
-                  type="button"
-                  className={`page-number-btn ${adminPage === item.value ? "active" : ""}`}
-                  onClick={() => setAdminPage(item.value)}
-                  aria-label={`Page ${item.value}`}
-                  aria-current={adminPage === item.value ? "page" : undefined}
-                >
-                  {item.value}
-                </button>
-              )
-            )}
-            <button
-              type="button"
-              className="page-number-btn page-nav-btn"
-              disabled={adminPage === adminTotalPages}
-              onClick={() => setAdminPage((prev) => Math.min(adminTotalPages, prev + 1))}
-              aria-label="Next page"
-            >
-              ›
-            </button>
-          </div>
+        <div className="pagination-bar card" style={{ marginTop: "8px" }}>
+          <nav aria-label="Admin products pages">
+            <ul className="pagination-numbers pages-items">
+              {adminPage > 1 ? (
+                <>
+                  <li className="pages-item pages-item-first">
+                    <button
+                      type="button"
+                      className="page-number-btn page-nav-btn"
+                      onClick={() => setAdminPage(1)}
+                      aria-label="First page"
+                    >
+                      «
+                    </button>
+                  </li>
+                  <li className="pages-item pages-item-prev">
+                    <button
+                      type="button"
+                      className="page-number-btn page-nav-btn"
+                      onClick={() => setAdminPage((prev) => Math.max(1, prev - 1))}
+                      aria-label="Previous page"
+                    >
+                      ‹
+                    </button>
+                  </li>
+                </>
+              ) : null}
+              {adminPaginationItems.map((item) =>
+                item.type === "ellipsis" ? (
+                  <li key={item.value} className="pages-item page-ellipsis" aria-hidden="true">…</li>
+                ) : (
+                  <li key={item.value} className={`pages-item ${adminPage === item.value ? "current" : ""}`}>
+                    <button
+                      type="button"
+                      className={`page-number-btn ${adminPage === item.value ? "active" : ""}`}
+                      onClick={() => setAdminPage(item.value)}
+                      aria-label={`Page ${item.value}`}
+                      aria-current={adminPage === item.value ? "page" : undefined}
+                    >
+                      {item.value}
+                    </button>
+                  </li>
+                )
+              )}
+              {adminPage < adminTotalPages ? (
+                <>
+                  <li className="pages-item pages-item-next">
+                    <button
+                      type="button"
+                      className="page-number-btn page-nav-btn"
+                      onClick={() => setAdminPage((prev) => Math.min(adminTotalPages, prev + 1))}
+                      aria-label="Next page"
+                    >
+                      ›
+                    </button>
+                  </li>
+                  <li className="pages-item pages-item-last">
+                    <button
+                      type="button"
+                      className="page-number-btn page-nav-btn"
+                      onClick={() => setAdminPage(adminTotalPages)}
+                      aria-label="Last page"
+                    >
+                      »
+                    </button>
+                  </li>
+                </>
+              ) : null}
+            </ul>
+          </nav>
         </div>
       </section>
       ) : null}

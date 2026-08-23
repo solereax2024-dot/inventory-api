@@ -14,11 +14,12 @@
   min-height: 38px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--primary) 22%, #cbd5e1);
-  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--primary-soft-2) 44%, #f1f5f9));
-  color: #1f2937;
+  background: linear-gradient(180deg, var(--surface-raised), var(--primary-soft));
+  color: var(--text-strong);
   font-weight: 600;
   padding: 0 14px;
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
 }
 
 .admin-subnav-tab.active {
@@ -49,9 +50,9 @@
   min-height: 0;
   max-height: none;
   scrollbar-gutter: stable both-edges;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: linear-gradient(180deg, var(--surface-raised), var(--surface-2));
 }
 
 .admin-table-wrap {
@@ -64,9 +65,9 @@
   min-height: 0;
   max-height: none;
   scrollbar-gutter: stable both-edges;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: linear-gradient(180deg, var(--surface-raised), var(--surface-2));
 }
 
 .admin-section .pagination-bar {
@@ -662,5 +663,62 @@
    .products-table {
      min-width: 360px;
    }
+}
+
+/* ── Admin dark-mode overrides ───────────────────────────────────────── */
+
+/* Fix: global `table { color: #2563eb }` overrides dark mode text for all td */
+body.theme-dark .products-table,
+body.theme-dark .admin-table {
+  color: #e2e8f0;
+}
+
+body.theme-dark .products-table td,
+body.theme-dark .admin-table td {
+  color: #e2e8f0;
+}
+
+body.theme-dark .edit-modal-sticky-head {
+  background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .edit-modal-section {
+  background: color-mix(in srgb, var(--dark-surface) 92%, transparent);
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .edit-modal-section h3 {
+  color: #e2e8f0;
+}
+
+body.theme-dark .stock-guide-panel {
+  background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .products-state,
+body.theme-dark .products-stocks {
+  color: #cbd5e1;
+}
+
+body.theme-dark .products-table-wrap,
+body.theme-dark .admin-table-wrap {
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .products-table thead tr:nth-child(2) th {
+  border-top-color: var(--dark-border);
+}
+
+body.theme-dark .remove-colorway-btn {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--dark-border));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 20%, rgba(17, 24, 39, 0.94)), color-mix(in srgb, var(--danger) 12%, rgba(2, 6, 23, 0.98)));
+  color: #fecaca;
+}
+
+body.theme-dark .stock-size-guide-cta {
+  border-color: color-mix(in srgb, var(--primary-soft) 48%, var(--dark-border));
+  color: color-mix(in srgb, var(--primary-soft) 80%, #ffffff);
 }
 

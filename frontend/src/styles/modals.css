@@ -644,6 +644,7 @@
   line-height: 1;
   cursor: pointer;
   padding: 0;
+  margin: 0;
   width: 32px;
   height: 32px;
   display: flex;
@@ -772,19 +773,19 @@
 
 .btn-cancel {
   padding: 12px 24px;
-  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--primary-soft-2) 40%, #f8fafc));
-  color: #1e293b;
-  border: 1px solid #cbd5e1;
+  background: linear-gradient(180deg, var(--surface-raised), var(--primary-soft));
+  color: var(--text-strong);
+  border: 1px solid var(--border);
   border-radius: 12px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s;
   box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
 }
 
 .btn-cancel:hover {
-  background: linear-gradient(180deg, #f8fafc, color-mix(in srgb, var(--primary-soft) 48%, #e2e8f0));
+  background: linear-gradient(180deg, var(--surface-raised), color-mix(in srgb, var(--primary-soft) 60%, var(--surface-tint)));
   border-color: color-mix(in srgb, var(--primary) 34%, #94a3b8);
 }
 
@@ -873,11 +874,12 @@
 .stock-mode-toggle {
   width: 100%;
   margin-top: 0;
-  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--primary-soft-2) 42%, #f8fafc));
-  color: #1e293b;
-  border: 1px solid #cbd5e1;
+  background: linear-gradient(180deg, var(--surface-raised), var(--primary-soft));
+  color: var(--text-strong);
+  border: 1px solid var(--border);
   font-weight: 600;
   box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
 }
 
 .stock-mode-toggle.active {
@@ -1242,6 +1244,136 @@ body.theme-dark .saved-entry-cancel-btn {
 
 body.theme-dark .saved-entry-cancel-btn:hover {
   border-color: var(--dark-border-strong);
+}
+
+/* ── Modals dark-mode overrides ──────────────────────────────────────── */
+
+/* Size guide table */
+body.theme-dark .size-guide-table-wrap {
+  background: color-mix(in srgb, var(--dark-surface) 90%, transparent);
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .size-guide-table th,
+body.theme-dark .size-guide-table td {
+  border-bottom-color: var(--dark-border);
+  color: #e2e8f0;
+}
+
+body.theme-dark .size-guide-table th {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dark-surface) 86%, transparent), color-mix(in srgb, var(--dark-bg-mid) 96%, transparent));
+  color: #f1f5f9;
+}
+
+/* Reserve confirm cards */
+body.theme-dark .reserve-confirm-product,
+body.theme-dark .reserve-confirm-item {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dark-surface) 92%, transparent), color-mix(in srgb, var(--dark-bg-mid) 96%, transparent));
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .reserve-confirm-label {
+  color: #94a3b8;
+}
+
+body.theme-dark .reserve-confirm-subtle {
+  color: #94a3b8;
+}
+
+/* Size group toggle */
+body.theme-dark .size-group-toggle {
+  background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .size-group-btn {
+  color: #cbd5e1;
+}
+
+body.theme-dark .size-group-btn:hover {
+  background: color-mix(in srgb, var(--primary) 18%, rgba(30, 41, 59, 0.9));
+}
+
+/* Size section heading */
+body.theme-dark .size-section-heading {
+  color: #94a3b8;
+}
+
+/* Confirm action modal */
+body.theme-dark .confirm-action-head h3 {
+  color: #f8fafc;
+}
+
+body.theme-dark .confirm-action-copy {
+  color: #cbd5e1;
+}
+
+body.theme-dark .confirm-action-target {
+  background: color-mix(in srgb, var(--primary) 28%, rgba(30, 41, 59, 0.9));
+  color: #e2e8f0;
+}
+
+/* Modal table (stock summary) */
+body.theme-dark .modal-table-wrap thead th {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dark-surface) 86%, transparent), color-mix(in srgb, var(--dark-bg-mid) 96%, transparent));
+  color: #e5e7eb;
+}
+
+body.theme-dark .modal-table-wrap tbody td:first-child {
+  background: color-mix(in srgb, var(--dark-surface) 92%, transparent);
+  box-shadow: 1px 0 0 var(--dark-border);
+  color: #e2e8f0;
+}
+
+body.theme-dark .modal-table-wrap tbody td {
+  color: #e2e8f0;
+}
+
+/* Image upload components */
+body.theme-dark .image-upload-stack {
+  background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .image-upload-headline {
+  border-bottom-color: var(--dark-border);
+}
+
+body.theme-dark .image-upload-headline strong {
+  color: #f1f5f9;
+}
+
+body.theme-dark .image-upload-headline small,
+body.theme-dark .image-upload-note,
+body.theme-dark .image-upload-name {
+  color: #94a3b8;
+}
+
+body.theme-dark .image-upload-field-label {
+  color: #94a3b8;
+}
+
+body.theme-dark .image-upload-section {
+  background: color-mix(in srgb, var(--dark-surface) 80%, transparent);
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .image-upload-trigger-enterprise {
+  background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
+  border-color: var(--dark-border);
+  color: #e2e8f0;
+}
+
+body.theme-dark .image-upload-trigger-enterprise:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 14%, var(--dark-surface)), var(--dark-bg-mid));
+  border-color: color-mix(in srgb, var(--primary-soft) 44%, var(--dark-border));
+}
+
+/* Form section in reserve page (not modal) */
+body.theme-dark .size-guide-pill-btn {
+  border-color: color-mix(in srgb, var(--primary-soft) 44%, var(--dark-border));
+  background: color-mix(in srgb, var(--primary) 18%, rgba(30, 41, 59, 0.9));
+  color: color-mix(in srgb, var(--primary-soft) 80%, #ffffff);
 }
 
 @media (max-width: 720px) {

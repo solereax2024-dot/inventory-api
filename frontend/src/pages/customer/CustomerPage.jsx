@@ -461,41 +461,72 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
        </section>
 
       <nav className="pagination-inline" aria-label="Collection pages">
-        <div className="pagination-numbers">
-          <button
-            type="button"
-            className="page-number-btn page-nav-btn"
-            disabled={activePage === 1}
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            aria-label="Previous page"
-          >
-            ‹
-          </button>
+        <ul className="pagination-numbers pages-items">
+          {activePage > 1 ? (
+            <>
+              <li className="pages-item pages-item-first">
+                <button
+                  type="button"
+                  className="page-number-btn page-nav-btn"
+                  onClick={() => setCurrentPage(1)}
+                  aria-label="First page"
+                >
+                  «
+                </button>
+              </li>
+              <li className="pages-item pages-item-prev">
+                <button
+                  type="button"
+                  className="page-number-btn page-nav-btn"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  aria-label="Previous page"
+                >
+                  ‹
+                </button>
+              </li>
+            </>
+          ) : null}
           {paginationItems.map((item) =>
             item.type === "ellipsis" ? (
-              <span key={item.value} className="page-ellipsis">…</span>
+              <li key={item.value} className="pages-item page-ellipsis" aria-hidden="true">…</li>
             ) : (
-              <button
-                key={item.value}
-                type="button"
-                className={`page-number-btn ${activePage === item.value ? "active" : ""}`}
-                onClick={() => setCurrentPage(item.value)}
-                aria-current={activePage === item.value ? "page" : undefined}
-              >
-                {item.value}
-              </button>
+              <li key={item.value} className={`pages-item ${activePage === item.value ? "current" : ""}`}>
+                <button
+                  type="button"
+                  className={`page-number-btn ${activePage === item.value ? "active" : ""}`}
+                  onClick={() => setCurrentPage(item.value)}
+                  aria-current={activePage === item.value ? "page" : undefined}
+                >
+                  {item.value}
+                </button>
+              </li>
             )
           )}
-          <button
-            type="button"
-            className="page-number-btn page-nav-btn"
-            disabled={activePage === totalPages}
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            aria-label="Next page"
-          >
-            ›
-          </button>
-        </div>
+          {activePage < totalPages ? (
+            <>
+              <li className="pages-item pages-item-next">
+                <button
+                  type="button"
+                  className="page-number-btn page-nav-btn"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  aria-label="Next page"
+                >
+                  ›
+                </button>
+              </li>
+              <li className="pages-item pages-item-last">
+                <button
+                  type="button"
+                  className="page-number-btn page-nav-btn"
+                  onClick={() => setCurrentPage(totalPages)}
+                  aria-label="Last page"
+                >
+                  »
+                </button>
+              </li>
+            </>
+          ) : null}
+        </ul>
       </nav>
       {message ? <div className="toast-banner">{message}</div> : null}
     </main>
