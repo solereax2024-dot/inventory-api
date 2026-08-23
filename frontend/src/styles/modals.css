@@ -361,8 +361,9 @@
   border-radius: 8px;
   background: transparent;
   overflow: hidden;
-  opacity: 0.7;
-  transition: opacity 0.2s, box-shadow 0.2s;
+  opacity: 0.32;
+  filter: saturate(0.72);
+  transition: opacity 0.2s, filter 0.2s, box-shadow 0.2s;
   box-shadow: none;
 }
 
@@ -375,12 +376,14 @@
 
 .reserve-thumb-btn:hover {
   transform: none;
-  opacity: 0.85;
+  opacity: 0.56;
+  filter: saturate(0.9);
   box-shadow: none;
 }
 
 .reserve-thumb-btn.active {
   opacity: 1;
+  filter: none;
   box-shadow: none;
 }
 
