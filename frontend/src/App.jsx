@@ -199,6 +199,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/collection" replace />} />
         <Route path="/collection" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} />} />
         <Route path="/shop" element={<Navigate to="/collection" replace />} />
+        <Route path="/reserve" element={<Navigate to="/collection" replace />} />
         <Route path="/reserve/:productId" element={<ReservePage />} />
         <Route
           path="/admin/*"

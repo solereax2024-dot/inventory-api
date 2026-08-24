@@ -64,6 +64,11 @@ export default function ReservePage() {
     loadProducts().catch((err) => setMessage(err.message));
   }, []);
 
+  const product = useMemo(
+    () => products.find((p) => String(p.id) === String(productId)),
+    [products, productId]
+  );
+
   useEffect(() => {
     if (!product?.id) {
       return;
@@ -79,10 +84,6 @@ export default function ReservePage() {
     }).catch(() => {});
   }, [product?.id]);
 
-  const product = useMemo(
-    () => products.find((p) => String(p.id) === String(productId)),
-    [products, productId]
-  );
   const colorways = useMemo(
     () => (product ? getSortedColorwaysFromStocks(product.stocks) : []),
     [product]
