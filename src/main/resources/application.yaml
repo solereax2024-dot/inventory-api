@@ -2,6 +2,11 @@ spring:
   application:
     name: sole-reax-inventory-api
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sole_reax}
     username: ${DB_USERNAME:postgres}

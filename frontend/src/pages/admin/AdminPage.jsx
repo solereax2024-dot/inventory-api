@@ -1404,7 +1404,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                           Upload Product Image
                         </button>
                       </div>
-                      <small className="field-hint image-upload-note">Recommended: 800 x 800 square image (JPG/PNG/WEBP/AVIF, max 5MB).</small>
+                      <small className="field-hint image-upload-note">Supported formats: JPG/PNG/WEBP/GIF/AVIF (max 5MB).</small>
                     </div>
                   </div>
                 </div>
@@ -1598,7 +1598,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                         Upload New Image
                       </button>
                     </div>
-                    <small className="field-hint image-upload-note">Recommended: 800 x 800 square image (JPG/PNG/WEBP/AVIF, max 5MB).</small>
+                    <small className="field-hint image-upload-note">Supported formats: JPG/PNG/WEBP/GIF/AVIF (max 5MB).</small>
                   </div>
                   {(editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl)
                     ? (

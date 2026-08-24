@@ -1,6 +1,5 @@
 package com.solereax.inventory.settings;
 
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -10,7 +9,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import javax.imageio.ImageIO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,8 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class MediaStorageService {
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif", "avif");
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024L * 1024L;
-    private static final int REQUIRED_IMAGE_WIDTH = 1536;
-    private static final int REQUIRED_IMAGE_HEIGHT = 1536;
 
     private final Path uploadBaseDirectory;
 
@@ -46,17 +42,6 @@ public class MediaStorageService {
             throw new IllegalArgumentException("Supported formats: jpg, jpeg, png, webp, gif, avif.");
         }
 
-        try (InputStream imageStream = file.getInputStream()) {
-            BufferedImage image = ImageIO.read(imageStream);
-            if (image == null) {
-                throw new IllegalArgumentException("Invalid image file.");
-            }
-            if (image.getWidth() != REQUIRED_IMAGE_WIDTH || image.getHeight() != REQUIRED_IMAGE_HEIGHT) {
-                throw new IllegalArgumentException("Image dimensions must be exactly 1536x1536 pixels.");
-            }
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed to read image file.", ex);
-        }
 
         String safeFolder = folderName.replaceAll("[^a-zA-Z0-9_-]", "");
         String fileName = UUID.randomUUID() + "." + extension;
