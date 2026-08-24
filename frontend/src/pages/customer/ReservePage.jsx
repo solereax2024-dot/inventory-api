@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { US_SIZES } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { getColorwayImageUrl } from "../../utils/colorway";
@@ -270,8 +270,11 @@ export default function ReservePage() {
     <main className="container container-wide reserve-page-shell">
       <section className="reserve-page-panel">
         <div className="breakdown-header">
-          <h2>{product.name}</h2>
-          <button type="button" className="btn-cancel reserve-page-back-btn" onClick={() => navigate("/collection")}>Back</button>
+          <h2>
+            <Link className="reserve-page-crumb-link" to="/collection">Collection</Link>
+            <span className="reserve-page-crumb-separator" aria-hidden="true"> / </span>
+            <span className="reserve-page-crumb-current">{product.name}</span>
+          </h2>
         </div>
 
         <div className="reserve-page-content">

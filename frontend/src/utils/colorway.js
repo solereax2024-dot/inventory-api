@@ -44,14 +44,6 @@ export function getColorwayImageUrl(product, colorway) {
     return colorwayImages[normalizedColorway];
   }
 
-  // Fall back to the first available image using a stable colorway order.
-  const firstAvailableImage = sortColorways(Object.keys(colorwayImages))
-    .map((key) => colorwayImages[key])
-    .find((url) => url);
-  if (firstAvailableImage) {
-    console.log("[IMAGE] No image for", normalizedColorway, "→ using fallback:", firstAvailableImage);
-    return firstAvailableImage;
-  }
 
   // Fall back to main product imageUrl (if it's a real URL, not a placeholder)
   if (product?.imageUrl && !product.imageUrl.includes("via.placeholder")) {
