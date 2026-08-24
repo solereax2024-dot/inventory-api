@@ -147,20 +147,11 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
               </div>
             ) : null}
 
-            <div className="reserve-modal-form">
-              <div className="form-section">
-                <label>Colorway</label>
-                <select
-                  value={reserve.colorway}
-                  onChange={(e) => { setReserve({ ...reserve, colorway: e.target.value }); resetZoom(); }}
-                >
-                  {colorways.map((colorway) => (
-                    <option key={colorway} value={colorway}>
-                      {formatColorwayLabel(colorway)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+             <div className="reserve-modal-form">
+               <div className="form-section">
+                 <label>Colorway</label>
+                 <div className="colorway-label">{formatColorwayLabel(reserve.colorway)}</div>
+               </div>
 
               <div className="form-section">
                 <label>Size & Availability</label>

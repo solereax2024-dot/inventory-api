@@ -343,23 +343,21 @@ export default function ReservePage() {
             ) : null}
           </div>
 
-          <div className="reserve-modal-form reserve-page-form-column">
-            <div className="form-section">
-              <label>Colorway</label>
-              <select
-                value={reserve.colorway}
-                onChange={(e) => {
-                  setReserve({ ...reserve, colorway: e.target.value });
-                  resetZoom();
-                }}
-              >
-                {prioritizedColorways.map((colorway) => (
-                  <option key={colorway} value={colorway}>
-                    {formatColorwayLabel(colorway)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <div className="reserve-modal-form reserve-page-form-column">
+              <div className="form-section">
+                <label>Colorway</label>
+                <div className="colorway-label">
+                  {(() => {
+                    const thumbUrl = getColorwayImageUrl(product, reserve.colorway);
+                    return (
+                      <>
+                        {thumbUrl && <img src={thumbUrl} alt={reserve.colorway} className="colorway-thumb" />}
+                        <span>{formatColorwayLabel(reserve.colorway)}</span>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
 
             <div className="form-section">
               <div className="size-label-row">
