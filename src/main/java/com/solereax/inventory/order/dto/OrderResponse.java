@@ -1,6 +1,7 @@
 package com.solereax.inventory.order.dto;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.List;
 
 public record OrderResponse(
@@ -12,6 +13,7 @@ public record OrderResponse(
         String courier,
         String mop,
         String mopOther,
+        BigDecimal totalPrice,
         String statusUpdatedBy,
         Instant createdAt,
         List<OrderItemResponse> items

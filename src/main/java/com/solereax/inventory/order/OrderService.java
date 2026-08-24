@@ -16,6 +16,8 @@ import com.solereax.inventory.order.dto.ReserveOrderItemRequest;
 import com.solereax.inventory.order.dto.ReserveOrderRequest;
 import com.solereax.inventory.order.dto.UpdateOrderStatusRequest;
 import com.solereax.inventory.shared.NotFoundException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -141,6 +143,13 @@ public class OrderService {
         } else if (request.mopOther() != null && "OTHER".equals(order.getMop())) {
             order.setMopOther(trimToNull(request.mopOther()));
         }
+        if (request.totalPrice() != null) {
+            BigDecimal totalPrice = request.totalPrice().setScale(2, RoundingMode.HALF_UP);
+            if (totalPrice.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Price must be 0 or higher.");
+            }
+            order.setTotalPrice(totalPrice);
+        }
         order.setStatusUpdatedBy(updatedBy);
         return toResponse(customerOrderRepository.save(order));
     }
@@ -165,6 +174,7 @@ public class OrderService {
                 order.getCourier(),
                 order.getMop(),
                 order.getMopOther(),
+                order.getTotalPrice(),
                 order.getStatusUpdatedBy(),
                 order.getCreatedAt(),
                 items

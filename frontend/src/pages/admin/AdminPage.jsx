@@ -97,6 +97,24 @@ function getFileFormatLabel(file) {
   return ext ? ext.toUpperCase() : "UNKNOWN";
 }
 
+const PHP_CURRENCY = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2
+});
+
+function formatPriceLabel(value) {
+  if (value === null || value === undefined || value === "") {
+    return "No Price";
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return "No Price";
+  }
+  return PHP_CURRENCY.format(parsed);
+}
+
 export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const UNDO_WINDOW_MS = 5000;
   const navigate = useNavigate();
@@ -160,6 +178,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [reservationEditors, setReservationEditors] = useState({});
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const [mopOtherDrafts, setMopOtherDrafts] = useState({});
+  const [priceDrafts, setPriceDrafts] = useState({});
   const [reservationSavedMap, setReservationSavedMap] = useState({});
   const reservationSavedTimersRef = useRef({});
   const [adminPage, setAdminPage] = useState(1);
@@ -782,7 +801,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setUpdatingOrderId(orderId);
     try {
       const updated = await apiRequest(`/api/admin/orders/${orderId}/status`, "PATCH", payload, token);
-      setOrders((prev) => prev.map((order) => (order.id === orderId ? updated : order)));
+      setOrders((prev) => prev.map((order) => {
+        if (order.id !== orderId) {
+          return order;
+        }
+        const next = { ...order, ...updated };
+        if (Object.prototype.hasOwnProperty.call(payload, "totalPrice")) {
+          next.totalPrice = payload.totalPrice;
+        }
+        return next;
+      }));
       markReservationSaved(orderId, savedField);
       if (successMessage) {
         setMessage(successMessage);
@@ -790,6 +818,28 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     } finally {
       setUpdatingOrderId(null);
     }
+  };
+
+  const saveReservationPrice = (orderId, draftValue) => {
+    const trimmed = String(draftValue ?? "").trim();
+    if (!trimmed) {
+      setMessage("Enter a price first.");
+      return;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setMessage("Price must be 0 or higher.");
+      return;
+    }
+    updateReservationStatus(
+      orderId,
+      { totalPrice: Number(parsed.toFixed(2)) },
+      `Reservation #${orderId} price updated to ${formatPriceLabel(parsed)}.`,
+      "price"
+    ).then(() => {
+      setPriceDrafts((prev) => ({ ...prev, [orderId]: parsed.toFixed(2) }));
+      setReservationEditorOpen(orderId, "price", false);
+    }).catch((err) => setMessage(err.message));
   };
 
   const isReservationEditorOpen = (orderId, field) => Boolean(reservationEditors?.[orderId]?.[field]);
@@ -1036,6 +1086,23 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const preparingCount = orders.filter((order) => normalizeReservationStatus(order.status) === "PREPARING").length;
     const shippedCount = orders.filter((order) => normalizeReservationStatus(order.status) === "SHIPPED").length;
     const deliveredCount = orders.filter((order) => normalizeReservationStatus(order.status) === "DELIVERED").length;
+    const totalSalesAll = orders.reduce((sum, order) => {
+      const parsed = Number(order.totalPrice);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        return sum;
+      }
+      return sum + parsed;
+    }, 0);
+    const totalSalesDelivered = orders.reduce((sum, order) => {
+      if (normalizeReservationStatus(order.status) !== "DELIVERED") {
+        return sum;
+      }
+      const parsed = Number(order.totalPrice);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        return sum;
+      }
+      return sum + parsed;
+    }, 0);
     const activeProducts = products.length;
     const lowStockSizes = products.reduce((count, product) => {
       const colorways = getSortedColorwaysFromStocks(product.stocks);
@@ -1048,6 +1115,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       preparingCount,
       shippedCount,
       deliveredCount,
+      totalSalesAll,
+      totalSalesDelivered,
       activeProducts,
       lowStockSizes
     };
@@ -1330,6 +1399,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               <h3>{reservationStats.preparingCount}</h3>
             </article>
             <article className="admin-summary-card">
+              <p>Total Sales (Delivered only)</p>
+              <h3>{formatPriceLabel(reservationStats.totalSalesDelivered)}</h3>
+            </article>
+            <article className="admin-summary-card">
+              <p>Total Sales (All reservations)</p>
+              <h3>{formatPriceLabel(reservationStats.totalSalesAll)}</h3>
+            </article>
+            <article className="admin-summary-card">
               <p>Shipped</p>
               <h3>{reservationStats.shippedCount}</h3>
             </article>
@@ -1367,6 +1444,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   <th>Created</th>
                   <th>Courier</th>
                   <th>MOP</th>
+                  <th>Price</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -1374,12 +1452,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                 {isAdminLoading ? (
                   Array.from({ length: 5 }, (_, index) => (
                     <tr key={`reservation-loading-${index}`}>
-                      <td colSpan="8"><div className="skeleton-line" /></td>
+                      <td colSpan="9"><div className="skeleton-line" /></td>
                     </tr>
                   ))
                 ) : filteredReservations.length === 0 ? (
                   <tr>
-                    <td colSpan="8">No reservations found.</td>
+                    <td colSpan="9">No reservations found.</td>
                   </tr>
                 ) : (
                   filteredReservations.map((order) => {
@@ -1388,6 +1466,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     const normalizedMop = String(order.mop || "").toUpperCase();
                     const mopOtherDraft = mopOtherDrafts[order.id] ?? order.mopOther ?? "";
                     const trimmedMopOtherDraft = mopOtherDraft.trim();
+                    const hasOrderPrice = order.totalPrice !== null && order.totalPrice !== undefined && order.totalPrice !== "";
+                    const normalizedOrderPrice = hasOrderPrice ? Number(order.totalPrice).toFixed(2) : "";
+                    const priceDraft = String(priceDrafts[order.id] ?? normalizedOrderPrice);
+                    const trimmedPriceDraft = priceDraft.trim();
+                    const isPriceDirty = trimmedPriceDraft !== normalizedOrderPrice;
                     const hasUnsavedMopOther = normalizedMop === "OTHER"
                       && trimmedMopOtherDraft
                       && trimmedMopOtherDraft !== (order.mopOther || "");
@@ -1533,6 +1616,61 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                               </>
                             ) : normalizedMop === "OTHER" && order.mopOther ? (
                               <small className="field-hint">Other: {order.mopOther}</small>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="reservation-field-cell">
+                            {isReservationEditorOpen(order.id, "price") ? (
+                              <div className="reservation-price-edit">
+                                <input
+                                  className="reservation-price-input"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={priceDraft}
+                                  placeholder="0.00"
+                                  disabled={updatingOrderId === order.id}
+                                  onChange={(e) => setPriceDrafts((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      saveReservationPrice(order.id, priceDraft);
+                                    }
+                                  }}
+                                  onBlur={() => {
+                                    if (isPriceDirty && trimmedPriceDraft) {
+                                      saveReservationPrice(order.id, priceDraft);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <span className={`order-status-chip reservation-final-chip ${hasOrderPrice ? "status-delivered" : "status-ordered"}`}>
+                                {formatPriceLabel(order.totalPrice)}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="reservation-inline-icon-btn"
+                              aria-label={isReservationEditorOpen(order.id, "price") ? "Close price editor" : "Set price"}
+                              onClick={() => {
+                                if (isReservationEditorOpen(order.id, "price") && isPriceDirty && trimmedPriceDraft) {
+                                  saveReservationPrice(order.id, priceDraft);
+                                  return;
+                                }
+                                const nextOpen = !isReservationEditorOpen(order.id, "price");
+                                setReservationEditorOpen(order.id, "price", nextOpen);
+                                if (nextOpen) {
+                                  setPriceDrafts((prev) => ({ ...prev, [order.id]: normalizedOrderPrice }));
+                                }
+                              }}
+                              disabled={updatingOrderId === order.id}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            {isReservationSaved(order.id, "price") ? (
+                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
                             ) : null}
                           </div>
                         </td>
