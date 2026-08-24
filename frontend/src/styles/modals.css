@@ -434,10 +434,23 @@
     display: block;
   }
 
+  .colorway-display {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    letter-spacing: 0.02em;
+  }
+
   body.theme-dark .colorway-label {
     background: #1e293b;
     border-color: #334155;
     color: #e2e8f0;
+  }
+
+  body.theme-dark .colorway-display {
+    color: #cbd5e1;
   }
 
 

@@ -315,11 +315,13 @@ export default function ReservePage() {
                     <div className="reserve-image-fallback-colorway">{reserve.colorway}</div>
                   </div>
                 );
-              })()}
-              <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span>
-            </div>
+               })()}
+               <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span>
+             </div>
 
-            {colorways.length > 1 ? (
+             <div className="colorway-display">{formatColorwayLabel(reserve.colorway)}</div>
+
+             {colorways.length > 1 ? (
               <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails">
                 {prioritizedColorways.map((colorway) => {
                   const thumbUrl = getColorwayImageUrl(product, colorway);
@@ -344,13 +346,8 @@ export default function ReservePage() {
           </div>
 
             <div className="reserve-modal-form reserve-page-form-column">
-              <div className="form-section">
-                <label>Colorway</label>
-                <div className="colorway-label">{formatColorwayLabel(reserve.colorway)}</div>
-              </div>
-
-            <div className="form-section">
-              <div className="size-label-row">
+             <div className="form-section">
+               <div className="size-label-row">
                 <label>Size &amp; Availability</label>
                 {sizeGuide ? (
                   <button
