@@ -346,17 +346,7 @@ export default function ReservePage() {
             <div className="reserve-modal-form reserve-page-form-column">
               <div className="form-section">
                 <label>Colorway</label>
-                <div className="colorway-label">
-                  {(() => {
-                    const thumbUrl = getColorwayImageUrl(product, reserve.colorway);
-                    return (
-                      <>
-                        {thumbUrl && <img src={thumbUrl} alt={reserve.colorway} className="colorway-thumb" />}
-                        <span>{formatColorwayLabel(reserve.colorway)}</span>
-                      </>
-                    );
-                  })()}
-                </div>
+                <div className="colorway-label">{formatColorwayLabel(reserve.colorway)}</div>
               </div>
 
             <div className="form-section">

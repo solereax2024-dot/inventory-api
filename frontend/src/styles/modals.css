@@ -424,39 +424,22 @@
 
   .colorway-label {
     margin-top: 6px;
-    padding: 8px 12px;
+    padding: 10px 12px;
     font-size: 14px;
     font-weight: 500;
     color: #1e293b;
-    background: linear-gradient(180deg, #ffffff, #f8fafc);
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .colorway-thumb {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    object-fit: cover;
-    object-position: center;
-    border: 1px solid color-mix(in srgb, var(--primary) 20%, #cbd5e1);
     background: #ffffff;
-    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    display: block;
   }
 
   body.theme-dark .colorway-label {
-    background: linear-gradient(180deg, #1e293b, #111827);
+    background: #1e293b;
     border-color: #334155;
     color: #e2e8f0;
   }
 
-  body.theme-dark .colorway-thumb {
-    border-color: #475569;
-    background: #0f172a;
-  }
 
  .size-section-list {
   display: grid;
