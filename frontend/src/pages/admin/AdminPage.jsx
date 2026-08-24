@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Boxes, ImagePlus, RotateCcw, Ruler, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Boxes, Check, ImagePlus, Pencil, RotateCcw, Ruler, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { US_SIZES, COLORWAY_OPTIONS, STOCK_SOURCE_TYPES, STOCK_SOURCE_LABELS, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
 import { apiRequest, uploadImage } from "../../utils/api";
@@ -23,6 +23,21 @@ const RESERVATION_STATUS_OPTIONS = [
   { value: "DELIVERED", label: "Delivered" }
 ];
 
+const RESERVATION_COURIER_OPTIONS = [
+  { value: "LALAMOVE", label: "Lalamove" },
+  { value: "GRAB", label: "Grab" },
+  { value: "LBC", label: "LBC" },
+  { value: "OTHER", label: "Other" }
+];
+
+const RESERVATION_MOP_OPTIONS = [
+  { value: "GCASH", label: "GCash" },
+  { value: "MAYA", label: "Maya" },
+  { value: "BPI", label: "BPI" },
+  { value: "MARIBANK", label: "MariBank" },
+  { value: "OTHER", label: "Other" }
+];
+
 function normalizeReservationStatus(status) {
   return status === "RESERVED" ? "ORDERED" : status;
 }
@@ -33,6 +48,19 @@ function statusChipClass(status) {
   if (normalized === "SHIPPED") return "status-shipped";
   if (normalized === "PREPARING") return "status-preparing";
   return "status-ordered";
+}
+
+function formatReservationDateTime(value) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+  return parsed.toLocaleString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function decodeRoleFromToken(token) {
@@ -125,6 +153,15 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     product: "",
     brand: "ALL"
   });
+  const [reservationFilters, setReservationFilters] = useState({
+    keyword: "",
+    status: "ALL"
+  });
+  const [reservationEditors, setReservationEditors] = useState({});
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [mopOtherDrafts, setMopOtherDrafts] = useState({});
+  const [reservationSavedMap, setReservationSavedMap] = useState({});
+  const reservationSavedTimersRef = useRef({});
   const [adminPage, setAdminPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null, confirmCode: "", userInput: "" });
   const [colorwayDeleteModal, setColorwayDeleteModal] = useState({ isOpen: false, productId: null, colorway: "" });
@@ -720,11 +757,82 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     await loadAdminData(token, adminRole);
   };
 
-  const updateReservationStatus = async (orderId, status) => {
-    await apiRequest(`/api/admin/orders/${orderId}/status`, "PATCH", { status }, token);
-    setMessage("Reservation status updated.");
-    await loadAdminData(token, adminRole);
+  const markReservationSaved = (orderId, field) => {
+    if (!field) return;
+    const key = `${orderId}:${field}`;
+    const existingTimer = reservationSavedTimersRef.current[key];
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+    setReservationSavedMap((prev) => ({ ...prev, [key]: true }));
+    reservationSavedTimersRef.current[key] = window.setTimeout(() => {
+      setReservationSavedMap((prev) => {
+        if (!prev[key]) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      delete reservationSavedTimersRef.current[key];
+    }, 1600);
   };
+
+  const isReservationSaved = (orderId, field) => Boolean(reservationSavedMap[`${orderId}:${field}`]);
+
+  const updateReservationStatus = async (orderId, payload, successMessage, savedField) => {
+    setUpdatingOrderId(orderId);
+    try {
+      const updated = await apiRequest(`/api/admin/orders/${orderId}/status`, "PATCH", payload, token);
+      setOrders((prev) => prev.map((order) => (order.id === orderId ? updated : order)));
+      markReservationSaved(orderId, savedField);
+      if (successMessage) {
+        setMessage(successMessage);
+      }
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const isReservationEditorOpen = (orderId, field) => Boolean(reservationEditors?.[orderId]?.[field]);
+
+  const setReservationEditorOpen = (orderId, field, isOpen) => {
+    setReservationEditors((prev) => ({
+      ...prev,
+      [orderId]: {
+        ...(prev[orderId] || {}),
+        [field]: isOpen
+      }
+    }));
+  };
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      const rowElement = event.target.closest("[data-reservation-row-id]");
+      const clickedOrderId = rowElement?.getAttribute("data-reservation-row-id");
+      setReservationEditors((prev) => {
+        const entries = Object.entries(prev || {});
+        if (entries.length === 0) {
+          return prev;
+        }
+        if (!clickedOrderId) {
+          return {};
+        }
+        const next = Object.fromEntries(entries.filter(([orderId]) => String(orderId) === String(clickedOrderId)));
+        return Object.keys(next).length === entries.length ? prev : next;
+      });
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    Object.values(reservationSavedTimersRef.current).forEach((timerId) => window.clearTimeout(timerId));
+  }, []);
 
   const openCreateModal = () => {
     setProductImageFile(null);
@@ -944,6 +1052,35 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       lowStockSizes
     };
   }, [orders, products]);
+
+  const filteredReservations = useMemo(() => {
+    const keyword = reservationFilters.keyword.trim().toLowerCase();
+    const statusFilter = reservationFilters.status;
+
+    return [...orders]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .filter((order) => {
+        const normalizedStatus = normalizeReservationStatus(order.status);
+        if (statusFilter !== "ALL" && normalizedStatus !== statusFilter) {
+          return false;
+        }
+        if (!keyword) {
+          return true;
+        }
+        const itemText = (order.items || []).map((item) => (
+          `${item.productName || ""} ${item.colorway || ""} ${item.size || ""} ${item.sizeGroup || ""}`
+        )).join(" ").toLowerCase();
+        const haystack = [
+          String(order.id || ""),
+          order.customerName || "",
+          order.customerContact || "",
+          order.notes || "",
+          order.status || "",
+          itemText
+        ].join(" ").toLowerCase();
+        return haystack.includes(keyword);
+      });
+  }, [orders, reservationFilters.keyword, reservationFilters.status]);
 
   useEffect(() => {
     if (!isSuperAdmin && activeAdminSection === "users") {
@@ -1172,6 +1309,280 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
           </nav>
         </div>
       </section>
+      ) : null}
+
+      {activeAdminSection === "reservations" ? (
+        <section className="card products-card admin-section">
+          <div className="section-head">
+            <h2>Reservations</h2>
+            <p className="field-hint" style={{ margin: 0 }}>
+              Review customer reservations and update fulfillment status.
+            </p>
+          </div>
+
+          <div className="admin-summary-grid">
+            <article className="admin-summary-card">
+              <p>Total</p>
+              <h3>{reservationStats.totalReservations}</h3>
+            </article>
+            <article className="admin-summary-card">
+              <p>Preparing</p>
+              <h3>{reservationStats.preparingCount}</h3>
+            </article>
+            <article className="admin-summary-card">
+              <p>Shipped</p>
+              <h3>{reservationStats.shippedCount}</h3>
+            </article>
+            <article className="admin-summary-card">
+              <p>Delivered</p>
+              <h3>{reservationStats.deliveredCount}</h3>
+            </article>
+          </div>
+
+          <div className="reservation-filter-row">
+            <input
+              value={reservationFilters.keyword}
+              onChange={(e) => setReservationFilters((prev) => ({ ...prev, keyword: e.target.value }))}
+              placeholder="Search by customer, contact, product, colorway, or order #"
+            />
+            <select
+              value={reservationFilters.status}
+              onChange={(e) => setReservationFilters((prev) => ({ ...prev, status: e.target.value }))}
+            >
+              <option value="ALL">All statuses</option>
+              {RESERVATION_STATUS_OPTIONS.map((option) => (
+                <option key={`reservation-status-filter-${option.value}`} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="admin-table-wrap">
+            <table className="admin-table reservations-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Customer</th>
+                  <th>Contact</th>
+                  <th>Items</th>
+                  <th>Created</th>
+                  <th>Courier</th>
+                  <th>MOP</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isAdminLoading ? (
+                  Array.from({ length: 5 }, (_, index) => (
+                    <tr key={`reservation-loading-${index}`}>
+                      <td colSpan="8"><div className="skeleton-line" /></td>
+                    </tr>
+                  ))
+                ) : filteredReservations.length === 0 ? (
+                  <tr>
+                    <td colSpan="8">No reservations found.</td>
+                  </tr>
+                ) : (
+                  filteredReservations.map((order) => {
+                    const normalizedStatus = normalizeReservationStatus(order.status);
+                    const normalizedCourier = String(order.courier || "").toUpperCase();
+                    const normalizedMop = String(order.mop || "").toUpperCase();
+                    const mopOtherDraft = mopOtherDrafts[order.id] ?? order.mopOther ?? "";
+                    const trimmedMopOtherDraft = mopOtherDraft.trim();
+                    const hasUnsavedMopOther = normalizedMop === "OTHER"
+                      && trimmedMopOtherDraft
+                      && trimmedMopOtherDraft !== (order.mopOther || "");
+                    return (
+                      <tr key={order.id} data-reservation-row-id={String(order.id)}>
+                        <td>#{order.id}</td>
+                        <td className="reservation-customer-cell">
+                          <strong>{order.customerName || "-"}</strong>
+                          {order.notes ? <small>Note: {order.notes}</small> : null}
+                        </td>
+                        <td>{order.customerContact || "-"}</td>
+                        <td className="reservation-items-cell">
+                          {(order.items || []).map((item, index) => (
+                            <div key={`${order.id}-${item.productId || item.productName}-${index}`} className="reservation-item-line">
+                              <strong>{item.productName}</strong>
+                              <span>
+                                {formatColorwayLabel(item.colorway)} · {item.sizeGroup === "WOMEN" ? "Women" : "Men"} US {item.size} · Qty {item.quantity}
+                              </span>
+                            </div>
+                          ))}
+                        </td>
+                        <td className="reservation-created-cell">{formatReservationDateTime(order.createdAt)}</td>
+                        <td>
+                          <div className="reservation-field-cell">
+                            {isReservationEditorOpen(order.id, "courier") ? (
+                              <select
+                                className="reservation-status-select"
+                                value={normalizedCourier}
+                                disabled={updatingOrderId === order.id}
+                                onChange={(e) => updateReservationStatus(
+                                  order.id,
+                                  { courier: e.target.value },
+                                  `Reservation #${order.id} courier set to ${formatEnumLabel(e.target.value)}.`,
+                                  "courier"
+                                ).then(() => setReservationEditorOpen(order.id, "courier", false)).catch((err) => setMessage(err.message))}
+                              >
+                                <option value="">Select courier</option>
+                                {RESERVATION_COURIER_OPTIONS.map((option) => (
+                                  <option key={`reservation-courier-${order.id}-${option.value}`} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className={`order-status-chip reservation-final-chip ${normalizedCourier ? "status-shipped" : "status-ordered"}`}>
+                                {normalizedCourier ? formatEnumLabel(normalizedCourier) : "No Courier"}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="reservation-inline-icon-btn"
+                              aria-label={isReservationEditorOpen(order.id, "courier") ? "Close courier selector" : "Set courier"}
+                              onClick={() => setReservationEditorOpen(order.id, "courier", !isReservationEditorOpen(order.id, "courier"))}
+                              disabled={updatingOrderId === order.id}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            {isReservationSaved(order.id, "courier") ? (
+                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="reservation-mop-cell">
+                            <div className="reservation-field-cell">
+                              {isReservationEditorOpen(order.id, "mop") ? (
+                                <select
+                                  className="reservation-status-select"
+                                  value={normalizedMop}
+                                  disabled={updatingOrderId === order.id}
+                                  onChange={(e) => updateReservationStatus(
+                                    order.id,
+                                    { mop: e.target.value },
+                                    `Reservation #${order.id} MOP set to ${formatEnumLabel(e.target.value)}.`,
+                                    "mop"
+                                  ).then(() => {
+                                    if (e.target.value !== "OTHER") {
+                                      setReservationEditorOpen(order.id, "mop", false);
+                                    }
+                                  }).catch((err) => setMessage(err.message))}
+                                >
+                                  <option value="">Select MOP</option>
+                                  {RESERVATION_MOP_OPTIONS.map((option) => (
+                                    <option key={`reservation-mop-${order.id}-${option.value}`} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className={`order-status-chip reservation-final-chip ${normalizedMop ? "status-preparing" : "status-ordered"}`}>
+                                  {normalizedMop ? formatEnumLabel(normalizedMop) : "No MOP"}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                className="reservation-inline-icon-btn"
+                                aria-label={isReservationEditorOpen(order.id, "mop") ? "Close MOP selector" : "Set MOP"}
+                                onClick={() => setReservationEditorOpen(order.id, "mop", !isReservationEditorOpen(order.id, "mop"))}
+                                disabled={updatingOrderId === order.id}
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              {isReservationSaved(order.id, "mop") || isReservationSaved(order.id, "mopOther") ? (
+                                <small className="reservation-saved-inline"><Check size={12} />Saved</small>
+                              ) : null}
+                            </div>
+                            {normalizedMop === "OTHER" && isReservationEditorOpen(order.id, "mop") ? (
+                              <>
+                                <input
+                                  className="reservation-other-input"
+                                  value={mopOtherDraft}
+                                  placeholder="Specify other MOP"
+                                  onChange={(e) => setMopOtherDrafts((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                                  onBlur={() => {
+                                    const trimmed = mopOtherDraft.trim();
+                                    if (!trimmed || trimmed === (order.mopOther || "")) {
+                                      return;
+                                    }
+                                    updateReservationStatus(
+                                      order.id,
+                                      { mop: "OTHER", mopOther: trimmed },
+                                      `Reservation #${order.id} MOP details updated.`,
+                                      "mopOther"
+                                    ).catch((err) => setMessage(err.message));
+                                  }}
+                                  disabled={updatingOrderId === order.id}
+                                />
+                                {hasUnsavedMopOther ? (
+                                  <button
+                                    type="button"
+                                    className="reservation-other-save-btn"
+                                    onClick={() => updateReservationStatus(
+                                      order.id,
+                                      { mop: "OTHER", mopOther: trimmedMopOtherDraft },
+                                      `Reservation #${order.id} MOP details updated.`,
+                                      "mopOther"
+                                    ).catch((err) => setMessage(err.message))}
+                                    disabled={updatingOrderId === order.id}
+                                  >
+                                    Save Other MOP
+                                  </button>
+                                ) : null}
+                              </>
+                            ) : normalizedMop === "OTHER" && order.mopOther ? (
+                              <small className="field-hint">Other: {order.mopOther}</small>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="reservation-status-cell">
+                            {isReservationEditorOpen(order.id, "status") ? (
+                              <select
+                                className="reservation-status-select"
+                                value={normalizedStatus}
+                                disabled={updatingOrderId === order.id}
+                                onChange={(e) => updateReservationStatus(
+                                  order.id,
+                                  { status: e.target.value },
+                                  `Reservation #${order.id} updated to ${formatEnumLabel(e.target.value)}.`,
+                                  "status"
+                                ).then(() => setReservationEditorOpen(order.id, "status", false)).catch((err) => setMessage(err.message))}
+                              >
+                                {RESERVATION_STATUS_OPTIONS.map((option) => (
+                                  <option key={`reservation-status-${order.id}-${option.value}`} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className={`order-status-chip ${statusChipClass(normalizedStatus)}`}>
+                                {formatEnumLabel(normalizedStatus)}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="reservation-inline-icon-btn"
+                              aria-label={isReservationEditorOpen(order.id, "status") ? "Close status selector" : "Set status"}
+                              onClick={() => setReservationEditorOpen(order.id, "status", !isReservationEditorOpen(order.id, "status"))}
+                              disabled={updatingOrderId === order.id}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            {isReservationSaved(order.id, "status") ? (
+                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       ) : null}
 
       {isSuperAdmin && activeAdminSection === "users" ? (

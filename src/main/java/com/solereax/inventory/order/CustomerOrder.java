@@ -41,6 +41,15 @@ public class CustomerOrder {
     @Column(name = "status_updated_by", nullable = false, length = 120)
     private String statusUpdatedBy = "system";
 
+    @Column(length = 30)
+    private String courier;
+
+    @Column(length = 30)
+    private String mop;
+
+    @Column(name = "mop_other", length = 120)
+    private String mopOther;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

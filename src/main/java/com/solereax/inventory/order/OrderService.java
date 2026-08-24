@@ -18,11 +18,16 @@ import com.solereax.inventory.order.dto.UpdateOrderStatusRequest;
 import com.solereax.inventory.shared.NotFoundException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class OrderService {
+    private static final Set<String> ALLOWED_COURIERS = Set.of("LALAMOVE", "GRAB", "LBC", "OTHER");
+    private static final Set<String> ALLOWED_MOPS = Set.of("GCASH", "MAYA", "BPI", "MARIBANK", "OTHER");
+
     private final CustomerOrderRepository customerOrderRepository;
     private final ProductRepository productRepository;
     private final ProductStockRepository productStockRepository;
@@ -108,8 +113,34 @@ public class OrderService {
     public OrderResponse updateOrderStatus(Long orderId, UpdateOrderStatusRequest request, String updatedBy) {
         CustomerOrder order = customerOrderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
-        OrderStatus nextStatus = parseStatus(request.status());
-        order.setStatus(nextStatus);
+        if (trimToNull(request.status()) != null) {
+            OrderStatus nextStatus = parseStatus(request.status());
+            order.setStatus(nextStatus);
+        }
+        if (request.courier() != null) {
+            String courier = normalizeChoice(request.courier());
+            if (courier != null && !ALLOWED_COURIERS.contains(courier)) {
+                throw new IllegalArgumentException("Invalid courier: " + request.courier());
+            }
+            order.setCourier(courier);
+        }
+
+        if (request.mop() != null) {
+            String mop = normalizeChoice(request.mop());
+            if (mop != null && !ALLOWED_MOPS.contains(mop)) {
+                throw new IllegalArgumentException("Invalid payment method: " + request.mop());
+            }
+            order.setMop(mop);
+
+            String mopOther = trimToNull(request.mopOther());
+            if ("OTHER".equals(mop)) {
+                order.setMopOther(mopOther);
+            } else {
+                order.setMopOther(null);
+            }
+        } else if (request.mopOther() != null && "OTHER".equals(order.getMop())) {
+            order.setMopOther(trimToNull(request.mopOther()));
+        }
         order.setStatusUpdatedBy(updatedBy);
         return toResponse(customerOrderRepository.save(order));
     }
@@ -131,10 +162,18 @@ public class OrderService {
                 order.getCustomerContact(),
                 order.getNotes(),
                 order.getStatus().name(),
+                order.getCourier(),
+                order.getMop(),
+                order.getMopOther(),
                 order.getStatusUpdatedBy(),
                 order.getCreatedAt(),
                 items
         );
+    }
+
+    private String normalizeChoice(String value) {
+        String normalized = trimToNull(value);
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 
     private String trimToNull(String value) {

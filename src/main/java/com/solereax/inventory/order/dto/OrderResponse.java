@@ -9,6 +9,9 @@ public record OrderResponse(
         String customerContact,
         String notes,
         String status,
+        String courier,
+        String mop,
+        String mopOther,
         String statusUpdatedBy,
         Instant createdAt,
         List<OrderItemResponse> items
