@@ -18,6 +18,7 @@ public record PublicProductResponse(
         List<SizeStockResponse> stocks,
         Map<String, Map<String, Integer>> stockStates,
         Map<String, Map<String, Map<String, Integer>>> stockStateBySize,
-        Map<String, Map<String, Map<String, Map<String, Integer>>>> stockStateBySizeGroup
+        Map<String, Map<String, Map<String, Map<String, Integer>>>> stockStateBySizeGroup,
+        Long viewCount
 ) {
 }

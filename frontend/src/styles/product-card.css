@@ -56,6 +56,13 @@
   letter-spacing: 0.5px;
 }
 
+.product-demand {
+  font-size: 10px;
+  color: color-mix(in srgb, var(--primary-dark) 24%, #475569);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .department-chip {
   font-size: 10px;
   padding: 2px 8px;

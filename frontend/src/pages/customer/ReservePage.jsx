@@ -7,6 +7,7 @@ import { formatColorwayLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
+import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
@@ -62,6 +63,21 @@ export default function ReservePage() {
     };
     loadProducts().catch((err) => setMessage(err.message));
   }, []);
+
+  useEffect(() => {
+    if (!product?.id) {
+      return;
+    }
+    const scopeKey = `product-${product.id}`;
+    if (!shouldTrackViewForScope(scopeKey)) {
+      return;
+    }
+    const sessionId = getOrCreateViewSessionId();
+    apiRequest("/api/public/analytics/views/track", "POST", {
+      sessionId,
+      productId: Number(product.id)
+    }).catch(() => {});
+  }, [product?.id]);
 
   const product = useMemo(
     () => products.find((p) => String(p.id) === String(productId)),

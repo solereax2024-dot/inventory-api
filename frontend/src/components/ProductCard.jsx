@@ -22,6 +22,7 @@ export default function ProductCard({ product, onReserveClick, initialColorway }
     () => getColorwayDetails(product, selectedColorway),
     [product, selectedColorway]
   );
+  const uniqueViewCount = Number(product?.viewCount || 0);
 
   return (
     <article className="card product-card">
@@ -40,6 +41,7 @@ export default function ProductCard({ product, onReserveClick, initialColorway }
       <div className="product-card-footer">
         <div className="product-card-meta">
           <small className="brand">{product.brand || ""}</small>
+          <small className="product-demand">{uniqueViewCount.toLocaleString()} view{uniqueViewCount === 1 ? "" : "s"}</small>
         </div>
         <h3>{product.name}</h3>
         {colorwayDetails.department && (

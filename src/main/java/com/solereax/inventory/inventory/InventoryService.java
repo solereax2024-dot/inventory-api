@@ -8,7 +8,9 @@ import com.solereax.inventory.inventory.dto.PublicProductResponse;
 import com.solereax.inventory.inventory.dto.SizeStockResponse;
 import com.solereax.inventory.shared.NotFoundException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,32 +21,39 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class InventoryService {
     private final ProductRepository productRepository;
+    private final ProductViewSessionRepository productViewSessionRepository;
     private final ProductStockRepository productStockRepository;
     private final StockMovementRepository stockMovementRepository;
 
     public InventoryService(
             ProductRepository productRepository,
+            ProductViewSessionRepository productViewSessionRepository,
             ProductStockRepository productStockRepository,
             StockMovementRepository stockMovementRepository
     ) {
         this.productRepository = productRepository;
+        this.productViewSessionRepository = productViewSessionRepository;
         this.productStockRepository = productStockRepository;
         this.stockMovementRepository = stockMovementRepository;
     }
 
     @Transactional(readOnly = true)
     public List<PublicProductResponse> listPublicProducts() {
-        return productRepository.findAllActiveWithStocks()
+        List<Product> products = productRepository.findAllActiveWithStocks();
+        Map<Long, Long> viewCountByProductId = mapViewCountByProductId(products);
+        return products
                 .stream()
-                .map(this::toPublicResponse)
+                .map(product -> toPublicResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<PublicProductResponse> listAdminProducts() {
-        return productRepository.findAllWithStocks()
+        List<Product> products = productRepository.findAllWithStocks();
+        Map<Long, Long> viewCountByProductId = mapViewCountByProductId(products);
+        return products
                 .stream()
-                .map(this::toAdminResponse)
+                .map(product -> toAdminResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
                 .toList();
     }
 
@@ -334,7 +343,25 @@ public class InventoryService {
         return ColorwayStandard.normalizeAndValidate(normalized);
     }
 
-    private PublicProductResponse toPublicResponse(Product product) {
+    private Map<Long, Long> mapViewCountByProductId(List<Product> products) {
+        List<Long> productIds = new ArrayList<>();
+        products.forEach(product -> {
+            if (product.getId() != null) {
+                productIds.add(product.getId());
+            }
+        });
+        if (productIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, Long> byProductId = new HashMap<>();
+        productViewSessionRepository.countViewsByProductIds(productIds).forEach(row ->
+                byProductId.put(row.getProductId(), row.getViewCount() == null ? 0L : row.getViewCount())
+        );
+        return byProductId;
+    }
+
+    private PublicProductResponse toPublicResponse(Product product, Long viewCount) {
         List<SizeStockResponse> stocks = product.getStocks().stream()
                 .sorted(UsSizeStandard.stockComparator())
                 .map(stock -> new SizeStockResponse(stock.getColorway(), stock.getSizeLabel(), stock.getSizeGroup(), stock.getQuantity()))
@@ -356,11 +383,17 @@ public class InventoryService {
                 stocks,
                 aggregateStateByColorway(stateByColorwayAndSize),
                 stateByColorwayAndSize,
-                stateByColorwayAndSizeGroup
+                stateByColorwayAndSizeGroup,
+                viewCount == null ? 0L : viewCount
         );
     }
 
     private PublicProductResponse toAdminResponse(Product product) {
+        Long viewCount = product.getId() == null ? 0L : productViewSessionRepository.countByProductId(product.getId());
+        return toAdminResponse(product, viewCount);
+    }
+
+    private PublicProductResponse toAdminResponse(Product product, Long viewCount) {
         List<SizeStockResponse> stocks = product.getStocks().stream()
                 .sorted(UsSizeStandard.stockComparator())
                 .map(stock -> new SizeStockResponse(stock.getColorway(), stock.getSizeLabel(), stock.getSizeGroup(), stock.getQuantity()))
@@ -382,7 +415,8 @@ public class InventoryService {
                 stocks,
                 aggregateStateByColorway(stateByColorwayAndSize),
                 stateByColorwayAndSize,
-                stateByColorwayAndSizeGroup
+                stateByColorwayAndSizeGroup,
+                viewCount == null ? 0L : viewCount
         );
     }
 

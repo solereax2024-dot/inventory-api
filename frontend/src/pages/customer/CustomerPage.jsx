@@ -4,6 +4,7 @@ import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
 import { getColorwayDetails, sanitizeColorways, sortColorways } from "../../utils/colorway";
+import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
 
@@ -24,6 +25,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isDesktopCatalog, setIsDesktopCatalog] = useState(() => window.innerWidth > 720);
+  const [siteUniqueViews, setSiteUniqueViews] = useState(null);
 
   // Transform products into colorway variants
   const expandProductsByColorway = (productsData) => {
@@ -66,6 +68,16 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
 
   useEffect(() => {
     loadProducts().catch((err) => setMessage(err.message));
+
+    const sessionId = getOrCreateViewSessionId();
+    if (shouldTrackViewForScope("site")) {
+      apiRequest("/api/public/analytics/views/track", "POST", { sessionId }).catch(() => {});
+    }
+    apiRequest("/api/public/analytics/views")
+      .then((data) => {
+        setSiteUniqueViews(Number(data?.siteUniqueViews || 0));
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -332,6 +344,11 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
             <span className="filter-results-meta">
               of {products.length} total
             </span>
+            {siteUniqueViews !== null ? (
+              <span className="filter-results-meta">
+                {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
+              </span>
+            ) : null}
             {activeFilterCount > 0 ? (
               <span className="filter-results-meta filter-results-chip">
                 {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"} active
