@@ -55,6 +55,7 @@ public class OrderService {
         order.setNotes(trimToNull(request.notes()));
         order.setStatus(OrderStatus.ORDERED);
         order.setStatusUpdatedBy("customer:" + order.getCustomerName());
+        BigDecimal computedTotalPrice = BigDecimal.ZERO;
 
         for (ReserveOrderItemRequest itemRequest : request.items()) {
             Product product = productRepository.findById(itemRequest.productId())
@@ -91,12 +92,21 @@ public class OrderService {
             item.setQuantity(quantity);
             order.getItems().add(item);
 
+            BigDecimal unitPrice = resolveReservedUnitPrice(product, stock, colorway);
+            if (unitPrice != null) {
+                computedTotalPrice = computedTotalPrice.add(unitPrice.multiply(BigDecimal.valueOf(quantity)));
+            }
+
             StockMovement movement = new StockMovement();
             movement.setProductStock(stock);
             movement.setQuantityChange(-quantity);
             movement.setReason("Reservation");
             movement.setChangedBy("customer:" + order.getCustomerName());
             stockMovementRepository.save(movement);
+        }
+
+        if (computedTotalPrice.compareTo(BigDecimal.ZERO) > 0) {
+            order.setTotalPrice(computedTotalPrice.setScale(2, RoundingMode.HALF_UP));
         }
 
         CustomerOrder savedOrder = customerOrderRepository.save(order);
@@ -220,6 +230,28 @@ public class OrderService {
             return "DEFAULT";
         }
         return ColorwayStandard.normalizeAndValidate(value);
+    }
+
+    private BigDecimal resolveReservedUnitPrice(Product product, ProductStock stock, String normalizedColorway) {
+        if (stock.getPrice() != null) {
+            return stock.getPrice();
+        }
+        BigDecimal colorwayPrice = product.getColorwayDetails().stream()
+                .filter(entry -> normalizedColorway.equals(normalizeColorway(entry.getColorway())))
+                .map(ProductColorwayDetail::getPrice)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
+        if (colorwayPrice != null) {
+            return colorwayPrice;
+        }
+        BigDecimal defaultColorwayPrice = product.getColorwayDetails().stream()
+                .filter(entry -> "DEFAULT".equals(normalizeColorway(entry.getColorway())))
+                .map(ProductColorwayDetail::getPrice)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
+        return defaultColorwayPrice != null ? defaultColorwayPrice : product.getPrice();
     }
 
     private OrderStatus parseStatus(String rawStatus) {

@@ -60,7 +60,10 @@ export function getColorwayDetails(product, colorway) {
       description: "",
       department: "",
       category: "",
-      productType: ""
+      productType: "",
+      price: null,
+      minPrice: null,
+      maxPrice: null
     };
   }
 
@@ -72,7 +75,10 @@ export function getColorwayDetails(product, colorway) {
     description: matched.description || product.description || "",
     department: matched.department || product.department || "",
     category: matched.category || product.category || "",
-    productType: matched.productType || product.productType || ""
+    productType: matched.productType || product.productType || "",
+    price: matched.price ?? product.price ?? null,
+    minPrice: matched.minPrice ?? matched.price ?? product.price ?? null,
+    maxPrice: matched.maxPrice ?? matched.price ?? product.price ?? null
   };
 }
 

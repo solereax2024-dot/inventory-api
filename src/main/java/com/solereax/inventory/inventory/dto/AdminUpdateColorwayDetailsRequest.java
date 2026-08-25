@@ -2,6 +2,7 @@ package com.solereax.inventory.inventory.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 
 public record AdminUpdateColorwayDetailsRequest(
         @NotBlank
@@ -14,7 +15,8 @@ public record AdminUpdateColorwayDetailsRequest(
         @Size(max = 30)
         String category,
         @Size(max = 50)
-        String productType
+        String productType,
+        BigDecimal price
 ) {
 }
 

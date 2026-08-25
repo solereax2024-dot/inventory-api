@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Check, ImagePlus, Pencil, RotateCcw, Ruler, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { US_SIZES, COLORWAY_OPTIONS, STOCK_SOURCE_TYPES, STOCK_SOURCE_LABELS, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
+import { US_SIZES, STOCK_SOURCE_TYPES, STOCK_SOURCE_LABELS, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
 import { apiRequest, uploadImage } from "../../utils/api";
 import { formatEnumLabel, formatColorwayLabel, getProductTypeOptions } from "../../utils/format";
 import { getColorwayDetails, sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
@@ -132,16 +132,18 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     category: "FOOTWEAR",
     productType: "LIFESTYLE_SNEAKERS",
     imageUrl: "",
+    price: "",
     colorwayImages: {},
     description: ""
   });
   const [stockForm, setStockForm] = useState({
     productId: "",
-    colorway: COLORWAY_OPTIONS[0],
+    colorway: "DEFAULT",
     size: US_SIZES[0],
     sizeGroup: "MEN",
     quantityChange: 1,
-    stockSourceType: "ON_HAND"
+    stockSourceType: "ON_HAND",
+    price: ""
   });
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -161,6 +163,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     category: "FOOTWEAR",
     productType: "LIFESTYLE_SNEAKERS",
     imageUrl: "",
+    price: "",
+    colorwayPrice: "",
     colorwayImages: {},
     description: ""
   });
@@ -236,7 +240,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
     return {
       sizeGroup: targetSection?.key || defaultGroup,
-      size: preferredRow?.baseSize || rows[0]?.baseSize || US_SIZES[0]
+      size: preferredRow?.baseSize || rows[0]?.baseSize || US_SIZES[0],
+      price: preferredRow?.price ?? rows[0]?.price ?? null
     };
   };
 
@@ -249,9 +254,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       [isSuperAdmin]
     );
   const adminColorwayOptions = useMemo(() => {
-    const dynamicColorways =
-      products.find((product) => String(product.id) === String(stockForm.productId))?.stocks?.map((stock) => stock.colorway) || [];
-    return sanitizeColorways([...COLORWAY_OPTIONS, ...dynamicColorways]);
+    const selectedProduct = products.find((product) => String(product.id) === String(stockForm.productId));
+    return getProductColorways(selectedProduct);
   }, [products, stockForm.productId]);
   const createImageColorwayOptions = useMemo(
     () =>
@@ -320,6 +324,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     category: details.category || "FOOTWEAR",
     productType: details.productType || "LIFESTYLE_SNEAKERS",
     imageUrl: product?.imageUrl || "",
+    price: product?.price === null || product?.price === undefined ? "" : String(product.price),
+    colorwayPrice: details?.price === null || details?.price === undefined ? "" : String(details.price),
     colorwayImages: product?.colorwayImages || {},
     description: details.description || ""
   });
@@ -510,7 +516,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   };
 
   const createProduct = async () => {
-    await apiRequest("/api/admin/products", "POST", { ...productForm, active: true }, token);
+    await apiRequest(
+      "/api/admin/products",
+      "POST",
+      {
+        ...productForm,
+        price: productForm.price === "" ? null : Number(productForm.price),
+        active: true
+      },
+      token
+    );
     setProductForm({
       name: "",
       brand: "",
@@ -519,6 +534,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       category: "FOOTWEAR",
       productType: "LIFESTYLE_SNEAKERS",
       imageUrl: "",
+      price: "",
       colorwayImages: {},
       description: ""
     });
@@ -586,6 +602,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         category: selectedProduct.category || "FOOTWEAR",
         productType: selectedProduct.productType || "LIFESTYLE_SNEAKERS",
         imageUrl: editProductForm.imageUrl,
+        price: editProductForm.price === "" ? null : Number(editProductForm.price),
         colorwayImages: editProductForm.colorwayImages || {},
         active: true
       },
@@ -599,7 +616,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         description: editProductForm.description,
         department: editProductForm.department,
         category: editProductForm.category,
-        productType: editProductForm.productType
+        productType: editProductForm.productType,
+        price: editProductForm.colorwayPrice === "" ? null : Number(editProductForm.colorwayPrice)
       },
       token
     );
@@ -717,11 +735,20 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const adjustStock = async (mode) => {
     const requestedQuantity = Number(stockForm.quantityChange);
-    if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
+    const parsedPrice = Number(stockForm.price);
+    const hasPriceInput = String(stockForm.price).trim() !== "";
+
+    if (mode === "price") {
+      if (!hasPriceInput || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+        throw new Error("Enter a valid size price (0 or higher).");
+      }
+    } else if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
       throw new Error("Enter a stock quantity of at least 1.");
     }
 
-    const quantityChange = mode === "remove" ? -requestedQuantity : requestedQuantity;
+    const quantityChange = mode === "price"
+      ? 0
+      : (mode === "remove" ? -requestedQuantity : requestedQuantity);
 
     await apiRequest(
       `/api/admin/products/${stockForm.productId}/stocks`,
@@ -731,7 +758,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         size: stockForm.size,
         sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
         quantityChange,
-        stockSourceType: stockForm.stockSourceType
+        stockSourceType: stockForm.stockSourceType,
+        price: hasPriceInput ? Number(parsedPrice.toFixed(2)) : null
       },
       token
     );
@@ -741,9 +769,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       size: prev.size,
       sizeGroup: prev.sizeGroup,
       quantityChange: 1,
-      stockSourceType: prev.stockSourceType
+      stockSourceType: prev.stockSourceType,
+      price: prev.price
     }));
-    setMessage(mode === "remove" ? "Stock removed." : "Stock added.");
+    if (mode === "price") {
+      setMessage(`Size price saved: ${formatPriceLabel(parsedPrice)}.`);
+    } else {
+      setMessage(mode === "remove" ? "Stock removed." : "Stock added.");
+    }
     await loadAdminData(token, adminRole);
   };
 
@@ -895,6 +928,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       category: "FOOTWEAR",
       productType: "LIFESTYLE_SNEAKERS",
       imageUrl: "",
+      price: "",
       colorwayImages: {},
       description: ""
     });
@@ -933,7 +967,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       size: preferredSelection.size,
       sizeGroup: preferredSelection.sizeGroup || getDefaultSizeGroup(nextDepartment),
       quantityChange: 1,
-      stockSourceType: "ON_HAND"
+      stockSourceType: "ON_HAND",
+      price: preferredSelection.price === null || preferredSelection.price === undefined ? "" : String(preferredSelection.price)
     }));
     const shouldAutoOpenGuide = !hasStockGuideOnboardingShown && Boolean(getBrandSizeGuide(selectedProduct?.brand));
     setIsStockGuideOpen(shouldAutoOpenGuide);
@@ -1001,6 +1036,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     return selectedStockRow.onHand;
   }, [selectedStockRow, stockForm.stockSourceType]);
+
+  useEffect(() => {
+    if (productActionModal.type !== "stock") {
+      return;
+    }
+    const nextPrice = selectedStockRow?.price;
+    setStockForm((prev) => {
+      const normalized = nextPrice === null || nextPrice === undefined ? "" : String(nextPrice);
+      return prev.price === normalized ? prev : { ...prev, price: normalized };
+    });
+  }, [productActionModal.type, selectedStockRow?.price, stockForm.size, stockForm.colorway, activeStockSizeGroup]);
   const stockGuideSection = useMemo(
     () => getGuideSectionForContext(stockSizeGuide, { sizeGroup: activeStockSizeGroup, department: stockModalDepartment }),
     [stockSizeGuide, activeStockSizeGroup, stockModalDepartment]
@@ -1150,6 +1196,36 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         return haystack.includes(keyword);
       });
   }, [orders, reservationFilters.keyword, reservationFilters.status]);
+
+  const productById = useMemo(() => {
+    const map = {};
+    products.forEach((product) => {
+      map[String(product.id)] = product;
+    });
+    return map;
+  }, [products]);
+
+  const resolveOriginalUnitPrice = (item) => {
+    const product = productById[String(item?.productId)];
+    if (!product) {
+      return null;
+    }
+    const exactStock = (product.stocks || []).find((stock) => (
+      String(stock.colorway || "").toUpperCase() === String(item.colorway || "").toUpperCase()
+      && String(stock.size) === String(item.size)
+      && String(stock.sizeGroup || "").toUpperCase() === String(item.sizeGroup || "").toUpperCase()
+    ));
+    const stockPrice = Number(exactStock?.price);
+    if (Number.isFinite(stockPrice) && stockPrice >= 0) {
+      return stockPrice;
+    }
+    const colorwayPrice = Number(getColorwayDetails(product, item.colorway)?.price);
+    if (Number.isFinite(colorwayPrice) && colorwayPrice >= 0) {
+      return colorwayPrice;
+    }
+    const productPrice = Number(product?.price);
+    return Number.isFinite(productPrice) && productPrice >= 0 ? productPrice : null;
+  };
 
   useEffect(() => {
     if (!isSuperAdmin && activeAdminSection === "users") {
@@ -1468,6 +1544,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     const trimmedMopOtherDraft = mopOtherDraft.trim();
                     const hasOrderPrice = order.totalPrice !== null && order.totalPrice !== undefined && order.totalPrice !== "";
                     const normalizedOrderPrice = hasOrderPrice ? Number(order.totalPrice).toFixed(2) : "";
+                    const originalPriceTotal = (order.items || []).reduce((sum, item) => {
+                      const basePrice = resolveOriginalUnitPrice(item);
+                      const quantity = Number(item.quantity || 0);
+                      if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(quantity) || quantity <= 0) {
+                        return sum;
+                      }
+                      return sum + (basePrice * quantity);
+                    }, 0);
+                    const hasOriginalPrice = originalPriceTotal > 0;
+                    const hasCustomPrice = hasOrderPrice && hasOriginalPrice
+                      && Math.abs(Number(order.totalPrice) - originalPriceTotal) >= 0.01;
                     const priceDraft = String(priceDrafts[order.id] ?? normalizedOrderPrice);
                     const trimmedPriceDraft = priceDraft.trim();
                     const isPriceDirty = trimmedPriceDraft !== normalizedOrderPrice;
@@ -1673,6 +1760,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                               <small className="reservation-saved-inline"><Check size={12} />Saved</small>
                             ) : null}
                           </div>
+                          {hasOriginalPrice ? (
+                            <small className={`reservation-original-price ${hasCustomPrice ? "is-overridden" : ""}`}>
+                              Original: {formatPriceLabel(originalPriceTotal)}
+                            </small>
+                          ) : null}
                         </td>
                         <td>
                           <div className="reservation-status-cell">
@@ -1878,6 +1970,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     value={productForm.mainColor}
                     onChange={(e) => setProductForm({ ...productForm, mainColor: e.target.value })}
                   />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Base Price (PHP)"
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                  />
                 </section>
 
                 <section className="edit-modal-section create-modal-section">
@@ -2024,6 +2124,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     value={editProductForm.name}
                     onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })}
                   />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Base Price (PHP)"
+                    value={editProductForm.price}
+                    onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })}
+                  />
                   <div className="row">
                     <select
                       value={editProductForm.brand}
@@ -2050,7 +2158,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
                 <section className="edit-modal-section">
                   <h3>Details by Colorway</h3>
-                  <p className="field-hint">Department, category, type, and description save only for the selected colorway.</p>
+                  <p className="field-hint">Department, category, type, description, and price save only for the selected colorway.</p>
                   <div className="row">
                     <select value={editDetailColorway} onChange={(e) => setEditDetailColorway(e.target.value)}>
                       {editDetailColorwayOptions.map((colorway) => (
@@ -2060,6 +2168,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       ))}
                     </select>
                   </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Colorway Price (PHP)"
+                    value={editProductForm.colorwayPrice}
+                    onChange={(e) => setEditProductForm({ ...editProductForm, colorwayPrice: e.target.value })}
+                  />
                   <div className="row">
                     <select value={editProductForm.department} onChange={(e) => setEditProductForm({ ...editProductForm, department: e.target.value })}>
                       {DEPARTMENT_OPTIONS.map((department) => (
@@ -2174,90 +2290,135 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
             {productActionModal.type === "stock" ? (
               <>
-                <p className="field-hint">Simple stock update: choose colorway, size, source, and quantity, then add or remove.</p>
+                <p className="field-hint">Choose colorway/size, set quantity or price, then run the matching action below.</p>
                 {stockModalProduct ? (
                   <p className="field-hint stock-size-selection-note">
                     Product: <strong>{`${stockModalProduct.brand || ""} ${stockModalProduct.name || ""}`.trim() || `#${stockModalProduct.id}`}</strong>
                   </p>
                 ) : null}
-                <div className="row">
-                  <button
-                    type="button"
-                    className="stock-mode-toggle"
-                    onClick={() => adjustStock("add").catch((err) => setMessage(err.message))}
-                  >
-                    + Add Stock
-                  </button>
-                  <button
-                    type="button"
-                    className="stock-mode-toggle"
-                    onClick={() => adjustStock("remove").catch((err) => setMessage(err.message))}
-                  >
-                    − Remove Stock
-                  </button>
-                </div>
-                <div className="row">
-                  <select value={stockForm.colorway} onChange={(e) => setStockForm({ ...stockForm, colorway: e.target.value })}>
-                    {adminColorwayOptions.map((colorway) => (
-                      <option key={colorway} value={colorway}>
-                        {formatColorwayLabel(colorway)}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={stockForm.stockSourceType}
-                    onChange={(e) => setStockForm({ ...stockForm, stockSourceType: e.target.value })}
-                  >
-                    {STOCK_SOURCE_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {STOCK_SOURCE_LABELS[type]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {isUnisexDepartment(stockModalDepartment) ? (
-                  <div className="row">
-                    <select value={activeStockSizeGroup} onChange={(e) => handleStockSizeGroupChange(e.target.value)}>
-                      {stockSizeSections.map((section) => (
-                        <option key={`stock-group-${section.key}`} value={section.key}>
-                          {section.key === "WOMEN" ? "Women's size group" : "Men's size group"}
-                        </option>
-                      ))}
-                    </select>
+                <section className="stock-controls-card">
+                  <div className="stock-controls-grid">
+                    <label className="stock-field">
+                      <span className="stock-field-label">Colorway</span>
+                      <select value={stockForm.colorway} onChange={(e) => setStockForm({ ...stockForm, colorway: e.target.value })}>
+                        {adminColorwayOptions.map((colorway) => (
+                          <option key={colorway} value={colorway}>
+                            {formatColorwayLabel(colorway)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="stock-field">
+                      <span className="stock-field-label">Stock source</span>
+                      <select
+                        value={stockForm.stockSourceType}
+                        onChange={(e) => setStockForm({ ...stockForm, stockSourceType: e.target.value })}
+                      >
+                        {STOCK_SOURCE_TYPES.map((type) => (
+                          <option key={type} value={type}>
+                            {STOCK_SOURCE_LABELS[type]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {isUnisexDepartment(stockModalDepartment) ? (
+                      <label className="stock-field">
+                        <span className="stock-field-label">Size view</span>
+                        <select value={activeStockSizeGroup} onChange={(e) => handleStockSizeGroupChange(e.target.value)}>
+                          {stockSizeSections.map((section) => (
+                            <option key={`stock-group-${section.key}`} value={section.key}>
+                              {section.key === "WOMEN" ? "Women's size group" : "Men's size group"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+
+                    <label className="stock-field">
+                      <span className="stock-field-label">Size</span>
+                      <select
+                        value={stockForm.size}
+                        onChange={(e) => setStockForm({ ...stockForm, size: e.target.value, sizeGroup: activeStockSizeGroup })}
+                      >
+                        {activeStockRows.length === 0 ? (
+                          <option value={stockForm.size}>US {stockForm.size}</option>
+                        ) : (
+                          activeStockRows.map((row) => (
+                            <option key={`stock-size-${activeStockSizeGroup}-${row.baseSize}`} value={row.baseSize}>
+                              US {row.displaySize}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </label>
+
+                    <label className="stock-field">
+                      <span className="stock-field-label">Quantity change</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="ex: 2"
+                        value={stockForm.quantityChange}
+                        onChange={(e) => setStockForm({ ...stockForm, quantityChange: Number(e.target.value) || 0 })}
+                      />
+                    </label>
+
+                    <label className="stock-field">
+                      <span className="stock-field-label">Size price (PHP)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="ex: 5699"
+                        value={stockForm.price}
+                        onChange={(e) => setStockForm({ ...stockForm, price: e.target.value })}
+                      />
+                    </label>
                   </div>
-                ) : null}
-                <div className="row">
-                  <select
-                    value={stockForm.size}
-                    onChange={(e) => setStockForm({ ...stockForm, size: e.target.value, sizeGroup: activeStockSizeGroup })}
-                  >
-                    {activeStockRows.length === 0 ? (
-                      <option value={stockForm.size}>US {stockForm.size}</option>
-                    ) : (
-                      activeStockRows.map((row) => (
-                        <option key={`stock-size-${activeStockSizeGroup}-${row.baseSize}`} value={row.baseSize}>
-                          US {row.displaySize}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="qty"
-                    value={stockForm.quantityChange}
-                    onChange={(e) => setStockForm({ ...stockForm, quantityChange: Number(e.target.value) || 0 })}
-                  />
+
+                  <div className="stock-action-cluster">
+                    <button
+                      type="button"
+                      className="stock-mode-toggle stock-mode-add"
+                      onClick={() => adjustStock("add").catch((err) => setMessage(err.message))}
+                    >
+                      + Add Stock
+                    </button>
+                    <button
+                      type="button"
+                      className="stock-mode-toggle stock-mode-remove"
+                      onClick={() => adjustStock("remove").catch((err) => setMessage(err.message))}
+                    >
+                      − Remove Stock
+                    </button>
+                    <button
+                      type="button"
+                      className="stock-mode-toggle stock-mode-price"
+                      onClick={() => adjustStock("price").catch((err) => setMessage(err.message))}
+                    >
+                      Save Size Price
+                    </button>
+                  </div>
+                </section>
+
+                <div className="stock-meta-list">
+                  <p className="field-hint stock-size-selection-note">
+                    Selected size: <strong>{selectedStockSizeLabel || `US ${stockForm.size}`}</strong>
+                    {isUnisexDepartment(stockModalDepartment) ? ` · ${activeStockSizeGroup === "WOMEN" ? "women's" : "men's"} stock group` : ""}
+                  </p>
+                  <p className="field-hint stock-size-selection-note">
+                    Current {STOCK_SOURCE_LABELS[stockForm.stockSourceType]}: <strong>{selectedStockSourceQuantity}</strong>
+                    {selectedStockRow ? ` · Total: ${selectedStockRow.total}` : ""}
+                  </p>
+                  {stockForm.price !== "" ? (
+                    <p className="field-hint stock-size-selection-note">
+                      Selected size price: <strong>{formatPriceLabel(stockForm.price)}</strong>
+                    </p>
+                  ) : null}
                 </div>
-                <p className="field-hint stock-size-selection-note">
-                  Selected size: <strong>{selectedStockSizeLabel || `US ${stockForm.size}`}</strong>
-                  {isUnisexDepartment(stockModalDepartment) ? ` · ${activeStockSizeGroup === "WOMEN" ? "women's" : "men's"} stock group` : ""}
-                </p>
-                <p className="field-hint stock-size-selection-note">
-                  Current {STOCK_SOURCE_LABELS[stockForm.stockSourceType]}: <strong>{selectedStockSourceQuantity}</strong>
-                  {selectedStockRow ? ` · Total: ${selectedStockRow.total}` : ""}
-                </p>
                 <p className="field-hint stock-size-guide-helper">
                   Tip: Check the brand size guide before updating stock so sizes stay accurate.
                 </p>

@@ -388,6 +388,18 @@
   appearance: textfield;
 }
 
+.reservation-original-price {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.reservation-original-price.is-overridden {
+  color: #b45309;
+  font-weight: 700;
+}
+
 .reservations-table th:nth-child(1),
 .reservations-table td:nth-child(1) {
   min-width: 76px;
@@ -569,6 +581,67 @@
 .stock-size-picker {
   display: grid;
   gap: 10px;
+}
+
+.stock-controls-card {
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  padding: 10px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  display: grid;
+  gap: 10px;
+}
+
+.stock-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stock-field {
+  display: grid;
+  gap: 5px;
+}
+
+.stock-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.stock-field > select,
+.stock-field > input {
+  margin-top: 0;
+}
+
+.stock-action-cluster {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stock-action-cluster .stock-mode-toggle {
+  width: 100%;
+  min-height: 38px;
+}
+
+.stock-mode-add {
+  border-color: color-mix(in srgb, var(--success) 36%, #86efac);
+}
+
+.stock-mode-remove {
+  border-color: color-mix(in srgb, var(--danger) 34%, #fca5a5);
+}
+
+.stock-mode-price {
+  border-color: color-mix(in srgb, var(--primary) 38%, #cbd5e1);
+}
+
+.stock-meta-list {
+  display: grid;
+  gap: 4px;
 }
 
 .stock-size-selection-note {
@@ -849,6 +922,14 @@
       grid-template-columns: 1fr;
     }
 
+    .stock-controls-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .stock-action-cluster {
+      grid-template-columns: 1fr;
+    }
+
 }
 
 @media (max-width: 480px) {
@@ -897,6 +978,15 @@ body.theme-dark .edit-modal-section {
 body.theme-dark .edit-modal-section h3 {
   color: #e2e8f0;
 }
+
+ body.theme-dark .stock-controls-card {
+   border-color: var(--dark-border);
+   background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
+ }
+
+ body.theme-dark .stock-field-label {
+   color: #94a3b8;
+ }
 
 body.theme-dark .stock-guide-panel {
   background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
@@ -947,6 +1037,14 @@ body.theme-dark .reservation-price-input {
   background: color-mix(in srgb, var(--dark-surface) 90%, transparent);
   border-color: var(--dark-border);
   color: #e2e8f0;
+}
+
+body.theme-dark .reservation-original-price {
+  color: #94a3b8;
+}
+
+body.theme-dark .reservation-original-price.is-overridden {
+  color: #fbbf24;
 }
 
 body.theme-dark .reservation-inline-icon-btn {

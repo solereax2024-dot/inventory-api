@@ -2,6 +2,7 @@ package com.solereax.inventory.inventory.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import java.util.Map;
 
 public record AdminCreateProductRequest(
@@ -22,6 +23,7 @@ public record AdminCreateProductRequest(
         String productType,
         @Size(max = 500)
         String imageUrl,
+        BigDecimal price,
         Map<String, String> colorwayImages,
         Boolean active
 ) {

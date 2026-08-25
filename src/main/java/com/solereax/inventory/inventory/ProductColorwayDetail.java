@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
@@ -40,6 +41,9 @@ public class ProductColorwayDetail {
 
     @Column(name = "product_type", length = 50)
     private String productType;
+
+    @Column(name = "price", precision = 12, scale = 2)
+    private BigDecimal price;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

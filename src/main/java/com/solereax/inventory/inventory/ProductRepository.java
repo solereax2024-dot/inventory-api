@@ -29,6 +29,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("select p from Product p where p.id = :id")
     Optional<Product> findManagedById(Long id);
 
+    @Query("""
+            select distinct p from Product p
+            left join fetch p.colorwayImages c
+            where p.id = :id and p.active = true
+            """)
+    Optional<Product> findActiveByIdWithColorwayImages(@Param("id") Long id);
+
     Optional<Product> findByBrandAndName(String brand, String name);
 
     @Query("""

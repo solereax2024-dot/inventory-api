@@ -7,6 +7,8 @@ import com.solereax.inventory.inventory.dto.ColorwayDetailsResponse;
 import com.solereax.inventory.inventory.dto.PublicProductResponse;
 import com.solereax.inventory.inventory.dto.SizeStockResponse;
 import com.solereax.inventory.shared.NotFoundException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,7 +71,15 @@ public class InventoryService {
             mergeProductFields(product, request);
         }
         applyColorwayImages(product, request, true);
-        upsertColorwayDetails(product, product.getMainColor(), request.description(), request.department(), request.category(), request.productType());
+        upsertColorwayDetails(
+                product,
+                product.getMainColor(),
+                request.description(),
+                request.department(),
+                request.category(),
+                request.productType(),
+                request.price()
+        );
         Product saved = productRepository.save(product);
         initializeDefaultStocks(saved);
         return toAdminResponse(saved);
@@ -104,7 +114,8 @@ public class InventoryService {
                 request.description(),
                 request.department(),
                 request.category(),
-                request.productType()
+                request.productType(),
+                request.price()
         );
         Product saved = productRepository.save(product);
         return toAdminResponse(saved);
@@ -156,6 +167,7 @@ public class InventoryService {
                     createdStock.setSizeLabel(normalizedSize);
                     createdStock.setSizeGroup(sizeGroup.name());
                     createdStock.setQuantity(0);
+                    createdStock.setPrice(resolveColorwayBasePrice(product, normalizedColorway));
                     return createdStock;
                 });
 
@@ -167,15 +179,20 @@ public class InventoryService {
         }
 
         stock.setQuantity(newQuantity);
+        if (request.price() != null) {
+            stock.setPrice(normalizePrice(request.price()));
+        }
         stock.setUpdatedAt(Instant.now());
         ProductStock savedStock = productStockRepository.save(stock);
 
-        StockMovement movement = new StockMovement();
-        movement.setProductStock(savedStock);
-        movement.setQuantityChange(request.quantityChange());
-        movement.setReason(request.stockSourceType().name());
-        movement.setChangedBy(changedBy);
-        stockMovementRepository.save(movement);
+        if (request.quantityChange() != 0) {
+            StockMovement movement = new StockMovement();
+            movement.setProductStock(savedStock);
+            movement.setQuantityChange(request.quantityChange());
+            movement.setReason(request.stockSourceType().name());
+            movement.setChangedBy(changedBy);
+            stockMovementRepository.save(movement);
+        }
 
         return toAdminResponse(productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found: " + productId)));
@@ -197,6 +214,7 @@ public class InventoryService {
         product.setDepartment(trimToNull(request.department()));
         product.setCategory(trimToNull(request.category()));
         product.setProductType(trimToNull(request.productType()));
+        product.setPrice(normalizePrice(request.price()));
         String imageUrl = trimToNull(request.imageUrl());
         if (imageUrl != null) {
             product.setImageUrl(imageUrl);
@@ -232,6 +250,9 @@ public class InventoryService {
         String productType = trimToNull(request.productType());
         if (productType != null) {
             product.setProductType(productType);
+        }
+        if (request.price() != null) {
+            product.setPrice(normalizePrice(request.price()));
         }
         String imageUrl = trimToNull(request.imageUrl());
         if (imageUrl != null && product.getImageUrl() == null) {
@@ -289,7 +310,8 @@ public class InventoryService {
             String descriptionInput,
             String departmentInput,
             String categoryInput,
-            String productTypeInput
+            String productTypeInput,
+            BigDecimal priceInput
     ) {
         String normalizedColorway = normalizeColorway(colorwayInput);
         ProductColorwayDetail target = product.getColorwayDetails().stream()
@@ -306,6 +328,7 @@ public class InventoryService {
         target.setDepartment(trimToNull(departmentInput));
         target.setCategory(trimToNull(categoryInput));
         target.setProductType(trimToNull(productTypeInput));
+        target.setPrice(normalizePrice(priceInput));
         target.setUpdatedAt(Instant.now());
     }
 
@@ -364,7 +387,13 @@ public class InventoryService {
     private PublicProductResponse toPublicResponse(Product product, Long viewCount) {
         List<SizeStockResponse> stocks = product.getStocks().stream()
                 .sorted(UsSizeStandard.stockComparator())
-                .map(stock -> new SizeStockResponse(stock.getColorway(), stock.getSizeLabel(), stock.getSizeGroup(), stock.getQuantity()))
+                .map(stock -> new SizeStockResponse(
+                        stock.getColorway(),
+                        stock.getSizeLabel(),
+                        stock.getSizeGroup(),
+                        stock.getQuantity(),
+                        stock.getPrice()
+                ))
                 .toList();
         Map<String, Map<String, Map<String, Map<String, Integer>>>> stateByColorwayAndSizeGroup = buildStateByColorwayAndSizeGroup(product);
         Map<String, Map<String, Map<String, Integer>>> stateByColorwayAndSize = aggregateStateByColorwayAndSize(stateByColorwayAndSizeGroup);
@@ -378,6 +407,7 @@ public class InventoryService {
                 product.getCategory(),
                 product.getProductType(),
                 product.getImageUrl(),
+                product.getPrice(),
                 mapColorwayImages(product),
                 mapColorwayDetails(product),
                 stocks,
@@ -396,7 +426,13 @@ public class InventoryService {
     private PublicProductResponse toAdminResponse(Product product, Long viewCount) {
         List<SizeStockResponse> stocks = product.getStocks().stream()
                 .sorted(UsSizeStandard.stockComparator())
-                .map(stock -> new SizeStockResponse(stock.getColorway(), stock.getSizeLabel(), stock.getSizeGroup(), stock.getQuantity()))
+                .map(stock -> new SizeStockResponse(
+                        stock.getColorway(),
+                        stock.getSizeLabel(),
+                        stock.getSizeGroup(),
+                        stock.getQuantity(),
+                        stock.getPrice()
+                ))
                 .toList();
         Map<String, Map<String, Map<String, Map<String, Integer>>>> stateByColorwayAndSizeGroup = buildStateByColorwayAndSizeGroup(product);
         Map<String, Map<String, Map<String, Integer>>> stateByColorwayAndSize = aggregateStateByColorwayAndSize(stateByColorwayAndSizeGroup);
@@ -410,6 +446,7 @@ public class InventoryService {
                 product.getCategory(),
                 product.getProductType(),
                 product.getImageUrl(),
+                product.getPrice(),
                 mapColorwayImages(product),
                 mapColorwayDetails(product),
                 stocks,
@@ -433,34 +470,121 @@ public class InventoryService {
 
     private Map<String, ColorwayDetailsResponse> mapColorwayDetails(Product product) {
         Map<String, ColorwayDetailsResponse> values = new LinkedHashMap<>();
-        product.getStocks().forEach(stock -> values.putIfAbsent(stock.getColorway(), fallbackColorwayDetails(product)));
-        product.getColorwayImages().forEach(entry -> values.putIfAbsent(entry.getColorway(), fallbackColorwayDetails(product)));
-        values.putIfAbsent(normalizeColorway(product.getMainColor()), fallbackColorwayDetails(product));
+        Map<String, PriceRange> priceRangesByColorway = buildPriceRangesByColorway(product);
+        product.getStocks().forEach(stock -> values.putIfAbsent(
+                stock.getColorway(),
+                fallbackColorwayDetails(product, stock.getColorway(), priceRangesByColorway)
+        ));
+        product.getColorwayImages().forEach(entry -> values.putIfAbsent(
+                entry.getColorway(),
+                fallbackColorwayDetails(product, entry.getColorway(), priceRangesByColorway)
+        ));
+        String normalizedMainColor = normalizeColorway(product.getMainColor());
+        values.putIfAbsent(normalizedMainColor, fallbackColorwayDetails(product, normalizedMainColor, priceRangesByColorway));
 
         product.getColorwayDetails().forEach(entry -> {
             if (entry.getColorway() == null) {
                 return;
             }
+            String normalizedColorway = normalizeColorway(entry.getColorway());
+            PriceRange range = priceRangesByColorway.get(normalizedColorway);
             values.put(
-                    normalizeColorway(entry.getColorway()),
+                    normalizedColorway,
                     new ColorwayDetailsResponse(
                             firstNonBlank(entry.getDescription(), product.getDescription()),
                             firstNonBlank(entry.getDepartment(), product.getDepartment()),
                             firstNonBlank(entry.getCategory(), product.getCategory()),
-                            firstNonBlank(entry.getProductType(), product.getProductType())
+                            firstNonBlank(entry.getProductType(), product.getProductType()),
+                            entry.getPrice() != null ? entry.getPrice() : resolveColorwayBasePrice(product, normalizedColorway),
+                            range == null ? null : range.min(),
+                            range == null ? null : range.max()
                     )
             );
         });
         return values;
     }
 
-    private ColorwayDetailsResponse fallbackColorwayDetails(Product product) {
+    private ColorwayDetailsResponse fallbackColorwayDetails(
+            Product product,
+            String colorway,
+            Map<String, PriceRange> priceRangesByColorway
+    ) {
+        String normalizedColorway = normalizeColorway(colorway);
+        PriceRange range = priceRangesByColorway.get(normalizedColorway);
         return new ColorwayDetailsResponse(
                 product.getDescription(),
                 product.getDepartment(),
                 product.getCategory(),
-                product.getProductType()
+                product.getProductType(),
+                resolveColorwayBasePrice(product, normalizedColorway),
+                range == null ? null : range.min(),
+                range == null ? null : range.max()
         );
+    }
+
+    private Map<String, PriceRange> buildPriceRangesByColorway(Product product) {
+        Map<String, BigDecimal> minByColorway = new LinkedHashMap<>();
+        Map<String, BigDecimal> maxByColorway = new LinkedHashMap<>();
+
+        product.getStocks().forEach(stock -> {
+            String colorway = normalizeColorway(stock.getColorway());
+            mergePriceRange(minByColorway, maxByColorway, colorway, stock.getPrice());
+        });
+
+        product.getColorwayDetails().forEach(detail -> {
+            String colorway = normalizeColorway(detail.getColorway());
+            mergePriceRange(minByColorway, maxByColorway, colorway, detail.getPrice());
+        });
+
+        LinkedHashSet<String> knownColorways = new LinkedHashSet<>();
+        product.getStocks().stream().map(ProductStock::getColorway).forEach(knownColorways::add);
+        product.getColorwayImages().stream().map(ProductColorwayImage::getColorway).forEach(knownColorways::add);
+        product.getColorwayDetails().stream().map(ProductColorwayDetail::getColorway).forEach(knownColorways::add);
+        knownColorways.add(product.getMainColor());
+
+        knownColorways.stream()
+                .map(this::normalizeColorway)
+                .forEach(colorway -> {
+                    BigDecimal fallbackPrice = resolveColorwayBasePrice(product, colorway);
+                    mergePriceRange(minByColorway, maxByColorway, colorway, fallbackPrice);
+                });
+
+        Map<String, PriceRange> ranges = new LinkedHashMap<>();
+        minByColorway.forEach((colorway, min) -> ranges.put(colorway, new PriceRange(min, maxByColorway.get(colorway))));
+        return ranges;
+    }
+
+    private void mergePriceRange(
+            Map<String, BigDecimal> minByColorway,
+            Map<String, BigDecimal> maxByColorway,
+            String colorway,
+            BigDecimal candidate
+    ) {
+        if (candidate == null) {
+            return;
+        }
+        minByColorway.merge(colorway, candidate, BigDecimal::min);
+        maxByColorway.merge(colorway, candidate, BigDecimal::max);
+    }
+
+    private BigDecimal resolveColorwayBasePrice(Product product, String colorway) {
+        String normalizedColorway = normalizeColorway(colorway);
+        BigDecimal exactPrice = product.getColorwayDetails().stream()
+                .filter(entry -> normalizedColorway.equals(normalizeColorway(entry.getColorway())))
+                .map(ProductColorwayDetail::getPrice)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
+        if (exactPrice != null) {
+            return exactPrice;
+        }
+        BigDecimal defaultPrice = product.getColorwayDetails().stream()
+                .filter(entry -> "DEFAULT".equals(normalizeColorway(entry.getColorway())))
+                .map(ProductColorwayDetail::getPrice)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
+        return defaultPrice != null ? defaultPrice : product.getPrice();
     }
 
     private Map<String, Map<String, Integer>> aggregateStateByColorway(
@@ -583,6 +707,17 @@ public class InventoryService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    private BigDecimal normalizePrice(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        BigDecimal normalized = value.setScale(2, RoundingMode.HALF_UP);
+        if (normalized.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Price must be 0 or higher.");
+        }
+        return normalized;
+    }
+
     private String firstNonBlank(String primary, String fallback) {
         String normalizedPrimary = trimToNull(primary);
         return normalizedPrimary != null ? normalizedPrimary : trimToNull(fallback);
@@ -609,8 +744,12 @@ public class InventoryService {
             stock.setSizeLabel(size);
             stock.setSizeGroup(defaultGroup.name());
             stock.setQuantity(0);
+            stock.setPrice(resolveColorwayBasePrice(product, normalizedColorway));
             stock.setUpdatedAt(Instant.now());
             productStockRepository.save(stock);
         }
+    }
+
+    private record PriceRange(BigDecimal min, BigDecimal max) {
     }
 }

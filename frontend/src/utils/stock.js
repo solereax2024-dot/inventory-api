@@ -68,9 +68,14 @@ export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup
     return !storageGroup || normalizeStockSizeGroup(stock.sizeGroup) === storageGroup;
   });
   const quantityBySize = new Map();
+  const priceBySize = new Map();
   stocks.forEach((stock) => {
     const key = String(stock.size);
     quantityBySize.set(key, Number(quantityBySize.get(key) || 0) + Number(stock.quantity || 0));
+    const parsedPrice = Number(stock.price);
+    if (!priceBySize.has(key) && Number.isFinite(parsedPrice) && parsedPrice >= 0) {
+      priceBySize.set(key, parsedPrice);
+    }
   });
   const bySize = storageGroup
     ? product?.stockStateBySizeGroup?.[selectedColorway]?.[storageGroup] || {}
@@ -84,6 +89,6 @@ export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup
     const inTransit = Number(stateValues.IN_TRANSIT || 0);
     const preOrder = Number(stateValues.PRE_ORDER || 0);
     const total = Number(quantityBySize.get(size) || 0);
-    return { size, onHand, inTransit, preOrder, total };
+    return { size, onHand, inTransit, preOrder, total, price: priceBySize.get(size) ?? null };
   });
 }

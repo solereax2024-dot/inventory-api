@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { US_SIZES } from "../../constants";
 import { apiRequest } from "../../utils/api";
-import { getColorwayImageUrl } from "../../utils/colorway";
+import { getColorwayDetails, getColorwayImageUrl } from "../../utils/colorway";
 import { formatColorwayLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
@@ -14,11 +14,33 @@ const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to rese
 const DESKTOP_BREAKPOINT = 721;
 const DESKTOP_BASE_IMAGE_SCALE = 1.42;
 const MOBILE_BASE_IMAGE_SCALE = 1;
+const PHP_CURRENCY = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2
+});
+
+function formatPriceRange(minPrice, maxPrice) {
+  const min = Number(minPrice);
+  const max = Number(maxPrice);
+  if (!Number.isFinite(min) && !Number.isFinite(max)) {
+    return "";
+  }
+  if (Number.isFinite(min) && Number.isFinite(max)) {
+    if (Math.abs(min - max) < 0.01) {
+      return PHP_CURRENCY.format(min);
+    }
+    return `${PHP_CURRENCY.format(Math.min(min, max))} - ${PHP_CURRENCY.format(Math.max(min, max))}`;
+  }
+  const fallback = Number.isFinite(min) ? min : max;
+  return PHP_CURRENCY.format(fallback);
+}
 
 export default function ReservePage() {
   const navigate = useNavigate();
   const { productId } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -34,6 +56,8 @@ export default function ReservePage() {
     sizeGroup: "MEN",
     quantity: 1
   });
+  const [entryColorway, setEntryColorway] = useState(null);
+  const lastProductIdRef = useRef(null);
   const [zoomIdx, setZoomIdx] = useState(0);
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const [baseImageScale, setBaseImageScale] = useState(() => (
@@ -90,18 +114,15 @@ export default function ReservePage() {
   );
   const prioritizedColorways = useMemo(() => {
     if (colorways.length === 0) return [];
-
-    const clickedColorway = searchParams.get("colorway");
-    const pinnedColorway =
-      (clickedColorway && colorways.includes(clickedColorway) && clickedColorway)
-      || (reserve.colorway && colorways.includes(reserve.colorway) && reserve.colorway)
-      || null;
-
-    if (!pinnedColorway) return colorways;
-    return [pinnedColorway, ...colorways.filter((colorway) => colorway !== pinnedColorway)];
-  }, [colorways, reserve.colorway, searchParams]);
+    if (!entryColorway || !colorways.includes(entryColorway)) return colorways;
+    return [entryColorway, ...colorways.filter((colorway) => colorway !== entryColorway)];
+  }, [colorways, entryColorway]);
   const selectedDepartment = useMemo(
     () => getDepartmentForColorway(product, reserve.colorway),
+    [product, reserve.colorway]
+  );
+  const selectedColorwayDetails = useMemo(
+    () => getColorwayDetails(product, reserve.colorway),
     [product, reserve.colorway]
   );
   const defaultSizeGroup = useMemo(
@@ -122,6 +143,15 @@ export default function ReservePage() {
   const selectedSizeLabel = useMemo(
     () => formatSelectedSizeLabel(reserve.size, activeSizeGroup, selectedDepartment),
     [reserve.size, activeSizeGroup, selectedDepartment]
+  );
+  const selectedSizePrice = useMemo(() => {
+    const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
+    const parsed = Number(selectedRow?.price);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }, [activeSizeSection, reserve.size]);
+  const selectedColorwayPriceRange = useMemo(
+    () => formatPriceRange(selectedColorwayDetails?.minPrice, selectedColorwayDetails?.maxPrice),
+    [selectedColorwayDetails]
   );
   const sizeGuide = useMemo(() => getBrandSizeGuide(product?.brand), [product?.brand]);
   const sizeGuideSection = useMemo(
@@ -146,6 +176,14 @@ export default function ReservePage() {
       sizeGroup: prev.sizeGroup || "MEN"
     }));
   }, [product, colorways, searchParams]);
+
+  useEffect(() => {
+    if (!productId) return;
+    if (lastProductIdRef.current === productId) return;
+    lastProductIdRef.current = productId;
+    const clickedColorway = searchParams.get("colorway");
+    setEntryColorway(clickedColorway || null);
+  }, [productId, searchParams]);
 
   useEffect(() => {
     if (!product || sizeSections.length === 0) return;
@@ -340,6 +378,11 @@ export default function ReservePage() {
              </div>
 
              <div className="colorway-display">{formatColorwayLabel(reserve.colorway)}</div>
+             {selectedSizePrice !== null ? (
+              <div className="field-hint">Selected size price: <strong>{PHP_CURRENCY.format(selectedSizePrice)}</strong></div>
+             ) : selectedColorwayPriceRange ? (
+              <div className="field-hint">Price: <strong>{selectedColorwayPriceRange}</strong></div>
+             ) : null}
 
              {colorways.length > 1 ? (
               <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails">
@@ -351,6 +394,12 @@ export default function ReservePage() {
                       type="button"
                       className={`reserve-thumb-btn quick-tooltip ${reserve.colorway === colorway ? "active" : ""}`}
                       onClick={() => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set("colorway", colorway);
+                        if (reserve.size) {
+                          nextParams.set("size", reserve.size);
+                        }
+                        setSearchParams(nextParams, { replace: true });
                         setReserve({ ...reserve, colorway });
                         resetZoom();
                       }}

@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -46,6 +47,9 @@ public class Product {
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
+
+    @Column(name = "price", precision = 12, scale = 2)
+    private BigDecimal price;
 
     @Column(nullable = false)
     private boolean active = true;

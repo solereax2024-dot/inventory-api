@@ -3,6 +3,7 @@ package com.solereax.inventory.inventory.dto;
 import com.solereax.inventory.inventory.StockSourceType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
 
 public record AdminAdjustStockRequest(
         @NotBlank
@@ -14,6 +15,7 @@ public record AdminAdjustStockRequest(
         @NotNull
         Integer quantityChange,
         @NotNull
-        StockSourceType stockSourceType
+        StockSourceType stockSourceType,
+        BigDecimal price
 ) {
 }

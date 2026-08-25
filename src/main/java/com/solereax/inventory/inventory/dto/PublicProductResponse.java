@@ -1,5 +1,6 @@
 package com.solereax.inventory.inventory.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,7 @@ public record PublicProductResponse(
         String category,
         String productType,
         String imageUrl,
+        BigDecimal price,
         Map<String, String> colorwayImages,
         Map<String, ColorwayDetailsResponse> colorwayDetails,
         List<SizeStockResponse> stocks,
