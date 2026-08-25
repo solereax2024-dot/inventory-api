@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -525,14 +526,21 @@ public class InventoryService {
     private Map<String, PriceRange> buildPriceRangesByColorway(Product product) {
         Map<String, BigDecimal> minByColorway = new LinkedHashMap<>();
         Map<String, BigDecimal> maxByColorway = new LinkedHashMap<>();
+        Set<String> colorwaysWithExplicitPrice = new LinkedHashSet<>();
 
         product.getStocks().forEach(stock -> {
             String colorway = normalizeColorway(stock.getColorway());
+            if (stock.getPrice() != null) {
+                colorwaysWithExplicitPrice.add(colorway);
+            }
             mergePriceRange(minByColorway, maxByColorway, colorway, stock.getPrice());
         });
 
         product.getColorwayDetails().forEach(detail -> {
             String colorway = normalizeColorway(detail.getColorway());
+            if (detail.getPrice() != null) {
+                colorwaysWithExplicitPrice.add(colorway);
+            }
             mergePriceRange(minByColorway, maxByColorway, colorway, detail.getPrice());
         });
 
@@ -545,6 +553,9 @@ public class InventoryService {
         knownColorways.stream()
                 .map(this::normalizeColorway)
                 .forEach(colorway -> {
+                    if (colorwaysWithExplicitPrice.contains(colorway)) {
+                        return;
+                    }
                     BigDecimal fallbackPrice = resolveColorwayBasePrice(product, colorway);
                     mergePriceRange(minByColorway, maxByColorway, colorway, fallbackPrice);
                 });
@@ -560,7 +571,7 @@ public class InventoryService {
             String colorway,
             BigDecimal candidate
     ) {
-        if (candidate == null) {
+        if (candidate == null || candidate.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         minByColorway.merge(colorway, candidate, BigDecimal::min);
