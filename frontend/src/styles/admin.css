@@ -616,15 +616,29 @@
   margin-top: 0;
 }
 
+.stock-field > input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .stock-action-cluster {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 220px);
   gap: 8px;
+  align-items: end;
 }
 
 .stock-action-cluster .stock-mode-toggle {
   width: 100%;
   min-height: 38px;
+}
+
+.stock-action-select {
+  margin: 0;
+}
+
+.stock-apply-btn {
+  margin-top: 0;
 }
 
 .stock-mode-add {

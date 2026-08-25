@@ -141,6 +141,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     colorway: "DEFAULT",
     size: US_SIZES[0],
     sizeGroup: "MEN",
+    actionType: "ADD",
     quantityChange: 1,
     stockSourceType: "ON_HAND",
     price: ""
@@ -733,7 +734,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   }, [editDetailColorway, editImageColorway]);
 
-  const adjustStock = async (mode) => {
+  const adjustStock = async () => {
+    const mode = stockForm.actionType === "REMOVE" ? "remove" : stockForm.actionType === "PRICE" ? "price" : "add";
     const requestedQuantity = Number(stockForm.quantityChange);
     const parsedPrice = Number(stockForm.price);
     const hasPriceInput = String(stockForm.price).trim() !== "";
@@ -769,6 +771,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       size: prev.size,
       sizeGroup: prev.sizeGroup,
       quantityChange: 1,
+      actionType: prev.actionType,
       stockSourceType: prev.stockSourceType,
       price: prev.price
     }));
@@ -966,6 +969,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       colorway: nextColorway,
       size: preferredSelection.size,
       sizeGroup: preferredSelection.sizeGroup || getDefaultSizeGroup(nextDepartment),
+      actionType: prev.actionType || "ADD",
       quantityChange: 1,
       stockSourceType: "ON_HAND",
       price: preferredSelection.price === null || preferredSelection.price === undefined ? "" : String(preferredSelection.price)
@@ -2362,6 +2366,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                         step="1"
                         placeholder="ex: 2"
                         value={stockForm.quantityChange}
+                        disabled={stockForm.actionType === "PRICE"}
                         onChange={(e) => setStockForm({ ...stockForm, quantityChange: Number(e.target.value) || 0 })}
                       />
                     </label>
@@ -2374,32 +2379,34 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                         step="0.01"
                         placeholder="ex: 5699"
                         value={stockForm.price}
+                        disabled={stockForm.actionType !== "PRICE"}
                         onChange={(e) => setStockForm({ ...stockForm, price: e.target.value })}
                       />
                     </label>
                   </div>
 
                   <div className="stock-action-cluster">
+                    <label className="stock-field stock-action-select">
+                      <span className="stock-field-label">Action</span>
+                      <select
+                        value={stockForm.actionType}
+                        onChange={(e) => setStockForm({ ...stockForm, actionType: e.target.value })}
+                      >
+                        <option value="ADD">Add stock</option>
+                        <option value="REMOVE">Remove stock</option>
+                        <option value="PRICE">Save size price</option>
+                      </select>
+                    </label>
                     <button
                       type="button"
-                      className="stock-mode-toggle stock-mode-add"
-                      onClick={() => adjustStock("add").catch((err) => setMessage(err.message))}
+                      className="stock-mode-toggle stock-apply-btn"
+                      onClick={() => adjustStock().catch((err) => setMessage(err.message))}
                     >
-                      + Add Stock
-                    </button>
-                    <button
-                      type="button"
-                      className="stock-mode-toggle stock-mode-remove"
-                      onClick={() => adjustStock("remove").catch((err) => setMessage(err.message))}
-                    >
-                      − Remove Stock
-                    </button>
-                    <button
-                      type="button"
-                      className="stock-mode-toggle stock-mode-price"
-                      onClick={() => adjustStock("price").catch((err) => setMessage(err.message))}
-                    >
-                      Save Size Price
+                      {stockForm.actionType === "REMOVE"
+                        ? "Apply Remove"
+                        : stockForm.actionType === "PRICE"
+                          ? "Save Price"
+                          : "Apply Add"}
                     </button>
                   </div>
                 </section>
@@ -2508,6 +2515,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     <th>In-transit</th>
                     <th>Pre-order</th>
                     <th>Total</th>
+                    <th>Price</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2518,6 +2526,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       <td>{row.inTransit}</td>
                       <td>{row.preOrder}</td>
                       <td>{row.total}</td>
+                      <td>{formatPriceLabel(row.price)}</td>
                     </tr>
                   ))}
                   <tr>
@@ -2526,6 +2535,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     <td><strong>{stockSummaryTotals.inTransit}</strong></td>
                     <td><strong>{stockSummaryTotals.preOrder}</strong></td>
                     <td><strong>{stockSummaryTotals.total}</strong></td>
+                    <td><strong>-</strong></td>
                   </tr>
                 </tbody>
               </table>
