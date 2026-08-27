@@ -24,15 +24,23 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
   const activeSizeSection = sizeSections.find((section) => section.key === activeSizeGroup) || sizeSections[0] || null;
   const zoomLevel = ZOOM_LEVELS[zoomIdx];
 
+  const selectReserveSize = (baseSize, sizeGroup) => {
+    setReserve((prev) => ({
+      ...prev,
+      size: baseSize,
+      sizeGroup
+    }));
+  };
+
   const handleSizeGroupChange = (nextSizeGroup) => {
     const targetSection = sizeSections.find((section) => section.key === nextSizeGroup);
     const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === reserve.size);
     const fallbackSize = (targetSection?.rows?.find((row) => row.total > 0) || targetSection?.rows?.[0])?.baseSize || reserve.size;
-    setReserve({
-      ...reserve,
+    setReserve((prev) => ({
+      ...prev,
       sizeGroup: nextSizeGroup,
-      size: hasCurrentSize ? reserve.size : fallbackSize
-    });
+      size: hasCurrentSize ? prev.size : fallbackSize
+    }));
   };
 
   const getOriginFromPoint = (clientX, clientY) => {
@@ -183,7 +191,7 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
                             key={`${activeSizeSection.key}-${row.baseSize}`}
                             type="button"
                             className={`size-btn ${isActive ? "active" : ""} ${!available ? "unavailable" : ""}`}
-                            onClick={() => available && setReserve({ ...reserve, size: row.baseSize, sizeGroup: activeSizeSection.key })}
+                            onClick={() => available && selectReserveSize(row.baseSize, activeSizeSection.key)}
                             disabled={!available}
                           >
                             <span className="size-label">US {row.displaySize}</span>

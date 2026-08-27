@@ -22,6 +22,7 @@
   --primary-dark: #312e81;
   --primary-soft: #e0e7ff;
   --primary-soft-2: #eef2ff;
+  --on-primary-text: #f8fafc;
   --focus-ring: rgba(79, 70, 229, 0.18);
   --theme-gradient-start: rgba(79, 70, 229, 0.14);
   --theme-gradient-end: rgba(79, 70, 229, 0.06);
@@ -621,7 +622,7 @@ table {
 .filter-drawer-btn.active {
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
   border-color: var(--primary);
-  color: #f8fafc;
+  color: var(--on-primary-text);
   box-shadow: 0 12px 22px color-mix(in srgb, var(--primary) 36%, transparent);
 }
 
@@ -646,7 +647,7 @@ table {
   font-size: 10px;
   font-weight: 800;
   background: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary-text);
   padding: 0 5px;
 }
 
@@ -1248,7 +1249,7 @@ body.theme-dark .stock-mode-toggle.active {
     linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 38%, transparent), color-mix(in srgb, var(--primary) 30%, transparent)),
     linear-gradient(135deg, var(--primary), var(--primary-dark));
   border-color: color-mix(in srgb, var(--primary-soft) 70%, #7dd3fc);
-  color: #f8fafc;
+  color: var(--on-primary-text);
   box-shadow:
     0 16px 28px rgba(15, 23, 42, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
@@ -1286,7 +1287,7 @@ body.theme-dark .pagination-bar .page-number-btn:hover:not(:disabled) {
 body.theme-dark .pagination-bar .page-number-btn.active {
   border-color: transparent;
   background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 62%, var(--dark-surface)), color-mix(in srgb, var(--primary-dark) 72%, var(--dark-bg-mid)));
-  color: #ffffff;
+  color: var(--on-primary-text);
   font-weight: 800;
   padding-inline: 10px;
   padding-block: 5px;

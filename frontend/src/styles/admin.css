@@ -25,7 +25,7 @@
 .admin-subnav-tab.active {
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
   border-color: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary-text);
   box-shadow: 0 12px 22px color-mix(in srgb, var(--primary) 34%, transparent);
 }
 
@@ -593,12 +593,12 @@
 .create-product-save-btn {
   border-color: var(--primary);
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
-  color: #ffffff;
+  color: var(--on-primary-text);
 }
 
 .create-product-save-btn:hover {
   border-color: var(--primary-strong);
-  color: #ffffff;
+  color: var(--on-primary-text);
   filter: brightness(1.03);
 }
 

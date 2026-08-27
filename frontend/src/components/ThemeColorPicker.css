@@ -53,7 +53,7 @@
 .theme-mode-btn.active {
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
   border-color: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary-text);
   box-shadow: 0 10px 18px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
@@ -153,7 +153,7 @@ body.theme-dark .theme-mode-btn {
 body.theme-dark .theme-mode-btn.active {
   background: linear-gradient(180deg, var(--primary), var(--primary-dark));
   border-color: color-mix(in srgb, var(--primary-soft) 70%, var(--primary));
-  color: #ffffff;
+  color: var(--on-primary-text);
 }
 
 body.theme-dark .color-dot {

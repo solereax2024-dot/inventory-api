@@ -35,6 +35,11 @@ function rgbToCss(rgb) {
   return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
 }
 
+function getReadableTextColor(rgb) {
+  const luminance = (0.2126 * rgb.r) + (0.7152 * rgb.g) + (0.0722 * rgb.b);
+  return luminance > 170 ? "#0f172a" : "#f8fafc";
+}
+
 export default function App() {
   const location = useLocation();
   const [branding, setBranding] = useState({ logoUrl: null, logoDarkUrl: null });
@@ -110,6 +115,7 @@ export default function App() {
     rootStyle.setProperty("--primary-dark", selectedTheme.primaryDark);
     rootStyle.setProperty("--primary-soft", selectedTheme.primarySoft);
     rootStyle.setProperty("--primary-soft-2", selectedTheme.primarySoft2);
+    rootStyle.setProperty("--on-primary-text", getReadableTextColor(primaryRgb));
     rootStyle.setProperty("--focus-ring", selectedTheme.focusRing);
     rootStyle.setProperty("--theme-accent", selectedTheme.hex);
     rootStyle.setProperty("--theme-gradient-start", selectedTheme.gradientStart);

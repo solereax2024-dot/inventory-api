@@ -161,6 +161,13 @@ export default function ReservePage() {
     () => formatPriceRange(selectedColorwayDetails?.minPrice, selectedColorwayDetails?.maxPrice),
     [selectedColorwayDetails]
   );
+  const selectReserveSize = (baseSize, sizeGroup) => {
+    setReserve((prev) => ({
+      ...prev,
+      size: baseSize,
+      sizeGroup
+    }));
+  };
   const sizeGuide = useMemo(() => getBrandSizeGuide(product?.brand), [product?.brand]);
   const sizeGuideSection = useMemo(
     () => getGuideSectionForContext(sizeGuide, { sizeGroup: activeSizeGroup, department: selectedDepartment }),
@@ -327,11 +334,11 @@ export default function ReservePage() {
     const targetSection = sizeSections.find((section) => section.key === nextSizeGroup);
     const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === reserve.size);
     const fallbackSize = (targetSection?.rows?.find((row) => row.total > 0) || targetSection?.rows?.[0])?.baseSize || reserve.size;
-    setReserve({
-      ...reserve,
+    setReserve((prev) => ({
+      ...prev,
       sizeGroup: nextSizeGroup,
-      size: hasCurrentSize ? reserve.size : fallbackSize
-    });
+      size: hasCurrentSize ? prev.size : fallbackSize
+    }));
   };
 
   const validateReserve = () => {
@@ -609,7 +616,7 @@ export default function ReservePage() {
                           key={`${activeSizeSection.key}-${row.baseSize}`}
                           type="button"
                           className={`size-btn ${isActive ? "active" : ""} ${!available ? "unavailable" : ""}`}
-                          onClick={() => available && setReserve({ ...reserve, size: row.baseSize, sizeGroup: activeSizeSection.key })}
+                          onClick={() => available && selectReserveSize(row.baseSize, activeSizeSection.key)}
                           disabled={!available}
                         >
                           <span className="size-label">US {row.displaySize}</span>
