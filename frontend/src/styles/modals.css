@@ -1237,6 +1237,76 @@ body.theme-dark .reserve-success-ref strong {
   gap: 10px;
 }
 
+.product-image-upload-tile-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-image-upload-tile {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--surface-2) 62%, #f8fafc);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.product-image-upload-tile:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, #f8fafc);
+}
+
+.product-image-upload-tile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-image-upload-placeholder {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-image-uploading {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--primary);
+}
+
+.product-image-upload-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.image-upload-preview-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin-top: 4px;
+}
+
+.image-upload-preview-label {
+  margin: 0;
+}
+
 .image-upload-submit-btn {
   width: auto;
   margin-top: 0;
@@ -1588,6 +1658,19 @@ body.theme-dark .image-upload-trigger-enterprise {
 body.theme-dark .image-upload-trigger-enterprise:hover {
   background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 14%, var(--dark-surface)), var(--dark-bg-mid));
   border-color: color-mix(in srgb, var(--primary-soft) 44%, var(--dark-border));
+}
+
+body.theme-dark .product-image-upload-tile {
+  background: color-mix(in srgb, var(--dark-surface) 80%, transparent);
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .product-image-upload-tile:hover {
+  border-color: var(--primary);
+}
+
+body.theme-dark .product-image-uploading {
+  background: rgba(0, 0, 0, 0.68);
 }
 
 /* Form section in reserve page (not modal) */

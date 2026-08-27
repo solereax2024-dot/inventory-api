@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { LayoutDashboard, LogOut, Menu, Palette, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import { apiRequest } from "../utils/api";
 import "../styles/header.css";
@@ -148,6 +149,35 @@ export default function SiteHeader({
     };
   }, []);
 
+  useEffect(() => {
+    const shouldLockScroll = isMobileViewport && (isMenuOpen || isSearchDrawerOpen);
+    if (!shouldLockScroll) {
+      return undefined;
+    }
+
+    const scrollY = window.scrollY;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isMobileViewport, isMenuOpen, isSearchDrawerOpen]);
+
 
   const saveRecentSearch = (value) => {
     const term = String(value || "").trim();
@@ -274,7 +304,8 @@ export default function SiteHeader({
         </div>
       </div>
 
-      {isCatalogPath && isSearchDrawerOpen ? (
+      {isCatalogPath && isSearchDrawerOpen
+        ? createPortal(
         <div
           className={`search-drawer-backdrop${!isMobileViewport ? " search-drawer-backdrop-desktop" : ""}`}
           onClick={() => setIsSearchDrawerOpen(false)}
@@ -425,10 +456,12 @@ export default function SiteHeader({
               ) : null}
             </div>
           </section>
-        </div>
+        </div>,
+        document.body
       ) : null}
 
-      {isMenuOpen ? (
+      {isMenuOpen
+        ? createPortal(
         <div className="site-menu-backdrop" onClick={() => setIsMenuOpen(false)}>
           <aside className="site-menu-panel" role="menu" aria-label="Header menu" onClick={(e) => e.stopPropagation()}>
             <div className="site-menu-panel-header">
@@ -519,7 +552,8 @@ export default function SiteHeader({
             )}
           </div>
           </aside>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </header>
   );

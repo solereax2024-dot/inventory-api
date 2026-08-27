@@ -1641,6 +1641,10 @@ body.theme-dark .reserve-form-actions {
 }
 
 @media (max-width: 720px) {
+  .app-shell {
+    padding-top: 66px;
+  }
+
   .container {
     margin: 16px auto;
     padding-bottom: 22px;

@@ -155,6 +155,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [productActionModal, setProductActionModal] = useState({ type: null, productId: "" });
   const [productImageFile, setProductImageFile] = useState(null);
   const [editProductImageFile, setEditProductImageFile] = useState(null);
+  const [isCreateImageUploading, setIsCreateImageUploading] = useState(false);
+  const [isEditImageUploading, setIsEditImageUploading] = useState(false);
   const [editProductId, setEditProductId] = useState("");
   const [editProductForm, setEditProductForm] = useState({
     name: "",
@@ -169,7 +171,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     colorwayImages: {},
     description: ""
   });
-  const [productImageColorway, setProductImageColorway] = useState("DEFAULT");
   const [editImageColorway, setEditImageColorway] = useState("DEFAULT");
   const [editDetailColorway, setEditDetailColorway] = useState("DEFAULT");
   const [tableFilters, setTableFilters] = useState({
@@ -260,10 +261,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const selectedProduct = products.find((product) => String(product.id) === String(stockForm.productId));
     return getProductColorways(selectedProduct);
   }, [products, stockForm.productId]);
-  const createImageColorwayOptions = useMemo(
-    () =>
-      [...new Set(["DEFAULT", ...sanitizeColorways([productForm.mainColor, ...Object.keys(productForm.colorwayImages || {})]).map(normalizeColorwayValue)])],
-    [productForm.mainColor, productForm.colorwayImages]
+  const createImageTargetColorway = useMemo(
+    () => normalizeColorwayValue(productForm.mainColor || "DEFAULT"),
+    [productForm.mainColor]
   );
   const editImageColorwayOptions = useMemo(() => {
     const product = products.find((item) => String(item.id) === String(editProductId));
@@ -558,41 +558,83 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     await loadAdminData(token, adminRole);
   };
 
-  const uploadProductImage = async () => {
-    if (!productImageFile) {
+  const uploadProductImage = async (fileOverride) => {
+    const fileToUpload = fileOverride || productImageFile;
+    if (!fileToUpload) {
       throw new Error("Please choose an image file first.");
     }
-    const data = await uploadImage("/api/admin/media/product-image", productImageFile, token);
-    const targetColorway = normalizeColorwayValue(productImageColorway || productForm.mainColor);
-    setProductForm((prev) => ({
-      ...prev,
-      colorwayImages: { ...(prev.colorwayImages || {}), [targetColorway]: data.url }
-    }));
-    setMessage(`Product image uploaded for ${formatColorwayLabel(targetColorway)}. Save Product to apply it.`);
+    setIsCreateImageUploading(true);
+    try {
+      const data = await uploadImage("/api/admin/media/product-image", fileToUpload, token);
+      const targetColorway = createImageTargetColorway;
+      setProductForm((prev) => ({
+        ...prev,
+        colorwayImages: { ...(prev.colorwayImages || {}), [targetColorway]: data.url }
+      }));
+      setMessage(`Product image uploaded for ${formatColorwayLabel(targetColorway)}. Save Product to apply it.`);
+    } finally {
+      setIsCreateImageUploading(false);
+    }
   };
 
 
-  const uploadEditProductImage = async () => {
-    if (!editProductImageFile) {
+  const uploadEditProductImage = async (fileOverride) => {
+    const fileToUpload = fileOverride || editProductImageFile;
+    if (!fileToUpload) {
       throw new Error("Please choose an image file first.");
     }
     if (!editProductId) {
       throw new Error("Please choose a product first.");
     }
-    const data = await uploadImage("/api/admin/media/product-image", editProductImageFile, token);
-    const targetColorway = normalizeColorwayValue(editImageColorway || editProductForm.mainColor);
-    await apiRequest(
-      `/api/admin/products/${editProductId}/colorway-image`,
-      "PUT",
-      { colorway: targetColorway, imageUrl: data.url },
-      token
-    );
-    setEditProductForm((prev) => ({
-      ...prev,
-      colorwayImages: { ...(prev.colorwayImages || {}), [targetColorway]: data.url }
-    }));
-    setMessage(`Image updated for ${formatColorwayLabel(targetColorway)}.`);
-    await loadAdminData(token, adminRole);
+    setIsEditImageUploading(true);
+    try {
+      const data = await uploadImage("/api/admin/media/product-image", fileToUpload, token);
+      const targetColorway = normalizeColorwayValue(editImageColorway || editProductForm.mainColor);
+      await apiRequest(
+        `/api/admin/products/${editProductId}/colorway-image`,
+        "PUT",
+        { colorway: targetColorway, imageUrl: data.url },
+        token
+      );
+      setEditProductForm((prev) => ({
+        ...prev,
+        colorwayImages: { ...(prev.colorwayImages || {}), [targetColorway]: data.url }
+      }));
+      setMessage(`Image updated for ${formatColorwayLabel(targetColorway)}.`);
+      await loadAdminData(token, adminRole);
+    } finally {
+      setIsEditImageUploading(false);
+    }
+  };
+
+  const handleCreateProductImageChange = async (event) => {
+    const file = event.target.files?.[0] || null;
+    setProductImageFile(file);
+    if (!file) {
+      return;
+    }
+    try {
+      await uploadProductImage(file);
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleEditProductImageChange = async (event) => {
+    const file = event.target.files?.[0] || null;
+    setEditProductImageFile(file);
+    if (!file) {
+      return;
+    }
+    try {
+      await uploadEditProductImage(file);
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const updateProduct = async () => {
@@ -720,13 +762,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setEditProductForm((prev) => ({ ...prev, productType: options[0] || "" }));
     }
   }, [editProductForm.category, editProductForm.productType]);
-
-  useEffect(() => {
-    if (!createImageColorwayOptions.includes(productImageColorway)) {
-      setProductImageColorway(createImageColorwayOptions[0] || "DEFAULT");
-    }
-  }, [createImageColorwayOptions, productImageColorway]);
-
 
   useEffect(() => {
     if (!editImageColorwayOptions.includes(editImageColorway)) {
@@ -963,7 +998,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const openCreateModal = () => {
     setProductImageFile(null);
-    setProductImageColorway("DEFAULT");
+    setIsCreateImageUploading(false);
     setProductForm({
       name: "",
       brand: "",
@@ -987,6 +1022,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     const scopedColorway = getAdminScopedColorway(selected, selectedColorway);
     setEditProductImageFile(null);
+    setIsEditImageUploading(false);
     setEditProductId(String(productId));
     setEditDetailColorway(scopedColorway);
     setEditProductForm(mapProductToForm(selected, scopedColorway));
@@ -1244,15 +1280,30 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const reservationMopTotals = useMemo(() => {
     const totals = new Map();
+    const otherLabels = new Map();
     filteredReservations.forEach((order) => {
-      const key = String(order.mop || "").trim().toUpperCase() || "NO_MOP";
+      const rawMop = String(order.mop || "").trim().toUpperCase();
+      let key = rawMop || "NO_MOP";
+      if (rawMop === "OTHER") {
+        const rawOther = String(order.mopOther || "").trim();
+        const normalizedOther = rawOther.toUpperCase() || "UNSPECIFIED";
+        key = `OTHER:${normalizedOther}`;
+        if (!otherLabels.has(key)) {
+          otherLabels.set(key, rawOther || "Other (Unspecified)");
+        }
+      }
       const parsed = Number(order.totalPrice);
       const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
       totals.set(key, (totals.get(key) || 0) + amount);
     });
 
+    const standardKeys = RESERVATION_MOP_OPTIONS
+      .map((option) => option.value)
+      .filter((value) => value !== "OTHER");
+    const otherKeys = [...totals.keys()].filter((key) => key.startsWith("OTHER:")).sort();
     const orderedKeys = [
-      ...RESERVATION_MOP_OPTIONS.map((option) => option.value),
+      ...standardKeys,
+      ...otherKeys,
       "NO_MOP"
     ];
 
@@ -1262,7 +1313,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         key,
         label: key === "NO_MOP"
           ? "No MOP"
-          : (RESERVATION_MOP_OPTIONS.find((option) => option.value === key)?.label || formatEnumLabel(key)),
+          : (key.startsWith("OTHER:")
+            ? otherLabels.get(key)
+            : (RESERVATION_MOP_OPTIONS.find((option) => option.value === key)?.label || formatEnumLabel(key))),
         total: totals.get(key) || 0
       }));
   }, [filteredReservations]);
@@ -2226,56 +2279,45 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       <small>Attach an image to the selected colorway.</small>
                     </div>
                     <div className="image-upload-section">
-                      <span className="image-upload-field-label">Colorway target</span>
-                      <select value={productImageColorway} onChange={(e) => setProductImageColorway(e.target.value)}>
-                        {createImageColorwayOptions.map((colorway) => (
-                          <option key={`create-image-${colorway}`} value={colorway}>
-                            {colorway === "DEFAULT" ? "Main Color (Default)" : formatColorwayLabel(colorway)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="image-upload-section">
                       <input
                         id="create-product-image-file"
                         className="sr-only-file-input"
                         type="file"
                         accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                        onChange={(e) => setProductImageFile(e.target.files?.[0] || null)}
+                        onChange={handleCreateProductImageChange}
                       />
-                      <span className="image-upload-field-label">Image file</span>
-                      <label htmlFor="create-product-image-file" className="image-upload-trigger-enterprise">
-                        <ImagePlus size={16} />
-                        <span>{productImageFile ? "Change Image File" : "Choose Product Image"}</span>
-                      </label>
-                      <div className="image-upload-meta-row">
-                        <small className="field-hint image-upload-name">
-                          {productImageFile
-                            ? `${productImageFile.name} · ${formatFileSize(productImageFile.size)} · ${getFileFormatLabel(productImageFile)}`
-                            : "No file selected"}
-                        </small>
-                        <button
-                          type="button"
-                          className="image-upload-submit-btn"
-                          onClick={() => uploadProductImage().catch((err) => setMessage(err.message))}
-                          disabled={!productImageFile}
-                        >
-                          Upload Product Image
-                        </button>
+                      <div className="product-image-upload-tile-wrap">
+                        <label htmlFor="create-product-image-file" className="product-image-upload-tile" title="Click to upload product image">
+                          {(productForm.colorwayImages?.[createImageTargetColorway] || productForm.imageUrl)
+                            ? (
+                              <img
+                                className="product-image-upload-tile-img"
+                                src={productForm.colorwayImages?.[createImageTargetColorway] || productForm.imageUrl}
+                                alt="Product preview"
+                              />
+                              )
+                            : (
+                              <span className="product-image-upload-placeholder">
+                                <ImagePlus size={20} />
+                              </span>
+                              )}
+                          {isCreateImageUploading ? <span className="product-image-uploading">•••</span> : null}
+                        </label>
+                        <div className="product-image-upload-copy">
+                          <small className="field-hint image-upload-name">
+                            {productImageFile
+                              ? `${productImageFile.name} · ${formatFileSize(productImageFile.size)} · ${getFileFormatLabel(productImageFile)}`
+                              : "No file selected"}
+                          </small>
+                          <small className="field-hint image-upload-note">
+                            {isCreateImageUploading ? "Uploading image..." : (productImageFile ? "Uploaded. Click the tile to replace." : "Click the tile to upload. Auto-upload starts immediately.")}
+                          </small>
+                        </div>
                       </div>
                       <small className="field-hint image-upload-note">Supported formats: JPG/PNG/WEBP/GIF/AVIF (max 5MB).</small>
                     </div>
                   </div>
                 </div>
-                {(productForm.colorwayImages?.[normalizeColorwayValue(productImageColorway)] || productForm.imageUrl)
-                  ? (
-                    <img
-                      className="logo-preview"
-                      src={productForm.colorwayImages?.[normalizeColorwayValue(productImageColorway)] || productForm.imageUrl}
-                      alt="Product preview"
-                    />
-                    )
-                  : null}
                 <section className="edit-modal-section create-modal-section">
                   <h3>Description</h3>
                   <p className="field-hint">Use a clear customer-facing description. You can generate a default draft anytime.</p>
@@ -2452,38 +2494,36 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       className="sr-only-file-input"
                       type="file"
                       accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                      onChange={(e) => setEditProductImageFile(e.target.files?.[0] || null)}
+                       onChange={handleEditProductImageChange}
                     />
                     <label htmlFor="edit-product-image-file" className="image-upload-trigger-enterprise">
                       <ImagePlus size={16} />
                       <span>{editProductImageFile ? "Change Image File" : "Choose Product Image"}</span>
                     </label>
-                    <div className="image-upload-meta-row">
+                      <div className="image-upload-meta-row">
                       <small className="field-hint image-upload-name">
                         {editProductImageFile
                           ? `${editProductImageFile.name} · ${formatFileSize(editProductImageFile.size)} · ${getFileFormatLabel(editProductImageFile)}`
                           : "No file selected"}
                       </small>
-                      <button
-                        type="button"
-                        className="image-upload-submit-btn"
-                        onClick={() => uploadEditProductImage().catch((err) => setMessage(err.message))}
-                        disabled={!editProductImageFile}
-                      >
-                        Upload New Image
-                      </button>
+                        <small className="field-hint image-upload-note">
+                          {isEditImageUploading ? "Uploading image..." : (editProductImageFile ? "Uploaded. Select another file to replace." : "Auto-upload starts after file selection.")}
+                        </small>
                     </div>
                     <small className="field-hint image-upload-note">Supported formats: JPG/PNG/WEBP/GIF/AVIF (max 5MB).</small>
+                    {(editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl)
+                      ? (
+                        <div className="image-upload-preview-inline">
+                          <img
+                            className="logo-preview"
+                            src={editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl}
+                            alt="Edit product preview"
+                          />
+                          <small className="field-hint image-upload-preview-label">Preview</small>
+                        </div>
+                        )
+                      : null}
                   </div>
-                  {(editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl)
-                    ? (
-                      <img
-                        className="logo-preview"
-                        src={editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl}
-                        alt="Edit product preview"
-                      />
-                      )
-                    : null}
                 </section>
 
                 <button

@@ -394,7 +394,12 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 <span className="filter-results-count">
                   {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
                 </span>
-                <span className="filter-results-meta">of {products.length}</span>
+                <span className="filter-results-meta">of {products.length} total</span>
+                {siteUniqueViews !== null ? (
+                  <span className="filter-results-meta">
+                    {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
+                  </span>
+                ) : null}
                 {activeFilterCount > 0 ? (
                   <span className="filter-results-meta filter-results-chip">
                     {activeFilterCount} active

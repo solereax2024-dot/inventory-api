@@ -23,6 +23,9 @@ const createTheme = ({
 
 // Multicolor theme configuration
 export const THEMES = {
+  blackwhite: createTheme({ name: 'Black & White', hex: '#111111', primaryStrong: '#000000', primaryDark: '#050505', primarySoft: '#f5f5f5', primarySoft2: '#fafafa', rgb: '17, 17, 17' }),
+  graphite: createTheme({ name: 'Graphite', hex: '#6b7280', primaryStrong: '#4b5563', primaryDark: '#374151', primarySoft: '#eef2f7', primarySoft2: '#f7f9fc', rgb: '107, 114, 128' }),
+  ultralight: createTheme({ name: 'Ultra Light', hex: '#e5e7eb', primaryStrong: '#d1d5db', primaryDark: '#9ca3af', primarySoft: '#fafafa', primarySoft2: '#ffffff', rgb: '229, 231, 235' }),
   indigo: createTheme({ name: 'Indigo', hex: '#4f46e5', primaryStrong: '#4338ca', primaryDark: '#312e81', primarySoft: '#e0e7ff', primarySoft2: '#eef2ff', rgb: '79, 70, 229' }),
   violet: createTheme({ name: 'Violet', hex: '#7c3aed', primaryStrong: '#6d28d9', primaryDark: '#5b21b6', primarySoft: '#ede9fe', primarySoft2: '#f5f3ff', rgb: '124, 58, 237' }),
   purple: createTheme({ name: 'Purple', hex: '#a855f7', primaryStrong: '#9333ea', primaryDark: '#7e22ce', primarySoft: '#f3e8ff', primarySoft2: '#faf5ff', rgb: '168, 85, 247' }),
