@@ -1,6 +1,8 @@
 package com.solereax.inventory.brand;
 
+import com.solereax.inventory.settings.MediaStorageService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
@@ -8,20 +10,29 @@ import java.util.Map;
 @RequestMapping("/api/admin/brands")
 public class AdminBrandController {
     private final BrandService brandService;
+    private final MediaStorageService mediaStorageService;
 
-    public AdminBrandController(BrandService brandService) {
+    public AdminBrandController(BrandService brandService, MediaStorageService mediaStorageService) {
         this.brandService = brandService;
+        this.mediaStorageService = mediaStorageService;
     }
 
     @GetMapping
-    public List<String> listBrands() {
-        return brandService.listBrandNames();
+    public List<BrandService.BrandDto> listBrands() {
+        return brandService.listBrands();
     }
 
     @PostMapping
-    public Map<String, String> createBrand(@RequestBody Map<String, String> body) {
-        String name = brandService.createBrand(body.get("name"));
-        return Map.of("name", name);
+    public BrandService.BrandDto createBrand(@RequestBody Map<String, String> body) {
+        return brandService.createBrand(body.get("name"));
+    }
+
+    @PostMapping("/{id:\\d+}/logo")
+    public BrandService.BrandDto uploadBrandLogo(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        String url = mediaStorageService.storeImage(file, "brands");
+        return brandService.updateBrandLogo(id, url);
     }
 
     @DeleteMapping("/{id:\\d+}")

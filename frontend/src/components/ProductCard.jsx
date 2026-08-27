@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Eye } from "lucide-react";
 import { getColorwayDetails, getColorwayImageUrl, sanitizeColorways, sortColorways } from "../utils/colorway";
 import { formatEnumLabel } from "../utils/format";
 import "../styles/product-card.css";
@@ -70,14 +71,19 @@ export default function ProductCard({ product, onReserveClick, initialColorway }
       <div className="product-card-footer">
         <div className="product-card-meta">
           <small className="brand">{product.brand || ""}</small>
-          <small className="product-demand">{uniqueViewCount.toLocaleString()} view{uniqueViewCount === 1 ? "" : "s"}</small>
+          <small className="product-demand">
+            <Eye size={11} strokeWidth={2.2} />
+            {uniqueViewCount.toLocaleString()}
+          </small>
         </div>
         <h3>{product.name}</h3>
-        {priceLabel ? (
-          <div className="product-price-row">
+        <div className={`product-price-row${priceLabel ? "" : " empty"}`}>
+          {priceLabel ? (
             <p className="product-price">{priceLabel}</p>
-          </div>
-        ) : null}
+          ) : (
+            <span className="product-price-placeholder" aria-hidden="true">&nbsp;</span>
+          )}
+        </div>
       </div>
     </article>
   );

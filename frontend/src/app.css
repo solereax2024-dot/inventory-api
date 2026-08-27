@@ -417,6 +417,39 @@ button:disabled {
   box-shadow: none;
 }
 
+/* Unified icon-button baseline: no default chrome, no spacing, circular hover only. */
+.menu-trigger,
+.nav-search-icon,
+.nav-link,
+.site-menu-close-btn,
+.search-drawer-close,
+.search-drawer-search-icon,
+.theme-picker-modal-close,
+.close-btn,
+.modal-close-btn,
+.reservation-inline-icon-btn {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.menu-trigger:hover,
+.nav-search-icon:hover,
+.nav-link:hover,
+.site-menu-close-btn:hover,
+.search-drawer-close:hover,
+.search-drawer-search-icon:hover,
+.theme-picker-modal-close:hover,
+.close-btn:hover,
+.modal-close-btn:hover,
+.reservation-inline-icon-btn:hover {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  transform: none;
+}
+
 .button-secondary {
   border: 1px solid var(--border);
   background: linear-gradient(180deg, var(--surface-raised), var(--primary-soft));
@@ -597,6 +630,27 @@ table {
   height: 16px;
 }
 
+.mobile-filter-btn-compact {
+  margin-top: 0;
+  min-height: 36px;
+  padding: 6px 10px;
+}
+
+.mobile-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--primary);
+  color: #ffffff;
+  padding: 0 5px;
+}
+
+
 .filter-controls-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -629,7 +683,10 @@ table {
 
 .filter-drawer-backdrop {
   position: fixed;
-  inset: 0;
+  top: 76px; /* start just below the sticky site-header so nav links stay clickable */
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: rgba(15, 23, 42, 0.48);
   z-index: 60;
   display: flex;
@@ -638,7 +695,7 @@ table {
 
 .filter-drawer {
   width: min(380px, 92vw);
-  height: 100vh;
+  height: calc(100vh - 76px); /* match the backdrop top offset */
   background:
     radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 45%),
     linear-gradient(180deg, var(--surface-raised), var(--surface-2));
@@ -1100,6 +1157,7 @@ body.theme-dark .filter-results-chip {
   color: color-mix(in srgb, var(--primary-soft) 80%, #ffffff);
 }
 
+
 body.theme-dark .filter-drawer-header {
   border-bottom-color: var(--dark-border);
 }
@@ -1324,6 +1382,28 @@ body.theme-dark button:not(.site-logo-button):not(.product-image-button):not(.na
 
 body.theme-dark button:not(.site-logo-button):not(.product-image-button):not(.nav-search-icon):not(.nav-link):not(.close-btn):not(.modal-close-btn):active {
   transform: translateY(0);
+}
+
+/* Exempt icon-only controls from heavy dark-mode button skin. */
+body.theme-dark .menu-trigger,
+body.theme-dark .site-menu-close-btn,
+body.theme-dark .search-drawer-close,
+body.theme-dark .search-drawer-search-icon,
+body.theme-dark .theme-picker-modal-close,
+body.theme-dark .reservation-inline-icon-btn {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+body.theme-dark .menu-trigger:hover,
+body.theme-dark .site-menu-close-btn:hover,
+body.theme-dark .search-drawer-close:hover,
+body.theme-dark .search-drawer-search-icon:hover,
+body.theme-dark .theme-picker-modal-close:hover,
+body.theme-dark .reservation-inline-icon-btn:hover {
+  background: color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
 body.theme-dark .page-number-btn,
@@ -1609,14 +1689,38 @@ body.theme-dark .reserve-form-actions {
   }
 
   .filter-bar-top {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   .filter-bar-actions {
+    width: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+
+  .filter-drawer-backdrop {
+    top: 0; /* full screen for mobile bottom sheet */
+    justify-content: center;
+    align-items: flex-end;
+  }
+
+  .filter-drawer {
     width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    max-width: none;
+    height: min(88vh, 760px);
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -18px 34px rgba(15, 23, 42, 0.22);
+    animation: slide-up-filter-sheet 180ms ease-out;
+  }
+
+  .filter-drawer-footer .filter-drawer-btn.active {
+    min-width: 156px;
+    justify-content: center;
   }
 
   .pagination-bar {
@@ -1635,6 +1739,15 @@ body.theme-dark .reserve-form-actions {
     min-width: 0;
     padding: 0;
     font-size: 12px;
+  }
+}
+
+@keyframes slide-up-filter-sheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
   }
 }
 

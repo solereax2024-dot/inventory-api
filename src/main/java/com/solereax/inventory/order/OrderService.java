@@ -160,6 +160,20 @@ public class OrderService {
             }
             order.setTotalPrice(totalPrice);
         }
+        if (request.downpayment() != null) {
+            BigDecimal downpayment = request.downpayment().setScale(2, RoundingMode.HALF_UP);
+            if (downpayment.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Downpayment must be 0 or higher.");
+            }
+            order.setDownpayment(downpayment);
+        }
+        if (request.balance() != null) {
+            BigDecimal balance = request.balance().setScale(2, RoundingMode.HALF_UP);
+            if (balance.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Balance must be 0 or higher.");
+            }
+            order.setBalance(balance);
+        }
         order.setStatusUpdatedBy(updatedBy);
         return toResponse(customerOrderRepository.save(order));
     }
@@ -185,6 +199,8 @@ public class OrderService {
                 order.getMop(),
                 order.getMopOther(),
                 order.getTotalPrice(),
+                order.getDownpayment(),
+                order.getBalance(),
                 order.getStatusUpdatedBy(),
                 order.getCreatedAt(),
                 items

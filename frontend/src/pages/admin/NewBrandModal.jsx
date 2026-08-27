@@ -1,21 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 
 export default function NewBrandModal({
   newBrandModal,
   setNewBrandModal,
   addNewBrand,
   savedBrands,
-  deleteSavedBrand
+  deleteSavedBrand,
+  uploadBrandLogo
 }) {
   const [pendingDelete, setPendingDelete] = useState("");
+  const [uploadingId, setUploadingId] = useState(null);
+  const fileInputRefs = useRef({});
 
   useEffect(() => {
     if (!newBrandModal.isOpen) {
       setPendingDelete("");
+      setUploadingId(null);
     }
   }, [newBrandModal.isOpen]);
 
   if (!newBrandModal.isOpen) return null;
+
+  const handleLogoChange = async (brand, file) => {
+    if (!file) return;
+    setUploadingId(brand.id);
+    try {
+      await uploadBrandLogo(brand.id, file);
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   return (
     <div className="modal-overlay" onClick={() => setNewBrandModal({ isOpen: false, brandName: "" })}>
@@ -48,15 +63,41 @@ export default function NewBrandModal({
           {savedBrands.length > 0 ? (
             <div className="saved-entry-items">
               {savedBrands.map((brand) => (
-                <div className="saved-entry-item" key={brand}>
-                  <span>{brand}</span>
-                  {pendingDelete === brand ? (
+                <div className="saved-entry-item brand-entry-item" key={brand.id ?? brand.name}>
+                  <div className="brand-entry-logo-col">
+                    <div
+                      className="brand-entry-logo"
+                      title="Click to upload logo"
+                      onClick={() => fileInputRefs.current[brand.id]?.click()}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {brand.logoUrl ? (
+                        <img src={brand.logoUrl} alt={brand.name} className="brand-logo-img" />
+                      ) : (
+                        <span className="brand-logo-placeholder">
+                          <ImagePlus size={16} />
+                        </span>
+                      )}
+                      {uploadingId === brand.id && (
+                        <span className="brand-logo-uploading">•••</span>
+                      )}
+                    </div>
+                    <input
+                      ref={(el) => { fileInputRefs.current[brand.id] = el; }}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => handleLogoChange(brand, e.target.files?.[0])}
+                    />
+                  </div>
+                  <span className="brand-entry-name">{brand.name}</span>
+                  {pendingDelete === brand.name ? (
                     <div className="saved-entry-confirm-actions">
                       <button
                         type="button"
                         className="saved-entry-confirm-btn"
                         onClick={() => {
-                          deleteSavedBrand(brand).catch(() => undefined);
+                          deleteSavedBrand(brand.name).catch(() => undefined);
                           setPendingDelete("");
                         }}
                       >
@@ -74,7 +115,7 @@ export default function NewBrandModal({
                     <button
                       type="button"
                       className="saved-entry-delete-btn"
-                      onClick={() => setPendingDelete(brand)}
+                      onClick={() => setPendingDelete(brand.name)}
                     >
                       Delete
                     </button>

@@ -54,6 +54,12 @@ public class CustomerOrder {
     @Column(name = "total_price", precision = 12, scale = 2)
     private BigDecimal totalPrice;
 
+    @Column(name = "downpayment", precision = 12, scale = 2)
+    private BigDecimal downpayment;
+
+    @Column(name = "balance", precision = 12, scale = 2)
+    private BigDecimal balance;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

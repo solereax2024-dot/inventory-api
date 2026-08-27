@@ -1,0 +1,303 @@
+.brands-page-shell {
+  gap: 20px;
+}
+
+.brands-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: clamp(18px, 3vw, 28px);
+  align-items: stretch;
+  min-height: auto;
+}
+
+.brands-hero-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brands-hero-copy h1 {
+  max-width: 14ch;
+  letter-spacing: -0.04em;
+}
+
+.brands-hero-copy p {
+  max-width: 60ch;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.brands-hero-meta {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.brands-hero-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #ffffff, var(--primary-soft-2));
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.brands-hero-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border-radius: 24px;
+}
+
+.brands-hero-panel strong {
+  font-size: 18px;
+  color: var(--text-strong);
+}
+
+.brands-hero-panel p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.brands-hero-cta {
+  width: auto;
+  justify-self: start;
+}
+
+.brands-directory {
+  display: grid;
+  gap: 16px;
+}
+
+.brands-directory-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brands-directory-head h2 {
+  margin: 4px 0 0;
+  color: var(--text-strong);
+}
+
+.brands-directory-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.brands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+
+.brand-card {
+  margin-top: 0;
+  width: 100%;
+  max-width: 360px;
+  justify-self: center;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 99%, #ffffff), color-mix(in srgb, var(--surface-2) 92%, #f8fafc));
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+
+.brand-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--primary);
+  box-shadow: 0 22px 44px color-mix(in srgb, var(--primary) 14%, rgba(15, 23, 42, 0.12));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, #ffffff), color-mix(in srgb, var(--surface-2) 88%, #f8fafc));
+}
+
+.brand-card-logo-large {
+  width: 100%;
+  height: 144px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-2) 40%, transparent);
+  padding: 14px;
+  flex-shrink: 0;
+}
+
+.brand-card-logo-large img {
+  max-height: 100%;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.brand-card-logo-empty {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 10%, transparent), color-mix(in srgb, var(--surface-2) 60%, transparent));
+  border: 1px dashed var(--border);
+}
+
+.brand-card-name-fallback {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  word-break: break-word;
+}
+
+.brand-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.brand-card-name {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  flex: 1;
+  word-break: break-word;
+  text-align: left;
+}
+
+.brand-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--primary-dark) 80%, #0f172a);
+  white-space: nowrap;
+}
+
+.brand-card-skeleton {
+  pointer-events: none;
+}
+
+.skeleton-logo {
+  width: 100%;
+  height: 144px;
+  border-radius: 18px;
+  background: var(--skeleton-bg);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+body.theme-dark .brands-hero-meta span,
+body.theme-dark .brand-card-stats span {
+  border-color: var(--dark-border);
+  background: color-mix(in srgb, var(--primary) 16%, rgba(15, 23, 42, 0.92));
+  color: #cbd5e1;
+}
+
+body.theme-dark .brands-hero-panel p,
+body.theme-dark .brands-directory-head p,
+body.theme-dark .brand-card-copy {
+  color: #94a3b8;
+}
+
+body.theme-dark .brand-card,
+body.theme-dark .brands-hero-panel {
+  border-color: var(--dark-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dark-surface) 94%, transparent), color-mix(in srgb, var(--dark-bg-mid) 96%, transparent));
+  color: #e2e8f0;
+}
+
+body.theme-dark .brand-card:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--dark-surface) 90%, transparent), color-mix(in srgb, var(--dark-bg-mid) 94%, transparent));
+}
+
+body.theme-dark .brand-card-name,
+body.theme-dark .brands-hero-panel strong,
+body.theme-dark .brands-directory-head h2 {
+  color: #f8fafc;
+}
+
+body.theme-dark .brand-card-action {
+  color: color-mix(in srgb, var(--primary-soft) 86%, #ffffff);
+}
+
+body.theme-dark .brand-card small {
+  color: color-mix(in srgb, var(--primary-soft) 76%, #cbd5e1);
+}
+
+body.theme-dark .brand-card-logo-large {
+  background: color-mix(in srgb, var(--dark-surface) 80%, transparent);
+}
+
+body.theme-dark .brand-card-logo-empty {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 8%, rgba(0,0,0,0.3)), color-mix(in srgb, var(--dark-surface) 70%, rgba(0,0,0,0.4)));
+  border-color: var(--dark-border);
+}
+
+@media (max-width: 900px) {
+  .brands-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .brands-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .brand-card {
+    max-width: none;
+    justify-self: stretch;
+    padding: 10px;
+  }
+
+  .brand-card-logo-large {
+    height: 108px;
+  }
+
+  .brand-card-name {
+    font-size: 13px;
+  }
+
+  .brand-card-action {
+    font-size: 11px;
+  }
+
+  .brands-hero-meta {
+    gap: 8px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .brands-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+  }
+}
+
+@media (min-width: 1500px) {
+  .brands-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px;
+  }
+
+  .brand-card {
+    max-width: 380px;
+  }
+}

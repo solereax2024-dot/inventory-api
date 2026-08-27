@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
@@ -10,15 +10,13 @@ import ProductCard from "../../components/ProductCard";
 
 export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState("");
-  const [brandFilter, setBrandFilter] = useState("ALL");
-  const [departmentFilter, setDepartmentFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [productTypeFilter, setProductTypeFilter] = useState("ALL");
   const [colorwayFilter, setColorwayFilter] = useState("ALL");
   const [sizeFilter, setSizeFilter] = useState("ALL");
-  const [stockFilter, setStockFilter] = useState("ALL");
   const [stateFilter, setStateFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("BRAND_ASC");
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,7 +95,13 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     () => ["ALL", ...new Set(products.map((product) => (product.brand || "").trim()).filter(Boolean))],
     [products]
   );
-   const colorwayOptions = useMemo(() => {
+  // Derive directly from URL — no intermediate state, no sync effects
+  const brandFilter = useMemo(() => {
+    const q = (searchParams.get("brand") || "").trim();
+    if (!q) return "ALL";
+    return brandOptions.find((b) => b.toLowerCase() === q.toLowerCase()) || "ALL";
+  }, [searchParams, brandOptions]);
+  const colorwayOptions = useMemo(() => {
      // Get all unique colorways from the original products, not variants
      const uniqueColorways = new Set();
      products.forEach((variant) => {
@@ -111,6 +115,16 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     () => ["ALL", ...new Set(products.map((product) => (product.department || "").trim()).filter(Boolean))],
     [products]
   );
+  // Derive directly from URL — no intermediate state, no sync effects
+  const departmentFilter = useMemo(() => {
+    const q = (searchParams.get("department") || "").trim();
+    if (!q) return "ALL";
+    return departmentOptions.find((d) => d.toLowerCase() === q.toLowerCase()) || "ALL";
+  }, [searchParams, departmentOptions]);
+  const stockFilter = useMemo(() => {
+    const q = (searchParams.get("stock") || "").trim().toUpperCase();
+    return ["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"].includes(q) ? q : "ALL";
+  }, [searchParams]);
   const categoryOptions = useMemo(
     () => ["ALL", ...new Set(products.map((product) => (product.category || "").trim()).filter(Boolean))],
     [products]
@@ -120,13 +134,24 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     [products]
   );
 
+  // One-way sync: URL ?q -> App-level searchText, only when URL params change.
+  useEffect(() => {
+    const queryKeyword = (searchParams.get("q") || "").trim();
+    setSearchText((prev) => (prev === queryKeyword ? prev : queryKeyword));
+  }, [searchParams, setSearchText]);
+
   useEffect(() => {
     onCatalogNavChange({
       brandOptions,
       brandFilter,
-      onBrandChange: setBrandFilter
+      onBrandChange: (brand) => {
+        const next = new URLSearchParams(searchParams);
+        if (brand !== "ALL") next.set("brand", brand);
+        else next.delete("brand");
+        setSearchParams(next, { replace: true });
+      }
     });
-  }, [brandOptions, brandFilter, onCatalogNavChange]);
+  }, [brandOptions, brandFilter, onCatalogNavChange, searchParams, setSearchParams]);
 
   const visibleProducts = useMemo(() => {
     let next = [...products];
@@ -144,7 +169,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
       next = next.filter((product) => (product.productType || "").toUpperCase() === productTypeFilter);
     }
 
-    const keyword = searchText.trim().toLowerCase();
+    const keyword = (searchText || searchParams.get("q") || "").trim().toLowerCase();
     if (keyword) {
       next = next.filter((product) => {
         const name = (product.name || "").toLowerCase();
@@ -265,6 +290,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     productTypeFilter,
     sortBy,
     searchText,
+    searchParams,
     sizeFilter,
     stockFilter,
     colorwayFilter,
@@ -318,19 +344,25 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     const params = new URLSearchParams();
     if (initialColorway) params.set("colorway", initialColorway);
     if (preferredSize) params.set("size", preferredSize);
-    navigate(`/reserve/${productId}?${params.toString()}`);
+    navigate(`/reserve/${productId}?${params.toString()}`, {
+      state: { fromCollectionsQuery: searchParams.toString() }
+    });
   };
 
   const resetCatalogFilters = () => {
-    setBrandFilter("ALL");
-    setDepartmentFilter("ALL");
+    const next = new URLSearchParams(searchParams);
+    next.delete("brand");
+    next.delete("department");
+    next.delete("stock");
+    next.delete("q");
+    setSearchParams(next, { replace: true });
+    setSearchText("");
     setCategoryFilter("ALL");
     setProductTypeFilter("ALL");
     setSizeFilter("ALL");
     setColorwayFilter("ALL");
-    setStockFilter("ALL");
     setStateFilter("ALL");
-    setSearchText("");
+    setSortBy("BRAND_ASC");
   };
 
   return (
@@ -338,33 +370,50 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
       <section className="filter-bar">
         <div className="filter-bar-top">
           <div className="filter-results">
-            <span className="filter-results-count">
-              {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
-            </span>
-            <span className="filter-results-meta">
-              of {products.length} total
-            </span>
-            {siteUniqueViews !== null ? (
-              <span className="filter-results-meta">
-                {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
-              </span>
-            ) : null}
-            {activeFilterCount > 0 ? (
-              <span className="filter-results-meta filter-results-chip">
-                {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"} active
-              </span>
-            ) : null}
+            {isDesktopCatalog ? (
+              <>
+                <span className="filter-results-count">
+                  {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
+                </span>
+                <span className="filter-results-meta">
+                  of {products.length} total
+                </span>
+                {siteUniqueViews !== null ? (
+                  <span className="filter-results-meta">
+                    {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+                {activeFilterCount > 0 ? (
+                  <span className="filter-results-meta filter-results-chip">
+                    {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"} active
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <span className="filter-results-count">
+                  {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
+                </span>
+                <span className="filter-results-meta">of {products.length}</span>
+                {activeFilterCount > 0 ? (
+                  <span className="filter-results-meta filter-results-chip">
+                    {activeFilterCount} active
+                  </span>
+                ) : null}
+              </>
+            )}
           </div>
           <div className="filter-bar-actions">
             <button
               type="button"
-              className={`filter-drawer-btn quick-tooltip${isFilterDrawerOpen ? " active" : ""}`}
+              className={`filter-drawer-btn quick-tooltip${isFilterDrawerOpen ? " active" : ""}${!isDesktopCatalog ? " mobile-filter-btn-compact" : ""}`}
               onClick={() => setIsFilterDrawerOpen(true)}
               aria-label="Open filter and sort panel"
               data-tooltip="Filter & sort"
             >
               <SlidersHorizontal size={16} />
               <span>Filters</span>
+              {!isDesktopCatalog && activeFilterCount > 0 ? <span className="mobile-filter-count">{activeFilterCount}</span> : null}
             </button>
           </div>
         </div>
@@ -388,7 +437,12 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
               </label>
               <label className="filter-control">
                 <span className="filter-control-label">Brand</span>
-                <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
+                <select value={brandFilter} onChange={(e) => {
+                  const next = new URLSearchParams(searchParams);
+                  if (e.target.value !== "ALL") next.set("brand", e.target.value);
+                  else next.delete("brand");
+                  setSearchParams(next, { replace: true });
+                }}>
                   {brandOptions.map((brand) => (
                     <option key={brand} value={brand}>{brand === "ALL" ? "All brands" : brand}</option>
                   ))}
@@ -396,7 +450,12 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
               </label>
               <label className="filter-control">
                 <span className="filter-control-label">Gender</span>
-                <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)}>
+                <select value={departmentFilter} onChange={(e) => {
+                  const next = new URLSearchParams(searchParams);
+                  if (e.target.value !== "ALL") next.set("department", e.target.value);
+                  else next.delete("department");
+                  setSearchParams(next, { replace: true });
+                }}>
                   {departmentOptions.map((dep) => (
                     <option key={dep} value={dep}>{dep === "ALL" ? "All genders" : formatEnumLabel(dep)}</option>
                   ))}
@@ -437,7 +496,12 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
               </label>
               <label className="filter-control">
                 <span className="filter-control-label">Stock</span>
-                <select value={stockFilter} onChange={(e) => setStockFilter(e.target.value)}>
+                <select value={stockFilter} onChange={(e) => {
+                  const next = new URLSearchParams(searchParams);
+                  if (e.target.value !== "ALL") next.set("stock", e.target.value);
+                  else next.delete("stock");
+                  setSearchParams(next, { replace: true });
+                }}>
                   <option value="ALL">All stock levels</option>
                   <option value="IN_STOCK">In stock</option>
                   <option value="LOW_STOCK">Low stock</option>
@@ -450,7 +514,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 Reset filters
               </button>
               <button type="button" className="filter-drawer-btn active" onClick={() => setIsFilterDrawerOpen(false)}>
-                Done
+                Show Results ({visibleProducts.length})
               </button>
             </div>
           </aside>
@@ -477,7 +541,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
          {visibleProducts.length === 0 ? <p className="field-hint">No products match your filters.</p> : null}
        </section>
 
-      <nav className="pagination-inline" aria-label="Collection pages">
+      <nav className="pagination-inline" aria-label="Collections pages">
         <ul className="pagination-numbers pages-items">
           {activePage > 1 ? (
             <>

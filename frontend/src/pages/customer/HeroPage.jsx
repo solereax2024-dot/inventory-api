@@ -7,14 +7,14 @@ export default function HeroPage() {
         <div className="hero-collections-copy">
           <p className="eyebrow">Sole Reax Collections</p>
           <h1>Shop real. Stay real.</h1>
-          <p className="hero-subcopy">Only authentic sneaker finds, curated for modern movement.</p>
+          <p className="hero-subco  py">Only authentic sneaker finds, curated for modern movement.</p>
           <div className="hero-service-line">
             <span>Nationwide Shipping</span>
             <span>Same-Day Delivery (Selected Areas)</span>
             <span>Cash on Delivery</span>
           </div>
           <div className="hero-actions">
-            <Link className="hero-cta" to="/collection">
+            <Link className="hero-cta" to="/collections">
               Browse Collections
             </Link>
           </div>

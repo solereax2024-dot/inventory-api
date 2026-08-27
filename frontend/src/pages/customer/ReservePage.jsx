@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Eye } from "lucide-react";
 import { US_SIZES } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { getColorwayDetails, getColorwayImageUrl } from "../../utils/colorway";
-import { formatColorwayLabel } from "../../utils/format";
+import { formatColorwayLabel, formatEnumLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
+import ProductCard from "../../components/ProductCard";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
@@ -41,14 +43,18 @@ function formatPriceRange(minPrice, maxPrice) {
 
 export default function ReservePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { productId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [successReference, setSuccessReference] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [mobileOpenSection, setMobileOpenSection] = useState("size");
   const [reserve, setReserve] = useState({
     customerName: "",
     customerContact: "",
@@ -162,6 +168,77 @@ export default function ReservePage() {
   );
   const zoomLevel = ZOOM_LEVELS[zoomIdx];
 
+  const relatedProducts = useMemo(() => {
+    if (!product) return [];
+
+    const baseDetails = getColorwayDetails(product, reserve.colorway);
+    const baseBrand = (product.brand || "").trim().toLowerCase();
+    const baseCategory = (baseDetails.category || product.category || "").trim().toUpperCase();
+    const baseDepartment = (baseDetails.department || product.department || "").trim().toUpperCase();
+    const baseType = (baseDetails.productType || product.productType || "").trim().toUpperCase();
+
+    return products
+      .filter((candidate) => candidate.id !== product.id)
+      .map((candidate) => {
+        const candidateDetails = getColorwayDetails(candidate, candidate.stocks?.[0]?.colorway || "DEFAULT");
+        const candidateBrand = (candidate.brand || "").trim().toLowerCase();
+        const candidateCategory = (candidateDetails.category || candidate.category || "").trim().toUpperCase();
+        const candidateDepartment = (candidateDetails.department || candidate.department || "").trim().toUpperCase();
+        const candidateType = (candidateDetails.productType || candidate.productType || "").trim().toUpperCase();
+
+        let score = 0;
+        const reasons = [];
+        if (baseBrand && candidateBrand === baseBrand) {
+          score += 5;
+          reasons.push("Same brand");
+        }
+        if (baseCategory && candidateCategory === baseCategory) {
+          score += 3;
+          reasons.push("Same category");
+        }
+        if (baseDepartment && candidateDepartment === baseDepartment) {
+          score += 2;
+          reasons.push("Same sizing");
+        }
+        if (baseType && candidateType === baseType) {
+          score += 1;
+        }
+
+        return { candidate, score, reasons };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return (a.candidate.name || "").localeCompare(b.candidate.name || "");
+      })
+      .slice(0, 8)
+      .map((entry) => ({
+        product: entry.candidate,
+        reasons: entry.reasons.slice(0, 2)
+      }));
+  }, [products, product, reserve.colorway]);
+
+  const openSimilarCollections = () => {
+    const details = getColorwayDetails(product, reserve.colorway);
+    const next = new URLSearchParams();
+    if (product?.brand) next.set("brand", product.brand);
+    if (details?.department) next.set("department", details.department);
+    navigate(`/collections?${next.toString()}`);
+  };
+
+  const backToCollectionsPath = useMemo(() => {
+    const raw = (location.state && location.state.fromCollectionsQuery) || "";
+    return raw ? `/collections?${raw}` : "/collections";
+  }, [location.state]);
+
+  const navigateToReserve = (nextProductId, colorway) => {
+    const params = new URLSearchParams();
+    if (colorway) params.set("colorway", colorway);
+    navigate(`/reserve/${nextProductId}?${params.toString()}`, {
+      state: { fromCollectionsQuery: (location.state && location.state.fromCollectionsQuery) || "" }
+    });
+  };
+
   useEffect(() => {
     if (!product || colorways.length === 0) return;
     const preferredColorway = searchParams.get("colorway");
@@ -217,6 +294,20 @@ export default function ReservePage() {
   useEffect(() => {
     setIsSizeGuideOpen(false);
   }, [product?.id, product?.brand]);
+
+  useEffect(() => {
+    setMobileOpenSection("size");
+  }, [product?.id]);
+
+  const toggleMobileSection = (sectionKey) => {
+    setMobileOpenSection((prev) => (prev === sectionKey ? "" : sectionKey));
+  };
+
+  const isMobileSectionOpen = (sectionKey) => mobileOpenSection === sectionKey;
+
+  const sizeSectionId = "reserve-accordion-size";
+  const quantitySectionId = "reserve-accordion-quantity";
+  const infoSectionId = "reserve-accordion-info";
 
   const getOriginFromPoint = (clientX, clientY) => {
     const el = imgWrapRef.current;
@@ -295,12 +386,25 @@ export default function ReservePage() {
 
     setIsSubmitting(true);
     try {
-      await apiRequest("/api/public/orders/reserve", "POST", payload);
+      const response = await apiRequest("/api/public/orders/reserve", "POST", payload);
+      const reservationRef = String(response?.orderCode || response?.reference || response?.id || "").trim();
       setIsConfirmOpen(false);
-      navigate("/collection");
+      setSuccessReference(reservationRef);
+      setIsSuccessOpen(true);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleReserveAnother = () => {
+    setIsSuccessOpen(false);
+    setReserve((prev) => ({
+      ...prev,
+      customerName: "",
+      customerContact: "",
+      notes: "",
+      quantity: 1
+    }));
   };
 
   if (isLoading) {
@@ -317,7 +421,7 @@ export default function ReservePage() {
         <div className="card">
           <h2>Product not found</h2>
           <p className="field-hint">This product may have been removed.</p>
-          <button type="button" className="btn-cancel" onClick={() => navigate("/collection")}>Back to collection</button>
+          <button type="button" className="btn-cancel" onClick={() => navigate(backToCollectionsPath)}>Back to collections</button>
         </div>
       </main>
     );
@@ -326,15 +430,25 @@ export default function ReservePage() {
   return (
     <main className="container container-wide reserve-page-shell">
       <section className="reserve-page-panel">
-        <div className="breakdown-header">
-          <h2>
-            <Link className="reserve-page-crumb-link" to="/collection">Collection</Link>
-            <span className="reserve-page-crumb-separator" aria-hidden="true"> / </span>
-            <span className="reserve-page-crumb-current">{product.name}</span>
-          </h2>
-        </div>
+
+        {/* Breadcrumb */}
+        <nav className="reserve-breadcrumb" aria-label="Breadcrumb">
+          <Link className="reserve-page-crumb-link reserve-back-link" to={backToCollectionsPath}>
+            <span className="reserve-back-arrow" aria-hidden="true">←</span>
+            Collections
+          </Link>
+          <span className="reserve-page-crumb-separator" aria-hidden="true">/</span>
+          {product.brand ? (
+            <>
+              <span className="reserve-page-crumb-brand">{product.brand}</span>
+              <span className="reserve-page-crumb-separator" aria-hidden="true">/</span>
+            </>
+          ) : null}
+          <span className="reserve-page-crumb-current" aria-current="page">{product.name}</span>
+        </nav>
 
         <div className="reserve-page-content">
+          {/* ── Media column ── */}
           <div className="reserve-page-media-column">
             <div
               ref={imgWrapRef}
@@ -362,7 +476,7 @@ export default function ReservePage() {
                       src={imgUrl}
                       alt={reserve.colorway}
                       style={{
-                          transform: `scale(${zoomLevel * baseImageScale})`,
+                        transform: `scale(${zoomLevel * baseImageScale})`,
                         transformOrigin: `${origin.x}% ${origin.y}%`
                       }}
                     />
@@ -375,18 +489,20 @@ export default function ReservePage() {
                     <div className="reserve-image-fallback-colorway">{reserve.colorway}</div>
                   </div>
                 );
-               })()}
-               <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span>
-             </div>
+              })()}
+              <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span>
+            </div>
 
-             <div className="colorway-display">{formatColorwayLabel(reserve.colorway)}</div>
-             {selectedSizePrice !== null ? (
-              <div className="field-hint">Selected size price: <strong>{PHP_CURRENCY.format(selectedSizePrice)}</strong></div>
-             ) : selectedColorwayPriceRange ? (
-              <div className="field-hint">Price: <strong>{selectedColorwayPriceRange}</strong></div>
-             ) : null}
+            <div className="reserve-media-meta">
+              <span className="colorway-display">{formatColorwayLabel(reserve.colorway)}</span>
+              {selectedSizePrice !== null ? (
+                <span className="reserve-size-price-badge">{PHP_CURRENCY.format(selectedSizePrice)}</span>
+              ) : selectedColorwayPriceRange ? (
+                <span className="reserve-size-price-badge">{selectedColorwayPriceRange}</span>
+              ) : null}
+            </div>
 
-             {colorways.length > 1 ? (
+            {colorways.length > 1 ? (
               <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails">
                 {prioritizedColorways.map((colorway) => {
                   const thumbUrl = getColorwayImageUrl(product, colorway);
@@ -398,9 +514,7 @@ export default function ReservePage() {
                       onClick={() => {
                         const nextParams = new URLSearchParams(searchParams);
                         nextParams.set("colorway", colorway);
-                        if (reserve.size) {
-                          nextParams.set("size", reserve.size);
-                        }
+                        if (reserve.size) nextParams.set("size", reserve.size);
                         setSearchParams(nextParams, { replace: true });
                         setReserve({ ...reserve, colorway });
                         resetZoom();
@@ -416,9 +530,46 @@ export default function ReservePage() {
             ) : null}
           </div>
 
-            <div className="reserve-modal-form reserve-page-form-column">
-             <div className="form-section">
-               <div className="size-label-row">
+          {/* ── Form column ── */}
+          <div className="reserve-modal-form reserve-page-form-column">
+
+            {/* Product header */}
+            <div className="reserve-product-header">
+              <div className="reserve-product-meta-row">
+                {product.brand ? <span className="reserve-brand-chip">{product.brand}</span> : null}
+                {selectedColorwayDetails?.department ? (
+                  <span className="reserve-dept-chip">{formatEnumLabel(selectedColorwayDetails.department)}</span>
+                ) : null}
+                {Number(product.viewCount || 0) > 0 ? (
+                  <span className="reserve-view-badge">
+                    <Eye size={11} strokeWidth={2.2} />
+                    {Number(product.viewCount).toLocaleString()} views
+                  </span>
+                ) : null}
+              </div>
+              <h1 className="reserve-product-title">{product.name}</h1>
+              {selectedColorwayDetails?.description ? (
+                <p className="reserve-product-desc">{selectedColorwayDetails.description}</p>
+              ) : null}
+              {selectedColorwayPriceRange ? (
+                <div className="reserve-product-price-display">{selectedColorwayPriceRange}</div>
+              ) : null}
+            </div>
+
+            {/* Size & Availability */}
+            <div className={`form-section reserve-accordion-section ${isMobileSectionOpen("size") ? "open" : ""}`}>
+              <button
+                type="button"
+                className="reserve-accordion-toggle"
+                onClick={() => toggleMobileSection("size")}
+                aria-expanded={isMobileSectionOpen("size")}
+                aria-controls={sizeSectionId}
+              >
+                <span>Size &amp; Availability</span>
+                <span className="reserve-accordion-icon" aria-hidden="true">▾</span>
+              </button>
+              <div className="reserve-accordion-body" id={sizeSectionId}>
+              <div className="size-label-row">
                 <label>Size &amp; Availability</label>
                 {sizeGuide ? (
                   <button
@@ -474,14 +625,13 @@ export default function ReservePage() {
                   </div>
                 </div>
               ) : null}
-              {isUnisexDepartment(selectedDepartment) ? (
-                <small className="field-hint">Unisex pairs show equivalent men&apos;s and women&apos;s US sizing.</small>
-              ) : selectedDepartment === "MEN" ? (
-                <small className="field-hint">Men&apos;s only sizing.</small>
-              ) : selectedDepartment === "WOMEN" ? (
-                <small className="field-hint">Women&apos;s only sizing.</small>
+              <small className="field-hint">
+                {isUnisexDepartment(selectedDepartment) ? "Unisex — shows both Men's & Women's sizing." : selectedDepartment === "WOMEN" ? "Women's sizing." : "Men's sizing."}
+                {" "}H=On-hand · T=In-transit · P=Pre-order
+              </small>
+              {selectedSizePrice !== null ? (
+                <div className="size-price-hint">Selected size: <strong>{PHP_CURRENCY.format(selectedSizePrice)}</strong></div>
               ) : null}
-              <small className="field-hint">H=On-hand, T=In-transit, P=Pre-order</small>
               {isSizeGuideOpen && sizeGuide && sizeGuideSection ? (
                 <div className="modal-overlay" onClick={() => setIsSizeGuideOpen(false)}>
                   <section className="modal-panel modal-panel-compact size-guide-modal" onClick={(e) => e.stopPropagation()}>
@@ -518,46 +668,90 @@ export default function ReservePage() {
                   </section>
                 </div>
               ) : null}
+              </div>
             </div>
 
-
-            <div className="form-section">
+            {/* Quantity stepper */}
+            <div className={`form-section reserve-accordion-section ${isMobileSectionOpen("quantity") ? "open" : ""}`}>
+              <button
+                type="button"
+                className="reserve-accordion-toggle"
+                onClick={() => toggleMobileSection("quantity")}
+                aria-expanded={isMobileSectionOpen("quantity")}
+                aria-controls={quantitySectionId}
+              >
+                <span>Quantity</span>
+                <span className="reserve-accordion-icon" aria-hidden="true">▾</span>
+              </button>
+              <div className="reserve-accordion-body" id={quantitySectionId}>
               <label>Quantity</label>
-              <input
-                type="number"
-                min="1"
-                value={reserve.quantity}
-                onChange={(e) => setReserve({ ...reserve, quantity: e.target.value })}
-              />
+              <div className="qty-stepper">
+                <button
+                  type="button"
+                  className="qty-btn"
+                  onClick={() => setReserve({ ...reserve, quantity: Math.max(1, Number(reserve.quantity) - 1) })}
+                  aria-label="Decrease quantity"
+                >
+                  −
+                </button>
+                <span className="qty-value">{reserve.quantity}</span>
+                <button
+                  type="button"
+                  className="qty-btn"
+                  onClick={() => setReserve({ ...reserve, quantity: Number(reserve.quantity) + 1 })}
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
+              </div>
             </div>
 
-            <div className="form-section">
-              <label>Your Name <span className="required">*</span></label>
-              <input
-                placeholder="Enter your name"
-                value={reserve.customerName}
-                onChange={(e) => setReserve({ ...reserve, customerName: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="form-section">
-              <label>Contact (Number / FB / IG) <span className="required">*</span></label>
-              <input
-                placeholder="Enter your contact"
-                value={reserve.customerContact}
-                onChange={(e) => setReserve({ ...reserve, customerContact: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="form-section">
-              <label>Notes (optional)</label>
-              <input
-                placeholder="Add any notes"
-                value={reserve.notes}
-                onChange={(e) => setReserve({ ...reserve, notes: e.target.value })}
-              />
+            {/* Customer Info — merged section */}
+            <div className={`form-section reserve-customer-section reserve-accordion-section ${isMobileSectionOpen("info") ? "open" : ""}`}>
+              <button
+                type="button"
+                className="reserve-accordion-toggle"
+                onClick={() => toggleMobileSection("info")}
+                aria-expanded={isMobileSectionOpen("info")}
+                aria-controls={infoSectionId}
+              >
+                <span>Your Info</span>
+                <span className="reserve-accordion-icon" aria-hidden="true">▾</span>
+              </button>
+              <div className="reserve-accordion-body" id={infoSectionId}>
+              <label>Your Info</label>
+              <div className="customer-info-grid">
+                <div className="customer-info-field">
+                  <span className="customer-field-label">Name <span className="required">*</span></span>
+                  <input
+                    placeholder="Enter your name"
+                    value={reserve.customerName}
+                    onChange={(e) => setReserve({ ...reserve, customerName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="customer-info-field">
+                  <span className="customer-field-label">Contact (Number / FB / IG) <span className="required">*</span></span>
+                  <input
+                    placeholder="Enter your contact"
+                    value={reserve.customerContact}
+                    onChange={(e) => setReserve({ ...reserve, customerContact: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="customer-notes-field">
+                <span className="customer-field-label">Notes <span className="field-hint-inline">(optional)</span></span>
+                <textarea
+                  className="notes-textarea"
+                  placeholder="Any special requests or notes?"
+                  value={reserve.notes}
+                  onChange={(e) => setReserve({ ...reserve, notes: e.target.value })}
+                  rows={2}
+                />
+              </div>
+              </div>
             </div>
 
             <div className="reserve-form-actions">
@@ -570,8 +764,51 @@ export default function ReservePage() {
             </div>
           </div>
         </div>
+
+        <div className="reserve-sticky-cta" role="complementary" aria-label="Quick reserve">
+          <div className="reserve-sticky-cta-meta">
+            <span className="reserve-sticky-cta-size">{selectedSizeLabel || `US ${reserve.size}`}</span>
+            <span className="reserve-sticky-cta-price">{selectedSizePrice !== null ? PHP_CURRENCY.format(selectedSizePrice) : (selectedColorwayPriceRange || "Select size")}</span>
+          </div>
+          <button type="button" className="btn-primary reserve-sticky-cta-btn" onClick={openConfirmation}>
+            Reserve Now
+          </button>
+        </div>
+
+        {/* Related products */}
+        {relatedProducts.length > 0 ? (
+          <section className="reserve-related-section">
+            <div className="reserve-related-header">
+              <div>
+                <h3 className="reserve-related-title">You may also like</h3>
+                <p className="reserve-related-subtitle">Picked by similarity in brand, category, and sizing context.</p>
+              </div>
+              <button type="button" className="reserve-related-link-btn" onClick={openSimilarCollections}>
+                View Similar
+              </button>
+            </div>
+            <div className="reserve-related-grid">
+              {relatedProducts.map((entry) => (
+                <div key={entry.product.id} className="reserve-related-item">
+                  <ProductCard
+                    product={entry.product}
+                    onReserveClick={navigateToReserve}
+                  />
+                  {entry.reasons.length > 0 ? (
+                    <div className="reserve-related-reasons" aria-label="Recommendation reasons">
+                      {entry.reasons.map((reason) => (
+                        <span key={`${entry.product.id}-${reason}`} className="reserve-related-reason-chip">{reason}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </section>
 
+      {/* Confirm modal */}
       {isConfirmOpen ? (
         <div className="modal-overlay" onClick={() => !isSubmitting && setIsConfirmOpen(false)}>
           <section className="modal-panel reserve-confirm-modal" onClick={(e) => e.stopPropagation()}>
@@ -589,10 +826,21 @@ export default function ReservePage() {
             </div>
 
             <div className="reserve-confirm-summary">
-              <div className="reserve-confirm-product">
-                <span className="reserve-confirm-label">Product</span>
-                <strong>{product.name}</strong>
-                {product.brand ? <span className="reserve-confirm-subtle">{product.brand}</span> : null}
+              {/* Product visual */}
+              <div className="reserve-confirm-product-visual">
+                {(() => {
+                  const imgUrl = getColorwayImageUrl(product, reserve.colorway);
+                  return imgUrl
+                    ? <img src={imgUrl} alt={reserve.colorway} className="reserve-confirm-thumb" />
+                    : <div className="reserve-confirm-thumb-fallback">👟</div>;
+                })()}
+                <div className="reserve-confirm-product-info">
+                  <div className="reserve-confirm-product-name">{product.name}</div>
+                  {product.brand ? <div className="reserve-confirm-product-brand">{product.brand}</div> : null}
+                  {selectedColorwayPriceRange ? (
+                    <div className="reserve-confirm-price-hint">{selectedColorwayPriceRange}</div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="reserve-confirm-grid">
@@ -608,6 +856,12 @@ export default function ReservePage() {
                   <span className="reserve-confirm-label">Quantity</span>
                   <strong>{reserve.quantity}</strong>
                 </div>
+                {selectedSizePrice !== null ? (
+                  <div className="reserve-confirm-item">
+                    <span className="reserve-confirm-label">Unit Price</span>
+                    <strong>{PHP_CURRENCY.format(selectedSizePrice)}</strong>
+                  </div>
+                ) : null}
                 <div className="reserve-confirm-item">
                   <span className="reserve-confirm-label">Name</span>
                   <strong>{reserve.customerName.trim()}</strong>
@@ -640,6 +894,40 @@ export default function ReservePage() {
               >
                 {isSubmitting ? "Submitting..." : "Confirm Reservation"}
               </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {isSuccessOpen ? (
+        <div className="modal-overlay" onClick={() => setIsSuccessOpen(false)}>
+          <section className="modal-panel reserve-success-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="reserve-success-content">
+              <div className="reserve-success-icon" aria-hidden="true">✓</div>
+              <h2>Reservation sent</h2>
+              <p className="reserve-success-copy">
+                Thanks! We received your reservation request and will contact you shortly.
+              </p>
+              {successReference ? (
+                <p className="reserve-success-ref">
+                  Reference: <strong>{successReference}</strong>
+                </p>
+              ) : null}
+              <div className="reserve-success-actions">
+                <button
+                  type="button"
+                  className="btn-cancel reserve-success-secondary-btn"
+                  onClick={handleReserveAnother}
+                >
+                  Reserve Another
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary reserve-success-primary-btn"
+                  onClick={() => navigate(backToCollectionsPath)}
+                >
+                  Back to Collections
+                </button>
+              </div>
             </div>
           </section>
         </div>

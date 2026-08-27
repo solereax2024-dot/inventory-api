@@ -14,6 +14,8 @@ public record OrderResponse(
         String mop,
         String mopOther,
         BigDecimal totalPrice,
+        BigDecimal downpayment,
+        BigDecimal balance,
         String statusUpdatedBy,
         Instant createdAt,
         List<OrderItemResponse> items

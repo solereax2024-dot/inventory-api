@@ -184,6 +184,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const [mopOtherDrafts, setMopOtherDrafts] = useState({});
   const [priceDrafts, setPriceDrafts] = useState({});
+  const [downpaymentDrafts, setDownpaymentDrafts] = useState({});
+  const [balanceDrafts, setBalanceDrafts] = useState({});
   const [reservationSavedMap, setReservationSavedMap] = useState({});
   const reservationSavedTimersRef = useRef({});
   const [adminPage, setAdminPage] = useState(1);
@@ -276,7 +278,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const brandOptions = useMemo(() => {
     const fromProducts = products.map((p) => (p.brand || "").trim()).filter(Boolean);
-    return [...new Set([...fromProducts, ...savedBrands])].sort();
+    const fromSaved = savedBrands.map((b) => b.name);
+    return [...new Set([...fromProducts, ...fromSaved])].sort();
   }, [products, savedBrands]);
 
   const generatedCreateDescription = useMemo(
@@ -382,8 +385,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       return;
     }
     try {
-      await apiRequest("/api/admin/brands", "POST", { name: trimmedName }, token);
-      setSavedBrands((prev) => [...prev, trimmedName].sort());
+      const newBrand = await apiRequest("/api/admin/brands", "POST", { name: trimmedName }, token);
+      setSavedBrands((prev) => [...prev, newBrand].sort((a, b) => a.name.localeCompare(b.name)));
       setProductForm({ ...productForm, brand: trimmedName });
       setNewBrandModal({ isOpen: false, brandName: "" });
       setMessage(`Brand "${trimmedName}" saved.`);
@@ -399,13 +402,23 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     try {
       await apiRequest(`/api/admin/brands/by-name?name=${encodeURIComponent(trimmedName)}`, "DELETE", undefined, token);
-      setSavedBrands((prev) => prev.filter((brand) => brand.toLowerCase() !== trimmedName.toLowerCase()));
+      setSavedBrands((prev) => prev.filter((b) => b.name.toLowerCase() !== trimmedName.toLowerCase()));
       setProductForm((prev) => (prev.brand.toLowerCase() === trimmedName.toLowerCase() ? { ...prev, brand: "" } : prev));
       setEditProductForm((prev) => (prev.brand.toLowerCase() === trimmedName.toLowerCase() ? { ...prev, brand: "" } : prev));
       pushUndoEntry("brand", trimmedName, `Brand "${trimmedName}" deleted.`);
       setMessage("Delete completed. Undo available below.");
     } catch (err) {
       setMessage("Failed to delete brand: " + err.message);
+    }
+  };
+
+  const uploadBrandLogo = async (brandId, file) => {
+    try {
+      const updated = await uploadImage(`/api/admin/brands/${brandId}/logo`, file, token);
+      setSavedBrands((prev) => prev.map((b) => (b.id === brandId ? updated : b)));
+      setMessage("Brand logo updated.");
+    } catch (err) {
+      setMessage("Failed to upload brand logo: " + err.message);
     }
   };
 
@@ -455,8 +468,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
     try {
       if (entry.type === "brand") {
-        await apiRequest("/api/admin/brands", "POST", { name: entry.value }, token);
-        setSavedBrands((prev) => [...new Set([...prev, entry.value])].sort());
+        const restored = await apiRequest("/api/admin/brands", "POST", { name: entry.value }, token);
+        setSavedBrands((prev) => [...prev.filter((b) => b.name !== restored.name), restored].sort((a, b) => a.name.localeCompare(b.name)));
         setMessage(`Restored brand "${entry.value}".`);
       } else if (entry.type === "name") {
         await apiRequest("/api/admin/product-names", "POST", { name: entry.value }, token);
@@ -845,6 +858,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         if (Object.prototype.hasOwnProperty.call(payload, "totalPrice")) {
           next.totalPrice = payload.totalPrice;
         }
+        if (Object.prototype.hasOwnProperty.call(payload, "downpayment")) {
+          next.downpayment = payload.downpayment;
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, "balance")) {
+          next.balance = payload.balance;
+        }
         return next;
       }));
       markReservationSaved(orderId, savedField);
@@ -875,6 +894,28 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     ).then(() => {
       setPriceDrafts((prev) => ({ ...prev, [orderId]: parsed.toFixed(2) }));
       setReservationEditorOpen(orderId, "price", false);
+    }).catch((err) => setMessage(err.message));
+  };
+
+  const saveReservationMonetary = (orderId, field, draftValue, label, setDrafts) => {
+    const trimmed = String(draftValue ?? "").trim();
+    if (!trimmed) {
+      setMessage(`Enter ${label.toLowerCase()} first.`);
+      return;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setMessage(`${label} must be 0 or higher.`);
+      return;
+    }
+    updateReservationStatus(
+      orderId,
+      { [field]: Number(parsed.toFixed(2)) },
+      `Reservation #${orderId} ${label.toLowerCase()} updated to ${formatPriceLabel(parsed)}.`,
+      field
+    ).then(() => {
+      setDrafts((prev) => ({ ...prev, [orderId]: parsed.toFixed(2) }));
+      setReservationEditorOpen(orderId, field, false);
     }).catch((err) => setMessage(err.message));
   };
 
@@ -1201,6 +1242,31 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       });
   }, [orders, reservationFilters.keyword, reservationFilters.status]);
 
+  const reservationMopTotals = useMemo(() => {
+    const totals = new Map();
+    filteredReservations.forEach((order) => {
+      const key = String(order.mop || "").trim().toUpperCase() || "NO_MOP";
+      const parsed = Number(order.totalPrice);
+      const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+      totals.set(key, (totals.get(key) || 0) + amount);
+    });
+
+    const orderedKeys = [
+      ...RESERVATION_MOP_OPTIONS.map((option) => option.value),
+      "NO_MOP"
+    ];
+
+    return orderedKeys
+      .filter((key) => totals.has(key))
+      .map((key) => ({
+        key,
+        label: key === "NO_MOP"
+          ? "No MOP"
+          : (RESERVATION_MOP_OPTIONS.find((option) => option.value === key)?.label || formatEnumLabel(key)),
+        total: totals.get(key) || 0
+      }));
+  }, [filteredReservations]);
+
   const productById = useMemo(() => {
     const map = {};
     products.forEach((product) => {
@@ -1494,6 +1560,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               <p>Delivered</p>
               <h3>{reservationStats.deliveredCount}</h3>
             </article>
+            {reservationMopTotals.map((entry) => (
+              <article key={`mop-total-${entry.key}`} className="admin-summary-card admin-summary-card-accent">
+                <p>{entry.label} Total</p>
+                <h3>{formatPriceLabel(entry.total)}</h3>
+              </article>
+            ))}
           </div>
 
           <div className="reservation-filter-row">
@@ -1525,6 +1597,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   <th>Courier</th>
                   <th>MOP</th>
                   <th>Price</th>
+                  <th>Downpayment</th>
+                  <th>Balance</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -1532,12 +1606,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                 {isAdminLoading ? (
                   Array.from({ length: 5 }, (_, index) => (
                     <tr key={`reservation-loading-${index}`}>
-                      <td colSpan="9"><div className="skeleton-line" /></td>
+                      <td colSpan="11"><div className="skeleton-line" /></td>
                     </tr>
                   ))
                 ) : filteredReservations.length === 0 ? (
                   <tr>
-                    <td colSpan="9">No reservations found.</td>
+                    <td colSpan="11">No reservations found.</td>
                   </tr>
                 ) : (
                   filteredReservations.map((order) => {
@@ -1562,6 +1636,25 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     const priceDraft = String(priceDrafts[order.id] ?? normalizedOrderPrice);
                     const trimmedPriceDraft = priceDraft.trim();
                     const isPriceDirty = trimmedPriceDraft !== normalizedOrderPrice;
+                    const hasDownpayment = order.downpayment !== null && order.downpayment !== undefined && order.downpayment !== "";
+                    const normalizedDownpayment = hasDownpayment ? Number(order.downpayment).toFixed(2) : "";
+                    const downpaymentDraft = String(downpaymentDrafts[order.id] ?? normalizedDownpayment);
+                    const trimmedDownpaymentDraft = downpaymentDraft.trim();
+                    const isDownpaymentDirty = trimmedDownpaymentDraft !== normalizedDownpayment;
+
+                    const computedBalance = hasOrderPrice
+                      ? Math.max(0, Number(order.totalPrice) - Number(order.downpayment || 0))
+                      : null;
+                    const hasBalance = order.balance !== null && order.balance !== undefined && order.balance !== "";
+                    const balanceDisplayValue = hasBalance
+                      ? Number(order.balance)
+                      : computedBalance;
+                    const normalizedBalance = hasBalance
+                      ? Number(order.balance).toFixed(2)
+                      : (computedBalance !== null ? Number(computedBalance).toFixed(2) : "");
+                    const balanceDraft = String(balanceDrafts[order.id] ?? normalizedBalance);
+                    const trimmedBalanceDraft = balanceDraft.trim();
+                    const isBalanceDirty = trimmedBalanceDraft !== normalizedBalance;
                     const hasUnsavedMopOther = normalizedMop === "OTHER"
                       && trimmedMopOtherDraft
                       && trimmedMopOtherDraft !== (order.mopOther || "");
@@ -1768,6 +1861,119 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                             <small className={`reservation-original-price ${hasCustomPrice ? "is-overridden" : ""}`}>
                               Original: {formatPriceLabel(originalPriceTotal)}
                             </small>
+                          ) : null}
+                        </td>
+                        <td>
+                          <div className="reservation-field-cell">
+                            {isReservationEditorOpen(order.id, "downpayment") ? (
+                              <div className="reservation-price-edit">
+                                <input
+                                  className="reservation-price-input"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={downpaymentDraft}
+                                  placeholder="0.00"
+                                  disabled={updatingOrderId === order.id}
+                                  onChange={(e) => setDownpaymentDrafts((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      saveReservationMonetary(order.id, "downpayment", downpaymentDraft, "Downpayment", setDownpaymentDrafts);
+                                    }
+                                  }}
+                                  onBlur={() => {
+                                    if (isDownpaymentDirty && trimmedDownpaymentDraft) {
+                                      saveReservationMonetary(order.id, "downpayment", downpaymentDraft, "Downpayment", setDownpaymentDrafts);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <span className={`order-status-chip reservation-final-chip ${hasDownpayment ? "status-delivered" : "status-ordered"}`}>
+                                {formatPriceLabel(order.downpayment)}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="reservation-inline-icon-btn"
+                              aria-label={isReservationEditorOpen(order.id, "downpayment") ? "Close downpayment editor" : "Set downpayment"}
+                              onClick={() => {
+                                if (isReservationEditorOpen(order.id, "downpayment") && isDownpaymentDirty && trimmedDownpaymentDraft) {
+                                  saveReservationMonetary(order.id, "downpayment", downpaymentDraft, "Downpayment", setDownpaymentDrafts);
+                                  return;
+                                }
+                                const nextOpen = !isReservationEditorOpen(order.id, "downpayment");
+                                setReservationEditorOpen(order.id, "downpayment", nextOpen);
+                                if (nextOpen) {
+                                  setDownpaymentDrafts((prev) => ({ ...prev, [order.id]: normalizedDownpayment }));
+                                }
+                              }}
+                              disabled={updatingOrderId === order.id}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            {isReservationSaved(order.id, "downpayment") ? (
+                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="reservation-field-cell">
+                            {isReservationEditorOpen(order.id, "balance") ? (
+                              <div className="reservation-price-edit">
+                                <input
+                                  className="reservation-price-input"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={balanceDraft}
+                                  placeholder="0.00"
+                                  disabled={updatingOrderId === order.id}
+                                  onChange={(e) => setBalanceDrafts((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      saveReservationMonetary(order.id, "balance", balanceDraft, "Balance", setBalanceDrafts);
+                                    }
+                                  }}
+                                  onBlur={() => {
+                                    if (isBalanceDirty && trimmedBalanceDraft) {
+                                      saveReservationMonetary(order.id, "balance", balanceDraft, "Balance", setBalanceDrafts);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <span className={`order-status-chip reservation-final-chip ${balanceDisplayValue !== null ? "status-preparing" : "status-ordered"}`}>
+                                {formatPriceLabel(balanceDisplayValue)}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="reservation-inline-icon-btn"
+                              aria-label={isReservationEditorOpen(order.id, "balance") ? "Close balance editor" : "Set balance"}
+                              onClick={() => {
+                                if (isReservationEditorOpen(order.id, "balance") && isBalanceDirty && trimmedBalanceDraft) {
+                                  saveReservationMonetary(order.id, "balance", balanceDraft, "Balance", setBalanceDrafts);
+                                  return;
+                                }
+                                const nextOpen = !isReservationEditorOpen(order.id, "balance");
+                                setReservationEditorOpen(order.id, "balance", nextOpen);
+                                if (nextOpen) {
+                                  setBalanceDrafts((prev) => ({ ...prev, [order.id]: normalizedBalance }));
+                                }
+                              }}
+                              disabled={updatingOrderId === order.id}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            {isReservationSaved(order.id, "balance") ? (
+                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
+                            ) : null}
+                          </div>
+                          {!hasBalance && computedBalance !== null ? (
+                            <small className="reservation-original-price">Auto: {formatPriceLabel(computedBalance)}</small>
                           ) : null}
                         </td>
                         <td>
@@ -2567,6 +2773,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         addNewBrand={addNewBrand}
         savedBrands={savedBrands}
         deleteSavedBrand={deleteSavedBrand}
+        uploadBrandLogo={uploadBrandLogo}
       />
 
       <NewAdminModal

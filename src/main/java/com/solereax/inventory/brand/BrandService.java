@@ -4,6 +4,7 @@ import com.solereax.inventory.shared.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BrandService {
@@ -13,17 +14,28 @@ public class BrandService {
         this.brandRepository = brandRepository;
     }
 
+    public record BrandDto(Long id, String name, String logoUrl) {}
+
+    private BrandDto toDto(Brand brand) {
+        return new BrandDto(brand.getId(), brand.getName(), brand.getLogoUrl());
+    }
+
     @Transactional(readOnly = true)
-    public List<String> listBrandNames() {
+    public List<BrandDto> listBrands() {
         return brandRepository.findAll()
                 .stream()
-                .map(Brand::getName)
-                .sorted()
+                .map(this::toDto)
+                .sorted((a, b) -> a.name().compareToIgnoreCase(b.name()))
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<String> listBrandNames() {
+        return listBrands().stream().map(BrandDto::name).toList();
+    }
+
     @Transactional
-    public String createBrand(String name) {
+    public BrandDto createBrand(String name) {
         String trimmed = name == null ? "" : name.trim();
         if (trimmed.isEmpty()) throw new IllegalArgumentException("Brand name cannot be empty.");
         if (brandRepository.existsByNameIgnoreCase(trimmed)) {
@@ -31,7 +43,15 @@ public class BrandService {
         }
         Brand brand = new Brand();
         brand.setName(trimmed);
-        return brandRepository.save(brand).getName();
+        return toDto(brandRepository.save(brand));
+    }
+
+    @Transactional
+    public BrandDto updateBrandLogo(Long id, String logoUrl) {
+        Brand brand = brandRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Brand not found: " + id));
+        brand.setLogoUrl(logoUrl);
+        return toDto(brandRepository.save(brand));
     }
 
     @Transactional

@@ -4,6 +4,7 @@ import { apiRequest, uploadImage } from "./utils/api";
 import SiteHeader from "./components/SiteHeader";
 import SiteFooter from "./components/SiteFooter";
 import CustomerPage from "./pages/customer/CustomerPage";
+import BrandsPage from "./pages/customer/BrandsPage";
 import ReservePage from "./pages/customer/ReservePage";
 import AdminPage from "./pages/admin/AdminPage";
 import ThemeColorPicker from "./components/ThemeColorPicker";
@@ -42,7 +43,10 @@ export default function App() {
   const [logoFile, setLogoFile] = useState(null);
   const [logoDarkFile, setLogoDarkFile] = useState(null);
   const [logoModalMessage, setLogoModalMessage] = useState("");
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get("q") || "").trim();
+  });
   const [catalogNav, setCatalogNav] = useState({
     brandOptions: ["ALL"],
     brandFilter: "ALL",
@@ -196,10 +200,12 @@ export default function App() {
         onThemeColorClick={() => setIsThemePickerOpen(true)}
       />
       <Routes>
-        <Route path="/" element={<Navigate to="/collection" replace />} />
-        <Route path="/collection" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} />} />
-        <Route path="/shop" element={<Navigate to="/collection" replace />} />
-        <Route path="/reserve" element={<Navigate to="/collection" replace />} />
+        <Route path="/" element={<Navigate to="/collections" replace />} />
+        <Route path="/collections" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} />} />
+        <Route path="/collection" element={<Navigate to="/collections" replace />} />
+        <Route path="/brands" element={<BrandsPage onCatalogNavChange={setCatalogNav} />} />
+        <Route path="/shop" element={<Navigate to="/collections" replace />} />
+        <Route path="/reserve" element={<Navigate to="/collections" replace />} />
         <Route path="/reserve/:productId" element={<ReservePage />} />
         <Route
           path="/admin/*"
@@ -212,7 +218,7 @@ export default function App() {
           }
         />
         <Route path="/admin.html/*" element={<Navigate to="/admin" replace />} />
-        <Route path="*" element={<Navigate to="/collection" replace />} />
+        <Route path="*" element={<Navigate to="/collections" replace />} />
       </Routes>
 
       {isLogoModalOpen ? (

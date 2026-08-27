@@ -8,6 +8,8 @@ public record UpdateOrderStatusRequest(
         @Size(max = 30) String courier,
         @Size(max = 30) String mop,
         @Size(max = 120) String mopOther,
-        BigDecimal totalPrice
+        BigDecimal totalPrice,
+        BigDecimal downpayment,
+        BigDecimal balance
 ) {
 }
