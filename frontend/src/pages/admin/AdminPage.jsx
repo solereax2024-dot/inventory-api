@@ -789,6 +789,41 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   }, [editDetailColorway, editImageColorway]);
 
+  const applyPriceToAllSizes = async () => {
+    const parsedPrice = Number(stockForm.price);
+    const hasPriceInput = String(stockForm.price).trim() !== "";
+    if (!hasPriceInput || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      throw new Error("Enter a valid price (0 or higher) first.");
+    }
+    const allSections = stockSizeSections;
+    if (!allSections || allSections.length === 0) {
+      throw new Error("No sizes found for this product.");
+    }
+    const requests = [];
+    for (const section of allSections) {
+      for (const row of (section.rows || [])) {
+        requests.push(
+          apiRequest(
+            `/api/admin/products/${stockForm.productId}/stocks`,
+            "POST",
+            {
+              colorway: stockForm.colorway,
+              size: row.baseSize,
+              sizeGroup: getStockStorageGroup(stockModalDepartment, section.key),
+              quantityChange: 0,
+              stockSourceType: stockForm.stockSourceType,
+              price: Number(parsedPrice.toFixed(2))
+            },
+            token
+          )
+        );
+      }
+    }
+    await Promise.all(requests);
+    setMessage(`Price ${formatPriceLabel(parsedPrice)} applied to all sizes.`);
+    await loadAdminData(token, adminRole);
+  };
+
   const adjustStock = async () => {
     const mode = stockForm.actionType === "REMOVE" ? "remove" : stockForm.actionType === "PRICE" ? "price" : "add";
     const requestedQuantity = Number(stockForm.quantityChange);
@@ -2773,6 +2808,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                           ? "Save Price"
                           : "Apply Add"}
                     </button>
+                    {stockForm.actionType === "PRICE" ? (
+                      <button
+                        type="button"
+                        className="stock-mode-toggle stock-apply-btn"
+                        style={{ marginTop: "6px" }}
+                        onClick={() => applyPriceToAllSizes().catch((err) => setMessage(err.message))}
+                      >
+                        Save to All Sizes
+                      </button>
+                    ) : null}
                   </div>
                 </section>
 
