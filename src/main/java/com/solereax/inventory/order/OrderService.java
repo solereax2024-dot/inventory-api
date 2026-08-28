@@ -66,8 +66,10 @@ public class OrderService {
 
             String size = UsSizeStandard.normalizeAndValidate(itemRequest.size());
             String colorway = ColorwayStandard.normalizeAndValidate(itemRequest.colorway());
-            StockSizeGroup sizeGroup = StockSizeGroup.forDepartment(resolveDepartmentForColorway(product, colorway), itemRequest.sizeGroup());
-            ProductStock stock = productStockRepository.findForUpdate(product.getId(), colorway, size, sizeGroup.name())
+            String department = resolveDepartmentForColorway(product, colorway);
+            StockSizeGroup stockSizeGroup = StockSizeGroup.forDepartment(department, itemRequest.sizeGroup());
+            String reservationSizeGroup = resolveReservationSizeGroup(department, itemRequest.sizeGroup());
+            ProductStock stock = productStockRepository.findForUpdate(product.getId(), colorway, size, stockSizeGroup.name())
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Colorway " + colorway + " size " + size + " is not available for " + product.getName()));
 
@@ -88,7 +90,7 @@ public class OrderService {
             item.setProductName(product.getName());
             item.setColorway(colorway);
             item.setSizeLabel(size);
-            item.setSizeGroup(sizeGroup.name());
+            item.setSizeGroup(reservationSizeGroup);
             item.setQuantity(quantity);
             order.getItems().add(item);
 
@@ -210,6 +212,23 @@ public class OrderService {
     private String normalizeChoice(String value) {
         String normalized = trimToNull(value);
         return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private String resolveReservationSizeGroup(String department, String requestedGroup) {
+        String normalizedDepartment = normalizeChoice(department);
+        if ("UNISEX".equals(normalizedDepartment)) {
+            return "WOMEN".equalsIgnoreCase(requestedGroup) ? "WOMEN" : "MEN";
+        }
+        if ("WOMEN".equals(normalizedDepartment)) {
+            return "WOMEN";
+        }
+        if ("KIDS".equals(normalizedDepartment)) {
+            return "KIDS";
+        }
+        if ("MEN".equals(normalizedDepartment)) {
+            return "MEN";
+        }
+        return normalizeChoice(requestedGroup) != null ? normalizeChoice(requestedGroup) : StockSizeGroup.STANDARD.name();
     }
 
     private String trimToNull(String value) {

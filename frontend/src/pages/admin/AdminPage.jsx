@@ -1333,10 +1333,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     if (!product) {
       return null;
     }
+    const department = getDepartmentForColorway(product, item?.colorway);
+    const normalizedItemSizeGroup = String(item?.sizeGroup || "").toUpperCase();
+    const storageSizeGroup = getStockStorageGroup(department, normalizedItemSizeGroup);
     const exactStock = (product.stocks || []).find((stock) => (
       String(stock.colorway || "").toUpperCase() === String(item.colorway || "").toUpperCase()
       && String(stock.size) === String(item.size)
-      && String(stock.sizeGroup || "").toUpperCase() === String(item.sizeGroup || "").toUpperCase()
+      && String(stock.sizeGroup || "").toUpperCase() === storageSizeGroup
     ));
     const stockPrice = Number(exactStock?.price);
     if (Number.isFinite(stockPrice) && stockPrice >= 0) {
@@ -1348,6 +1351,26 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     const productPrice = Number(product?.price);
     return Number.isFinite(productPrice) && productPrice >= 0 ? productPrice : null;
+  };
+
+  const formatReservationItemSizeLabel = (item) => {
+    const normalizedSizeGroup = String(item?.sizeGroup || "").toUpperCase();
+    const product = productById[String(item?.productId)];
+    const department = product ? getDepartmentForColorway(product, item?.colorway) : normalizedSizeGroup;
+    if (String(department || "").toUpperCase() === "UNISEX" && normalizedSizeGroup === "STANDARD") {
+      return `US ${item?.size || "-"}`;
+    }
+    const formatted = formatSelectedSizeLabel(item?.size, normalizedSizeGroup, department);
+    if (formatted) {
+      return formatted;
+    }
+    if (normalizedSizeGroup === "WOMEN") {
+      return `Women's US ${item?.size || "-"}`;
+    }
+    if (normalizedSizeGroup === "KIDS") {
+      return `Kids' US ${item?.size || "-"}`;
+    }
+    return `Men's US ${item?.size || "-"}`;
   };
 
   useEffect(() => {
@@ -1724,7 +1747,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                             <div key={`${order.id}-${item.productId || item.productName}-${index}`} className="reservation-item-line">
                               <strong>{item.productName}</strong>
                               <span>
-                                {formatColorwayLabel(item.colorway)} · {item.sizeGroup === "WOMEN" ? "Women" : "Men"} US {item.size} · Qty {item.quantity}
+                                {formatColorwayLabel(item.colorway)} · {formatReservationItemSizeLabel(item)} · Qty {item.quantity}
                               </span>
                             </div>
                           ))}
