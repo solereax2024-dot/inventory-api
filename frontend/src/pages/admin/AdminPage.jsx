@@ -205,9 +205,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [savedProductNames, setSavedProductNames] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
-  const [activeAdminSection, setActiveAdminSection] = useState("products");
-  const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
-  const [isStockGuideOpen, setIsStockGuideOpen] = useState(false);
+   const [activeAdminSection, setActiveAdminSection] = useState("products");
+   const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
+   const [productImageColorway, setProductImageColorway] = useState("DEFAULT");
+   const [isStockGuideOpen, setIsStockGuideOpen] = useState(false);
   const [isStockSummaryOpen, setIsStockSummaryOpen] = useState(false);
   const [hasStockGuideOnboardingShown, setHasStockGuideOnboardingShown] = useState(
     () => localStorage.getItem("adminStockGuideOnboardingShown") === "1"
