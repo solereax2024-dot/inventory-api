@@ -1114,6 +1114,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       String(stockForm.productId) === String(productId) ? stockForm.size : null,
       String(stockForm.productId) === String(productId) ? stockForm.sizeGroup : null
     );
+    // Use preferred price, fallback to product base price, then empty
+    let priceValue = "";
+    if (preferredSelection.price !== null && preferredSelection.price !== undefined) {
+      priceValue = String(preferredSelection.price);
+    } else if (selectedProduct?.price) {
+      priceValue = String(selectedProduct.price);
+    }
     setStockForm((prev) => ({
       ...prev,
       productId: String(productId),
@@ -1123,7 +1130,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       actionType: prev.actionType || "ADD",
       quantityChange: 1,
       stockSourceType: "ON_HAND",
-      price: preferredSelection.price === null || preferredSelection.price === undefined ? "" : String(preferredSelection.price)
+      price: priceValue
     }));
     const shouldAutoOpenGuide = !hasStockGuideOnboardingShown && Boolean(getBrandSizeGuide(selectedProduct?.brand));
     setIsStockGuideOpen(shouldAutoOpenGuide);
