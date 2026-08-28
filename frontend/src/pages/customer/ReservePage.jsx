@@ -246,22 +246,22 @@ export default function ReservePage() {
     });
   };
 
-  useEffect(() => {
-    if (!product || colorways.length === 0) return;
-    const preferredColorway = searchParams.get("colorway");
-    const preferredSize = searchParams.get("size") || String(US_SIZES[0]);
-    const selectedColorway =
-      preferredColorway && colorways.includes(preferredColorway)
-        ? preferredColorway
-        : colorways[0];
+   useEffect(() => {
+     if (!product || colorways.length === 0) return;
+     const preferredColorway = searchParams.get("colorway");
+     const preferredSize = searchParams.get("size") || String(US_SIZES[0]);
+     const selectedColorway =
+       preferredColorway && colorways.includes(preferredColorway)
+         ? preferredColorway
+         : colorways[0];
 
-    setReserve((prev) => ({
-      ...prev,
-      colorway: prev.colorway && colorways.includes(prev.colorway) ? prev.colorway : selectedColorway,
-      size: prev.size || preferredSize,
-      sizeGroup: prev.sizeGroup || "MEN"
-    }));
-  }, [product, colorways, searchParams]);
+     setReserve((prev) => ({
+       ...prev,
+       colorway: selectedColorway,
+       size: prev.size || preferredSize,
+       sizeGroup: prev.sizeGroup || "MEN"
+     }));
+   }, [product, colorways, searchParams]);
 
   useEffect(() => {
     const clickedColorway = searchParams.get("colorway");
