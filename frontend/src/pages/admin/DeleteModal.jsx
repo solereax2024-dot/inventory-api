@@ -1,12 +1,24 @@
-export default function DeleteModal({ deleteModal, setDeleteModal, confirmDelete }) {
+const DEFAULT_CLOSED_STATE = { isOpen: false, productId: null, confirmCode: "", userInput: "" };
+
+export default function DeleteModal({
+  deleteModal,
+  setDeleteModal,
+  confirmDelete,
+  title = "Delete Product",
+  description = "This will permanently delete the product and all its colorways, stock records, and related data.",
+  confirmLabel = "Delete Product",
+  closedState = DEFAULT_CLOSED_STATE
+}) {
   if (!deleteModal.isOpen) return null;
 
+  const closeModal = () => setDeleteModal(closedState);
+
   return (
-    <div className="modal-overlay" onClick={() => setDeleteModal({ isOpen: false, productId: null, confirmCode: "", userInput: "" })}>
+    <div className="modal-overlay" onClick={closeModal}>
       <section className="modal-panel delete-modal" onClick={(e) => e.stopPropagation()}>
         <div className="delete-modal-header">
-          <h2>Delete Product</h2>
-          <button className="close-btn" onClick={() => setDeleteModal({ isOpen: false, productId: null, confirmCode: "", userInput: "" })}>×</button>
+          <h2>{title}</h2>
+          <button className="close-btn" onClick={closeModal}>×</button>
         </div>
 
         <div className="delete-modal-body">
@@ -14,7 +26,7 @@ export default function DeleteModal({ deleteModal, setDeleteModal, confirmDelete
             <div className="warning-icon">⚠️</div>
             <div className="warning-text">
               <p><strong>This action cannot be undone.</strong></p>
-              <p>This will permanently delete the product and all its colorways, stock records, and related data.</p>
+              <p>{description}</p>
             </div>
           </div>
 
@@ -35,7 +47,7 @@ export default function DeleteModal({ deleteModal, setDeleteModal, confirmDelete
           <div className="delete-modal-footer">
             <button
               className="btn-cancel"
-              onClick={() => setDeleteModal({ isOpen: false, productId: null, confirmCode: "", userInput: "" })}
+              onClick={closeModal}
             >
               Cancel
             </button>
@@ -44,7 +56,7 @@ export default function DeleteModal({ deleteModal, setDeleteModal, confirmDelete
               onClick={confirmDelete}
               disabled={deleteModal.userInput !== deleteModal.confirmCode}
             >
-              Delete Product
+              {confirmLabel}
             </button>
           </div>
         </div>

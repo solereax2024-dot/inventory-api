@@ -180,6 +180,34 @@ public class OrderService {
         return toResponse(customerOrderRepository.save(order));
     }
 
+    @Transactional
+    public void deleteOrder(Long orderId, String deletedBy) {
+        CustomerOrder order = customerOrderRepository.findByIdWithItems(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
+
+        for (CustomerOrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            String size = UsSizeStandard.normalizeAndValidate(item.getSizeLabel());
+            String colorway = normalizeColorway(item.getColorway());
+            String department = resolveDepartmentForColorway(product, colorway);
+            String stockSizeGroup = StockSizeGroup.forDepartment(department, item.getSizeGroup()).name();
+            ProductStock stock = findOrCreateStockForReservationRestore(product, colorway, size, stockSizeGroup);
+
+            stock.setQuantity(stock.getQuantity() + item.getQuantity());
+            stock.setUpdatedAt(Instant.now());
+            productStockRepository.save(stock);
+
+            StockMovement movement = new StockMovement();
+            movement.setProductStock(stock);
+            movement.setQuantityChange(item.getQuantity());
+            movement.setReason("Reservation deleted #" + orderId);
+            movement.setChangedBy(deletedBy);
+            stockMovementRepository.save(movement);
+        }
+
+        customerOrderRepository.delete(order);
+    }
+
     private OrderResponse toResponse(CustomerOrder order) {
         List<OrderItemResponse> items = order.getItems().stream()
                 .map(item -> new OrderItemResponse(
@@ -212,6 +240,43 @@ public class OrderService {
     private String normalizeChoice(String value) {
         String normalized = trimToNull(value);
         return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private ProductStock findOrCreateStockForReservationRestore(
+            Product product,
+            String colorway,
+            String size,
+            String preferredSizeGroup
+    ) {
+        return productStockRepository.findForUpdate(product.getId(), colorway, size, preferredSizeGroup)
+                .orElseGet(() -> {
+                    List<ProductStock> matchingStocks = productStockRepository.findAllByProductIdAndColorwayAndSizeLabel(
+                            product.getId(),
+                            colorway,
+                            size
+                    );
+                    if (matchingStocks.size() == 1) {
+                        String matchedGroup = matchingStocks.get(0).getSizeGroup();
+                        return productStockRepository.findForUpdate(product.getId(), colorway, size, matchedGroup)
+                                .orElse(matchingStocks.get(0));
+                    }
+                    if (matchingStocks.size() > 1) {
+                        throw new IllegalArgumentException(
+                                "Unable to restore stock for " + product.getName() + " " + colorway + " size " + size
+                                        + " because multiple stock groups match this reservation item."
+                        );
+                    }
+
+                    ProductStock createdStock = new ProductStock();
+                    createdStock.setProduct(product);
+                    createdStock.setColorway(colorway);
+                    createdStock.setSizeLabel(size);
+                    createdStock.setSizeGroup(preferredSizeGroup);
+                    createdStock.setQuantity(0);
+                    createdStock.setPrice(resolveReservedUnitPrice(product, createdStock, colorway));
+                    createdStock.setUpdatedAt(Instant.now());
+                    return productStockRepository.save(createdStock);
+                });
     }
 
     private String resolveReservationSizeGroup(String department, String requestedGroup) {

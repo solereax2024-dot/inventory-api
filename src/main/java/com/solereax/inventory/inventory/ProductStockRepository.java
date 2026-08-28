@@ -1,5 +1,6 @@
 package com.solereax.inventory.inventory;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,12 @@ public interface ProductStockRepository extends JpaRepository<ProductStock, Long
             String colorway,
             String sizeLabel,
             String sizeGroup
+    );
+
+    List<ProductStock> findAllByProductIdAndColorwayAndSizeLabel(
+            Long productId,
+            String colorway,
+            String sizeLabel
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

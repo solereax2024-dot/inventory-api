@@ -191,6 +191,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const reservationSavedTimersRef = useRef({});
   const [adminPage, setAdminPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null, confirmCode: "", userInput: "" });
+  const [reservationDeleteModal, setReservationDeleteModal] = useState({
+    isOpen: false,
+    orderId: null,
+    customerName: "",
+    itemCount: 0
+  });
   const [colorwayDeleteModal, setColorwayDeleteModal] = useState({ isOpen: false, productId: null, colorway: "" });
   const [newBrandModal, setNewBrandModal] = useState({ isOpen: false, brandName: "" });
   const [newAdminModal, setNewAdminModal] = useState({ isOpen: false });
@@ -954,6 +960,73 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }).catch((err) => setMessage(err.message));
   };
 
+  const openReservationDeleteModal = (order) => {
+    if (!isSuperAdmin) {
+      setMessage("Only SUPER_ADMIN can delete reservations.");
+      return;
+    }
+    setReservationDeleteModal({
+      isOpen: true,
+      orderId: order.id,
+      customerName: order.customerName || "",
+      itemCount: Array.isArray(order.items) ? order.items.length : 0
+    });
+  };
+
+  const closeReservationDeleteModal = () => {
+    setReservationDeleteModal({ isOpen: false, orderId: null, customerName: "", itemCount: 0 });
+  };
+
+  const confirmDeleteReservation = async () => {
+    if (!isSuperAdmin || !reservationDeleteModal.orderId) {
+      return;
+    }
+    const orderId = reservationDeleteModal.orderId;
+    setUpdatingOrderId(orderId);
+    try {
+      await apiRequest(`/api/admin/orders/${orderId}`, "DELETE", undefined, token);
+      setOrders((prev) => prev.filter((order) => order.id !== orderId));
+      setReservationEditors((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      setMopOtherDrafts((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      setPriceDrafts((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      setDownpaymentDrafts((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      setBalanceDrafts((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      setReservationSavedMap((prev) => {
+        const next = { ...prev };
+        ["status", "courier", "mop", "mopOther", "price", "downpayment", "balance"].forEach((field) => {
+          delete next[`${orderId}:${field}`];
+        });
+        return next;
+      });
+      setMessage(`Reservation #${orderId} deleted and stock restored.`);
+      closeReservationDeleteModal();
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
   const isReservationEditorOpen = (orderId, field) => Boolean(reservationEditors?.[orderId]?.[field]);
 
   const setReservationEditorOpen = (orderId, field, isOpen) => {
@@ -1277,6 +1350,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         return haystack.includes(keyword);
       });
   }, [orders, reservationFilters.keyword, reservationFilters.status]);
+  const reservationTableColumnCount = isSuperAdmin ? 12 : 11;
 
   const reservationMopTotals = useMemo(() => {
     const totals = new Map();
@@ -1676,18 +1750,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   <th>Downpayment</th>
                   <th>Balance</th>
                   <th>Status</th>
+                  {isSuperAdmin ? <th>Action</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {isAdminLoading ? (
                   Array.from({ length: 5 }, (_, index) => (
                     <tr key={`reservation-loading-${index}`}>
-                      <td colSpan="11"><div className="skeleton-line" /></td>
+                      <td colSpan={reservationTableColumnCount}><div className="skeleton-line" /></td>
                     </tr>
                   ))
                 ) : filteredReservations.length === 0 ? (
                   <tr>
-                    <td colSpan="11">No reservations found.</td>
+                    <td colSpan={reservationTableColumnCount}>No reservations found.</td>
                   </tr>
                 ) : (
                   filteredReservations.map((order) => {
@@ -2091,6 +2166,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                             ) : null}
                           </div>
                         </td>
+                        {isSuperAdmin ? (
+                          <td>
+                            <button
+                              type="button"
+                              className="reservation-delete-btn"
+                              onClick={() => openReservationDeleteModal(order)}
+                              disabled={updatingOrderId === order.id}
+                            >
+                              <Trash2 size={14} />
+                              <span>Delete</span>
+                            </button>
+                          </td>
+                        ) : null}
                       </tr>
                     );
                   })
@@ -2827,6 +2915,18 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         confirmLabel="Delete Colorway"
         onCancel={closeColorwayDeleteModal}
         onConfirm={() => confirmDeleteProductColorway().catch((err) => setMessage(err.message))}
+      />
+
+      <ConfirmActionModal
+        isOpen={reservationDeleteModal.isOpen}
+        title="Delete Reservation"
+        description="This will permanently delete the reservation record and restore stock quantities for all its items."
+        targetLabel={reservationDeleteModal.orderId
+          ? `#${reservationDeleteModal.orderId}${reservationDeleteModal.customerName ? ` · ${reservationDeleteModal.customerName}` : ""}${reservationDeleteModal.itemCount ? ` · ${reservationDeleteModal.itemCount} item${reservationDeleteModal.itemCount === 1 ? "" : "s"}` : ""}`
+          : ""}
+        confirmLabel="Delete Reservation"
+        onCancel={closeReservationDeleteModal}
+        onConfirm={() => confirmDeleteReservation().catch((err) => setMessage(err.message))}
       />
 
 

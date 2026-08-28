@@ -173,7 +173,7 @@
 
 .reservation-status-cell {
    display: grid;
-   grid-template-columns: minmax(0, 1fr) auto auto;
+   grid-template-columns: minmax(0, 1fr) auto auto auto;
    align-items: center;
    column-gap: 8px;
    width: 100%;
@@ -234,6 +234,31 @@
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.reservation-delete-btn {
+  margin-top: 0;
+  width: auto;
+  min-height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  justify-self: end;
+  border-radius: 999px;
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #b91c1c;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.reservation-delete-btn:hover {
+  background: #ffe4e6;
+  color: #991b1b;
+  transform: none;
 }
 
 .order-status-chip {
@@ -935,6 +960,10 @@
       min-width: 130px;
     }
 
+    .reservation-status-cell {
+      grid-template-columns: minmax(0, 1fr) 32px auto auto;
+    }
+
     .reservation-field-cell > .order-status-chip,
     .reservation-status-cell > .order-status-chip {
       min-width: 0;
@@ -1099,5 +1128,16 @@ body.theme-dark .reservation-inline-icon-btn:hover {
 
 body.theme-dark .reservation-saved-inline {
   color: #86efac;
+}
+
+body.theme-dark .reservation-delete-btn {
+  border-color: #7f1d1d;
+  background: rgba(127, 29, 29, 0.32);
+  color: #fecaca;
+}
+
+body.theme-dark .reservation-delete-btn:hover {
+  background: rgba(153, 27, 27, 0.42);
+  color: #ffe4e6;
 }
 
