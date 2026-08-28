@@ -2689,6 +2689,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                 >
                   Update Product
                 </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  style={{ marginTop: "8px" }}
+                  onClick={() => openStockModal(editProductId, editDetailColorway)}
+                >
+                  Manage Stock
+                </button>
               </div>
             ) : null}
 
