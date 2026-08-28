@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Eye } from "lucide-react";
 import { US_SIZES } from "../../constants";
@@ -65,7 +65,6 @@ export default function ReservePage() {
     quantity: 1
   });
   const [entryColorway, setEntryColorway] = useState(null);
-  const lastProductIdRef = useRef(null);
   const [zoomIdx, setZoomIdx] = useState(0);
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const [baseImageScale, setBaseImageScale] = useState(() => (
@@ -241,6 +240,7 @@ export default function ReservePage() {
   const navigateToReserve = (nextProductId, colorway) => {
     const params = new URLSearchParams();
     if (colorway) params.set("colorway", colorway);
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     navigate(`/reserve/${nextProductId}?${params.toString()}`, {
       state: { fromCollectionsQuery: (location.state && location.state.fromCollectionsQuery) || "" }
     });
@@ -264,12 +264,14 @@ export default function ReservePage() {
   }, [product, colorways, searchParams]);
 
   useEffect(() => {
-    if (!productId) return;
-    if (lastProductIdRef.current === productId) return;
-    lastProductIdRef.current = productId;
     const clickedColorway = searchParams.get("colorway");
     setEntryColorway(clickedColorway || null);
   }, [productId, searchParams]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [product?.id]);
 
   useEffect(() => {
     if (!product || sizeSections.length === 0) return;

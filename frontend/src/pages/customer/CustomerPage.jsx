@@ -344,6 +344,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     const params = new URLSearchParams();
     if (initialColorway) params.set("colorway", initialColorway);
     if (preferredSize) params.set("size", preferredSize);
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     navigate(`/reserve/${productId}?${params.toString()}`, {
       state: { fromCollectionsQuery: searchParams.toString() }
     });

@@ -160,6 +160,10 @@ export default function App() {
     document.title = "Sole Reax PH | Official Site";
   }, [location.pathname]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname]);
+
   const handleAdminSignOut = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminRole");
