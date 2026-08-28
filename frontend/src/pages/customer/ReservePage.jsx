@@ -512,31 +512,30 @@ export default function ReservePage() {
             </div>
 
             {colorways.length > 1 ? (
-              <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails">
-                {prioritizedColorways.map((colorway) => {
-                  const thumbUrl = getColorwayImageUrl(product, colorway);
-                  return (
-                    <button
-                      key={`${product.id}-${colorway}`}
-                      type="button"
-                      className={`reserve-thumb-btn quick-tooltip ${reserve.colorway === colorway ? "active" : ""}`}
-                      onClick={() => {
-                        const nextParams = new URLSearchParams(searchParams);
-                        nextParams.set("colorway", colorway);
-                        if (reserve.size) nextParams.set("size", reserve.size);
-                        setSearchParams(nextParams, { replace: true });
-                        setReserve({ ...reserve, colorway });
-                        resetZoom();
-                      }}
-                      data-tooltip={formatColorwayLabel(colorway)}
-                      aria-label={formatColorwayLabel(colorway)}
-                    >
-                      {thumbUrl ? <img src={thumbUrl} alt={colorway} loading="lazy" /> : <span className="reserve-thumb-fallback">👟</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
+               <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails">
+                 {colorways.map((colorway) => {
+                   const thumbUrl = getColorwayImageUrl(product, colorway);
+                   return (
+                     <button
+                       key={`${product.id}-${colorway}`}
+                       type="button"
+                       className={`reserve-thumb-btn quick-tooltip ${reserve.colorway === colorway ? "active" : ""}`}
+                       onClick={() => {
+                         const nextParams = new URLSearchParams(searchParams);
+                         nextParams.set("colorway", colorway);
+                         if (reserve.size) nextParams.set("size", reserve.size);
+                         setSearchParams(nextParams, { replace: true });
+                         resetZoom();
+                       }}
+                       data-tooltip={formatColorwayLabel(colorway)}
+                       aria-label={formatColorwayLabel(colorway)}
+                     >
+                       {thumbUrl ? <img src={thumbUrl} alt={colorway} loading="lazy" /> : <span className="reserve-thumb-fallback">👟</span>}
+                     </button>
+                   );
+                 })}
+               </div>
+             ) : null}
           </div>
 
           {/* ── Form column ── */}
