@@ -2501,6 +2501,13 @@ body.theme-dark .reserve-confirm-thumb-fallback {
     gap: 8px;
   }
 
+  /* Prevent iOS Safari from auto-zooming when tapping inputs with font-size < 16px */
+  .reserve-page-form-column input,
+  .reserve-page-form-column select,
+  .notes-textarea {
+    font-size: 16px;
+  }
+
   .reserve-related-grid {
     grid-auto-columns: minmax(152px, auto);
     gap: 10px;
