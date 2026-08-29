@@ -4,6 +4,12 @@
 
 :root {
   color-scheme: light;
+  --scrollbar-size: 9px;
+  --scrollbar-radius: 999px;
+  --scrollbar-track: color-mix(in srgb, var(--surface-2) 58%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--primary) 34%, #94a3b8);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--primary-strong) 56%, #64748b);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--primary-dark) 66%, #475569);
   --bg-base: #f8fafc;
   --bg-accent: #eef2ff;
   --surface: #ffffff;
@@ -60,6 +66,53 @@ body {
   color: var(--text-strong);
   line-height: 1.45;
   scrollbar-gutter: stable;
+}
+
+/* Premium, app-wide scrollbar style (vertical + horizontal). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--scrollbar-radius);
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: var(--scrollbar-radius);
+  border: 2px solid color-mix(in srgb, var(--surface) 84%, transparent);
+  background-clip: padding-box;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--scrollbar-thumb) 92%, #ffffff), var(--scrollbar-thumb));
+  min-height: 40px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--scrollbar-thumb-hover) 84%, #ffffff), var(--scrollbar-thumb-hover));
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
+
+*:focus-visible::-webkit-scrollbar-thumb {
+  border-color: color-mix(in srgb, var(--primary-soft) 54%, transparent);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@media (hover: none), (pointer: coarse) {
+  :root {
+    --scrollbar-size: 7px;
+  }
 }
 
 .quick-tooltip {
@@ -1091,6 +1144,10 @@ table {
 }
 
 body.theme-dark {
+  --scrollbar-track: color-mix(in srgb, var(--dark-surface) 56%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--primary-soft) 30%, #475569);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--primary) 50%, #64748b);
+  --scrollbar-thumb-active: color-mix(in srgb, var(--primary-dark) 64%, #334155);
   background:
     radial-gradient(circle at 8% 4%, var(--theme-dark-bg), transparent 30%),
     radial-gradient(circle at 88% 12%, var(--theme-dark-bg-2), transparent 26%),

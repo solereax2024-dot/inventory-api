@@ -7,6 +7,7 @@ import { getColorwayDetails, sanitizeColorways, sortColorways } from "../../util
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
+import "../../styles/popular-rail.css";
 
 export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
   const navigate = useNavigate();
@@ -317,39 +318,28 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     sortBy !== "BRAND_ASC",
     Boolean(searchText.trim())
   ].filter(Boolean).length;
-  const isTrendingPinnedMode = activeFilterCount === 0 && !searchText.trim();
-  const orderedProducts = useMemo(() => {
-    if (!isTrendingPinnedMode || !topViewedIds.length || !visibleProducts.length) {
-      return visibleProducts;
+  const shouldShowPopularRail = activeFilterCount === 0 && !searchText.trim();
+  const popularProducts = useMemo(() => {
+    if (!shouldShowPopularRail || !topViewedIds.length || !products.length) {
+      return [];
     }
 
-    const pinned = [];
-    const usedVariantKeys = new Set();
+    const result = [];
+    const usedProductIds = new Set();
     for (const productId of topViewedIds) {
-      const match = visibleProducts.find((item) => {
-        const key = item._variantId || String(item.id);
-        return item.id === productId && !usedVariantKeys.has(key);
-      });
+      const match = products.find((item) => item.id === productId && !usedProductIds.has(item.id));
       if (match) {
-        const key = match._variantId || String(match.id);
-        usedVariantKeys.add(key);
-        pinned.push(match);
+        usedProductIds.add(match.id);
+        result.push(match);
       }
-      if (pinned.length >= 8) {
+      if (result.length >= 6) {
         break;
       }
     }
+    return result;
+  }, [shouldShowPopularRail, topViewedIds, products]);
 
-    if (!pinned.length) {
-      return visibleProducts;
-    }
-
-    const pinnedKeys = new Set(pinned.map((item) => item._variantId || String(item.id)));
-    const remaining = visibleProducts.filter((item) => !pinnedKeys.has(item._variantId || String(item.id)));
-    return [...pinned, ...remaining];
-  }, [isTrendingPinnedMode, topViewedIds, visibleProducts]);
-
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(orderedProducts.length / catalogPageSize)), [orderedProducts.length, catalogPageSize]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(visibleProducts.length / catalogPageSize)), [visibleProducts.length, catalogPageSize]);
   const activePage = Math.min(currentPage, totalPages);
   const paginationItems = useMemo(() => {
     if (totalPages <= 5) {
@@ -372,8 +362,8 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   }, [activePage, totalPages]);
   const paginatedProducts = useMemo(() => {
     const start = (activePage - 1) * catalogPageSize;
-    return orderedProducts.slice(start, start + catalogPageSize);
-  }, [orderedProducts, activePage, catalogPageSize]);
+    return visibleProducts.slice(start, start + catalogPageSize);
+  }, [visibleProducts, activePage, catalogPageSize]);
 
   const openReservePage = (productId, initialColorway, preferredSize = US_SIZES[0]) => {
     const params = new URLSearchParams();
@@ -420,11 +410,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                     {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
                   </span>
                 ) : null}
-                {isTrendingPinnedMode && topViewedIds.length > 0 ? (
-                  <span className="filter-results-meta filter-results-chip">
-                    most viewed first
-                  </span>
-                ) : null}
                 {activeFilterCount > 0 ? (
                   <span className="filter-results-meta filter-results-chip">
                     {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"} active
@@ -440,11 +425,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 {siteUniqueViews !== null ? (
                   <span className="filter-results-meta">
                     {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
-                  </span>
-                ) : null}
-                {isTrendingPinnedMode && topViewedIds.length > 0 ? (
-                  <span className="filter-results-meta filter-results-chip">
-                    most viewed first
                   </span>
                 ) : null}
                 {activeFilterCount > 0 ? (
@@ -470,6 +450,29 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
           </div>
         </div>
       </section>
+
+      {shouldShowPopularRail && popularProducts.length > 0 ? (
+        <section className="popular-rail" aria-label="Popular right now">
+          <div className="popular-rail-head">
+            <h2>Popular right now</h2>
+            {siteUniqueViews !== null ? (
+              <p>{siteUniqueViews.toLocaleString()} unique visit{siteUniqueViews === 1 ? "" : "s"}</p>
+            ) : null}
+          </div>
+          <div className="popular-rail-track">
+            {popularProducts.map((product) => (
+              <article key={`popular-${product.id}`} className="popular-rail-item">
+                <ProductCard
+                  product={product}
+                  onReserveClick={openReservePage}
+                  initialColorway={product._colorwayVariant}
+                />
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {isFilterDrawerOpen ? (
         <div className="filter-drawer-backdrop" onClick={() => setIsFilterDrawerOpen(false)}>
           <aside className="filter-drawer" onClick={(e) => e.stopPropagation()}>
