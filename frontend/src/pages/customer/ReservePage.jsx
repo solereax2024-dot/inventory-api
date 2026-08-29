@@ -71,6 +71,9 @@ export default function ReservePage() {
     window.innerWidth >= DESKTOP_BREAKPOINT ? DESKTOP_BASE_IMAGE_SCALE : MOBILE_BASE_IMAGE_SCALE
   ));
   const imgWrapRef = useRef(null);
+  const relatedRailRef = useRef(null);
+  const [relatedRailScrollRatio, setRelatedRailScrollRatio] = useState(0);
+  const [canScrollRelatedRail, setCanScrollRelatedRail] = useState(false);
 
   useEffect(() => {
     const updateScaleByViewport = () => {
@@ -223,6 +226,37 @@ export default function ReservePage() {
         reasons: entry.reasons.slice(0, 2)
       }));
   }, [products, product, reserve.colorway]);
+
+  useEffect(() => {
+    const rail = relatedRailRef.current;
+    if (!rail || relatedProducts.length === 0) {
+      setRelatedRailScrollRatio(0);
+      setCanScrollRelatedRail(false);
+      return undefined;
+    }
+
+    const updateRelatedRailProgress = () => {
+      const maxScrollLeft = rail.scrollWidth - rail.clientWidth;
+      if (maxScrollLeft <= 1) {
+        setRelatedRailScrollRatio(0);
+        setCanScrollRelatedRail(false);
+        return;
+      }
+
+      const ratio = Math.min(1, Math.max(0, rail.scrollLeft / maxScrollLeft));
+      setRelatedRailScrollRatio(ratio);
+      setCanScrollRelatedRail(true);
+    };
+
+    updateRelatedRailProgress();
+    rail.addEventListener("scroll", updateRelatedRailProgress, { passive: true });
+    window.addEventListener("resize", updateRelatedRailProgress);
+
+    return () => {
+      rail.removeEventListener("scroll", updateRelatedRailProgress);
+      window.removeEventListener("resize", updateRelatedRailProgress);
+    };
+  }, [relatedProducts.length]);
 
   const openSimilarCollections = () => {
     const details = getColorwayDetails(product, reserve.colorway);
@@ -828,7 +862,7 @@ export default function ReservePage() {
                 View Similar
               </button>
             </div>
-            <div className="reserve-related-grid">
+            <div className="reserve-related-grid" ref={relatedRailRef}>
               {relatedProducts.map((entry) => (
                 <div key={entry.product.id} className="reserve-related-item">
                   <ProductCard
@@ -845,6 +879,15 @@ export default function ReservePage() {
                 </div>
               ))}
             </div>
+            {canScrollRelatedRail ? (
+              <div
+                className="reserve-related-progress"
+                aria-hidden="true"
+                style={{ "--related-scroll-ratio": String(relatedRailScrollRatio) }}
+              >
+                <span className="reserve-related-progress-thumb" />
+              </div>
+            ) : null}
           </section>
         ) : null}
       </section>

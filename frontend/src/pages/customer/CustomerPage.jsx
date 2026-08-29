@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
@@ -26,6 +26,9 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [isDesktopCatalog, setIsDesktopCatalog] = useState(() => window.innerWidth > 720);
   const [siteUniqueViews, setSiteUniqueViews] = useState(null);
   const [topViewedIds, setTopViewedIds] = useState([]);
+  const [popularRailScrollRatio, setPopularRailScrollRatio] = useState(0);
+  const [canScrollPopularRail, setCanScrollPopularRail] = useState(false);
+  const popularRailRef = useRef(null);
 
   // Transform products into colorway variants
   const expandProductsByColorway = (productsData) => {
@@ -339,6 +342,36 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     return result;
   }, [shouldShowPopularRail, topViewedIds, products]);
 
+  useEffect(() => {
+    const rail = popularRailRef.current;
+    if (!rail || !shouldShowPopularRail || popularProducts.length === 0) {
+      setPopularRailScrollRatio(0);
+      setCanScrollPopularRail(false);
+      return undefined;
+    }
+
+    const updatePopularRailProgress = () => {
+      const maxScrollLeft = rail.scrollWidth - rail.clientWidth;
+      if (maxScrollLeft <= 1) {
+        setPopularRailScrollRatio(0);
+        setCanScrollPopularRail(false);
+        return;
+      }
+      const ratio = Math.min(1, Math.max(0, rail.scrollLeft / maxScrollLeft));
+      setPopularRailScrollRatio(ratio);
+      setCanScrollPopularRail(true);
+    };
+
+    updatePopularRailProgress();
+    rail.addEventListener("scroll", updatePopularRailProgress, { passive: true });
+    window.addEventListener("resize", updatePopularRailProgress);
+
+    return () => {
+      rail.removeEventListener("scroll", updatePopularRailProgress);
+      window.removeEventListener("resize", updatePopularRailProgress);
+    };
+  }, [shouldShowPopularRail, popularProducts.length]);
+
   const totalPages = useMemo(() => Math.max(1, Math.ceil(visibleProducts.length / catalogPageSize)), [visibleProducts.length, catalogPageSize]);
   const activePage = Math.min(currentPage, totalPages);
   const paginationItems = useMemo(() => {
@@ -459,7 +492,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
               <p>{siteUniqueViews.toLocaleString()} unique visit{siteUniqueViews === 1 ? "" : "s"}</p>
             ) : null}
           </div>
-          <div className="popular-rail-track">
+          <div className="popular-rail-track" ref={popularRailRef}>
             {popularProducts.map((product) => (
               <article key={`popular-${product.id}`} className="popular-rail-item">
                 <ProductCard
@@ -470,6 +503,15 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
               </article>
             ))}
           </div>
+          {canScrollPopularRail ? (
+            <div
+              className="popular-rail-progress"
+              aria-hidden="true"
+              style={{ "--popular-scroll-ratio": String(popularRailScrollRatio) }}
+            >
+              <span className="popular-rail-progress-thumb" />
+            </div>
+          ) : null}
         </section>
       ) : null}
 

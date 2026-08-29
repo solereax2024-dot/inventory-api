@@ -41,6 +41,64 @@
   width: 100%;
   min-width: 0;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  --rail-edge-fade: 14px;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000000 var(--rail-edge-fade),
+    #000000 calc(100% - var(--rail-edge-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000000 var(--rail-edge-fade),
+    #000000 calc(100% - var(--rail-edge-fade)),
+    transparent 100%
+  );
+}
+
+.popular-rail-track::-webkit-scrollbar {
+  height: 0;
+  display: none;
+}
+
+.popular-rail-progress {
+  --popular-rail-progress-width: min(124px, 30vw);
+  --popular-rail-progress-thumb-width: 30px;
+  --popular-rail-progress-thumb-height: 7px;
+  width: var(--popular-rail-progress-width);
+  height: 2px;
+  margin: 9px auto 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, #cbd5e1 58%, transparent);
+  position: relative;
+  overflow: visible;
+}
+
+.popular-rail-progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--popular-rail-progress-thumb-width);
+  height: var(--popular-rail-progress-thumb-height);
+  border-radius: 999px;
+  background: color-mix(in srgb, #475569 90%, #64748b);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+  transform: translateX(
+    calc(
+      (var(--popular-rail-progress-width) - var(--popular-rail-progress-thumb-width))
+      * var(--popular-scroll-ratio)
+    )
+  ) translateY(-50%);
+  transition: transform 0.12s ease-out;
+}
+
+/* Keep Popular rail product images fully visible on smaller cards. */
+.popular-rail .product-image {
+  object-fit: contain;
+  object-position: center;
 }
 
 
@@ -81,6 +139,13 @@
   .popular-rail-track {
     grid-auto-columns: minmax(140px, auto);
     gap: 8px;
+    --rail-edge-fade: 10px;
+  }
+
+  .popular-rail-progress {
+    --popular-rail-progress-width: min(112px, 38vw);
+    --popular-rail-progress-thumb-width: 24px;
+    --popular-rail-progress-thumb-height: 7px;
   }
 }
 
@@ -90,5 +155,14 @@ body.theme-dark .popular-rail-head h2 {
 
 body.theme-dark .popular-rail-head p {
   color: #94a3b8;
+}
+
+body.theme-dark .popular-rail-progress {
+  background: color-mix(in srgb, #334155 74%, transparent);
+}
+
+body.theme-dark .popular-rail-progress-thumb {
+  background: color-mix(in srgb, var(--primary-soft) 62%, #94a3b8);
+  box-shadow: 0 1px 3px rgba(2, 6, 23, 0.4);
 }
 

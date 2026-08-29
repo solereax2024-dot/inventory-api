@@ -10,6 +10,11 @@
   --scrollbar-thumb: color-mix(in srgb, var(--primary) 34%, #94a3b8);
   --scrollbar-thumb-hover: color-mix(in srgb, var(--primary-strong) 56%, #64748b);
   --scrollbar-thumb-active: color-mix(in srgb, var(--primary-dark) 66%, #475569);
+  --rail-scrollbar-size: 4px;
+  --rail-scrollbar-track: color-mix(in srgb, #e2e8f0 68%, transparent);
+  --rail-scrollbar-thumb: color-mix(in srgb, #94a3b8 72%, #cbd5e1);
+  --rail-scrollbar-thumb-hover: color-mix(in srgb, #94a3b8 82%, #64748b);
+  --rail-scrollbar-thumb-active: color-mix(in srgb, #64748b 82%, #475569);
   --bg-base: #f8fafc;
   --bg-accent: #eef2ff;
   --surface: #ffffff;
@@ -107,6 +112,35 @@ body {
 
 *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Horizontal-only polish for reserve thumbnails. */
+.reserve-thumbnail-row {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rail-scrollbar-thumb) var(--rail-scrollbar-track);
+}
+
+.reserve-thumbnail-row::-webkit-scrollbar {
+  height: var(--rail-scrollbar-size);
+}
+
+.reserve-thumbnail-row::-webkit-scrollbar-track {
+  background: var(--rail-scrollbar-track);
+  border-radius: 999px;
+}
+
+.reserve-thumbnail-row::-webkit-scrollbar-thumb {
+  border: 1px solid color-mix(in srgb, var(--surface) 90%, transparent);
+  border-radius: 999px;
+  background: var(--rail-scrollbar-thumb);
+}
+
+.reserve-thumbnail-row::-webkit-scrollbar-thumb:hover {
+  background: var(--rail-scrollbar-thumb-hover);
+}
+
+.reserve-thumbnail-row::-webkit-scrollbar-thumb:active {
+  background: var(--rail-scrollbar-thumb-active);
 }
 
 @media (hover: none), (pointer: coarse) {
@@ -411,6 +445,7 @@ select {
   border: 1px solid var(--border);
   background: var(--surface-raised);
   color: var(--text-strong);
+  font-size: 16px; /* prevent iOS Safari auto-zoom on focus */
   transition: border-color .2s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
 }
 
@@ -1148,6 +1183,10 @@ body.theme-dark {
   --scrollbar-thumb: color-mix(in srgb, var(--primary-soft) 30%, #475569);
   --scrollbar-thumb-hover: color-mix(in srgb, var(--primary) 50%, #64748b);
   --scrollbar-thumb-active: color-mix(in srgb, var(--primary-dark) 64%, #334155);
+  --rail-scrollbar-track: color-mix(in srgb, var(--dark-surface) 60%, transparent);
+  --rail-scrollbar-thumb: color-mix(in srgb, var(--primary-soft) 30%, #64748b);
+  --rail-scrollbar-thumb-hover: color-mix(in srgb, var(--primary-soft) 42%, #94a3b8);
+  --rail-scrollbar-thumb-active: color-mix(in srgb, var(--primary) 38%, #94a3b8);
   background:
     radial-gradient(circle at 8% 4%, var(--theme-dark-bg), transparent 30%),
     radial-gradient(circle at 88% 12%, var(--theme-dark-bg-2), transparent 26%),
