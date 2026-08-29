@@ -305,6 +305,18 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   }, [brandFilter, departmentFilter, categoryFilter, productTypeFilter, sortBy, searchText, sizeFilter, stockFilter, colorwayFilter, stateFilter]);
 
   const catalogPageSize = isDesktopCatalog ? CATALOG_PAGE_SIZE : 12;
+  const activeFilterCount = [
+    brandFilter !== "ALL",
+    departmentFilter !== "ALL",
+    categoryFilter !== "ALL",
+    productTypeFilter !== "ALL",
+    sizeFilter !== "ALL",
+    colorwayFilter !== "ALL",
+    stockFilter !== "ALL",
+    stateFilter !== "ALL",
+    sortBy !== "BRAND_ASC",
+    Boolean(searchText.trim())
+  ].filter(Boolean).length;
   const isTrendingPinnedMode = activeFilterCount === 0 && !searchText.trim();
   const orderedProducts = useMemo(() => {
     if (!isTrendingPinnedMode || !topViewedIds.length || !visibleProducts.length) {
@@ -339,18 +351,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(orderedProducts.length / catalogPageSize)), [orderedProducts.length, catalogPageSize]);
   const activePage = Math.min(currentPage, totalPages);
-  const activeFilterCount = [
-    brandFilter !== "ALL",
-    departmentFilter !== "ALL",
-    categoryFilter !== "ALL",
-    productTypeFilter !== "ALL",
-    sizeFilter !== "ALL",
-    colorwayFilter !== "ALL",
-    stockFilter !== "ALL",
-    stateFilter !== "ALL",
-    sortBy !== "BRAND_ASC",
-    Boolean(searchText.trim())
-  ].filter(Boolean).length;
   const paginationItems = useMemo(() => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, index) => ({ type: "page", value: index + 1 }));
