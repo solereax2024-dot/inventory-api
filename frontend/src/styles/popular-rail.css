@@ -5,26 +5,42 @@
 
 .popular-rail-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
   min-width: 0;
   flex-wrap: wrap;
+  text-align: center;
 }
 
 .popular-rail-head h2 {
   margin: 0;
+  font-size: var(--typo-rail-title-size);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-strong);
+  display: grid;
+  gap: 3px;
+}
+
+.popular-rail-head h2::before {
+  content: "TRENDING";
   font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 500;
   text-transform: uppercase;
-  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  color: #64748b;
 }
 
 .popular-rail-head p {
-  margin: 0;
+  margin: 0 0 8px 0;
+  flex-basis: 100%;
   font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-align: center;
   color: var(--text-soft);
 }
 
@@ -42,21 +58,9 @@
   min-width: 0;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  --rail-edge-fade: 14px;
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000000 var(--rail-edge-fade),
-    #000000 calc(100% - var(--rail-edge-fade)),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000000 var(--rail-edge-fade),
-    #000000 calc(100% - var(--rail-edge-fade)),
-    transparent 100%
-  );
+  --rail-edge-fade: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .popular-rail-track::-webkit-scrollbar {
@@ -66,13 +70,13 @@
 
 .popular-rail-progress {
   --popular-rail-progress-width: min(124px, 30vw);
-  --popular-rail-progress-thumb-width: 30px;
-  --popular-rail-progress-thumb-height: 7px;
+  --popular-rail-progress-thumb-width: 24px;
+  --popular-rail-progress-thumb-height: 3px;
   width: var(--popular-rail-progress-width);
-  height: 2px;
+  height: 1px;
   margin: 9px auto 0;
   border-radius: 999px;
-  background: color-mix(in srgb, #cbd5e1 58%, transparent);
+  background: color-mix(in srgb, #cbd5e1 42%, transparent);
   position: relative;
   overflow: visible;
 }
@@ -84,8 +88,8 @@
   width: var(--popular-rail-progress-thumb-width);
   height: var(--popular-rail-progress-thumb-height);
   border-radius: 999px;
-  background: color-mix(in srgb, #475569 90%, #64748b);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+  background: color-mix(in srgb, #64748b 72%, #94a3b8);
+  box-shadow: none;
   transform: translateX(
     calc(
       (var(--popular-rail-progress-width) - var(--popular-rail-progress-thumb-width))
@@ -121,31 +125,78 @@
     margin-bottom: 12px;
   }
 
+  .popular-rail-head {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    row-gap: 4px;
+    margin-bottom: 14px;
+  }
+
   .popular-rail-head h2 {
-    font-size: 11px;
+    display: grid;
+    gap: 2px;
+    justify-items: center;
+    font-size: 21px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0.005em;
+    color: var(--text-strong);
+  }
+
+  .popular-rail-head h2::before {
+    content: "TRENDING";
+    font-size: 14.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: #64748b;
   }
 
   .popular-rail-head p {
-    display: none;
+    display: block;
+    margin: 0 0 8px 0;
+    flex-basis: 100%;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    text-align: center;
+    color: #94a3b8;
   }
 
   .popular-rail-track {
     grid-auto-columns: minmax(152px, auto);
     gap: 10px;
+    --rail-edge-fade: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }
 
 @media (max-width: 420px) {
+  .popular-rail-head {
+    margin-bottom: 12px;
+  }
+
+  .popular-rail-head h2 {
+    font-size: 19px;
+  }
+
+  .popular-rail-head p {
+    font-size: 10.5px;
+    text-align: center;
+  }
+
   .popular-rail-track {
     grid-auto-columns: minmax(140px, auto);
     gap: 8px;
-    --rail-edge-fade: 10px;
+    --rail-edge-fade: 0;
   }
 
   .popular-rail-progress {
     --popular-rail-progress-width: min(112px, 38vw);
-    --popular-rail-progress-thumb-width: 24px;
-    --popular-rail-progress-thumb-height: 7px;
+    --popular-rail-progress-thumb-width: 20px;
+    --popular-rail-progress-thumb-height: 3px;
   }
 }
 
@@ -158,11 +209,11 @@ body.theme-dark .popular-rail-head p {
 }
 
 body.theme-dark .popular-rail-progress {
-  background: color-mix(in srgb, #334155 74%, transparent);
+  background: color-mix(in srgb, #334155 58%, transparent);
 }
 
 body.theme-dark .popular-rail-progress-thumb {
-  background: color-mix(in srgb, var(--primary-soft) 62%, #94a3b8);
-  box-shadow: 0 1px 3px rgba(2, 6, 23, 0.4);
+  background: color-mix(in srgb, var(--primary-soft) 46%, #94a3b8);
+  box-shadow: none;
 }
 

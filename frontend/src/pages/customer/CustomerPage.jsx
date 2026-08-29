@@ -7,6 +7,7 @@ import { getColorwayDetails, sanitizeColorways, sortColorways } from "../../util
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
+import BrandsMarquee from "../../components/BrandsMarquee";
 import "../../styles/popular-rail.css";
 
 export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
@@ -26,6 +27,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [isDesktopCatalog, setIsDesktopCatalog] = useState(() => window.innerWidth > 720);
   const [siteUniqueViews, setSiteUniqueViews] = useState(null);
   const [topViewedIds, setTopViewedIds] = useState([]);
+  const [brandBannerItems, setBrandBannerItems] = useState([]);
   const [popularRailScrollRatio, setPopularRailScrollRatio] = useState(0);
   const [canScrollPopularRail, setCanScrollPopularRail] = useState(false);
   const popularRailRef = useRef(null);
@@ -81,6 +83,15 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         setSiteUniqueViews(Number(data?.siteUniqueViews || 0));
         const ids = (data?.topViewedProducts || []).map((p) => p.productId);
         setTopViewedIds(ids);
+      })
+      .catch(() => {});
+
+    apiRequest("/api/public/brands")
+      .then((brandData) => {
+        const next = Array.isArray(brandData)
+          ? brandData.filter((brand) => (brand?.name || "").trim())
+          : [];
+        setBrandBannerItems(next);
       })
       .catch(() => {});
   }, []);
@@ -408,6 +419,10 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     });
   };
 
+  const openBrandCollection = (brandName) => {
+    navigate(`/collections?brand=${encodeURIComponent(brandName)}`);
+  };
+
   const resetCatalogFilters = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("brand");
@@ -430,43 +445,9 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
       <section className="filter-bar">
         <div className="filter-bar-top">
           <div className="filter-results">
-            {isDesktopCatalog ? (
-              <>
-                <span className="filter-results-count">
-                  {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
-                </span>
-                <span className="filter-results-meta">
-                  of {products.length} total
-                </span>
-                {siteUniqueViews !== null ? (
-                  <span className="filter-results-meta">
-                    {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
-                  </span>
-                ) : null}
-                {activeFilterCount > 0 ? (
-                  <span className="filter-results-meta filter-results-chip">
-                    {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"} active
-                  </span>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <span className="filter-results-count">
-                  {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
-                </span>
-                <span className="filter-results-meta">of {products.length} total</span>
-                {siteUniqueViews !== null ? (
-                  <span className="filter-results-meta">
-                    {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
-                  </span>
-                ) : null}
-                {activeFilterCount > 0 ? (
-                  <span className="filter-results-meta filter-results-chip">
-                    {activeFilterCount} active
-                  </span>
-                ) : null}
-              </>
-            )}
+            <span className="filter-results-count">
+              {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
+            </span>
           </div>
           <div className="filter-bar-actions">
             <button
@@ -489,7 +470,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
           <div className="popular-rail-head">
             <h2>Popular right now</h2>
             {siteUniqueViews !== null ? (
-              <p>{siteUniqueViews.toLocaleString()} unique visit{siteUniqueViews === 1 ? "" : "s"}</p>
+              <p>{siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}</p>
             ) : null}
           </div>
           <div className="popular-rail-track" ref={popularRailRef}>
@@ -513,6 +494,10 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
             </div>
           ) : null}
         </section>
+      ) : null}
+
+      {shouldShowPopularRail && brandBannerItems.length > 0 ? (
+        <BrandsMarquee brands={brandBannerItems} onBrandClick={openBrandCollection} />
       ) : null}
 
       {isFilterDrawerOpen ? (

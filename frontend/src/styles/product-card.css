@@ -1,7 +1,9 @@
 .product-card h3 {
   margin: 4px 0 0 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 400;
+  letter-spacing: -0.01em;
   color: #111827;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -38,7 +40,7 @@
 }
 
 .product-card-footer {
-  padding: 8px 4px 4px;
+  padding: 10px 4px 6px;
   margin-top: auto;
 }
 
@@ -47,13 +49,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
+  line-height: 1.35;
 }
 
 .product-card-footer .brand {
-  font-size: 11px;
+  font-size: 12.5px;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
+  font-weight: 500;
 }
 
 .product-demand {
@@ -62,15 +66,22 @@
   gap: 3px;
   font-size: 10px;
   color: color-mix(in srgb, var(--primary-dark) 24%, #475569);
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.02em;
 }
 
 .product-price {
   margin: 6px 0 2px;
-  font-size: 13px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--primary-dark) 70%, #0f172a);
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 400;
+  letter-spacing: 0.002em;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, #64748b 86%, #94a3b8);
+}
+
+body.theme-dark .product-price {
+  color: color-mix(in srgb, #94a3b8 78%, #cbd5e1);
 }
 
 .product-price-row {
@@ -91,21 +102,23 @@
 
 .product-price-placeholder {
   display: inline-block;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1;
 }
 
 
 .department-chip {
   display: inline-flex;
-  font-size: 10px;
+  font-size: var(--caps-label-size);
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--primary-soft-2);
   color: var(--primary-strong);
   border: 1px solid color-mix(in srgb, var(--primary) 30%, #c7d2fe);
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: var(--caps-label-weight);
+  letter-spacing: var(--caps-label-track);
+  text-transform: uppercase;
   margin-top: 6px;
 }
 
@@ -167,7 +180,7 @@
   border: 1px solid color-mix(in srgb, var(--primary) 22%, #cbd5e1);
   background: color-mix(in srgb, var(--primary-soft-2) 60%, #f8fafc);
   color: color-mix(in srgb, var(--primary-dark) 40%, #334155);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .product-image-wrap {
@@ -194,6 +207,11 @@
   margin-top: 0;
   box-shadow: none;
   position: relative;
+}
+
+.product-image-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 42%, transparent);
+  outline-offset: 3px;
 }
 
 .product-image {
@@ -250,7 +268,20 @@
   }
 
   .product-card h3 {
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.35;
+    font-weight: 500;
+  }
+
+  .product-card-footer .brand {
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
+  .product-price {
+    font-size: 12.5px;
+    font-weight: 500;
   }
 
 }
@@ -270,7 +301,11 @@
   }
 
   .department-chip {
-    font-size: 9px;
+    font-size: 10.5px;
+  }
+
+  .product-price {
+    font-size: 12px;
   }
 }
 

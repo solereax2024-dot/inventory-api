@@ -1,0 +1,131 @@
+.brands-marquee {
+  margin: 8px 0 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.brands-marquee-track-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 6px 0;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+
+.brands-marquee-track {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: max-content;
+  min-width: 0;
+  margin: 0;
+  padding: 0 10px;
+  animation: brands-marquee-scroll 54s linear infinite;
+}
+
+.brands-marquee-track-wrap:hover .brands-marquee-track {
+  animation-play-state: paused;
+}
+
+.brands-marquee-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 84px;
+  min-width: 218px;
+  padding: 6px 12px;
+}
+
+.brands-marquee-link {
+  margin: 0;
+  width: auto;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.brands-marquee-link:hover {
+  transform: none;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  opacity: 0.92;
+}
+
+.brands-marquee-link:hover .brands-marquee-logo,
+.brands-marquee-link:focus-visible .brands-marquee-logo {
+  transform: scale(1.02);
+}
+
+.brands-marquee-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 56%, transparent);
+  outline-offset: 2px;
+}
+
+.brands-marquee-logo {
+  width: auto;
+  height: 64px;
+  max-width: 230px;
+  object-fit: contain;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+@keyframes brands-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brands-marquee-track {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .brands-marquee {
+    margin: 6px 0 14px;
+  }
+
+  .brands-marquee-track {
+    gap: 12px;
+    animation-duration: 42s;
+  }
+
+  .brands-marquee-pill {
+    min-height: 60px;
+    min-width: 136px;
+    padding: 2px 8px;
+  }
+
+  .brands-marquee-link {
+    padding: 6px 10px;
+  }
+
+  .brands-marquee-link:hover .brands-marquee-logo,
+  .brands-marquee-link:focus-visible .brands-marquee-logo {
+    transform: none;
+  }
+
+  .brands-marquee-logo {
+    height: 42px;
+    max-width: 136px;
+  }
+
+  .brands-marquee-track-wrap {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
