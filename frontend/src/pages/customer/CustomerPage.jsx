@@ -7,6 +7,7 @@ import { getColorwayDetails, sanitizeColorways, sortColorways } from "../../util
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
+import "../../styles/trending.css";
 
 export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isDesktopCatalog, setIsDesktopCatalog] = useState(() => window.innerWidth > 720);
   const [siteUniqueViews, setSiteUniqueViews] = useState(null);
+  const [topViewedIds, setTopViewedIds] = useState([]);
 
   // Transform products into colorway variants
   const expandProductsByColorway = (productsData) => {
@@ -74,6 +76,8 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     apiRequest("/api/public/analytics/views")
       .then((data) => {
         setSiteUniqueViews(Number(data?.siteUniqueViews || 0));
+        const ids = (data?.topViewedProducts || []).map((p) => p.productId);
+        setTopViewedIds(ids);
       })
       .catch(() => {});
   }, []);
@@ -340,6 +344,21 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     return visibleProducts.slice(start, start + catalogPageSize);
   }, [visibleProducts, activePage, catalogPageSize]);
 
+  // Build trending section: top viewed products matched with full product data (first colorway variant)
+  const trendingProducts = useMemo(() => {
+    if (!topViewedIds.length || !products.length) return [];
+    const seen = new Set();
+    const result = [];
+    for (const id of topViewedIds) {
+      const match = products.find((p) => p.id === id && !seen.has(p.id));
+      if (match) {
+        seen.add(match.id);
+        result.push(match);
+      }
+    }
+    return result.slice(0, 8);
+  }, [topViewedIds, products]);
+
   const openReservePage = (productId, initialColorway, preferredSize = US_SIZES[0]) => {
     const params = new URLSearchParams();
     if (initialColorway) params.set("colorway", initialColorway);
@@ -368,6 +387,30 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
 
   return (
     <main className="container container-customer">
+
+      {/* ── Trending Section ── */}
+      {trendingProducts.length > 0 && activeFilterCount === 0 && !searchText.trim() ? (
+        <section className="trending-section">
+          <div className="trending-header">
+            <span className="trending-fire">🔥</span>
+            <div>
+              <h2 className="trending-title">Trending Now</h2>
+              <p className="trending-sub">Most viewed by shoppers right now</p>
+            </div>
+          </div>
+          <div className="trending-grid">
+            {trendingProducts.map((product) => (
+              <ProductCard
+                key={`trending-${product._variantId || product.id}`}
+                product={product}
+                onReserveClick={openReservePage}
+                initialColorway={product._colorwayVariant}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="filter-bar">
         <div className="filter-bar-top">
           <div className="filter-results">
