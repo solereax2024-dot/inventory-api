@@ -392,14 +392,16 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
       {trendingProducts.length > 0 && activeFilterCount === 0 && !searchText.trim() ? (
         <section className="trending-section">
           <div className="trending-header">
-            <span className="trending-fire">🔥</span>
-            <div>
-              <h2 className="trending-title">Trending Now</h2>
+            <span className="trending-badge">
+              <span className="trending-badge-dot" />
+              Trending
+            </span>
+            <h2 className="trending-title">Most Viewed</h2>
+            {siteUniqueViews !== null ? (
               <p className="trending-sub">
-                Most viewed by shoppers right now
-                {siteUniqueViews !== null ? ` · ${siteUniqueViews.toLocaleString()} unique visit${siteUniqueViews === 1 ? "" : "s"}` : ""}
+                {siteUniqueViews.toLocaleString()} unique visit{siteUniqueViews === 1 ? "" : "s"}
               </p>
-            </div>
+            ) : null}
           </div>
           <div className="trending-grid">
             {trendingProducts.map((product) => (
