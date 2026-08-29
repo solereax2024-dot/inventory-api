@@ -463,6 +463,21 @@ body.theme-dark .reserve-success-ref strong {
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 2px;
+  --rail-edge-fade: 12px;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000000 var(--rail-edge-fade),
+    #000000 calc(100% - var(--rail-edge-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000000 var(--rail-edge-fade),
+    #000000 calc(100% - var(--rail-edge-fade)),
+    transparent 100%
+  );
 }
 
 .reserve-thumb-btn {
@@ -1765,6 +1780,7 @@ body.theme-dark .size-guide-pill-btn {
 
   .reserve-thumbnail-row {
     gap: 6px;
+    --rail-edge-fade: 8px;
   }
 
   .reserve-thumb-btn {
@@ -2207,8 +2223,38 @@ body.theme-dark .notes-textarea:focus {
 
 .reserve-related-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(176px, auto);
   gap: 14px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: inline mandatory;
+  scroll-padding-inline: 2px;
+  padding-bottom: 4px;
+  width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  --related-edge-fade: 14px;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000000 var(--related-edge-fade),
+    #000000 calc(100% - var(--related-edge-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000000 var(--related-edge-fade),
+    #000000 calc(100% - var(--related-edge-fade)),
+    transparent 100%
+  );
+}
+
+.reserve-related-grid::-webkit-scrollbar {
+  height: 0;
+  display: none;
 }
 
 .reserve-related-item {
@@ -2216,7 +2262,8 @@ body.theme-dark .notes-textarea:focus {
   gap: 8px;
   isolation: isolate;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  scroll-snap-align: start;
 }
 
 .reserve-related-grid .product-card,
@@ -2232,9 +2279,45 @@ body.theme-dark .notes-textarea:focus {
   overflow: hidden;
 }
 
+.reserve-related-grid .product-image {
+  object-fit: contain;
+  object-position: center;
+}
+
 .reserve-related-grid .product-card .product-image,
 .reserve-related-grid .product-card:hover .product-image {
   transform: none !important;
+}
+
+.reserve-related-progress {
+  --reserve-related-progress-width: min(124px, 30vw);
+  --reserve-related-progress-thumb-width: 28px;
+  --reserve-related-progress-thumb-height: 6px;
+  width: var(--reserve-related-progress-width);
+  height: 2px;
+  margin: 9px auto 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, #cbd5e1 58%, transparent);
+  position: relative;
+  overflow: visible;
+}
+
+.reserve-related-progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--reserve-related-progress-thumb-width);
+  height: var(--reserve-related-progress-thumb-height);
+  border-radius: 999px;
+  background: color-mix(in srgb, #475569 90%, #64748b);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+  transform: translateX(
+    calc(
+      (var(--reserve-related-progress-width) - var(--reserve-related-progress-thumb-width))
+      * var(--related-scroll-ratio)
+    )
+  ) translateY(-50%);
+  transition: transform 0.12s ease-out;
 }
 
 .reserve-related-reasons {
@@ -2312,6 +2395,15 @@ body.theme-dark .reserve-related-reason-chip {
   border-color: color-mix(in srgb, var(--primary) 28%, var(--dark-border));
   background: color-mix(in srgb, var(--primary) 16%, rgba(30, 41, 59, 0.9));
   color: color-mix(in srgb, var(--primary-soft) 80%, #e2e8f0);
+}
+
+body.theme-dark .reserve-related-progress {
+  background: color-mix(in srgb, #334155 74%, transparent);
+}
+
+body.theme-dark .reserve-related-progress-thumb {
+  background: color-mix(in srgb, var(--primary-soft) 62%, #94a3b8);
+  box-shadow: 0 1px 3px rgba(2, 6, 23, 0.4);
 }
 
 body.theme-dark .reserve-related-link-btn {
@@ -2410,8 +2502,15 @@ body.theme-dark .reserve-confirm-thumb-fallback {
   }
 
   .reserve-related-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-auto-columns: minmax(152px, auto);
     gap: 10px;
+    --related-edge-fade: 10px;
+  }
+
+  .reserve-related-progress {
+    --reserve-related-progress-width: min(112px, 38vw);
+    --reserve-related-progress-thumb-width: 24px;
+    --reserve-related-progress-thumb-height: 6px;
   }
 
   .reserve-related-header {
@@ -2478,6 +2577,19 @@ body.theme-dark .reserve-confirm-thumb-fallback {
   .image-upload-note,
   .image-upload-name {
     font-size: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .reserve-related-grid {
+    grid-auto-columns: minmax(140px, auto);
+    gap: 8px;
+  }
+
+  .reserve-related-progress {
+    --reserve-related-progress-width: min(100px, 38vw);
+    --reserve-related-progress-thumb-width: 22px;
+    --reserve-related-progress-thumb-height: 6px;
   }
 }
 
