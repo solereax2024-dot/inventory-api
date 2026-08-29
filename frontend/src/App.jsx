@@ -8,6 +8,7 @@ import BrandsPage from "./pages/customer/BrandsPage";
 import ReservePage from "./pages/customer/ReservePage";
 import AdminPage from "./pages/admin/AdminPage";
 import ThemeColorPicker from "./components/ThemeColorPicker";
+import WelcomeThemeModal from "./components/WelcomeThemeModal";
 import { DEFAULT_THEME, THEMES } from "./constants/themes";
 import "./styles/modals.css";
 import "./styles/theme-picker-modal.css";
@@ -60,6 +61,7 @@ export default function App() {
   const [adminToken, setAdminToken] = useState(() => localStorage.getItem("adminToken") || "");
   const [themeColor, setThemeColor] = useState(() => localStorage.getItem("themeColor") || DEFAULT_THEME);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("solereax-welcomed"));
 
   // Use dark logo variant when night mode is enabled.
   const activeLogoUrl = isDarkMode && branding.logoDarkUrl ? branding.logoDarkUrl : branding.logoUrl;
@@ -169,6 +171,11 @@ export default function App() {
     localStorage.removeItem("adminRole");
     window.dispatchEvent(new Event("admin-auth-changed"));
     setAdminToken("");
+  };
+
+  const handleWelcomeClose = () => {
+    localStorage.setItem("solereax-welcomed", "true");
+    setShowWelcome(false);
   };
 
   const uploadLogoDay = async () => {
@@ -316,6 +323,18 @@ export default function App() {
       ) : null}
 
       <SiteFooter />
+
+      {showWelcome && (
+        <WelcomeThemeModal
+          activeTheme={themeColor}
+          isDarkMode={isDarkMode}
+          onThemeChange={(newTheme) => {
+            setThemeColor(newTheme);
+          }}
+          onModeChange={setIsDarkMode}
+          onClose={handleWelcomeClose}
+        />
+      )}
     </div>
   );
 }
