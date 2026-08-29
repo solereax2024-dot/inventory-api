@@ -395,7 +395,10 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
             <span className="trending-fire">🔥</span>
             <div>
               <h2 className="trending-title">Trending Now</h2>
-              <p className="trending-sub">Most viewed by shoppers right now</p>
+              <p className="trending-sub">
+                Most viewed by shoppers right now
+                {siteUniqueViews !== null ? ` · ${siteUniqueViews.toLocaleString()} unique visit${siteUniqueViews === 1 ? "" : "s"}` : ""}
+              </p>
             </div>
           </div>
           <div className="trending-grid">
@@ -422,7 +425,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 <span className="filter-results-meta">
                   of {products.length} total
                 </span>
-                {siteUniqueViews !== null ? (
+                {siteUniqueViews !== null && trendingProducts.length === 0 ? (
                   <span className="filter-results-meta">
                     {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
                   </span>
@@ -439,7 +442,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                   {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
                 </span>
                 <span className="filter-results-meta">of {products.length} total</span>
-                {siteUniqueViews !== null ? (
+                {siteUniqueViews !== null && trendingProducts.length === 0 ? (
                   <span className="filter-results-meta">
                     {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
                   </span>
