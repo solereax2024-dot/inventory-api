@@ -1739,11 +1739,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             </article>
             <article className="admin-summary-card">
               <p>Total Sales (Delivered only)</p>
-              <h3>{formatPriceLabel(reservationStats.totalSalesDelivered)}</h3>
+              <h3 className="admin-summary-value admin-summary-value-price">{formatPriceLabel(reservationStats.totalSalesDelivered)}</h3>
             </article>
             <article className="admin-summary-card">
               <p>Total Sales (All reservations)</p>
-              <h3>{formatPriceLabel(reservationStats.totalSalesAll)}</h3>
+              <h3 className="admin-summary-value admin-summary-value-price">{formatPriceLabel(reservationStats.totalSalesAll)}</h3>
             </article>
             <article className="admin-summary-card">
               <p>Shipped</p>
@@ -1756,7 +1756,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             {reservationMopTotals.map((entry) => (
               <article key={`mop-total-${entry.key}`} className="admin-summary-card admin-summary-card-accent">
                 <p>{entry.label} Total</p>
-                <h3>{formatPriceLabel(entry.total)}</h3>
+                <h3 className="admin-summary-value admin-summary-value-price">{formatPriceLabel(entry.total)}</h3>
               </article>
             ))}
           </div>
@@ -2024,7 +2024,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                 />
                               </div>
                             ) : (
-                              <span className={`order-status-chip reservation-final-chip ${hasOrderPrice ? "status-delivered" : "status-ordered"}`}>
+                              <span className={`order-status-chip reservation-final-chip reservation-price-chip ${hasOrderPrice ? "status-delivered" : "status-ordered"}`}>
                                 {formatPriceLabel(order.totalPrice)}
                               </span>
                             )}
@@ -2084,7 +2084,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                 />
                               </div>
                             ) : (
-                              <span className={`order-status-chip reservation-final-chip ${hasDownpayment ? "status-delivered" : "status-ordered"}`}>
+                              <span className={`order-status-chip reservation-final-chip reservation-price-chip ${hasDownpayment ? "status-delivered" : "status-ordered"}`}>
                                 {formatPriceLabel(order.downpayment)}
                               </span>
                             )}
@@ -2139,7 +2139,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                 />
                               </div>
                             ) : (
-                              <span className={`order-status-chip reservation-final-chip ${balanceDisplayValue !== null ? "status-preparing" : "status-ordered"}`}>
+                              <span className={`order-status-chip reservation-final-chip reservation-price-chip ${balanceDisplayValue !== null ? "status-preparing" : "status-ordered"}`}>
                                 {formatPriceLabel(balanceDisplayValue)}
                               </span>
                             )}

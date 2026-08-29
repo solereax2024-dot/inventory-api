@@ -13,8 +13,8 @@ import ProductCard from "../../components/ProductCard";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
-const DESKTOP_BREAKPOINT = 721;
-const DESKTOP_BASE_IMAGE_SCALE = 1.42;
+const DESKTOP_BREAKPOINT = 901;
+const DESKTOP_BASE_IMAGE_SCALE = 1;
 const MOBILE_BASE_IMAGE_SCALE = 1;
 const PHP_CURRENCY = new Intl.NumberFormat("en-PH", {
   style: "currency",
@@ -871,9 +871,7 @@ export default function ReservePage() {
                   />
                   {entry.reasons.length > 0 ? (
                     <div className="reserve-related-reasons" aria-label="Recommendation reasons">
-                      {entry.reasons.map((reason) => (
-                        <span key={`${entry.product.id}-${reason}`} className="reserve-related-reason-chip">{reason}</span>
-                      ))}
+                      <span className="reserve-related-reason-chip">{entry.reasons.join(" • ")}</span>
                     </div>
                   ) : null}
                 </div>

@@ -41,8 +41,11 @@ function getReadableTextColor(rgb) {
   return luminance > 170 ? "#0f172a" : "#f8fafc";
 }
 
+const THEME_DEFAULT_MIGRATION_KEY = "themeDefaultMigrationV1";
+
 export default function App() {
   const location = useLocation();
+  const isThemeCustomizationEnabled = false;
   const [branding, setBranding] = useState({ logoUrl: null, logoDarkUrl: null });
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
@@ -59,9 +62,18 @@ export default function App() {
     onBrandChange: () => {}
   });
   const [adminToken, setAdminToken] = useState(() => localStorage.getItem("adminToken") || "");
-  const [themeColor, setThemeColor] = useState(() => localStorage.getItem("themeColor") || DEFAULT_THEME);
+  const [themeColor, setThemeColor] = useState(() => {
+    const hasMigratedDefault = localStorage.getItem(THEME_DEFAULT_MIGRATION_KEY) === "1";
+    const storedTheme = localStorage.getItem("themeColor") || "";
+    if (!hasMigratedDefault) {
+      localStorage.setItem(THEME_DEFAULT_MIGRATION_KEY, "1");
+      localStorage.setItem("themeColor", DEFAULT_THEME);
+      return DEFAULT_THEME;
+    }
+    return THEMES[storedTheme] ? storedTheme : DEFAULT_THEME;
+  });
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
-  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("solereax-welcomed"));
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // Use dark logo variant when night mode is enabled.
   const activeLogoUrl = isDarkMode && branding.logoDarkUrl ? branding.logoDarkUrl : branding.logoUrl;
@@ -126,7 +138,7 @@ export default function App() {
     rootStyle.setProperty("--theme-dark-bg-2", selectedTheme.darkBg2);
 
     // Light mode tokens tinted by the selected palette.
-    rootStyle.setProperty("--bg-base", rgbToCss(mixRgb(primaryRgb, white, 0.93)));
+    rootStyle.setProperty("--bg-base", "#ffffff");
     rootStyle.setProperty("--bg-accent", rgbToCss(mixRgb(primaryRgb, white, 0.86)));
     rootStyle.setProperty("--surface", rgbToCss(mixRgb(primaryRgb, white, 0.96)));
     rootStyle.setProperty("--surface-raised", rgbToCss(mixRgb(primaryRgb, white, 0.97)));
@@ -214,7 +226,7 @@ export default function App() {
         onSearchChange={setSearchText}
         onAdminSignOut={handleAdminSignOut}
         themeColor={themeColor}
-        onThemeColorClick={() => setIsThemePickerOpen(true)}
+        onThemeColorClick={isThemeCustomizationEnabled ? () => setIsThemePickerOpen(true) : undefined}
       />
       <Routes>
         <Route path="/" element={<Navigate to="/collections" replace />} />
@@ -298,7 +310,7 @@ export default function App() {
         </div>
       ) : null}
 
-      {isThemePickerOpen ? (
+      {isThemeCustomizationEnabled && isThemePickerOpen ? (
         <div className="theme-picker-modal-backdrop" onClick={() => setIsThemePickerOpen(false)}>
           <div className="theme-picker-modal" onClick={(e) => e.stopPropagation()}>
             <button
@@ -324,7 +336,7 @@ export default function App() {
 
       <SiteFooter />
 
-      {showWelcome && (
+      {isThemeCustomizationEnabled && showWelcome && (
         <WelcomeThemeModal
           activeTheme={themeColor}
           isDarkMode={isDarkMode}

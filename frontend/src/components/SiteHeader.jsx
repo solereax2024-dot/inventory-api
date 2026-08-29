@@ -496,17 +496,19 @@ export default function SiteHeader({
 
 
           <div className="site-menu-lower">
-            <button
-              type="button"
-              className="site-menu-action"
-              onClick={() => {
-                onThemeColorClick();
-                setIsMenuOpen(false);
-              }}
-            >
-              <Palette size={16} />
-              <span>Theme</span>
-            </button>
+            {typeof onThemeColorClick === "function" ? (
+              <button
+                type="button"
+                className="site-menu-action"
+                onClick={() => {
+                  onThemeColorClick();
+                  setIsMenuOpen(false);
+                }}
+              >
+                <Palette size={16} />
+                <span>Theme</span>
+              </button>
+            ) : null}
             {isAdminLoggedIn && isAdminPath && (
               <Link
                 className="site-menu-action"
