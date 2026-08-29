@@ -418,8 +418,41 @@ export default function ReservePage() {
 
   if (isLoading) {
     return (
-      <main className="container container-customer">
-        <p className="field-hint">Loading reservation form...</p>
+      <main className="container container-wide reserve-page-shell">
+        <section className="reserve-page-panel">
+          {/* Skeleton breadcrumb */}
+          <div className="skeleton-breadcrumb">
+            <span className="skeleton-line" style={{ width: 80 }} />
+            <span className="skeleton-line" style={{ width: 6 }} />
+            <span className="skeleton-line" style={{ width: 120 }} />
+          </div>
+          <div className="reserve-page-content">
+            {/* Skeleton image column */}
+            <div className="reserve-page-media-column">
+              <div className="skeleton-media reserve-skeleton-image" />
+              <div className="skeleton-thumbnail-row">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <div key={i} className="skeleton-media reserve-skeleton-thumb" />
+                ))}
+              </div>
+            </div>
+            {/* Skeleton form column */}
+            <div className="reserve-page-form-column">
+              <div className="skeleton-line" style={{ width: "60%", height: 14, marginBottom: 6 }} />
+              <div className="skeleton-line" style={{ width: "85%", height: 26, marginBottom: 20 }} />
+              <div className="skeleton-line" style={{ width: "40%", height: 20, marginBottom: 12 }} />
+              <div className="skeleton-size-row">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="skeleton-media" style={{ height: 38, borderRadius: 8 }} />
+                ))}
+              </div>
+              <div className="skeleton-line" style={{ width: "100%", height: 44, borderRadius: 10, marginTop: 20 }} />
+              <div className="skeleton-line" style={{ width: "100%", height: 44, borderRadius: 10, marginTop: 10 }} />
+              <div className="skeleton-line" style={{ width: "100%", height: 80, borderRadius: 10, marginTop: 10 }} />
+              <div className="skeleton-line" style={{ width: "100%", height: 48, borderRadius: 10, marginTop: 16 }} />
+            </div>
+          </div>
+        </section>
       </main>
     );
   }
