@@ -5,6 +5,16 @@
   min-width: 0;
 }
 
+.brands-marquee-label {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
 .brands-marquee-track-wrap {
   width: 100%;
   max-width: 100%;
@@ -98,6 +108,12 @@
     margin: 6px 0 14px;
   }
 
+  .brands-marquee-label {
+    margin-bottom: 7px;
+    font-size: 14.5px;
+    letter-spacing: 0.045em;
+  }
+
   .brands-marquee-track {
     gap: 12px;
     animation-duration: 42s;
@@ -127,5 +143,9 @@
     -webkit-mask-image: none;
     mask-image: none;
   }
+}
+
+body.theme-dark .brands-marquee-label {
+  color: #94a3b8;
 }
 

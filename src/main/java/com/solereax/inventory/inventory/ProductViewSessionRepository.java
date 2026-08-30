@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProductViewSessionRepository extends JpaRepository<ProductViewSession, Long> {
-    boolean existsByProductIdAndSessionId(Long productId, String sessionId);
+    boolean existsByProductIdAndSessionIdAndColorwayKey(Long productId, String sessionId, String colorwayKey);
 
     long countByProductId(Long productId);
 
@@ -20,12 +20,12 @@ public interface ProductViewSessionRepository extends JpaRepository<ProductViewS
     List<ProductViewCountProjection> countViewsByProductIds(@Param("productIds") List<Long> productIds);
 
     @Query("""
-            select p.id as productId, p.name as name, p.brand as brand, count(pvs.id) as viewCount
+            select p.id as productId, pvs.colorwayKey as colorwayKey, p.name as name, p.brand as brand, count(pvs.id) as viewCount
             from ProductViewSession pvs
             join pvs.product p
             where p.active = true
-            group by p.id, p.name, p.brand
-            order by count(pvs.id) desc, p.name asc
+            group by p.id, pvs.colorwayKey, p.name, p.brand
+            order by count(pvs.id) desc, p.name asc, pvs.colorwayKey asc
             """)
     List<TopViewedProductProjection> findTopViewedProducts(Pageable pageable);
 }

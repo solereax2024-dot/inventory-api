@@ -26,7 +26,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isDesktopCatalog, setIsDesktopCatalog] = useState(() => window.innerWidth > 720);
   const [siteUniqueViews, setSiteUniqueViews] = useState(null);
-  const [topViewedIds, setTopViewedIds] = useState([]);
+  const [topViewedItems, setTopViewedItems] = useState([]);
   const [brandBannerItems, setBrandBannerItems] = useState([]);
   const [popularRailScrollRatio, setPopularRailScrollRatio] = useState(0);
   const [canScrollPopularRail, setCanScrollPopularRail] = useState(false);
@@ -81,8 +81,14 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     apiRequest("/api/public/analytics/views")
       .then((data) => {
         setSiteUniqueViews(Number(data?.siteUniqueViews || 0));
-        const ids = (data?.topViewedProducts || []).map((p) => p.productId);
-        setTopViewedIds(ids);
+        const items = (data?.topViewedProducts || [])
+          .map((item) => ({
+            productId: Number(item?.productId || 0),
+            colorwayKey: (item?.colorwayKey || "DEFAULT").trim().toUpperCase(),
+            uniqueViews: Number(item?.uniqueViews || 0)
+          }))
+          .filter((item) => item.productId > 0);
+        setTopViewedItems(items);
       })
       .catch(() => {});
 
@@ -334,24 +340,34 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   ].filter(Boolean).length;
   const shouldShowPopularRail = activeFilterCount === 0 && !searchText.trim();
   const popularProducts = useMemo(() => {
-    if (!shouldShowPopularRail || !topViewedIds.length || !products.length) {
+    if (!shouldShowPopularRail || !topViewedItems.length || !products.length) {
       return [];
     }
 
     const result = [];
-    const usedProductIds = new Set();
-    for (const productId of topViewedIds) {
-      const match = products.find((item) => item.id === productId && !usedProductIds.has(item.id));
+    const usedVariantKeys = new Set();
+    for (const topItem of topViewedItems) {
+      const variantKey = `${topItem.productId}-${topItem.colorwayKey}`;
+      if (usedVariantKeys.has(variantKey)) {
+        continue;
+      }
+      const match = products.find(
+        (item) => item.id === topItem.productId && (item._colorwayVariant || "DEFAULT") === topItem.colorwayKey
+      ) || products.find((item) => item.id === topItem.productId);
       if (match) {
-        usedProductIds.add(match.id);
-        result.push(match);
+        usedVariantKeys.add(variantKey);
+        result.push({
+          ...match,
+          _popularColorway: topItem.colorwayKey,
+          viewCount: topItem.uniqueViews
+        });
       }
       if (result.length >= 6) {
         break;
       }
     }
     return result;
-  }, [shouldShowPopularRail, topViewedIds, products]);
+  }, [shouldShowPopularRail, topViewedItems, products]);
 
   useEffect(() => {
     const rail = popularRailRef.current;
@@ -475,11 +491,11 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
           </div>
           <div className="popular-rail-track" ref={popularRailRef}>
             {popularProducts.map((product) => (
-              <article key={`popular-${product.id}`} className="popular-rail-item">
+              <article key={`popular-${product.id}-${product._popularColorway || product._colorwayVariant || "DEFAULT"}`} className="popular-rail-item">
                 <ProductCard
                   product={product}
                   onReserveClick={openReservePage}
-                  initialColorway={product._colorwayVariant}
+                  initialColorway={product._popularColorway || product._colorwayVariant}
                 />
               </article>
             ))}

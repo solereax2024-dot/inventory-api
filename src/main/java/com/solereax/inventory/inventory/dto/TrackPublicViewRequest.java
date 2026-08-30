@@ -4,7 +4,8 @@ import jakarta.validation.constraints.Size;
 
 public record TrackPublicViewRequest(
         @Size(max = 120) String sessionId,
-        Long productId
+        Long productId,
+        @Size(max = 80) String colorwayKey
 ) {
 }
 

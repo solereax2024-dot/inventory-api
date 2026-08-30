@@ -10,6 +10,7 @@ export default function BrandsMarquee({ brands = [], onBrandClick = () => {} }) 
 
   return (
     <section className="brands-marquee" aria-label="Featured brands">
+      <p className="brands-marquee-label">Featured Brands</p>
       <div className="brands-marquee-track-wrap">
         <ul className="brands-marquee-track">
           {loopBrands.map((brand, index) => (

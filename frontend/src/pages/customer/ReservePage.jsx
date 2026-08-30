@@ -104,19 +104,20 @@ export default function ReservePage() {
   );
 
   useEffect(() => {
-    if (!product?.id) {
+    if (!product?.id || !reserve.colorway) {
       return;
     }
-    const scopeKey = `product-${product.id}`;
+    const scopeKey = `product-${product.id}-${reserve.colorway}`;
     if (!shouldTrackViewForScope(scopeKey)) {
       return;
     }
     const sessionId = getOrCreateViewSessionId();
     apiRequest("/api/public/analytics/views/track", "POST", {
       sessionId,
-      productId: Number(product.id)
+      productId: Number(product.id),
+      colorwayKey: reserve.colorway
     }).catch(() => {});
-  }, [product?.id]);
+  }, [product?.id, reserve.colorway]);
 
   const colorways = useMemo(
     () => (product ? getSortedColorwaysFromStocks(product.stocks) : []),

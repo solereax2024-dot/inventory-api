@@ -19,7 +19,7 @@ import lombok.Setter;
 @Entity
 @Table(
         name = "product_view_sessions",
-        uniqueConstraints = @UniqueConstraint(name = "uq_product_view_session", columnNames = {"product_id", "session_id"})
+        uniqueConstraints = @UniqueConstraint(name = "uq_product_view_session", columnNames = {"product_id", "session_id", "colorway_key"})
 )
 public class ProductViewSession {
     @Id
@@ -32,6 +32,9 @@ public class ProductViewSession {
 
     @Column(name = "session_id", nullable = false, length = 120)
     private String sessionId;
+
+    @Column(name = "colorway_key", nullable = false, length = 80)
+    private String colorwayKey;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

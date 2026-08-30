@@ -23,7 +23,7 @@ public class PublicViewAnalyticsController {
     @PostMapping("/track")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void trackView(@Valid @RequestBody TrackPublicViewRequest request) {
-        publicViewAnalyticsService.trackUniqueView(request.sessionId(), request.productId());
+        publicViewAnalyticsService.trackUniqueView(request.sessionId(), request.productId(), request.colorwayKey());
     }
 
     @GetMapping
