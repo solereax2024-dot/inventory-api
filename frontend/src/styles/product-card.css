@@ -128,7 +128,7 @@ body.theme-dark .product-price {
   right: 6px;
   z-index: 3;
   margin-top: 0;
-  font-size: 8px;
+  font-size: 7px;
   padding: 1px 6px;
   background: color-mix(in srgb, var(--primary-soft-2) 82%, #ffffff);
   backdrop-filter: blur(2px);
