@@ -510,7 +510,7 @@ body.theme-dark .reserve-success-ref strong {
 .reserve-thumbnail-progress {
   --reserve-thumbnail-progress-width: min(112px, 34vw);
   --reserve-thumbnail-progress-thumb-width: 24px;
-  --reserve-thumbnail-progress-thumb-height: 4px;
+  --reserve-thumbnail-progress-thumb-height: 3px;
   width: var(--reserve-thumbnail-progress-width);
   height: 1px;
   margin: 8px auto 0;
@@ -528,7 +528,7 @@ body.theme-dark .reserve-success-ref strong {
   height: var(--reserve-thumbnail-progress-thumb-height);
   border-radius: 999px;
   background: color-mix(in srgb, #64748b 72%, #94a3b8);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+  box-shadow: none;
   transform: translateX(
     calc(
       (var(--reserve-thumbnail-progress-width) - var(--reserve-thumbnail-progress-thumb-width))
@@ -2636,7 +2636,7 @@ body.theme-dark .reserve-confirm-thumb-fallback {
   .reserve-thumbnail-progress {
     --reserve-thumbnail-progress-width: min(104px, 40vw);
     --reserve-thumbnail-progress-thumb-width: 22px;
-    --reserve-thumbnail-progress-thumb-height: 4px;
+    --reserve-thumbnail-progress-thumb-height: 3px;
   }
 
   .reserve-related-header {
