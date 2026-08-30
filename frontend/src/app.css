@@ -157,34 +157,6 @@ body {
   background: transparent;
 }
 
-/* Horizontal-only polish for reserve thumbnails. */
-.reserve-thumbnail-row {
-  scrollbar-width: thin;
-  scrollbar-color: var(--rail-scrollbar-thumb) var(--rail-scrollbar-track);
-}
-
-.reserve-thumbnail-row::-webkit-scrollbar {
-  height: var(--rail-scrollbar-size);
-}
-
-.reserve-thumbnail-row::-webkit-scrollbar-track {
-  background: var(--rail-scrollbar-track);
-  border-radius: 999px;
-}
-
-.reserve-thumbnail-row::-webkit-scrollbar-thumb {
-  border: 1px solid color-mix(in srgb, var(--surface) 90%, transparent);
-  border-radius: 999px;
-  background: var(--rail-scrollbar-thumb);
-}
-
-.reserve-thumbnail-row::-webkit-scrollbar-thumb:hover {
-  background: var(--rail-scrollbar-thumb-hover);
-}
-
-.reserve-thumbnail-row::-webkit-scrollbar-thumb:active {
-  background: var(--rail-scrollbar-thumb-active);
-}
 
 @media (hover: none), (pointer: coarse) {
   :root {

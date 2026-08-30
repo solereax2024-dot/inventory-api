@@ -71,7 +71,10 @@ export default function ReservePage() {
     window.innerWidth >= DESKTOP_BREAKPOINT ? DESKTOP_BASE_IMAGE_SCALE : MOBILE_BASE_IMAGE_SCALE
   ));
   const imgWrapRef = useRef(null);
+  const thumbnailRailRef = useRef(null);
   const relatedRailRef = useRef(null);
+  const [thumbnailRailScrollRatio, setThumbnailRailScrollRatio] = useState(0);
+  const [canScrollThumbnailRail, setCanScrollThumbnailRail] = useState(false);
   const [relatedRailScrollRatio, setRelatedRailScrollRatio] = useState(0);
   const [canScrollRelatedRail, setCanScrollRelatedRail] = useState(false);
 
@@ -227,6 +230,37 @@ export default function ReservePage() {
         reasons: entry.reasons.slice(0, 2)
       }));
   }, [products, product, reserve.colorway]);
+
+  useEffect(() => {
+    const rail = thumbnailRailRef.current;
+    if (!rail || colorways.length <= 1) {
+      setThumbnailRailScrollRatio(0);
+      setCanScrollThumbnailRail(false);
+      return undefined;
+    }
+
+    const updateThumbnailRailProgress = () => {
+      const maxScrollLeft = rail.scrollWidth - rail.clientWidth;
+      if (maxScrollLeft <= 1) {
+        setThumbnailRailScrollRatio(0);
+        setCanScrollThumbnailRail(false);
+        return;
+      }
+
+      const ratio = Math.min(1, Math.max(0, rail.scrollLeft / maxScrollLeft));
+      setThumbnailRailScrollRatio(ratio);
+      setCanScrollThumbnailRail(true);
+    };
+
+    updateThumbnailRailProgress();
+    rail.addEventListener("scroll", updateThumbnailRailProgress, { passive: true });
+    window.addEventListener("resize", updateThumbnailRailProgress);
+
+    return () => {
+      rail.removeEventListener("scroll", updateThumbnailRailProgress);
+      window.removeEventListener("resize", updateThumbnailRailProgress);
+    };
+  }, [colorways.length]);
 
   useEffect(() => {
     const rail = relatedRailRef.current;
@@ -580,7 +614,7 @@ export default function ReservePage() {
             </div>
 
             {colorways.length > 1 ? (
-               <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails">
+               <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails" ref={thumbnailRailRef}>
                  {colorways.map((colorway) => {
                    const thumbUrl = getColorwayImageUrl(product, colorway);
                    return (
@@ -602,6 +636,15 @@ export default function ReservePage() {
                      </button>
                    );
                  })}
+               </div>
+             ) : null}
+             {canScrollThumbnailRail ? (
+               <div
+                 className="reserve-thumbnail-progress"
+                 aria-hidden="true"
+                 style={{ "--thumbnail-scroll-ratio": String(thumbnailRailScrollRatio) }}
+               >
+                 <span className="reserve-thumbnail-progress-thumb" />
                </div>
              ) : null}
           </div>
