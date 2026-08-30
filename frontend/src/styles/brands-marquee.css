@@ -21,8 +21,19 @@
   min-width: 0;
   overflow: hidden;
   padding: 6px 0;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8%, #000 92%, transparent 100%);
   mask-image: linear-gradient(to right, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+
+.brands-marquee-track-wrap.is-dragging {
+  cursor: grabbing;
+}
+
+.brands-marquee-track-offset {
+  transform: translateX(var(--brands-marquee-drag-offset, 0px));
 }
 
 .brands-marquee-track {
@@ -38,6 +49,10 @@
 }
 
 .brands-marquee-track-wrap:hover .brands-marquee-track {
+  animation-play-state: paused;
+}
+
+.brands-marquee-track-wrap.is-dragging .brands-marquee-track {
   animation-play-state: paused;
 }
 
