@@ -32,6 +32,7 @@ export default function ReservePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [mobileOpenSection, setMobileOpenSection] = useState("size");
+  const [entryColorway, setEntryColorway] = useState("");
   const [reserve, setReserve] = useState({
     customerName: "",
     customerContact: "",
@@ -107,12 +108,13 @@ export default function ReservePage() {
   );
   const prioritizedColorways = useMemo(() => {
     if (colorways.length === 0) return [];
-    const matchingSelectedColorway = colorways.find(
-      (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(reserve.colorway)
+    if (!entryColorway) return colorways;
+    const matchingEntryColorway = colorways.find(
+      (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(entryColorway)
     );
-    if (!matchingSelectedColorway) return colorways;
-    return [matchingSelectedColorway, ...colorways.filter((colorway) => colorway !== matchingSelectedColorway)];
-  }, [colorways, reserve.colorway]);
+    if (!matchingEntryColorway) return colorways;
+    return [matchingEntryColorway, ...colorways.filter((colorway) => colorway !== matchingEntryColorway)];
+  }, [colorways, entryColorway]);
   const selectedDepartment = useMemo(
     () => getDepartmentForColorway(product, reserve.colorway),
     [product, reserve.colorway]
@@ -301,21 +303,20 @@ export default function ReservePage() {
      if (!product || colorways.length === 0) return;
      const preferredColorway = searchParams.get("colorway");
      const preferredSize = searchParams.get("size") || String(US_SIZES[0]);
-      const matchedPreferredColorway = colorways.find(
-        (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(preferredColorway)
-      );
-     const selectedColorway =
-        matchedPreferredColorway
-          ? matchedPreferredColorway
-         : colorways[0];
+     const matchedPreferredColorway = colorways.find(
+       (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(preferredColorway)
+     );
+     const selectedColorway = matchedPreferredColorway ? matchedPreferredColorway : colorways[0];
 
+     // Keep the entry colorway pinned for thumbnail ordering.
+     setEntryColorway(selectedColorway);
      setReserve((prev) => ({
        ...prev,
        colorway: selectedColorway,
        size: prev.size || preferredSize,
        sizeGroup: prev.sizeGroup || "MEN"
      }));
-   }, [product, colorways, searchParams]);
+   }, [product?.id, colorways]);
 
 
   useEffect(() => {
@@ -643,6 +644,7 @@ export default function ReservePage() {
                        type="button"
                        className={`reserve-thumb-btn quick-tooltip ${reserve.colorway === colorway ? "active" : ""}`}
                        onClick={() => {
+                          setReserve((prev) => ({ ...prev, colorway }));
                          const nextParams = new URLSearchParams(searchParams);
                          nextParams.set("colorway", colorway);
                          if (reserve.size) nextParams.set("size", reserve.size);

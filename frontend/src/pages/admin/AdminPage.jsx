@@ -21,6 +21,7 @@ const RESERVATION_STATUS_OPTIONS = [
   { value: "ORDERED", label: "Ordered" },
   { value: "PREPARING", label: "Preparing" },
   { value: "SHIPPED", label: "Shipped" },
+  { value: "DELIVERED", label: "Delivered" },
   { value: "PAID", label: "Paid" }
 ];
 
@@ -41,13 +42,13 @@ const RESERVATION_MOP_OPTIONS = [
 
 function normalizeReservationStatus(status) {
   if (status === "RESERVED") return "ORDERED";
-  if (status === "DELIVERED") return "PAID";
   return status;
 }
 
 function statusChipClass(status) {
   const normalized = normalizeReservationStatus(status);
   if (normalized === "PAID") return "status-paid";
+  if (normalized === "DELIVERED") return "status-delivered";
   if (normalized === "SHIPPED") return "status-shipped";
   if (normalized === "PREPARING") return "status-preparing";
   return "status-ordered";
