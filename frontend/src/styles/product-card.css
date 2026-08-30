@@ -190,7 +190,7 @@ body.theme-dark .product-price {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 6.5px;
   color: color-mix(in srgb, var(--primary-dark) 24%, #475569);
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -378,7 +378,7 @@ body.theme-dark .product-price {
     }
 
    .product-demand-overlay {
-     font-size: 9px;
+      font-size: 6px;
      padding: 1px 5px;
    }
 
