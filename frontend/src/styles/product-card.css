@@ -163,7 +163,7 @@ body.theme-dark .product-price {
 .department-chip-bottom {
   position: absolute;
   bottom: 6px;
-  right: 6px;
+  left: 6px;
   z-index: 3;
   margin-top: 0;
   font-size: 6.5px;
