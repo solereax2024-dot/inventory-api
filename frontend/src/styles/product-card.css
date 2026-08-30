@@ -304,6 +304,10 @@ body.theme-dark .product-price {
     font-size: 10.5px;
   }
 
+  .department-chip-on-image {
+    font-size: 7px;
+  }
+
   .product-price {
     font-size: 12px;
   }
