@@ -24,6 +24,7 @@ public interface ProductViewSessionRepository extends JpaRepository<ProductViewS
             from ProductViewSession pvs
             join pvs.product p
             where p.active = true
+              and pvs.colorwayKey <> 'DEFAULT'
             group by p.id, pvs.colorwayKey, p.name, p.brand
             order by count(pvs.id) desc, p.name asc, pvs.colorwayKey asc
             """)

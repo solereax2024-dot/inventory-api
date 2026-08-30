@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
-import { getColorwayDetails, sanitizeColorways, sortColorways } from "../../utils/colorway";
+import { getColorwayDetails, getColorwayImageUrl, normalizeColorwayValue, sanitizeColorways, sortColorways } from "../../utils/colorway";
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
@@ -84,10 +84,10 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         const items = (data?.topViewedProducts || [])
           .map((item) => ({
             productId: Number(item?.productId || 0),
-            colorwayKey: (item?.colorwayKey || "DEFAULT").trim().toUpperCase(),
+            colorwayKey: normalizeColorwayValue(item?.colorwayKey || "DEFAULT"),
             uniqueViews: Number(item?.uniqueViews || 0)
           }))
-          .filter((item) => item.productId > 0);
+          .filter((item) => item.productId > 0 && item.colorwayKey !== "DEFAULT");
         setTopViewedItems(items);
       })
       .catch(() => {});
@@ -352,9 +352,9 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         continue;
       }
       const match = products.find(
-        (item) => item.id === topItem.productId && (item._colorwayVariant || "DEFAULT") === topItem.colorwayKey
-      ) || products.find((item) => item.id === topItem.productId);
-      if (match) {
+        (item) => item.id === topItem.productId && normalizeColorwayValue(item._colorwayVariant || "DEFAULT") === topItem.colorwayKey
+      );
+      if (match && getColorwayImageUrl(match, topItem.colorwayKey)) {
         usedVariantKeys.add(variantKey);
         result.push({
           ...match,

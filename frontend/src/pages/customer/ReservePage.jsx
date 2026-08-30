@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import { Eye } from "lucide-react";
 import { US_SIZES } from "../../constants";
 import { apiRequest } from "../../utils/api";
-import { getColorwayDetails, getColorwayImageUrl } from "../../utils/colorway";
+import { getColorwayDetails, getColorwayImageUrl, normalizeColorwayValue } from "../../utils/colorway";
 import { formatColorwayLabel, formatEnumLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
@@ -128,8 +128,11 @@ export default function ReservePage() {
   );
   const prioritizedColorways = useMemo(() => {
     if (colorways.length === 0) return [];
-    if (!entryColorway || !colorways.includes(entryColorway)) return colorways;
-    return [entryColorway, ...colorways.filter((colorway) => colorway !== entryColorway)];
+    const matchingEntryColorway = colorways.find(
+      (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(entryColorway)
+    );
+    if (!matchingEntryColorway) return colorways;
+    return [matchingEntryColorway, ...colorways.filter((colorway) => colorway !== matchingEntryColorway)];
   }, [colorways, entryColorway]);
   const selectedDepartment = useMemo(
     () => getDepartmentForColorway(product, reserve.colorway),
@@ -319,9 +322,12 @@ export default function ReservePage() {
      if (!product || colorways.length === 0) return;
      const preferredColorway = searchParams.get("colorway");
      const preferredSize = searchParams.get("size") || String(US_SIZES[0]);
+      const matchedPreferredColorway = colorways.find(
+        (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(preferredColorway)
+      );
      const selectedColorway =
-       preferredColorway && colorways.includes(preferredColorway)
-         ? preferredColorway
+        matchedPreferredColorway
+          ? matchedPreferredColorway
          : colorways[0];
 
      setReserve((prev) => ({
@@ -614,8 +620,8 @@ export default function ReservePage() {
             </div>
 
             {colorways.length > 1 ? (
-               <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails" ref={thumbnailRailRef}>
-                 {colorways.map((colorway) => {
+                <div className="reserve-thumbnail-row" aria-label="Colorway thumbnails" ref={thumbnailRailRef}>
+                  {prioritizedColorways.map((colorway) => {
                    const thumbUrl = getColorwayImageUrl(product, colorway);
                    return (
                      <button
