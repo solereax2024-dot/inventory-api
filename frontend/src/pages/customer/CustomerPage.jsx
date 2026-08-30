@@ -85,9 +85,10 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
           .map((item) => ({
             productId: Number(item?.productId || 0),
             colorwayKey: normalizeColorwayValue(item?.colorwayKey || "DEFAULT"),
+            hasColorwayKey: Boolean((item?.colorwayKey || "").trim()),
             uniqueViews: Number(item?.uniqueViews || 0)
           }))
-          .filter((item) => item.productId > 0 && item.colorwayKey !== "DEFAULT");
+          .filter((item) => item.productId > 0);
         setTopViewedItems(items);
       })
       .catch(() => {});
@@ -347,18 +348,31 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     const result = [];
     const usedVariantKeys = new Set();
     for (const topItem of topViewedItems) {
-      const variantKey = `${topItem.productId}-${topItem.colorwayKey}`;
+      const variantKey = topItem.hasColorwayKey
+        ? `${topItem.productId}-${topItem.colorwayKey}`
+        : `product-${topItem.productId}`;
       if (usedVariantKeys.has(variantKey)) {
         continue;
       }
-      const match = products.find(
-        (item) => item.id === topItem.productId && normalizeColorwayValue(item._colorwayVariant || "DEFAULT") === topItem.colorwayKey
-      );
-      if (match && getColorwayImageUrl(match, topItem.colorwayKey)) {
+      const productMatches = products.filter((item) => item.id === topItem.productId);
+      const exactMatch = topItem.hasColorwayKey
+        ? productMatches.find(
+            (item) => normalizeColorwayValue(item._colorwayVariant || "DEFAULT") === topItem.colorwayKey
+          )
+        : null;
+      const fallbackMatch = productMatches.find(
+        (item) => getColorwayImageUrl(item, item._colorwayVariant || "DEFAULT")
+      ) || productMatches[0];
+      const match = exactMatch || fallbackMatch;
+      const resolvedColorway = topItem.hasColorwayKey
+        ? topItem.colorwayKey
+        : normalizeColorwayValue(match?._colorwayVariant || "DEFAULT");
+      if (match && getColorwayImageUrl(match, resolvedColorway)) {
         usedVariantKeys.add(variantKey);
         result.push({
           ...match,
-          _popularColorway: topItem.colorwayKey,
+          _popularColorway: resolvedColorway,
+          _popularUsesExactColorway: topItem.hasColorwayKey,
           _popularUniqueViews: topItem.uniqueViews
         });
       }

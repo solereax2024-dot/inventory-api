@@ -72,7 +72,7 @@ export default function BrandsMarquee({ brands = [], onBrandClick = () => {} }) 
 
   return (
     <section className="brands-marquee" aria-label="Featured brands">
-      <p className="brands-marquee-label">Featured Brands</p>
+      <p className="brands-marquee-label">Collections</p>
       <div
         ref={wrapRef}
         className={`brands-marquee-track-wrap${isDragging ? " is-dragging" : ""}`}
