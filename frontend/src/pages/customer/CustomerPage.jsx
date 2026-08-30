@@ -359,7 +359,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         result.push({
           ...match,
           _popularColorway: topItem.colorwayKey,
-          viewCount: topItem.uniqueViews
+          _popularUniqueViews: topItem.uniqueViews
         });
       }
       if (result.length >= 6) {
