@@ -55,8 +55,12 @@ export default function ProductCard({ product, onReserveClick, initialColorway }
     <article className="card product-card">
       <button type="button" className="product-image-wrap product-image-button" onClick={() => onReserveClick(product.id, selectedColorway)}>
         {colorwayDetails.department && (
-          <span className="department-chip department-chip-on-image">{formatEnumLabel(colorwayDetails.department)}</span>
+          <span className="department-chip department-chip-left">{formatEnumLabel(colorwayDetails.department)}</span>
         )}
+        <small className="product-demand-overlay">
+          <Eye size={11} strokeWidth={2.2} />
+          {uniqueViewCount.toLocaleString()}
+        </small>
         {(() => {
           const imgUrl = getColorwayImageUrl(product, selectedColorway);
           if (imgUrl) return <img className="product-image" src={imgUrl} alt={product.name} loading="lazy" />;
@@ -71,10 +75,6 @@ export default function ProductCard({ product, onReserveClick, initialColorway }
       <div className="product-card-footer">
         <div className="product-card-meta">
           <small className="brand">{product.brand || ""}</small>
-          <small className="product-demand">
-            <Eye size={11} strokeWidth={2.2} />
-            {uniqueViewCount.toLocaleString()}
-          </small>
         </div>
         <h3>{product.name}</h3>
         <div className={`product-price-row${priceLabel ? "" : " empty"}`}>
