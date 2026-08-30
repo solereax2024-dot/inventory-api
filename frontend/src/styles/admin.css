@@ -304,6 +304,12 @@
   color: #166534;
 }
 
+.order-status-chip.status-paid {
+  background: #ecfdf3;
+  border-color: #86efac;
+  color: #166534;
+}
+
 .admin-summary-grid {
   margin-bottom: 12px;
   display: grid;
@@ -465,7 +471,8 @@
 .reservation-price-chip.status-ordered,
 .reservation-price-chip.status-preparing,
 .reservation-price-chip.status-shipped,
-.reservation-price-chip.status-delivered {
+.reservation-price-chip.status-delivered,
+.reservation-price-chip.status-paid {
   background: color-mix(in srgb, var(--surface-raised) 96%, #ffffff);
   border-color: color-mix(in srgb, var(--primary) 12%, #cbd5e1);
   color: color-mix(in srgb, var(--text) 76%, #334155);
@@ -1148,7 +1155,8 @@ body.theme-dark .reservation-original-price.is-overridden {
 body.theme-dark .reservation-price-chip.status-ordered,
 body.theme-dark .reservation-price-chip.status-preparing,
 body.theme-dark .reservation-price-chip.status-shipped,
-body.theme-dark .reservation-price-chip.status-delivered {
+body.theme-dark .reservation-price-chip.status-delivered,
+body.theme-dark .reservation-price-chip.status-paid {
   background: color-mix(in srgb, var(--dark-surface) 92%, transparent);
   border-color: color-mix(in srgb, var(--primary-soft) 22%, var(--dark-border));
   color: color-mix(in srgb, #ffffff 82%, #cbd5e1);

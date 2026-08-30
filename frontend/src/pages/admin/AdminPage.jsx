@@ -21,7 +21,7 @@ const RESERVATION_STATUS_OPTIONS = [
   { value: "ORDERED", label: "Ordered" },
   { value: "PREPARING", label: "Preparing" },
   { value: "SHIPPED", label: "Shipped" },
-  { value: "DELIVERED", label: "Delivered" }
+  { value: "PAID", label: "Paid" }
 ];
 
 const RESERVATION_COURIER_OPTIONS = [
@@ -40,12 +40,14 @@ const RESERVATION_MOP_OPTIONS = [
 ];
 
 function normalizeReservationStatus(status) {
-  return status === "RESERVED" ? "ORDERED" : status;
+  if (status === "RESERVED") return "ORDERED";
+  if (status === "DELIVERED") return "PAID";
+  return status;
 }
 
 function statusChipClass(status) {
   const normalized = normalizeReservationStatus(status);
-  if (normalized === "DELIVERED") return "status-delivered";
+  if (normalized === "PAID") return "status-paid";
   if (normalized === "SHIPPED") return "status-shipped";
   if (normalized === "PREPARING") return "status-preparing";
   return "status-ordered";
@@ -100,11 +102,11 @@ function getFileFormatLabel(file) {
 
 function formatPriceLabel(value) {
   if (value === null || value === undefined || value === "") {
-    return "No Price";
+    return PHP_CURRENCY.format(0);
   }
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
-    return "No Price";
+    return PHP_CURRENCY.format(0);
   }
   return PHP_CURRENCY.format(parsed);
 }
@@ -144,6 +146,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [orders, setOrders] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [successModal, setSuccessModal] = useState({ isOpen: false, message: "" });
   const [undoQueue, setUndoQueue] = useState([]);
   const [undoNow, setUndoNow] = useState(Date.now());
   const [productActionModal, setProductActionModal] = useState({ type: null, productId: "" });
@@ -367,7 +370,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
     try {
       await apiRequest(`/api/admin/products/${productId}`, "DELETE", undefined, token);
-      setMessage("Product deleted successfully.");
+      setSuccessModal({ isOpen: true, message: "Product deleted successfully." });
       await loadAdminData(token, adminRole);
     } catch (err) {
       setMessage("Failed to delete product: " + err.message);
@@ -389,7 +392,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setSavedBrands((prev) => [...prev, newBrand].sort((a, b) => a.name.localeCompare(b.name)));
       setProductForm({ ...productForm, brand: trimmedName });
       setNewBrandModal({ isOpen: false, brandName: "" });
-      setMessage(`Brand "${trimmedName}" saved.`);
+      setSuccessModal({ isOpen: true, message: `Brand "${trimmedName}" saved.` });
     } catch (err) {
       setMessage("Failed to save brand: " + err.message);
     }
@@ -416,7 +419,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     try {
       const updated = await uploadImage(`/api/admin/brands/${brandId}/logo`, file, token);
       setSavedBrands((prev) => prev.map((b) => (b.id === brandId ? updated : b)));
-      setMessage("Brand logo updated.");
+      setSuccessModal({ isOpen: true, message: "Brand logo updated." });
     } catch (err) {
       setMessage("Failed to upload brand logo: " + err.message);
     }
@@ -437,7 +440,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setSavedProductNames((prev) => [...prev, trimmedName].sort());
       setProductForm({ ...productForm, name: trimmedName });
       setNewProductNameModal({ isOpen: false, productName: "" });
-      setMessage(`Product name "${trimmedName}" saved.`);
+      setSuccessModal({ isOpen: true, message: `Product name "${trimmedName}" saved.` });
     } catch (err) {
       setMessage("Failed to save product name: " + err.message);
     }
@@ -554,7 +557,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     });
     setIsCreateDescriptionEdited(false);
     setProductImageColorway("DEFAULT");
-    setMessage("Product created.");
+    setSuccessModal({ isOpen: true, message: "Product created." });
     await loadAdminData(token, adminRole);
   };
 
@@ -571,7 +574,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         ...prev,
         colorwayImages: { ...(prev.colorwayImages || {}), [targetColorway]: data.url }
       }));
-      setMessage(`Product image uploaded for ${formatColorwayLabel(targetColorway)}. Save Product to apply it.`);
+      setSuccessModal({ isOpen: true, message: `Product image uploaded for ${formatColorwayLabel(targetColorway)}. Save Product to apply it.` });
     } finally {
       setIsCreateImageUploading(false);
     }
@@ -600,7 +603,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         ...prev,
         colorwayImages: { ...(prev.colorwayImages || {}), [targetColorway]: data.url }
       }));
-      setMessage(`Image updated for ${formatColorwayLabel(targetColorway)}.`);
+      setSuccessModal({ isOpen: true, message: `Image updated for ${formatColorwayLabel(targetColorway)}.` });
       await loadAdminData(token, adminRole);
     } finally {
       setIsEditImageUploading(false);
@@ -677,7 +680,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       },
       token
     );
-    setMessage("Product updated.");
+    setSuccessModal({ isOpen: true, message: "Product updated." });
     await loadAdminData(token, adminRole);
   };
 
@@ -717,7 +720,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       token
     );
     closeColorwayDeleteModal();
-    setMessage(`Colorway "${colorwayLabel}" deleted.`);
+    setSuccessModal({ isOpen: true, message: `Colorway "${colorwayLabel}" deleted.` });
     await loadAdminData(token, adminRole);
   };
 
@@ -813,7 +816,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       }
     }
     await Promise.all(requests);
-    setMessage(`Price ${formatPriceLabel(parsedPrice)} applied to all sizes.`);
+    setSuccessModal({ isOpen: true, message: `Price ${formatPriceLabel(parsedPrice)} applied to all sizes.` });
     await loadAdminData(token, adminRole);
   };
 
@@ -859,9 +862,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       price: prev.price
     }));
     if (mode === "price") {
-      setMessage(`Size price saved: ${formatPriceLabel(parsedPrice)}.`);
+      setSuccessModal({ isOpen: true, message: `Size price saved: ${formatPriceLabel(parsedPrice)}.` });
     } else {
-      setMessage(mode === "remove" ? "Stock removed." : "Stock added.");
+      setSuccessModal({ isOpen: true, message: mode === "remove" ? "Stock removed." : "Stock added." });
     }
     await loadAdminData(token, adminRole);
   };
@@ -881,7 +884,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     await apiRequest("/api/admin/users/admins", "POST", payload, token);
     setNewAdminModal({ isOpen: false });
     setNewAdminForm({ username: "", password: "", role: "ADMIN" });
-    setMessage("New admin user added.");
+    setSuccessModal({ isOpen: true, message: "New admin user added." });
     await loadAdminData(token, adminRole);
   };
 
@@ -891,7 +894,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     const action = enabled ? "enable" : "disable";
     await apiRequest(`/api/admin/users/admins/${userId}/${action}`, "PATCH", undefined, token);
-    setMessage(`Admin user ${enabled ? "enabled" : "disabled"}.`);
+    setSuccessModal({ isOpen: true, message: `Admin user ${enabled ? "enabled" : "disabled"}.` });
     await loadAdminData(token, adminRole);
   };
 
@@ -938,7 +941,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       }));
       markReservationSaved(orderId, savedField);
       if (successMessage) {
-        setMessage(successMessage);
+        setSuccessModal({ isOpen: true, message: successMessage });
       }
     } finally {
       setUpdatingOrderId(null);
@@ -1047,7 +1050,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         });
         return next;
       });
-      setMessage(`Reservation #${orderId} deleted and stock restored.`);
+      setSuccessModal({ isOpen: true, message: `Reservation #${orderId} deleted and stock restored.` });
       closeReservationDeleteModal();
     } catch (err) {
       setMessage(err.message);
@@ -1321,7 +1324,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const totalReservations = orders.length;
     const preparingCount = orders.filter((order) => normalizeReservationStatus(order.status) === "PREPARING").length;
     const shippedCount = orders.filter((order) => normalizeReservationStatus(order.status) === "SHIPPED").length;
-    const deliveredCount = orders.filter((order) => normalizeReservationStatus(order.status) === "DELIVERED").length;
+    const paidCount = orders.filter((order) => normalizeReservationStatus(order.status) === "PAID").length;
     const totalSalesAll = orders.reduce((sum, order) => {
       const parsed = Number(order.totalPrice);
       if (!Number.isFinite(parsed) || parsed < 0) {
@@ -1329,8 +1332,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       }
       return sum + parsed;
     }, 0);
-    const totalSalesDelivered = orders.reduce((sum, order) => {
-      if (normalizeReservationStatus(order.status) !== "DELIVERED") {
+    const totalSalesPaid = orders.reduce((sum, order) => {
+      if (normalizeReservationStatus(order.status) !== "PAID") {
         return sum;
       }
       const parsed = Number(order.totalPrice);
@@ -1350,9 +1353,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       totalReservations,
       preparingCount,
       shippedCount,
-      deliveredCount,
+      paidCount,
       totalSalesAll,
-      totalSalesDelivered,
+      totalSalesPaid,
       activeProducts,
       lowStockSizes
     };
@@ -1731,8 +1734,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               <h3>{reservationStats.preparingCount}</h3>
             </article>
             <article className="admin-summary-card">
-              <p>Total Sales (Delivered only)</p>
-              <h3 className="admin-summary-value admin-summary-value-price">{formatPriceLabel(reservationStats.totalSalesDelivered)}</h3>
+              <p>Total Sales (Paid only)</p>
+              <h3 className="admin-summary-value admin-summary-value-price">{formatPriceLabel(reservationStats.totalSalesPaid)}</h3>
             </article>
             <article className="admin-summary-card">
               <p>Total Sales (All reservations)</p>
@@ -1743,8 +1746,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               <h3>{reservationStats.shippedCount}</h3>
             </article>
             <article className="admin-summary-card">
-              <p>Delivered</p>
-              <h3>{reservationStats.deliveredCount}</h3>
+              <p>Paid</p>
+              <h3>{reservationStats.paidCount}</h3>
             </article>
             {reservationMopTotals.map((entry) => (
               <article key={`mop-total-${entry.key}`} className="admin-summary-card admin-summary-card-accent">
@@ -2620,56 +2623,53 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
                 <section className="edit-modal-section">
                   <h3>Image by Colorway</h3>
-                  <p className="field-hint">Image preview follows the selected colorway target in real time.</p>
-                  <div className="row">
-                    <input
-                      placeholder="Image URL"
-                      value={editProductForm.imageUrl}
-                      onChange={(e) => setEditProductForm({ ...editProductForm, imageUrl: e.target.value })}
-                    />
-                  </div>
-                  <div className="row">
-                    <select value={editImageColorway} disabled>
-                      {editImageColorwayOptions.map((colorway) => (
-                        <option key={`edit-image-${colorway}`} value={colorway}>
-                          {formatColorwayLabel(colorway)}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      id="edit-product-image-file"
-                      className="sr-only-file-input"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                       onChange={handleEditProductImageChange}
-                    />
-                    <label htmlFor="edit-product-image-file" className="image-upload-trigger-enterprise">
-                      <ImagePlus size={16} />
-                      <span>{editProductImageFile ? "Change Image File" : "Choose Product Image"}</span>
-                    </label>
-                      <div className="image-upload-meta-row">
-                      <small className="field-hint image-upload-name">
-                        {editProductImageFile
-                          ? `${editProductImageFile.name} · ${formatFileSize(editProductImageFile.size)} · ${getFileFormatLabel(editProductImageFile)}`
-                          : "No file selected"}
-                      </small>
-                        <small className="field-hint image-upload-note">
-                          {isEditImageUploading ? "Uploading image..." : (editProductImageFile ? "Uploaded. Select another file to replace." : "Auto-upload starts after file selection.")}
-                        </small>
-                    </div>
-                    <small className="field-hint image-upload-note">Supported formats: JPG/PNG/WEBP/GIF/AVIF (max 5MB).</small>
-                    {(editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl)
-                      ? (
-                        <div className="image-upload-preview-inline">
-                          <img
-                            className="logo-preview"
-                            src={editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl}
-                            alt="Edit product preview"
-                          />
-                          <small className="field-hint image-upload-preview-label">Preview</small>
+                  <p className="field-hint">Upload design now matches Add Product.</p>
+                  <p className="field-hint">Target colorway: <strong>{formatColorwayLabel(editImageColorway)}</strong></p>
+                  <div className="row add-product-upload-row">
+                    <div className="image-upload-stack">
+                      <div className="image-upload-headline">
+                        <strong>Product Image</strong>
+                        <small>Attach an image to the selected colorway.</small>
+                      </div>
+                      <div className="image-upload-section">
+                        <input
+                          id="edit-product-image-file"
+                          className="sr-only-file-input"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                          onChange={handleEditProductImageChange}
+                        />
+                        <div className="product-image-upload-tile-wrap">
+                          <label htmlFor="edit-product-image-file" className="product-image-upload-tile" title="Click to upload product image">
+                            {(editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl)
+                              ? (
+                                <img
+                                  className="product-image-upload-tile-img"
+                                  src={editProductForm.colorwayImages?.[normalizeColorwayValue(editImageColorway)] || editProductForm.imageUrl}
+                                  alt="Edit product preview"
+                                />
+                                )
+                              : (
+                                <span className="product-image-upload-placeholder">
+                                  <ImagePlus size={20} />
+                                </span>
+                                )}
+                            {isEditImageUploading ? <span className="product-image-uploading">•••</span> : null}
+                          </label>
+                          <div className="product-image-upload-copy">
+                            <small className="field-hint image-upload-name">
+                              {editProductImageFile
+                                ? `${editProductImageFile.name} · ${formatFileSize(editProductImageFile.size)} · ${getFileFormatLabel(editProductImageFile)}`
+                                : "No file selected"}
+                            </small>
+                            <small className="field-hint image-upload-note">
+                              {isEditImageUploading ? "Uploading image..." : (editProductImageFile ? "Uploaded. Click the tile to replace." : "Click the tile to upload. Auto-upload starts immediately.")}
+                            </small>
+                          </div>
                         </div>
-                        )
-                      : null}
+                        <small className="field-hint image-upload-note">Supported formats: JPG/PNG/WEBP/GIF/AVIF (max 5MB).</small>
+                      </div>
+                    </div>
                   </div>
                 </section>
 
@@ -3008,6 +3008,22 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         savedProductNames={savedProductNames}
         deleteSavedProductName={deleteSavedProductName}
       />
+      {successModal.isOpen ? (
+        <div className="modal-overlay" onClick={() => setSuccessModal({ isOpen: false, message: "" })}>
+          <section className="modal-panel modal-panel-compact" onClick={(e) => e.stopPropagation()}>
+            <div className="breakdown-header">
+              <h2>Success</h2>
+              <button type="button" className="modal-close-btn" aria-label="Close success modal" onClick={() => setSuccessModal({ isOpen: false, message: "" })}>✕</button>
+            </div>
+            <div className="modal-success-content">
+              <p style={{ margin: "16px 0", textAlign: "center" }}>{successModal.message}</p>
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <button type="button" onClick={() => setSuccessModal({ isOpen: false, message: "" })} style={{ minWidth: "120px" }}>OK</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {message || undoQueue.length > 0 ? (
         <div className="toast-banner">
           {message ? <span className="toast-message-text">{message}</span> : null}

@@ -346,12 +346,9 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     }
 
     const result = [];
-    const usedVariantKeys = new Set();
+    const usedProductIds = new Set();
     for (const topItem of topViewedItems) {
-      const variantKey = topItem.hasColorwayKey
-        ? `${topItem.productId}-${topItem.colorwayKey}`
-        : `product-${topItem.productId}`;
-      if (usedVariantKeys.has(variantKey)) {
+      if (usedProductIds.has(topItem.productId)) {
         continue;
       }
       const productMatches = products.filter((item) => item.id === topItem.productId);
@@ -368,7 +365,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         ? topItem.colorwayKey
         : normalizeColorwayValue(match?._colorwayVariant || "DEFAULT");
       if (match && getColorwayImageUrl(match, resolvedColorway)) {
-        usedVariantKeys.add(variantKey);
+        usedProductIds.add(topItem.productId);
         result.push({
           ...match,
           _popularColorway: resolvedColorway,
