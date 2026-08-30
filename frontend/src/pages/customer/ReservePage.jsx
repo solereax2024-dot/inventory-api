@@ -41,7 +41,6 @@ export default function ReservePage() {
     sizeGroup: "MEN",
     quantity: 1
   });
-  const [entryColorway, setEntryColorway] = useState(null);
   const [zoomIdx, setZoomIdx] = useState(0);
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const [baseImageScale, setBaseImageScale] = useState(() => (
@@ -50,6 +49,9 @@ export default function ReservePage() {
   const imgWrapRef = useRef(null);
   const thumbnailRailRef = useRef(null);
   const relatedRailRef = useRef(null);
+  const sizeSectionRef = useRef(null);
+  const customerNameInputRef = useRef(null);
+  const customerContactInputRef = useRef(null);
   const [thumbnailRailScrollRatio, setThumbnailRailScrollRatio] = useState(0);
   const [canScrollThumbnailRail, setCanScrollThumbnailRail] = useState(false);
   const [relatedRailScrollRatio, setRelatedRailScrollRatio] = useState(0);
@@ -105,12 +107,12 @@ export default function ReservePage() {
   );
   const prioritizedColorways = useMemo(() => {
     if (colorways.length === 0) return [];
-    const matchingEntryColorway = colorways.find(
-      (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(entryColorway)
+    const matchingSelectedColorway = colorways.find(
+      (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(reserve.colorway)
     );
-    if (!matchingEntryColorway) return colorways;
-    return [matchingEntryColorway, ...colorways.filter((colorway) => colorway !== matchingEntryColorway)];
-  }, [colorways, entryColorway]);
+    if (!matchingSelectedColorway) return colorways;
+    return [matchingSelectedColorway, ...colorways.filter((colorway) => colorway !== matchingSelectedColorway)];
+  }, [colorways, reserve.colorway]);
   const selectedDepartment = useMemo(
     () => getDepartmentForColorway(product, reserve.colorway),
     [product, reserve.colorway]
@@ -315,10 +317,6 @@ export default function ReservePage() {
      }));
    }, [product, colorways, searchParams]);
 
-  useEffect(() => {
-    const clickedColorway = searchParams.get("colorway");
-    setEntryColorway(clickedColorway || null);
-  }, [productId, searchParams]);
 
   useEffect(() => {
     if (!product?.id) return;
@@ -395,52 +393,91 @@ export default function ReservePage() {
     }));
   };
 
-  const validateReserve = () => {
-    if (!product || !reserve.colorway || !reserve.size) {
-      throw new Error("Please select a product, colorway, and size.");
-    }
+   const validateReserve = () => {
+     if (!product || !reserve.colorway || !reserve.size) {
+       const error = new Error("Please select a product, colorway, and size.");
+       error.fieldId = "size";
+       throw error;
+     }
 
-    const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
-    if (!selectedRow || selectedRow.total <= 0) {
-      throw new Error("Please select an available size.");
-    }
+     const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
+     if (!selectedRow || selectedRow.total <= 0) {
+       const error = new Error("Please select an available size.");
+       error.fieldId = "size";
+       throw error;
+     }
 
-    if (!reserve.customerName || reserve.customerName.trim() === "") {
-      throw new Error("Please enter your name.");
-    }
-    if (!reserve.customerContact || reserve.customerContact.trim() === "") {
-      throw new Error("Please enter your contact (number, FB, or IG).");
-    }
+     if (!reserve.customerName || reserve.customerName.trim() === "") {
+       const error = new Error("Please enter your name.");
+       error.fieldId = "customerName";
+       throw error;
+     }
+     if (!reserve.customerContact || reserve.customerContact.trim() === "") {
+       const error = new Error("Please enter your contact (number, FB, or IG).");
+       error.fieldId = "customerContact";
+       throw error;
+     }
 
-    const quantity = Number(reserve.quantity);
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      throw new Error("Please enter a valid quantity.");
-    }
+     const quantity = Number(reserve.quantity);
+     if (!Number.isFinite(quantity) || quantity <= 0) {
+       const error = new Error("Please enter a valid quantity.");
+       error.fieldId = "quantity";
+       throw error;
+     }
 
-    return {
-      customerName: reserve.customerName.trim(),
-      customerContact: reserve.customerContact.trim(),
-      notes: reserve.notes.trim(),
-      items: [
-        {
-          productId: Number(product.id),
-          colorway: reserve.colorway,
-          size: reserve.size,
-          sizeGroup: activeSizeGroup,
-          quantity
-        }
-      ]
-    };
-  };
+     return {
+       customerName: reserve.customerName.trim(),
+       customerContact: reserve.customerContact.trim(),
+       notes: reserve.notes.trim(),
+       items: [
+         {
+           productId: Number(product.id),
+           colorway: reserve.colorway,
+           size: reserve.size,
+           sizeGroup: activeSizeGroup,
+           quantity
+         }
+       ]
+     };
+   };
 
-  const openConfirmation = () => {
-    try {
-      validateReserve();
-      setIsConfirmOpen(true);
-    } catch (err) {
-      setMessage(err.message);
-    }
-  };
+   const scrollToField = (fieldId) => {
+     let targetElement = null;
+     let scrollOptions = { behavior: "smooth", block: "center" };
+
+     if (fieldId === "size" && sizeSectionRef.current) {
+       targetElement = sizeSectionRef.current;
+     } else if (fieldId === "customerName" && customerNameInputRef.current) {
+       targetElement = customerNameInputRef.current;
+       scrollOptions = { behavior: "smooth", block: "nearest" };
+     } else if (fieldId === "customerContact" && customerContactInputRef.current) {
+       targetElement = customerContactInputRef.current;
+       scrollOptions = { behavior: "smooth", block: "nearest" };
+     }
+
+     if (targetElement) {
+       // Scroll into view with smooth behavior
+       targetElement.scrollIntoView(scrollOptions);
+
+       // Focus on input fields for better UX
+       if (fieldId === "customerName" || fieldId === "customerContact") {
+         setTimeout(() => targetElement?.focus(), 300);
+       }
+     }
+   };
+
+   const openConfirmation = () => {
+     try {
+       validateReserve();
+       setIsConfirmOpen(true);
+     } catch (err) {
+       setMessage(err.message);
+       // Scroll to the field that caused the error
+       if (err.fieldId) {
+         scrollToField(err.fieldId);
+       }
+     }
+   };
 
   const reserveNow = async () => {
     const payload = validateReserve();
@@ -658,8 +695,11 @@ export default function ReservePage() {
               ) : null}
             </div>
 
-            {/* Size & Availability */}
-            <div className={`form-section reserve-accordion-section ${isMobileSectionOpen("size") ? "open" : ""}`}>
+             {/* Size & Availability */}
+             <div 
+               ref={sizeSectionRef}
+               className={`form-section reserve-accordion-section ${isMobileSectionOpen("size") ? "open" : ""}`}
+             >
               <button
                 type="button"
                 className="reserve-accordion-toggle"
@@ -824,24 +864,26 @@ export default function ReservePage() {
               <div className="reserve-accordion-body" id={infoSectionId}>
               <label>Your Info</label>
               <div className="customer-info-grid">
-                <div className="customer-info-field">
-                  <span className="customer-field-label">Name <span className="required">*</span></span>
-                  <input
-                    placeholder="Enter your name"
-                    value={reserve.customerName}
-                    onChange={(e) => setReserve({ ...reserve, customerName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="customer-info-field">
-                  <span className="customer-field-label">Contact (Number / FB / IG) <span className="required">*</span></span>
-                  <input
-                    placeholder="Enter your contact"
-                    value={reserve.customerContact}
-                    onChange={(e) => setReserve({ ...reserve, customerContact: e.target.value })}
-                    required
-                  />
-                </div>
+                 <div className="customer-info-field">
+                   <span className="customer-field-label">Name <span className="required">*</span></span>
+                   <input
+                     ref={customerNameInputRef}
+                     placeholder="Enter your name"
+                     value={reserve.customerName}
+                     onChange={(e) => setReserve({ ...reserve, customerName: e.target.value })}
+                     required
+                   />
+                 </div>
+                 <div className="customer-info-field">
+                   <span className="customer-field-label">Contact (Number / FB / IG) <span className="required">*</span></span>
+                   <input
+                     ref={customerContactInputRef}
+                     placeholder="Enter your contact"
+                     value={reserve.customerContact}
+                     onChange={(e) => setReserve({ ...reserve, customerContact: e.target.value })}
+                     required
+                   />
+                 </div>
               </div>
               <div className="customer-notes-field">
                 <span className="customer-field-label">Notes <span className="field-hint-inline">(optional)</span></span>
