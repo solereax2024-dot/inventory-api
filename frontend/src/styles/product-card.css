@@ -166,7 +166,7 @@ body.theme-dark .product-price {
   right: 6px;
   z-index: 3;
   margin-top: 0;
-  font-size: 6px;
+  font-size: 6.5px;
   padding: 1px 6px;
   background: color-mix(in srgb, var(--primary-soft-2) 82%, #ffffff);
   backdrop-filter: blur(2px);
@@ -374,7 +374,7 @@ body.theme-dark .product-price {
    }
 
     .department-chip-bottom {
-      font-size: 5px;
+        font-size: 6px;
     }
 
    .product-demand-overlay {
