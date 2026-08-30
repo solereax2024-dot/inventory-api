@@ -8,6 +8,7 @@ import { getColorwayDetails, sanitizeColorways, normalizeColorwayValue } from ".
 import { getSortedColorwaysFromStocks, buildSizeStateRows, getStockStorageGroup } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { buildDefaultProductDescription } from "../../utils/productDescription";
+import { PHP_CURRENCY } from "../../utils/price";
 import "../../styles/admin.css";
 import ConfirmActionModal from "./ConfirmActionModal";
 import DeleteModal from "./DeleteModal";
@@ -96,13 +97,6 @@ function getFileFormatLabel(file) {
   const ext = name.includes(".") ? name.split(".").pop() : "";
   return ext ? ext.toUpperCase() : "UNKNOWN";
 }
-
-const PHP_CURRENCY = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2
-});
 
 function formatPriceLabel(value) {
   if (value === null || value === undefined || value === "") {
@@ -358,7 +352,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setMessage("Only SUPER_ADMIN can delete stocks/products.");
       return;
     }
-    console.log("Delete clicked for product:", productId);
     const confirmCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     setDeleteModal({ isOpen: true, productId, confirmCode, userInput: "" });
   };

@@ -1,48 +1,109 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye } from "lucide-react";
 import { getColorwayDetails, getColorwayImageUrl, sanitizeColorways, sortColorways } from "../utils/colorway";
 import { formatEnumLabel } from "../utils/format";
+import { formatPriceDisplay } from "../utils/price";
 import "../styles/product-card.css";
 
-const PHP_CURRENCY = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2
-});
 
-function formatPriceDisplay(minPrice, maxPrice) {
-  const min = Number(minPrice);
-  const max = Number(maxPrice);
-  const hasMin = Number.isFinite(min) && min > 0;
-  const hasMax = Number.isFinite(max) && max > 0;
-  if (!hasMin && !hasMax) {
-    return "";
-  }
-  if (hasMin && hasMax) {
-    if (Math.abs(min - max) < 0.01) {
-      return PHP_CURRENCY.format(min);
-    }
-    return `${PHP_CURRENCY.format(Math.min(min, max))} - ${PHP_CURRENCY.format(Math.max(min, max))}`;
-  }
-  const fallback = hasMin ? min : max;
-  return PHP_CURRENCY.format(fallback);
-}
-
-export default function ProductCard({ product, onReserveClick, initialColorway }) {
+export default function ProductCard({
+  product,
+  onReserveClick,
+  initialColorway,
+  autoCycleColorways = false,
+  autoCycleOffsetMs = 0,
+  autoCycleIntervalMs = 2200,
+  autoCycleJitterMs = 0
+}) {
   const colorways = useMemo(() => {
     return sortColorways(sanitizeColorways((product.stocks || []).map((stock) => stock.colorway)));
   }, [product.stocks]);
 
   const [selectedColorway, setSelectedColorway] = useState(initialColorway || colorways[0] || "DEFAULT");
+  const [isCyclePaused, setIsCyclePaused] = useState(false);
+  const hasCycleStartedRef = useRef(false);
+  const resumeTimerRef = useRef(null);
+
+  const clearResumeTimer = () => {
+    if (resumeTimerRef.current) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+  };
+
+  const scheduleResume = (delayMs = 0) => {
+    if (!autoCycleColorways) {
+      return;
+    }
+    clearResumeTimer();
+    const nextDelay = Math.max(0, Number(delayMs) || 0);
+    if (nextDelay === 0) {
+      setIsCyclePaused(false);
+      return;
+    }
+    resumeTimerRef.current = window.setTimeout(() => {
+      setIsCyclePaused(false);
+      resumeTimerRef.current = null;
+    }, nextDelay);
+  };
 
   useEffect(() => {
     if (initialColorway) {
       setSelectedColorway(initialColorway);
-    } else if (!colorways.includes(selectedColorway)) {
+    }
+  }, [initialColorway]);
+
+  useEffect(() => {
+    if (!initialColorway && !colorways.includes(selectedColorway)) {
       setSelectedColorway(colorways[0] || "DEFAULT");
     }
   }, [colorways, selectedColorway, initialColorway]);
+
+  useEffect(() => () => clearResumeTimer(), []);
+
+  useEffect(() => {
+    if (!autoCycleColorways || colorways.length <= 1 || isCyclePaused) {
+      return undefined;
+    }
+
+    const advanceColorway = () => {
+      setSelectedColorway((current) => {
+        const currentIndex = colorways.indexOf(current);
+        if (currentIndex < 0) {
+          return colorways[0] || "DEFAULT";
+        }
+        const nextIndex = (currentIndex + 1) % colorways.length;
+        return colorways[nextIndex] || current;
+      });
+    };
+
+    const cycleMs = Math.max(1200, Number(autoCycleIntervalMs) || 2200);
+    const cycleJitterMs = Math.max(0, Number(autoCycleJitterMs) || 0);
+    const getNextDelay = () => {
+      if (cycleJitterMs <= 0) {
+        return cycleMs;
+      }
+      const minDelay = Math.max(900, cycleMs - cycleJitterMs);
+      const maxDelay = cycleMs + cycleJitterMs;
+      return Math.round(minDelay + (Math.random() * (maxDelay - minDelay)));
+    };
+
+    let timeoutId;
+    const scheduleNext = (delayMs) => {
+      timeoutId = window.setTimeout(() => {
+        advanceColorway();
+        hasCycleStartedRef.current = true;
+        scheduleNext(getNextDelay());
+      }, Math.max(0, Number(delayMs) || 0));
+    };
+
+    const initialDelay = hasCycleStartedRef.current ? getNextDelay() : Math.max(0, Number(autoCycleOffsetMs) || 0);
+    scheduleNext(initialDelay);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [autoCycleColorways, autoCycleOffsetMs, autoCycleIntervalMs, autoCycleJitterMs, colorways, isCyclePaused]);
 
   const colorwayDetails = useMemo(
     () => getColorwayDetails(product, selectedColorway),
@@ -53,7 +114,33 @@ export default function ProductCard({ product, onReserveClick, initialColorway }
 
   return (
     <article className="card product-card">
-      <button type="button" className="product-image-wrap product-image-button" onClick={() => onReserveClick(product.id, selectedColorway)}>
+      <button
+        type="button"
+        className="product-image-wrap product-image-button"
+        onMouseEnter={() => {
+          if (!autoCycleColorways) return;
+          clearResumeTimer();
+          setIsCyclePaused(true);
+        }}
+        onMouseLeave={() => scheduleResume(720)}
+        onFocus={() => {
+          if (!autoCycleColorways) return;
+          clearResumeTimer();
+          setIsCyclePaused(true);
+        }}
+        onBlur={() => scheduleResume(820)}
+        onPointerDown={() => {
+          if (!autoCycleColorways) return;
+          clearResumeTimer();
+          setIsCyclePaused(true);
+        }}
+        onPointerUp={() => scheduleResume(1100)}
+        onPointerCancel={() => scheduleResume(820)}
+        onClick={() => {
+          scheduleResume(1200);
+          onReserveClick(product.id, selectedColorway);
+        }}
+      >
         {colorwayDetails.department && (
           <span className="department-chip department-chip-bottom">{formatEnumLabel(colorwayDetails.department)}</span>
         )}
@@ -63,7 +150,17 @@ export default function ProductCard({ product, onReserveClick, initialColorway }
         </small>
         {(() => {
           const imgUrl = getColorwayImageUrl(product, selectedColorway);
-          if (imgUrl) return <img className="product-image" src={imgUrl} alt={product.name} loading="lazy" />;
+          if (imgUrl) {
+            return (
+              <img
+                key={`${product.id}-${selectedColorway}`}
+                className={`product-image${autoCycleColorways ? " product-image-cycle" : ""}`}
+                src={imgUrl}
+                alt={product.name}
+                loading="lazy"
+              />
+            );
+          }
           return (
             <div className="product-image-fallback">
               <span>👟</span>

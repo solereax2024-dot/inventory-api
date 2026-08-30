@@ -9,6 +9,7 @@ import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
+import { PHP_CURRENCY, formatPriceDisplay } from "../../utils/price";
 import ProductCard from "../../components/ProductCard";
 
 const ZOOM_LEVELS = [1, 2, 3];
@@ -16,30 +17,6 @@ const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to rese
 const DESKTOP_BREAKPOINT = 901;
 const DESKTOP_BASE_IMAGE_SCALE = 1;
 const MOBILE_BASE_IMAGE_SCALE = 1;
-const PHP_CURRENCY = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2
-});
-
-function formatPriceRange(minPrice, maxPrice) {
-  const min = Number(minPrice);
-  const max = Number(maxPrice);
-  const hasMin = Number.isFinite(min) && min > 0;
-  const hasMax = Number.isFinite(max) && max > 0;
-  if (!hasMin && !hasMax) {
-    return "";
-  }
-  if (hasMin && hasMax) {
-    if (Math.abs(min - max) < 0.01) {
-      return PHP_CURRENCY.format(min);
-    }
-    return `${PHP_CURRENCY.format(Math.min(min, max))} - ${PHP_CURRENCY.format(Math.max(min, max))}`;
-  }
-  const fallback = hasMin ? min : max;
-  return PHP_CURRENCY.format(fallback);
-}
 
 export default function ReservePage() {
   const navigate = useNavigate();
@@ -167,7 +144,7 @@ export default function ReservePage() {
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }, [activeSizeSection, reserve.size]);
   const selectedColorwayPriceRange = useMemo(
-    () => formatPriceRange(selectedColorwayDetails?.minPrice, selectedColorwayDetails?.maxPrice),
+    () => formatPriceDisplay(selectedColorwayDetails?.minPrice, selectedColorwayDetails?.maxPrice),
     [selectedColorwayDetails]
   );
   const selectReserveSize = (baseSize, sizeGroup) => {

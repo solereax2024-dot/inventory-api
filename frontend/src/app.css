@@ -404,12 +404,19 @@ body {
 }
 
 .eyebrow {
-  margin-bottom: 12px;
-  font-size: var(--typo-label-size);
+  margin-bottom: 14px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: var(--typo-label-track);
   font-weight: var(--typo-label-weight);
   color: var(--text-muted);
+}
+
+.hero .eyebrow,
+.brands-hero .eyebrow,
+.brands-directory-head .eyebrow {
+  margin-bottom: 18px;
+  font-size: 12.5px;
 }
 
 .card {
@@ -645,6 +652,36 @@ table {
   margin-top: 0;
   width: auto;
   padding-inline: 12px;
+}
+
+.catalog-section-head {
+  margin: 8px 0 10px;
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
+
+.catalog-section-head-copy {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.catalog-section-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.catalog-section-head p {
+  margin: 0;
+  max-width: 44ch;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .actions-inline {
@@ -1688,6 +1725,14 @@ body.theme-dark .form-section label {
   text-shadow: 0 1px 1px rgba(2, 6, 23, 0.35);
 }
 
+body.theme-dark .catalog-section-label {
+  color: #94a3b8;
+}
+
+body.theme-dark .catalog-section-head p {
+  color: #cbd5e1;
+}
+
 body.theme-dark .hero-collection-tile {
   background:
     linear-gradient(160deg, rgba(255, 255, 255, 0.035), transparent 38%),
@@ -1838,6 +1883,11 @@ body.theme-dark .reserve-form-actions {
     -webkit-text-size-adjust: 100%;
   }
 
+  .eyebrow {
+    margin-bottom: 14px;
+    font-size: var(--typo-label-size);
+  }
+
   .app-shell {
     padding-top: 66px;
   }
@@ -1908,6 +1958,22 @@ body.theme-dark .reserve-form-actions {
     align-items: center;
     text-align: center;
   }
+
+  .catalog-section-head {
+    margin: 2px 0 0;
+    align-items: center;
+  }
+
+  .catalog-section-label {
+    font-size: 14.5px;
+    letter-spacing: 0.045em;
+  }
+
+  .catalog-section-head p {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
 
   .filter-bar-top {
     flex-direction: row;

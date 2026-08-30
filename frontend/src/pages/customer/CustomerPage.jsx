@@ -380,7 +380,13 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         break;
       }
     }
-    return result;
+    return result.sort((a, b) => {
+      const viewDiff = Number(b?.viewCount || 0) - Number(a?.viewCount || 0);
+      if (viewDiff !== 0) {
+        return viewDiff;
+      }
+      return String(a?.name || "").localeCompare(String(b?.name || ""));
+    });
   }, [shouldShowPopularRail, topViewedItems, products]);
 
   useEffect(() => {
@@ -510,6 +516,10 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                   product={product}
                   onReserveClick={openReservePage}
                   initialColorway={product._popularColorway || product._colorwayVariant}
+                  autoCycleColorways
+                  autoCycleOffsetMs={((product.id || 0) % 5) * 360}
+                  autoCycleIntervalMs={2450 + (((product.id || 0) % 6) * 180)}
+                  autoCycleJitterMs={520}
                 />
               </article>
             ))}
@@ -632,6 +642,13 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
           </aside>
         </div>
       ) : null}
+
+       <section className="catalog-section-head" aria-label="Collection heading">
+         <div className="catalog-section-head-copy">
+           <span className="catalog-section-label">Collections</span>
+           <p>Explore standout pieces across featured brands.</p>
+         </div>
+       </section>
 
        <section className="grid">
          {isLoadingProducts
