@@ -55,7 +55,7 @@ export default function ProductCard({ product, onReserveClick, initialColorway }
     <article className="card product-card">
       <button type="button" className="product-image-wrap product-image-button" onClick={() => onReserveClick(product.id, selectedColorway)}>
         {colorwayDetails.department && (
-          <span className="department-chip department-chip-left">{formatEnumLabel(colorwayDetails.department)}</span>
+          <span className="department-chip department-chip-bottom">{formatEnumLabel(colorwayDetails.department)}</span>
         )}
         <small className="product-demand-overlay">
           <Eye size={11} strokeWidth={2.2} />
