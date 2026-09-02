@@ -216,6 +216,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     });
     const [stockSummaryRowDrafts, setStockSummaryRowDrafts] = useState({});
     const [stockSummarySavingRow, setStockSummarySavingRow] = useState("");
+    const [editingCell, setEditingCell] = useState(null);
   const [hasStockGuideOnboardingShown, setHasStockGuideOnboardingShown] = useState(
     () => localStorage.getItem("adminStockGuideOnboardingShown") === "1"
   );
@@ -3141,13 +3142,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     <th>Total</th>
                     <th>Supplier / Origin</th>
                     <th>Price</th>
-                    <th>Quick Edit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStockSummaryRows.length === 0 ? (
                     <tr>
-                      <td colSpan={8}>No sizes match the selected filters.</td>
+                      <td colSpan={7}>No sizes match the selected filters.</td>
                     </tr>
                   ) : filteredStockSummaryRows.map((row) => {
                     const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
@@ -3158,29 +3158,37 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       price: row.price === null || row.price === undefined ? "" : String(row.price)
                     };
                     const isSavingRow = stockSummarySavingRow.startsWith(`${rowKey}:`);
+                    const editingOnhand = editingCell === `${rowKey}:onhand`;
+                    const editingSupplier = editingCell === `${rowKey}:supplier`;
+                    const editingPrice = editingCell === `${rowKey}:price`;
+
+                    const handleSaveOnhand = async (action) => {
+                      setEditingCell(null);
+                      await runStockSummaryQuickAction(row, action).catch((err) => setMessage(err.message));
+                    };
+
+                    const handleSaveSupplier = async () => {
+                      setEditingCell(null);
+                      await runStockSummaryQuickAction(row, "supplier").catch((err) => setMessage(err.message));
+                    };
+
+                    const handleSavePrice = async () => {
+                      setEditingCell(null);
+                      await runStockSummaryQuickAction(row, "price").catch((err) => setMessage(err.message));
+                    };
+
                     return (
                       <tr key={`stock-summary-${activeStockSizeGroup}-${row.baseSize}`}>
                         <td>US {row.displaySize}</td>
-                        <td>{row.onHand}</td>
-                        <td>{row.inTransit}</td>
-                        <td>{row.preOrder}</td>
-                        <td>
-                          <span className={`stock-summary-total-pill ${row.total > 0 && row.total <= 3 ? "is-low" : ""}`}>
-                            {row.total}
-                          </span>
-                        </td>
-                        <td>
-                          {row.supplier ? (
-                            <span className="stock-supplier-chip">{row.supplier}</span>
-                          ) : (
-                            <span className="stock-supplier-chip muted">Not set</span>
-                          )}
-                        </td>
-                        <td>{formatPriceLabel(row.price)}</td>
-                        <td>
-                          <div className="stock-quick-edit-cell">
-                            <div className="stock-quick-edit-line">
+                        <td 
+                          className="stock-cell-editable"
+                          onClick={() => !editingOnhand && !isSavingRow && setEditingCell(`${rowKey}:onhand`)}
+                          title="Click to adjust on-hand quantity"
+                        >
+                          {editingOnhand ? (
+                            <div className="stock-inline-edit-group" onClick={(e) => e.stopPropagation()}>
                               <input
+                                autoFocus
                                 type="number"
                                 min="1"
                                 step="1"
@@ -3189,7 +3197,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                   ...prev,
                                   [rowKey]: { ...rowDraft, quantityChange: Number(e.target.value) || 0 }
                                 }))}
-                                disabled={isSavingRow}
+                                onBlur={() => setEditingCell(null)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveOnhand("add");
+                                  if (e.key === "Escape") setEditingCell(null);
+                                }}
                               />
                               <select
                                 value={rowDraft.stockSourceType}
@@ -3197,17 +3209,34 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                   ...prev,
                                   [rowKey]: { ...rowDraft, stockSourceType: e.target.value }
                                 }))}
-                                disabled={isSavingRow}
                               >
                                 {STOCK_SOURCE_TYPES.map((type) => (
                                   <option key={`summary-row-source-${rowKey}-${type}`} value={type}>{STOCK_SOURCE_LABELS[type]}</option>
                                 ))}
                               </select>
-                              <button type="button" onClick={() => runStockSummaryQuickAction(row, "add").catch((err) => setMessage(err.message))} disabled={isSavingRow}>+ Add</button>
-                              <button type="button" className="button-secondary" onClick={() => runStockSummaryQuickAction(row, "remove").catch((err) => setMessage(err.message))} disabled={isSavingRow}>- Remove</button>
+                              <button type="button" size="sm" onClick={() => handleSaveOnhand("add")} disabled={isSavingRow}>+</button>
+                              <button type="button" size="sm" onClick={() => handleSaveOnhand("remove")} disabled={isSavingRow}>−</button>
                             </div>
-                            <div className="stock-quick-edit-line">
+                          ) : (
+                            <span>{row.onHand}</span>
+                          )}
+                        </td>
+                        <td>{row.inTransit}</td>
+                        <td>{row.preOrder}</td>
+                        <td>
+                          <span className={`stock-summary-total-pill ${row.total > 0 && row.total <= 3 ? "is-low" : ""}`}>
+                            {row.total}
+                          </span>
+                        </td>
+                        <td 
+                          className="stock-cell-editable"
+                          onClick={() => !editingSupplier && !isSavingRow && setEditingCell(`${rowKey}:supplier`)}
+                          title="Click to edit supplier"
+                        >
+                          {editingSupplier ? (
+                            <div className="stock-inline-edit-single" onClick={(e) => e.stopPropagation()}>
                               <input
+                                autoFocus
                                 type="text"
                                 maxLength={140}
                                 placeholder="Supplier / origin"
@@ -3216,12 +3245,32 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                   ...prev,
                                   [rowKey]: { ...rowDraft, supplier: e.target.value }
                                 }))}
-                                disabled={isSavingRow}
+                                onBlur={handleSaveSupplier}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveSupplier();
+                                  if (e.key === "Escape") setEditingCell(null);
+                                }}
                               />
-                              <button type="button" className="button-secondary" onClick={() => runStockSummaryQuickAction(row, "supplier").catch((err) => setMessage(err.message))} disabled={isSavingRow}>Save Supplier</button>
                             </div>
-                            <div className="stock-quick-edit-line">
+                          ) : (
+                            <>
+                              {row.supplier ? (
+                                <span className="stock-supplier-chip">{row.supplier}</span>
+                              ) : (
+                                <span className="stock-supplier-chip muted">Not set</span>
+                              )}
+                            </>
+                          )}
+                        </td>
+                        <td 
+                          className="stock-cell-editable"
+                          onClick={() => !editingPrice && !isSavingRow && setEditingCell(`${rowKey}:price`)}
+                          title="Click to edit price"
+                        >
+                          {editingPrice ? (
+                            <div className="stock-inline-edit-single" onClick={(e) => e.stopPropagation()}>
                               <input
+                                autoFocus
                                 type="number"
                                 min="0"
                                 step="0.01"
@@ -3231,11 +3280,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                   ...prev,
                                   [rowKey]: { ...rowDraft, price: e.target.value }
                                 }))}
-                                disabled={isSavingRow}
+                                onBlur={handleSavePrice}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSavePrice();
+                                  if (e.key === "Escape") setEditingCell(null);
+                                }}
                               />
-                              <button type="button" className="button-secondary" onClick={() => runStockSummaryQuickAction(row, "price").catch((err) => setMessage(err.message))} disabled={isSavingRow}>Save Price</button>
                             </div>
-                          </div>
+                          ) : (
+                            <span>{formatPriceLabel(row.price)}</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -3249,7 +3303,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     <td>
                       <strong>{stockSummaryMetrics.uniqueSuppliers > 0 ? `${stockSummaryMetrics.uniqueSuppliers} supplier(s)` : "-"}</strong>
                     </td>
-                    <td><strong>-</strong></td>
                     <td><strong>-</strong></td>
                   </tr>
                 </tbody>
