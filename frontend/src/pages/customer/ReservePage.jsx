@@ -147,6 +147,10 @@ export default function ReservePage() {
     const parsed = Number(selectedRow?.price);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }, [activeSizeSection, reserve.size]);
+  const selectedSizePriceLabel = useMemo(
+    () => (selectedSizePrice !== null ? PHP_CURRENCY.format(selectedSizePrice) : ""),
+    [selectedSizePrice]
+  );
   const selectedSizeAvailableQuantity = useMemo(() => {
     const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
     return Number(selectedRow?.total || 0);
@@ -157,6 +161,7 @@ export default function ReservePage() {
     () => formatPriceDisplay(selectedColorwayDetails?.minPrice, selectedColorwayDetails?.maxPrice),
     [selectedColorwayDetails]
   );
+  const selectedColorwayPriceLabel = selectedColorwayPriceRange || selectedSizePriceLabel;
   const selectReserveSize = (baseSize, sizeGroup) => {
     setReserve((prev) => ({
       ...prev,
@@ -632,10 +637,8 @@ export default function ReservePage() {
 
             <div className="reserve-media-meta">
               <span className="colorway-display">{formatColorwayLabel(reserve.colorway)}</span>
-              {selectedSizePrice !== null ? (
-                <span className="reserve-size-price-badge">{PHP_CURRENCY.format(selectedSizePrice)}</span>
-              ) : selectedColorwayPriceRange ? (
-                <span className="reserve-size-price-badge">{selectedColorwayPriceRange}</span>
+              {selectedColorwayPriceLabel ? (
+                <span className="reserve-size-price-badge">{selectedColorwayPriceLabel}</span>
               ) : null}
             </div>
 
@@ -697,8 +700,8 @@ export default function ReservePage() {
               {selectedColorwayDetails?.description ? (
                 <p className="reserve-product-desc">{selectedColorwayDetails.description}</p>
               ) : null}
-              {selectedColorwayPriceRange ? (
-                <div className="reserve-product-price-display">{selectedColorwayPriceRange}</div>
+              {selectedColorwayPriceLabel ? (
+                <div className="reserve-product-price-display">{selectedColorwayPriceLabel}</div>
               ) : null}
             </div>
 
@@ -773,8 +776,8 @@ export default function ReservePage() {
               <small className="field-hint">
                 {isUnisexDepartment(selectedDepartment) ? "Unisex — shows both Men's & Women's sizing." : selectedDepartment === "WOMEN" ? "Women's sizing." : "Men's sizing."}
               </small>
-              {selectedSizePrice !== null ? (
-                <div className="size-price-hint">Selected size: <strong>{PHP_CURRENCY.format(selectedSizePrice)}</strong></div>
+              {selectedSizePriceLabel ? (
+                <div className="size-price-hint">Selected size: <strong>{selectedSizePriceLabel}</strong></div>
               ) : null}
               {isSizeGuideOpen && sizeGuide && sizeGuideSection ? (
                 <div className="modal-overlay" onClick={() => setIsSizeGuideOpen(false)}>
@@ -914,7 +917,7 @@ export default function ReservePage() {
         <div className="reserve-sticky-cta" role="complementary" aria-label="Quick reserve">
           <div className="reserve-sticky-cta-meta">
             <span className="reserve-sticky-cta-size">{selectedSizeLabel || `US ${reserve.size}`}</span>
-            <span className="reserve-sticky-cta-price">{selectedSizePrice !== null ? PHP_CURRENCY.format(selectedSizePrice) : (selectedColorwayPriceRange || "Select size")}</span>
+            <span className="reserve-sticky-cta-price">{selectedColorwayPriceLabel || "Select size"}</span>
           </div>
           <button type="button" className="btn-primary reserve-sticky-cta-btn" onClick={openConfirmation}>
             {primaryActionLabel}
@@ -991,8 +994,8 @@ export default function ReservePage() {
                   <div className="reserve-confirm-product-name">{product.name}</div>
                   {product.brand ? <div className="reserve-confirm-product-brand">{product.brand}</div> : null}
                   {isSelectedSizePreOrder ? <span className="reserve-confirm-preorder-badge">Pre-Order Item</span> : null}
-                  {selectedColorwayPriceRange ? (
-                    <div className="reserve-confirm-price-hint">{selectedColorwayPriceRange}</div>
+                  {selectedColorwayPriceLabel ? (
+                    <div className="reserve-confirm-price-hint">{selectedColorwayPriceLabel}</div>
                   ) : null}
                 </div>
               </div>
@@ -1013,7 +1016,7 @@ export default function ReservePage() {
                 {selectedSizePrice !== null ? (
                   <div className="reserve-confirm-item">
                     <span className="reserve-confirm-label">Unit Price</span>
-                    <strong>{PHP_CURRENCY.format(selectedSizePrice)}</strong>
+                    <strong>{selectedSizePriceLabel}</strong>
                   </div>
                 ) : null}
                 <div className="reserve-confirm-item">
