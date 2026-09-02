@@ -504,7 +504,7 @@ public class InventoryService {
             if (entry.getColorway() == null || entry.getImageUrl() == null) {
                 return;
             }
-            values.put(entry.getColorway(), entry.getImageUrl());
+            values.put(normalizeColorway(entry.getColorway()), entry.getImageUrl());
         });
         return values;
     }
@@ -513,11 +513,11 @@ public class InventoryService {
         Map<String, ColorwayDetailsResponse> values = new LinkedHashMap<>();
         Map<String, PriceRange> priceRangesByColorway = buildPriceRangesByColorway(product, forPublicView);
         product.getStocks().forEach(stock -> values.putIfAbsent(
-                stock.getColorway(),
+                normalizeColorway(stock.getColorway()),
                 fallbackColorwayDetails(product, stock.getColorway(), priceRangesByColorway, forPublicView)
         ));
         product.getColorwayImages().forEach(entry -> values.putIfAbsent(
-                entry.getColorway(),
+                normalizeColorway(entry.getColorway()),
                 fallbackColorwayDetails(product, entry.getColorway(), priceRangesByColorway, forPublicView)
         ));
         String normalizedMainColor = normalizeColorway(product.getMainColor());
@@ -578,12 +578,12 @@ public class InventoryService {
     private Map<String, PriceRange> buildPriceRangesByColorway(Product product, boolean forPublicView) {
         Map<String, BigDecimal> minByColorway = new LinkedHashMap<>();
         Map<String, BigDecimal> maxByColorway = new LinkedHashMap<>();
-        Set<String> colorwaysWithExplicitPrice = new LinkedHashSet<>();
+        Set<String> colorwaysWithStockPrice = new LinkedHashSet<>();
 
         product.getStocks().forEach(stock -> {
             String colorway = normalizeColorway(stock.getColorway());
-            if (stock.getPrice() != null) {
-                colorwaysWithExplicitPrice.add(colorway);
+            if (hasPositivePrice(stock.getPrice())) {
+                colorwaysWithStockPrice.add(colorway);
             }
             mergePriceRange(
                     minByColorway,
@@ -595,8 +595,8 @@ public class InventoryService {
 
         product.getColorwayDetails().forEach(detail -> {
             String colorway = normalizeColorway(detail.getColorway());
-            if (detail.getPrice() != null) {
-                colorwaysWithExplicitPrice.add(colorway);
+            if (colorwaysWithStockPrice.contains(colorway)) {
+                return;
             }
             mergePriceRange(
                     minByColorway,
@@ -615,7 +615,7 @@ public class InventoryService {
         knownColorways.stream()
                 .map(this::normalizeColorway)
                 .forEach(colorway -> {
-                    if (colorwaysWithExplicitPrice.contains(colorway)) {
+                    if (minByColorway.containsKey(colorway)) {
                         return;
                     }
                     BigDecimal fallbackPrice = resolveColorwayBasePrice(product, colorway);
@@ -630,6 +630,10 @@ public class InventoryService {
         Map<String, PriceRange> ranges = new LinkedHashMap<>();
         minByColorway.forEach((colorway, min) -> ranges.put(colorway, new PriceRange(min, maxByColorway.get(colorway))));
         return ranges;
+    }
+
+    private boolean hasPositivePrice(BigDecimal value) {
+        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
     }
 
     private void mergePriceRange(

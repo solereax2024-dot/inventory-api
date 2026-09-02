@@ -114,5 +114,71 @@ class InventoryServiceIntegrationTest {
                         org.assertj.core.groups.Tuple.tuple("Supplier 2", 2)
                 );
     }
+
+    @Test
+    void listAdminProductsBuildsPriceRangesPerColorwayFromStockPrices() {
+        Product product = new Product();
+        product.setName("Per Colorway Range Test");
+        product.setBrand("Test Brand");
+        product.setDepartment("MEN");
+        product.setCategory("FOOTWEAR");
+        product.setProductType("LIFESTYLE_SNEAKERS");
+        product.setMainColor("RED");
+        product.setPrice(new BigDecimal("8000.00"));
+        product.setActive(true);
+
+        ProductColorwayDetail redDetail = new ProductColorwayDetail();
+        redDetail.setProduct(product);
+        redDetail.setColorway("RED");
+        redDetail.setDepartment("MEN");
+        redDetail.setPrice(new BigDecimal("8000.00"));
+        product.getColorwayDetails().add(redDetail);
+
+        ProductColorwayDetail orangeDetail = new ProductColorwayDetail();
+        orangeDetail.setProduct(product);
+        orangeDetail.setColorway("ORANGE");
+        orangeDetail.setDepartment("MEN");
+        orangeDetail.setPrice(new BigDecimal("8000.00"));
+        product.getColorwayDetails().add(orangeDetail);
+
+        ProductStock redSizeSix = new ProductStock();
+        redSizeSix.setProduct(product);
+        redSizeSix.setColorway("RED");
+        redSizeSix.setSizeLabel("6");
+        redSizeSix.setSizeGroup("STANDARD");
+        redSizeSix.setQuantity(1);
+        redSizeSix.setPrice(new BigDecimal("8000.00"));
+        product.getStocks().add(redSizeSix);
+
+        ProductStock redSizeFive = new ProductStock();
+        redSizeFive.setProduct(product);
+        redSizeFive.setColorway("RED");
+        redSizeFive.setSizeLabel("5");
+        redSizeFive.setSizeGroup("STANDARD");
+        redSizeFive.setQuantity(1);
+        redSizeFive.setPrice(new BigDecimal("9000.00"));
+        product.getStocks().add(redSizeFive);
+
+        ProductStock orangeSizeSix = new ProductStock();
+        orangeSizeSix.setProduct(product);
+        orangeSizeSix.setColorway("ORANGE");
+        orangeSizeSix.setSizeLabel("6");
+        orangeSizeSix.setSizeGroup("STANDARD");
+        orangeSizeSix.setQuantity(1);
+        orangeSizeSix.setPrice(new BigDecimal("9000.00"));
+        product.getStocks().add(orangeSizeSix);
+
+        productRepository.save(product);
+
+        PublicProductResponse response = inventoryService.listAdminProducts().stream()
+                .filter(item -> "Per Colorway Range Test".equals(item.name()))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(response.colorwayDetails().get("RED").minPrice()).isEqualByComparingTo("8000.00");
+        assertThat(response.colorwayDetails().get("RED").maxPrice()).isEqualByComparingTo("9000.00");
+        assertThat(response.colorwayDetails().get("ORANGE").minPrice()).isEqualByComparingTo("9000.00");
+        assertThat(response.colorwayDetails().get("ORANGE").maxPrice()).isEqualByComparingTo("9000.00");
+    }
 }
 

@@ -22,6 +22,23 @@ export function normalizeColorwayValue(value) {
   return normalized || "DEFAULT";
 }
 
+function getByNormalizedKey(record, key) {
+  if (!record || typeof record !== "object") {
+    return undefined;
+  }
+  const normalizedKey = normalizeColorwayValue(key);
+  const exactMatch = Object.prototype.hasOwnProperty.call(record, normalizedKey)
+    ? record[normalizedKey]
+    : undefined;
+  if (exactMatch !== undefined) {
+    return exactMatch;
+  }
+  const matchedEntry = Object.entries(record).find(
+    ([entryKey]) => normalizeColorwayValue(entryKey) === normalizedKey
+  );
+  return matchedEntry?.[1];
+}
+
 export function sortColorways(colorways) {
   return [...(colorways || [])]
     .filter(Boolean)
@@ -40,8 +57,9 @@ export function getColorwayImageUrl(product, colorway) {
   const colorwayImages = product?.colorwayImages || {};
 
   // Try the exact colorway first
-  if (colorwayImages[normalizedColorway]) {
-    return colorwayImages[normalizedColorway];
+  const matchedImage = getByNormalizedKey(colorwayImages, normalizedColorway);
+  if (matchedImage) {
+    return matchedImage;
   }
 
 
@@ -69,7 +87,9 @@ export function getColorwayDetails(product, colorway) {
 
   const normalizedColorway = normalizeColorwayValue(colorway);
   const colorwayDetails = product?.colorwayDetails || {};
-  const matched = colorwayDetails[normalizedColorway] || colorwayDetails.DEFAULT || {};
+  const matched = getByNormalizedKey(colorwayDetails, normalizedColorway)
+    || getByNormalizedKey(colorwayDetails, "DEFAULT")
+    || {};
 
   return {
     description: matched.description || product.description || "",
