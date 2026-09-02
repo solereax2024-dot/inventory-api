@@ -3168,13 +3168,23 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     };
 
                     const handleSaveSupplier = async () => {
-                      setEditingCell(null);
-                      await runStockSummaryQuickAction(row, "supplier").catch((err) => setMessage(err.message));
+                      try {
+                        await runStockSummaryQuickAction(row, "supplier");
+                      } catch (err) {
+                        setMessage(err.message);
+                      } finally {
+                        setEditingCell(null);
+                      }
                     };
 
                     const handleSavePrice = async () => {
-                      setEditingCell(null);
-                      await runStockSummaryQuickAction(row, "price").catch((err) => setMessage(err.message));
+                      try {
+                        await runStockSummaryQuickAction(row, "price");
+                      } catch (err) {
+                        setMessage(err.message);
+                      } finally {
+                        setEditingCell(null);
+                      }
                     };
 
                     return (
@@ -3247,9 +3257,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                 }))}
                                 onBlur={handleSaveSupplier}
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveSupplier();
-                                  if (e.key === "Escape") setEditingCell(null);
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSaveSupplier();
+                                  }
+                                  if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    setEditingCell(null);
+                                  }
                                 }}
+                                disabled={isSavingRow}
                               />
                             </div>
                           ) : (
@@ -3282,9 +3299,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                 }))}
                                 onBlur={handleSavePrice}
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSavePrice();
-                                  if (e.key === "Escape") setEditingCell(null);
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSavePrice();
+                                  }
+                                  if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    setEditingCell(null);
+                                  }
                                 }}
+                                disabled={isSavingRow}
                               />
                             </div>
                           ) : (
