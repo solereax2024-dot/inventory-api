@@ -3252,35 +3252,47 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       supplier: row.supplier || "",
                       price: row.price === null || row.price === undefined ? "" : String(row.price)
                     };
-                    const isSavingRow = stockSummarySavingRow.startsWith(`${rowKey}:`);
-                    const editingOnhand = editingCell === `${rowKey}:onhand`;
-                    const editingSupplier = editingCell === `${rowKey}:supplier`;
-                    const editingPrice = editingCell === `${rowKey}:price`;
+                     const isSavingRow = stockSummarySavingRow.startsWith(`${rowKey}:`);
+                     const editingOnhand = editingCell === `${rowKey}:onhand`;
+                     const editingSupplier = editingCell === `${rowKey}:supplier`;
+                     const editingPrice = editingCell === `${rowKey}:price`;
 
-                    const handleSaveOnhand = async (action) => {
-                      setEditingCell(null);
-                      await runStockSummaryQuickAction(row, action).catch((err) => setMessage(err.message));
-                    };
+                     const handleApplyOnhand = async () => {
+                       try {
+                         const quantityChange = Number(rowDraft.quantityChange);
+                         const isAdd = rowDraft.stockSourceType !== "REMOVE_MODE";
+                         const action = isAdd ? "add" : "remove";
 
-                    const handleSaveSupplier = async () => {
-                      try {
-                        await runStockSummaryQuickAction(row, "supplier");
-                      } catch (err) {
-                        setMessage(err.message);
-                      } finally {
-                        setEditingCell(null);
-                      }
-                    };
+                         if (!Number.isInteger(quantityChange) || quantityChange < 1) {
+                           throw new Error("Quantity must be at least 1.");
+                         }
 
-                    const handleSavePrice = async () => {
-                      try {
-                        await runStockSummaryQuickAction(row, "price");
-                      } catch (err) {
-                        setMessage(err.message);
-                      } finally {
-                        setEditingCell(null);
-                      }
-                    };
+                         setEditingCell(null);
+                         await runStockSummaryQuickAction(row, action);
+                       } catch (err) {
+                         setMessage(err.message);
+                       }
+                     };
+
+                     const handleSaveSupplier = async () => {
+                       try {
+                         await runStockSummaryQuickAction(row, "supplier");
+                       } catch (err) {
+                         setMessage(err.message);
+                       } finally {
+                         setEditingCell(null);
+                       }
+                     };
+
+                     const handleSavePrice = async () => {
+                       try {
+                         await runStockSummaryQuickAction(row, "price");
+                       } catch (err) {
+                         setMessage(err.message);
+                       } finally {
+                         setEditingCell(null);
+                       }
+                     };
 
                     return (
                       <tr key={`stock-summary-${activeStockSizeGroup}-${row.baseSize}`}>
@@ -3292,6 +3304,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                         >
                           {editingOnhand ? (
                             <div className="stock-inline-edit-group" onClick={(e) => e.stopPropagation()}>
+                              <select
+                                value={rowDraft.stockSourceType === "REMOVE_MODE" ? "remove" : "add"}
+                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
+                                  ...prev,
+                                  [rowKey]: { ...rowDraft, stockSourceType: e.target.value === "remove" ? "REMOVE_MODE" : "ON_HAND" }
+                                }))}
+                                disabled={isSavingRow}
+                              >
+                                <option value="add">Add</option>
+                                <option value="remove">Remove</option>
+                              </select>
                               <input
                                 autoFocus
                                 type="number"
@@ -3302,25 +3325,26 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                   ...prev,
                                   [rowKey]: { ...rowDraft, quantityChange: Number(e.target.value) || 0 }
                                 }))}
-                                onBlur={() => setEditingCell(null)}
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveOnhand("add");
-                                  if (e.key === "Escape") setEditingCell(null);
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleApplyOnhand();
+                                  }
+                                  if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    setEditingCell(null);
+                                  }
                                 }}
+                                disabled={isSavingRow}
                               />
-                              <select
-                                value={rowDraft.stockSourceType}
-                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
-                                  ...prev,
-                                  [rowKey]: { ...rowDraft, stockSourceType: e.target.value }
-                                }))}
+                              <button
+                                type="button"
+                                onClick={() => handleApplyOnhand()}
+                                disabled={isSavingRow}
+                                title="Apply change"
                               >
-                                {STOCK_SOURCE_TYPES.map((type) => (
-                                  <option key={`summary-row-source-${rowKey}-${type}`} value={type}>{STOCK_SOURCE_LABELS[type]}</option>
-                                ))}
-                              </select>
-                              <button type="button" size="sm" onClick={() => handleSaveOnhand("add")} disabled={isSavingRow}>+</button>
-                              <button type="button" size="sm" onClick={() => handleSaveOnhand("remove")} disabled={isSavingRow}>−</button>
+                                {isSavingRow ? "..." : "Apply"}
+                              </button>
                             </div>
                           ) : (
                             <span>{row.onHand}</span>
