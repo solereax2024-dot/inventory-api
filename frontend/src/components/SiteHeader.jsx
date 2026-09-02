@@ -81,6 +81,15 @@ export default function SiteHeader({
       product?.description
     ].join(" ").toLowerCase();
 
+    const buildProductSuggestionLabel = (product) => {
+      const brand = String(product?.brand || "").trim();
+      const name = String(product?.name || "").trim();
+      if (brand && name) {
+        return `${brand} ${name}`;
+      }
+      return brand || name || "Suggested Pick";
+    };
+
     const loadVisualSuggestions = async () => {
       try {
         const data = await apiRequest("/api/public/products");
@@ -95,23 +104,18 @@ export default function SiteHeader({
         }));
         const usedIds = new Set();
 
-        const pickImage = (matcher) => {
+        const pickProduct = (matcher) => {
           const hit = catalog.find(({ product, text }) => !usedIds.has(product.id) && matcher({ product, text }));
           if (hit) {
             usedIds.add(hit.product.id);
-            return hit.product.imageUrl;
+            return hit.product;
           }
-          const fallback = catalog.find(({ product }) => !usedIds.has(product.id));
-          if (!fallback) {
-            return null;
-          }
-          usedIds.add(fallback.product.id);
-          return fallback.product.imageUrl;
+          return null;
         };
 
         const findByBrand = (brandName) => {
           const normalizedBrand = String(brandName || "").trim().toLowerCase();
-          return pickImage(({ product, text }) => {
+          return pickProduct(({ product, text }) => {
             const productBrand = String(product?.brand || "").trim().toLowerCase();
             if (productBrand && productBrand === normalizedBrand) {
               return true;
@@ -122,17 +126,35 @@ export default function SiteHeader({
 
         const nextSuggestions = VISUAL_SUGGESTION_BLUEPRINTS
           .map((item) => {
-            const imageUrl = findByBrand(item.brand) || pickImage(() => true);
-            if (!imageUrl) {
+            const matchedProduct = findByBrand(item.brand);
+            if (!matchedProduct) {
               return null;
             }
             return {
               label: item.label,
               query: item.query,
-              imageUrl
+              imageUrl: matchedProduct.imageUrl
             };
           })
           .filter(Boolean);
+
+        if (nextSuggestions.length < 4) {
+          const remaining = 4 - nextSuggestions.length;
+          const fallbackSuggestions = [];
+          for (let index = 0; index < remaining; index += 1) {
+            const fallbackProduct = pickProduct(() => true);
+            if (!fallbackProduct) {
+              break;
+            }
+            const label = buildProductSuggestionLabel(fallbackProduct);
+            fallbackSuggestions.push({
+              label,
+              query: String(fallbackProduct.brand || fallbackProduct.name || "").trim(),
+              imageUrl: fallbackProduct.imageUrl
+            });
+          }
+          nextSuggestions.push(...fallbackSuggestions.filter((item) => item.query));
+        }
 
         if (!cancelled && nextSuggestions.length > 0) {
           setVisualSuggestions(nextSuggestions);

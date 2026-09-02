@@ -141,7 +141,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     actionType: "ADD",
     quantityChange: 1,
     stockSourceType: "ON_HAND",
-    price: ""
+    price: "",
+    supplier: ""
   });
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -208,6 +209,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
    const [productImageColorway, setProductImageColorway] = useState("DEFAULT");
    const [isStockGuideOpen, setIsStockGuideOpen] = useState(false);
   const [isStockSummaryOpen, setIsStockSummaryOpen] = useState(false);
+    const [stockSummaryQuickFilters, setStockSummaryQuickFilters] = useState({
+      lowStockOnly: false,
+      noSupplierOnly: false,
+      withInTransitOnly: false
+    });
+    const [stockSummaryRowDrafts, setStockSummaryRowDrafts] = useState({});
+    const [stockSummarySavingRow, setStockSummarySavingRow] = useState("");
   const [hasStockGuideOnboardingShown, setHasStockGuideOnboardingShown] = useState(
     () => localStorage.getItem("adminStockGuideOnboardingShown") === "1"
   );
@@ -250,7 +258,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     return {
       sizeGroup: targetSection?.key || defaultGroup,
       size: preferredRow?.baseSize || rows[0]?.baseSize || US_SIZES[0],
-      price: preferredRow?.price ?? rows[0]?.price ?? null
+      price: preferredRow?.price ?? rows[0]?.price ?? null,
+      supplier: preferredRow?.supplier || rows[0]?.supplier || ""
     };
   };
 
@@ -826,6 +835,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const requestedQuantity = Number(stockForm.quantityChange);
     const parsedPrice = Number(stockForm.price);
     const hasPriceInput = String(stockForm.price).trim() !== "";
+    const normalizedSupplier = String(stockForm.supplier || "").trim();
 
     if (mode === "price") {
       if (!hasPriceInput || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
@@ -833,6 +843,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       }
     } else if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
       throw new Error("Enter a stock quantity of at least 1.");
+    }
+
+    if (mode === "add" && !normalizedSupplier) {
+      throw new Error("Enter supplier/source before adding stock.");
     }
 
     const quantityChange = mode === "price"
@@ -848,7 +862,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
         quantityChange,
         stockSourceType: stockForm.stockSourceType,
-        price: hasPriceInput ? Number(parsedPrice.toFixed(2)) : null
+        price: hasPriceInput ? Number(parsedPrice.toFixed(2)) : null,
+        supplier: normalizedSupplier || null
       },
       token
     );
@@ -860,7 +875,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       quantityChange: 1,
       actionType: prev.actionType,
       stockSourceType: prev.stockSourceType,
-      price: prev.price
+      price: prev.price,
+      supplier: prev.supplier
     }));
     if (mode === "price") {
       setSuccessModal({ isOpen: true, message: `Size price saved: ${formatPriceLabel(parsedPrice)}.` });
@@ -868,6 +884,71 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setSuccessModal({ isOpen: true, message: mode === "remove" ? "Stock removed." : "Stock added." });
     }
     await loadAdminData(token, adminRole);
+  };
+
+  const runStockSummaryQuickAction = async (row, action) => {
+    if (!row) {
+      return;
+    }
+    const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
+    const draft = stockSummaryRowDrafts[rowKey] || {};
+    const quantity = Number(draft.quantityChange);
+    const stockSourceType = String(draft.stockSourceType || "ON_HAND");
+    const supplier = String(draft.supplier || "").trim();
+    const priceRaw = String(draft.price ?? "").trim();
+
+    let quantityChange = 0;
+    let price = null;
+
+    if (action === "add" || action === "remove") {
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        throw new Error("Quantity must be at least 1.");
+      }
+      if (action === "add" && !supplier) {
+        throw new Error("Supplier is required before adding stock.");
+      }
+      quantityChange = action === "remove" ? -quantity : quantity;
+    }
+
+    if (action === "price") {
+      const parsedPrice = Number(priceRaw);
+      if (!priceRaw || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+        throw new Error("Enter a valid price (0 or higher).");
+      }
+      price = Number(parsedPrice.toFixed(2));
+    }
+
+    if (action === "supplier" && !supplier) {
+      throw new Error("Enter supplier/origin first.");
+    }
+
+    setStockSummarySavingRow(`${rowKey}:${action}`);
+    try {
+      await apiRequest(
+        `/api/admin/products/${stockForm.productId}/stocks`,
+        "POST",
+        {
+          colorway: stockForm.colorway,
+          size: row.baseSize,
+          sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
+          quantityChange,
+          stockSourceType,
+          price,
+          supplier: supplier || null
+        },
+        token
+      );
+      if (action === "price") {
+        setSuccessModal({ isOpen: true, message: `US ${row.displaySize} price updated.` });
+      } else if (action === "supplier") {
+        setSuccessModal({ isOpen: true, message: `US ${row.displaySize} supplier updated.` });
+      } else {
+        setSuccessModal({ isOpen: true, message: action === "remove" ? `US ${row.displaySize} stock removed.` : `US ${row.displaySize} stock added.` });
+      }
+      await loadAdminData(token, adminRole);
+    } finally {
+      setStockSummarySavingRow("");
+    }
   };
 
   const createAdminUser = async () => {
@@ -1162,7 +1243,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       actionType: prev.actionType || "ADD",
       quantityChange: 1,
       stockSourceType: "ON_HAND",
-      price: priceValue
+      price: priceValue,
+      supplier: preferredSelection.supplier || ""
     }));
     const shouldAutoOpenGuide = !hasStockGuideOnboardingShown && Boolean(getBrandSizeGuide(selectedProduct?.brand));
     setIsStockGuideOpen(shouldAutoOpenGuide);
@@ -1171,6 +1253,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       localStorage.setItem("adminStockGuideOnboardingShown", "1");
     }
     setIsStockSummaryOpen(false);
+    setStockSummaryQuickFilters({ lowStockOnly: false, noSupplierOnly: false, withInTransitOnly: false });
+    setStockSummaryRowDrafts({});
+    setStockSummarySavingRow("");
     setProductActionModal({ type: "stock", productId: String(productId) });
   };
 
@@ -1241,6 +1326,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       return prev.price === normalized ? prev : { ...prev, price: normalized };
     });
   }, [productActionModal.type, selectedStockRow?.price, stockForm.size, stockForm.colorway, activeStockSizeGroup]);
+  useEffect(() => {
+    if (productActionModal.type !== "stock") {
+      return;
+    }
+    const nextSupplier = String(selectedStockRow?.supplier || "");
+    setStockForm((prev) => (prev.supplier === nextSupplier ? prev : { ...prev, supplier: nextSupplier }));
+  }, [productActionModal.type, selectedStockRow?.supplier, stockForm.size, stockForm.colorway, activeStockSizeGroup]);
   const stockGuideSection = useMemo(
     () => getGuideSectionForContext(stockSizeGuide, { sizeGroup: activeStockSizeGroup, department: stockModalDepartment }),
     [stockSizeGuide, activeStockSizeGroup, stockModalDepartment]
@@ -1260,6 +1352,60 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     preOrder: 0,
     total: 0
   }), [activeStockRows]);
+  const stockSummaryMetrics = useMemo(() => {
+    const rowsWithStock = activeStockRows.filter((row) => Number(row.total || 0) > 0).length;
+    const lowStockRows = activeStockRows.filter((row) => Number(row.total || 0) > 0 && Number(row.total || 0) <= 3).length;
+    const suppliers = [...new Set(activeStockRows.map((row) => String(row.supplier || "").trim()).filter(Boolean))];
+    return {
+      rowsWithStock,
+      lowStockRows,
+      uniqueSuppliers: suppliers.length
+    };
+  }, [activeStockRows]);
+  const filteredStockSummaryRows = useMemo(() => activeStockRows.filter((row) => {
+    if (stockSummaryQuickFilters.lowStockOnly && !(Number(row.total || 0) > 0 && Number(row.total || 0) <= 3)) {
+      return false;
+    }
+    if (stockSummaryQuickFilters.noSupplierOnly && String(row.supplier || "").trim()) {
+      return false;
+    }
+    if (stockSummaryQuickFilters.withInTransitOnly && Number(row.inTransit || 0) <= 0) {
+      return false;
+    }
+    return true;
+  }), [activeStockRows, stockSummaryQuickFilters]);
+  const stockSummaryVisibleTotals = useMemo(() => filteredStockSummaryRows.reduce((acc, row) => ({
+    onHand: acc.onHand + (row.onHand || 0),
+    inTransit: acc.inTransit + (row.inTransit || 0),
+    preOrder: acc.preOrder + (row.preOrder || 0),
+    total: acc.total + (row.total || 0)
+  }), {
+    onHand: 0,
+    inTransit: 0,
+    preOrder: 0,
+    total: 0
+  }), [filteredStockSummaryRows]);
+  useEffect(() => {
+    if (productActionModal.type !== "stock") {
+      return;
+    }
+    setStockSummaryRowDrafts((prev) => {
+      const next = {};
+      activeStockRows.forEach((row) => {
+        const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
+        const previous = prev[rowKey] || {};
+        next[rowKey] = {
+          quantityChange: Number(previous.quantityChange) >= 1 ? Number(previous.quantityChange) : 1,
+          stockSourceType: previous.stockSourceType || "ON_HAND",
+          supplier: Object.prototype.hasOwnProperty.call(previous, "supplier") ? previous.supplier : (row.supplier || ""),
+          price: Object.prototype.hasOwnProperty.call(previous, "price")
+            ? previous.price
+            : (row.price === null || row.price === undefined ? "" : String(row.price))
+        };
+      });
+      return next;
+    });
+  }, [productActionModal.type, activeStockRows, activeStockSizeGroup]);
   const handleStockSizeGroupChange = (nextSizeGroup) => {
     const targetSection = stockSizeSections.find((section) => section.key === nextSizeGroup);
     const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === stockForm.size);
@@ -2729,6 +2875,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       </select>
                     </label>
 
+                    <label className="stock-field">
+                      <span className="stock-field-label">Supplier / stock origin</span>
+                      <input
+                        type="text"
+                        maxLength={140}
+                        placeholder="ex: Nike PH, Titan, Direct Supplier"
+                        value={stockForm.supplier}
+                        onChange={(e) => setStockForm({ ...stockForm, supplier: e.target.value })}
+                      />
+                    </label>
+
                     {isUnisexDepartment(stockModalDepartment) ? (
                       <label className="stock-field">
                         <span className="stock-field-label">Size view</span>
@@ -2832,6 +2989,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     Current {STOCK_SOURCE_LABELS[stockForm.stockSourceType]}: <strong>{selectedStockSourceQuantity}</strong>
                     {selectedStockRow ? ` · Total: ${selectedStockRow.total}` : ""}
                   </p>
+                  {stockForm.supplier.trim() ? (
+                    <p className="field-hint stock-size-selection-note">
+                      Supplier / origin: <strong>{stockForm.supplier.trim()}</strong>
+                    </p>
+                  ) : null}
                   {stockForm.price !== "" ? (
                     <p className="field-hint stock-size-selection-note">
                       Selected size price: <strong>{formatPriceLabel(stockForm.price)}</strong>
@@ -2918,8 +3080,58 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               </button>
             </div>
 
+            <div className="stock-summary-metrics-grid">
+              <article className="stock-summary-metric-card">
+                <p>Sizes with stock</p>
+                <h3>{stockSummaryMetrics.rowsWithStock}</h3>
+              </article>
+              <article className="stock-summary-metric-card">
+                <p>Low stock sizes</p>
+                <h3>{stockSummaryMetrics.lowStockRows}</h3>
+              </article>
+              <article className="stock-summary-metric-card">
+                <p>Suppliers listed</p>
+                <h3>{stockSummaryMetrics.uniqueSuppliers}</h3>
+              </article>
+              <article className="stock-summary-metric-card">
+                <p>Total units</p>
+                <h3>{stockSummaryTotals.total}</h3>
+              </article>
+            </div>
+
+            <div className="stock-summary-filter-bar">
+              <button
+                type="button"
+                className={`stock-summary-filter-chip ${stockSummaryQuickFilters.lowStockOnly ? "active" : ""}`}
+                onClick={() => setStockSummaryQuickFilters((prev) => ({ ...prev, lowStockOnly: !prev.lowStockOnly }))}
+              >
+                Low stock only
+              </button>
+              <button
+                type="button"
+                className={`stock-summary-filter-chip ${stockSummaryQuickFilters.noSupplierOnly ? "active" : ""}`}
+                onClick={() => setStockSummaryQuickFilters((prev) => ({ ...prev, noSupplierOnly: !prev.noSupplierOnly }))}
+              >
+                Missing supplier
+              </button>
+              <button
+                type="button"
+                className={`stock-summary-filter-chip ${stockSummaryQuickFilters.withInTransitOnly ? "active" : ""}`}
+                onClick={() => setStockSummaryQuickFilters((prev) => ({ ...prev, withInTransitOnly: !prev.withInTransitOnly }))}
+              >
+                With in-transit
+              </button>
+              <button
+                type="button"
+                className="stock-summary-filter-chip clear"
+                onClick={() => setStockSummaryQuickFilters({ lowStockOnly: false, noSupplierOnly: false, withInTransitOnly: false })}
+              >
+                Clear filters
+              </button>
+            </div>
+
             <div className="modal-table-wrap">
-              <table>
+              <table className="stock-summary-table">
                 <thead>
                   <tr>
                     <th>US Size</th>
@@ -2927,26 +3139,117 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     <th>In-transit</th>
                     <th>Pre-order</th>
                     <th>Total</th>
+                    <th>Supplier / Origin</th>
                     <th>Price</th>
+                    <th>Quick Edit</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activeStockRows.map((row) => (
-                    <tr key={`stock-summary-${activeStockSizeGroup}-${row.baseSize}`}>
-                      <td>US {row.displaySize}</td>
-                      <td>{row.onHand}</td>
-                      <td>{row.inTransit}</td>
-                      <td>{row.preOrder}</td>
-                      <td>{row.total}</td>
-                      <td>{formatPriceLabel(row.price)}</td>
+                  {filteredStockSummaryRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={8}>No sizes match the selected filters.</td>
                     </tr>
-                  ))}
+                  ) : filteredStockSummaryRows.map((row) => {
+                    const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
+                    const rowDraft = stockSummaryRowDrafts[rowKey] || {
+                      quantityChange: 1,
+                      stockSourceType: "ON_HAND",
+                      supplier: row.supplier || "",
+                      price: row.price === null || row.price === undefined ? "" : String(row.price)
+                    };
+                    const isSavingRow = stockSummarySavingRow.startsWith(`${rowKey}:`);
+                    return (
+                      <tr key={`stock-summary-${activeStockSizeGroup}-${row.baseSize}`}>
+                        <td>US {row.displaySize}</td>
+                        <td>{row.onHand}</td>
+                        <td>{row.inTransit}</td>
+                        <td>{row.preOrder}</td>
+                        <td>
+                          <span className={`stock-summary-total-pill ${row.total > 0 && row.total <= 3 ? "is-low" : ""}`}>
+                            {row.total}
+                          </span>
+                        </td>
+                        <td>
+                          {row.supplier ? (
+                            <span className="stock-supplier-chip">{row.supplier}</span>
+                          ) : (
+                            <span className="stock-supplier-chip muted">Not set</span>
+                          )}
+                        </td>
+                        <td>{formatPriceLabel(row.price)}</td>
+                        <td>
+                          <div className="stock-quick-edit-cell">
+                            <div className="stock-quick-edit-line">
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={rowDraft.quantityChange}
+                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
+                                  ...prev,
+                                  [rowKey]: { ...rowDraft, quantityChange: Number(e.target.value) || 0 }
+                                }))}
+                                disabled={isSavingRow}
+                              />
+                              <select
+                                value={rowDraft.stockSourceType}
+                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
+                                  ...prev,
+                                  [rowKey]: { ...rowDraft, stockSourceType: e.target.value }
+                                }))}
+                                disabled={isSavingRow}
+                              >
+                                {STOCK_SOURCE_TYPES.map((type) => (
+                                  <option key={`summary-row-source-${rowKey}-${type}`} value={type}>{STOCK_SOURCE_LABELS[type]}</option>
+                                ))}
+                              </select>
+                              <button type="button" onClick={() => runStockSummaryQuickAction(row, "add").catch((err) => setMessage(err.message))} disabled={isSavingRow}>+ Add</button>
+                              <button type="button" className="button-secondary" onClick={() => runStockSummaryQuickAction(row, "remove").catch((err) => setMessage(err.message))} disabled={isSavingRow}>- Remove</button>
+                            </div>
+                            <div className="stock-quick-edit-line">
+                              <input
+                                type="text"
+                                maxLength={140}
+                                placeholder="Supplier / origin"
+                                value={rowDraft.supplier}
+                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
+                                  ...prev,
+                                  [rowKey]: { ...rowDraft, supplier: e.target.value }
+                                }))}
+                                disabled={isSavingRow}
+                              />
+                              <button type="button" className="button-secondary" onClick={() => runStockSummaryQuickAction(row, "supplier").catch((err) => setMessage(err.message))} disabled={isSavingRow}>Save Supplier</button>
+                            </div>
+                            <div className="stock-quick-edit-line">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="Price"
+                                value={rowDraft.price}
+                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
+                                  ...prev,
+                                  [rowKey]: { ...rowDraft, price: e.target.value }
+                                }))}
+                                disabled={isSavingRow}
+                              />
+                              <button type="button" className="button-secondary" onClick={() => runStockSummaryQuickAction(row, "price").catch((err) => setMessage(err.message))} disabled={isSavingRow}>Save Price</button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   <tr>
                     <td><strong>Total</strong></td>
-                    <td><strong>{stockSummaryTotals.onHand}</strong></td>
-                    <td><strong>{stockSummaryTotals.inTransit}</strong></td>
-                    <td><strong>{stockSummaryTotals.preOrder}</strong></td>
-                    <td><strong>{stockSummaryTotals.total}</strong></td>
+                    <td><strong>{stockSummaryVisibleTotals.onHand}</strong></td>
+                    <td><strong>{stockSummaryVisibleTotals.inTransit}</strong></td>
+                    <td><strong>{stockSummaryVisibleTotals.preOrder}</strong></td>
+                    <td><strong>{stockSummaryVisibleTotals.total}</strong></td>
+                    <td>
+                      <strong>{stockSummaryMetrics.uniqueSuppliers > 0 ? `${stockSummaryMetrics.uniqueSuppliers} supplier(s)` : "-"}</strong>
+                    </td>
+                    <td><strong>-</strong></td>
                     <td><strong>-</strong></td>
                   </tr>
                 </tbody>

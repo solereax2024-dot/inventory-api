@@ -158,6 +158,10 @@ public class InventoryService {
 
         String normalizedSize = UsSizeStandard.normalizeAndValidate(request.size());
         String normalizedColorway = ColorwayStandard.normalizeAndValidate(request.colorway());
+        String normalizedSupplier = trimToNull(request.supplier());
+        if (request.quantityChange() > 0 && normalizedSupplier == null) {
+            throw new IllegalArgumentException("Supplier is required when adding stock.");
+        }
         StockSizeGroup sizeGroup = resolveStockSizeGroup(product, normalizedColorway, request.sizeGroup());
         ProductStock stock = productStockRepository
                 .findByProductIdAndColorwayAndSizeLabelAndSizeGroup(productId, normalizedColorway, normalizedSize, sizeGroup.name())
@@ -169,6 +173,7 @@ public class InventoryService {
                     createdStock.setSizeGroup(sizeGroup.name());
                     createdStock.setQuantity(0);
                     createdStock.setPrice(resolveColorwayBasePrice(product, normalizedColorway));
+                    createdStock.setSupplier(normalizedSupplier);
                     return createdStock;
                 });
 
@@ -182,6 +187,9 @@ public class InventoryService {
         stock.setQuantity(newQuantity);
         if (request.price() != null) {
             stock.setPrice(normalizePrice(request.price()));
+        }
+        if (normalizedSupplier != null) {
+            stock.setSupplier(normalizedSupplier);
         }
         stock.setUpdatedAt(Instant.now());
         ProductStock savedStock = productStockRepository.save(stock);
@@ -393,7 +401,8 @@ public class InventoryService {
                         stock.getSizeLabel(),
                         stock.getSizeGroup(),
                         stock.getQuantity(),
-                        stock.getPrice()
+                        stock.getPrice(),
+                        stock.getSupplier()
                 ))
                 .toList();
         Map<String, Map<String, Map<String, Map<String, Integer>>>> stateByColorwayAndSizeGroup = buildStateByColorwayAndSizeGroup(product);
@@ -432,7 +441,8 @@ public class InventoryService {
                         stock.getSizeLabel(),
                         stock.getSizeGroup(),
                         stock.getQuantity(),
-                        stock.getPrice()
+                        stock.getPrice(),
+                        stock.getSupplier()
                 ))
                 .toList();
         Map<String, Map<String, Map<String, Map<String, Integer>>>> stateByColorwayAndSizeGroup = buildStateByColorwayAndSizeGroup(product);

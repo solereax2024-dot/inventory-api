@@ -16,6 +16,7 @@ public record AdminAdjustStockRequest(
         Integer quantityChange,
         @NotNull
         StockSourceType stockSourceType,
-        BigDecimal price
+        BigDecimal price,
+        String supplier
 ) {
 }

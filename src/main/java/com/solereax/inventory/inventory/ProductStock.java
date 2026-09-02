@@ -42,6 +42,9 @@ public class ProductStock {
     @Column(name = "price", precision = 12, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "supplier", length = 140)
+    private String supplier;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
