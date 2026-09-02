@@ -1057,7 +1057,9 @@
   }
 
   .search-drawer-panel {
-    width: 100vw;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     border-radius: 0 0 14px 14px;
     border-top: 0;
     padding: 10px 10px 12px;

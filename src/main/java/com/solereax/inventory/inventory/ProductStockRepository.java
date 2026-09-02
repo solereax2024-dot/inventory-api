@@ -15,6 +15,29 @@ public interface ProductStockRepository extends JpaRepository<ProductStock, Long
             String sizeGroup
     );
 
+    @Query("""
+            select ps from ProductStock ps
+            where ps.product.id = :productId
+              and ps.colorway = :colorway
+              and ps.sizeLabel = :sizeLabel
+              and ps.sizeGroup = :sizeGroup
+              and ((:supplier is null and ps.supplier is null) or ps.supplier = :supplier)
+            """)
+    Optional<ProductStock> findByProductIdAndColorwayAndSizeLabelAndSizeGroupAndSupplier(
+            Long productId,
+            String colorway,
+            String sizeLabel,
+            String sizeGroup,
+            String supplier
+    );
+
+    List<ProductStock> findAllByProductIdAndColorwayAndSizeLabelAndSizeGroup(
+            Long productId,
+            String colorway,
+            String sizeLabel,
+            String sizeGroup
+    );
+
     List<ProductStock> findAllByProductIdAndColorwayAndSizeLabel(
             Long productId,
             String colorway,
@@ -30,6 +53,28 @@ public interface ProductStockRepository extends JpaRepository<ProductStock, Long
               and ps.sizeGroup = :sizeGroup
             """)
     Optional<ProductStock> findForUpdate(Long productId, String colorway, String sizeLabel, String sizeGroup);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select ps from ProductStock ps
+            where ps.product.id = :productId
+              and ps.colorway = :colorway
+              and ps.sizeLabel = :sizeLabel
+              and ps.sizeGroup = :sizeGroup
+              and ((:supplier is null and ps.supplier is null) or ps.supplier = :supplier)
+            """)
+    Optional<ProductStock> findForUpdateBySupplier(Long productId, String colorway, String sizeLabel, String sizeGroup, String supplier);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select ps from ProductStock ps
+            where ps.product.id = :productId
+              and ps.colorway = :colorway
+              and ps.sizeLabel = :sizeLabel
+              and ps.sizeGroup = :sizeGroup
+            order by ps.createdAt asc, ps.id asc
+            """)
+    List<ProductStock> findAllForUpdate(Long productId, String colorway, String sizeLabel, String sizeGroup);
 
     void deleteByProductId(Long productId);
 }

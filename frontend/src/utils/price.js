@@ -5,6 +5,17 @@ export const PHP_CURRENCY = new Intl.NumberFormat("en-PH", {
   maximumFractionDigits: 2
 });
 
+export const CUSTOMER_MARKUP = 2000;
+
+export function toCustomerPriceFromSupplier(supplierPrice, markup = CUSTOMER_MARKUP) {
+  const supplier = Number(supplierPrice);
+  const markupValue = Number(markup);
+  if (!Number.isFinite(supplier) || supplier < 0 || !Number.isFinite(markupValue) || markupValue < 0) {
+    return null;
+  }
+  return Number((supplier + markupValue).toFixed(2));
+}
+
 export function formatPriceDisplay(minPrice, maxPrice) {
   const min = Number(minPrice);
   const max = Number(maxPrice);

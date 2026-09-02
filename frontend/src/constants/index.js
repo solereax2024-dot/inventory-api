@@ -1,10 +1,4 @@
 export const US_SIZES = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13"];
-export const STOCK_SOURCE_TYPES = ["PRE_ORDER", "IN_TRANSIT", "ON_HAND"];
-export const STOCK_SOURCE_LABELS = {
-  PRE_ORDER: "Pre-order",
-  IN_TRANSIT: "In-transit",
-  ON_HAND: "On-hand"
-};
 export const COLORWAY_OPTIONS = ["TRIPLE BLACK", "BLACK/WHITE", "WHITE/GUM", "RED/WHITE", "BLUE/WHITE", "GREY/NAVY"];
 export const DEPARTMENT_OPTIONS = ["MEN", "WOMEN", "UNISEX", "KIDS"];
 export const CATEGORY_OPTIONS = ["FOOTWEAR", "APPAREL", "ACCESSORIES"];

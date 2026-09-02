@@ -147,6 +147,12 @@ export default function ReservePage() {
     const parsed = Number(selectedRow?.price);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
   }, [activeSizeSection, reserve.size]);
+  const selectedSizeAvailableQuantity = useMemo(() => {
+    const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
+    return Number(selectedRow?.total || 0);
+  }, [activeSizeSection, reserve.size]);
+  const isSelectedSizePreOrder = selectedSizeAvailableQuantity <= 0;
+  const primaryActionLabel = isSelectedSizePreOrder ? "Pre-Order Now" : "Reserve Now";
   const selectedColorwayPriceRange = useMemo(
     () => formatPriceDisplay(selectedColorwayDetails?.minPrice, selectedColorwayDetails?.maxPrice),
     [selectedColorwayDetails]
@@ -402,12 +408,11 @@ export default function ReservePage() {
      }
 
      const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
-     if (!selectedRow || selectedRow.total <= 0) {
+     if (!selectedRow) {
        const error = new Error("Please select an available size.");
        error.fieldId = "size";
        throw error;
      }
-
      if (!reserve.customerName || reserve.customerName.trim() === "") {
        const error = new Error("Please enter your name.");
        error.fieldId = "customerName";
@@ -753,15 +758,11 @@ export default function ReservePage() {
                           key={`${activeSizeSection.key}-${row.baseSize}`}
                           type="button"
                           className={`size-btn ${isActive ? "active" : ""} ${!available ? "unavailable" : ""}`}
-                          onClick={() => available && selectReserveSize(row.baseSize, activeSizeSection.key)}
-                          disabled={!available}
+                          onClick={() => selectReserveSize(row.baseSize, activeSizeSection.key)}
                         >
                           <span className="size-label">US {row.displaySize}</span>
                           <span className="size-stock">
-                            {row.onHand > 0 ? `${row.onHand}H` : ""}
-                            {row.inTransit > 0 ? ` ${row.inTransit}T` : ""}
-                            {row.preOrder > 0 ? ` ${row.preOrder}P` : ""}
-                            {row.total === 0 ? "Out" : ""}
+                            {row.total > 0 ? `${row.total} available` : "Out of stock"}
                           </span>
                         </button>
                       );
@@ -771,7 +772,6 @@ export default function ReservePage() {
               ) : null}
               <small className="field-hint">
                 {isUnisexDepartment(selectedDepartment) ? "Unisex — shows both Men's & Women's sizing." : selectedDepartment === "WOMEN" ? "Women's sizing." : "Men's sizing."}
-                {" "}H=On-hand · T=In-transit · P=Pre-order
               </small>
               {selectedSizePrice !== null ? (
                 <div className="size-price-hint">Selected size: <strong>{PHP_CURRENCY.format(selectedSizePrice)}</strong></div>
@@ -905,7 +905,7 @@ export default function ReservePage() {
                 className="btn-primary reserve-submit-btn"
                 onClick={openConfirmation}
               >
-                Reserve Now
+                {primaryActionLabel}
               </button>
             </div>
           </div>
@@ -917,7 +917,7 @@ export default function ReservePage() {
             <span className="reserve-sticky-cta-price">{selectedSizePrice !== null ? PHP_CURRENCY.format(selectedSizePrice) : (selectedColorwayPriceRange || "Select size")}</span>
           </div>
           <button type="button" className="btn-primary reserve-sticky-cta-btn" onClick={openConfirmation}>
-            Reserve Now
+            {primaryActionLabel}
           </button>
         </div>
 
@@ -990,6 +990,7 @@ export default function ReservePage() {
                 <div className="reserve-confirm-product-info">
                   <div className="reserve-confirm-product-name">{product.name}</div>
                   {product.brand ? <div className="reserve-confirm-product-brand">{product.brand}</div> : null}
+                  {isSelectedSizePreOrder ? <span className="reserve-confirm-preorder-badge">Pre-Order Item</span> : null}
                   {selectedColorwayPriceRange ? (
                     <div className="reserve-confirm-price-hint">{selectedColorwayPriceRange}</div>
                   ) : null}

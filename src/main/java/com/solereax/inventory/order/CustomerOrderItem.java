@@ -44,4 +44,7 @@ public class CustomerOrderItem {
 
     @Column(nullable = false)
     private int quantity;
+
+    @Column(name = "supplier_breakdown", length = 1000)
+    private String supplierBreakdown;
 }

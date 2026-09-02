@@ -1,6 +1,5 @@
 package com.solereax.inventory.inventory.dto;
 
-import com.solereax.inventory.inventory.StockSourceType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -14,9 +13,11 @@ public record AdminAdjustStockRequest(
         String sizeGroup,
         @NotNull
         Integer quantityChange,
-        @NotNull
-        StockSourceType stockSourceType,
         BigDecimal price,
-        String supplier
+        BigDecimal markup,
+        String referenceSupplier,
+        String supplier,
+        Boolean clearPrice,
+        Boolean clearSupplier
 ) {
 }

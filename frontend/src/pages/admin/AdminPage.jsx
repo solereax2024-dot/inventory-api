@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Check, ImagePlus, Pencil, RotateCcw, Ruler, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { US_SIZES, STOCK_SOURCE_TYPES, STOCK_SOURCE_LABELS, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
+import { US_SIZES, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
 import { apiRequest, uploadImage } from "../../utils/api";
 import { formatEnumLabel, formatColorwayLabel, getProductTypeOptions } from "../../utils/format";
 import { getColorwayDetails, sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
 import { getSortedColorwaysFromStocks, buildSizeStateRows, getStockStorageGroup } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { buildDefaultProductDescription } from "../../utils/productDescription";
-import { PHP_CURRENCY } from "../../utils/price";
+import { CUSTOMER_MARKUP, PHP_CURRENCY } from "../../utils/price";
 import "../../styles/admin.css";
+import "../../styles/stock.css";
 import ConfirmActionModal from "./ConfirmActionModal";
 import DeleteModal from "./DeleteModal";
 import NewBrandModal from "./NewBrandModal";
 import NewAdminModal from "./NewAdminModal";
 import NewProductNameModal from "./NewProductNameModal";
+import StockSummaryModal from "./StockSummaryModal";
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 
 const RESERVATION_STATUS_OPTIONS = [
@@ -39,6 +41,24 @@ const RESERVATION_MOP_OPTIONS = [
   { value: "MARIBANK", label: "MariBank" },
   { value: "OTHER", label: "Other" }
 ];
+
+const DEFAULT_STOCK_SUMMARY_BULK_ACTION = {
+  quantityChange: "",
+  quantityMode: "ADD",
+  supplier: "",
+  price: "",
+  markup: "",
+  applying: false
+};
+
+const DEFAULT_STOCK_SUMMARY_RESET_MODAL = {
+  isOpen: false,
+  count: 0,
+  colorway: "DEFAULT",
+  productName: ""
+};
+
+const PREORDER_SUPPLIER_BREAKDOWN_MARKER = "__PREORDER__";
 
 function normalizeReservationStatus(status) {
   if (status === "RESERVED") return "ORDERED";
@@ -140,7 +160,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     sizeGroup: "MEN",
     actionType: "ADD",
     quantityChange: 1,
-    stockSourceType: "ON_HAND",
     price: "",
     supplier: ""
   });
@@ -211,15 +230,15 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [isStockSummaryOpen, setIsStockSummaryOpen] = useState(false);
     const [stockSummaryQuickFilters, setStockSummaryQuickFilters] = useState({
       lowStockOnly: false,
-      noSupplierOnly: false,
-      withInTransitOnly: false
+          noSupplierOnly: false
     });
-    const [stockSummaryRowDrafts, setStockSummaryRowDrafts] = useState({});
-    const [stockSummarySavingRow, setStockSummarySavingRow] = useState("");
-    const [editingCell, setEditingCell] = useState(null);
-    const [stockSummarySortColumn, setStockSummarySortColumn] = useState("size");
+     const [stockSummarySavingRow, setStockSummarySavingRow] = useState("");
+     const [stockSummarySortColumn, setStockSummarySortColumn] = useState("size");
     const [stockSummarySortAsc, setStockSummarySortAsc] = useState(true);
-    const [stockSummaryBulkSupplier, setStockSummaryBulkSupplier] = useState({ isOpen: false, supplier: "", applying: false });
+    const [stockSummarySelectedRows, setStockSummarySelectedRows] = useState(new Set());
+    const [stockSummarySupplierSelections, setStockSummarySupplierSelections] = useState({});
+    const [stockSummaryResetModal, setStockSummaryResetModal] = useState(() => ({ ...DEFAULT_STOCK_SUMMARY_RESET_MODAL }));
+    const [stockSummaryBulkAction, setStockSummaryBulkAction] = useState(() => ({ ...DEFAULT_STOCK_SUMMARY_BULK_ACTION }));
   const [hasStockGuideOnboardingShown, setHasStockGuideOnboardingShown] = useState(
     () => localStorage.getItem("adminStockGuideOnboardingShown") === "1"
   );
@@ -263,6 +282,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       sizeGroup: targetSection?.key || defaultGroup,
       size: preferredRow?.baseSize || rows[0]?.baseSize || US_SIZES[0],
       price: preferredRow?.price ?? rows[0]?.price ?? null,
+      markup: preferredRow?.markup ?? rows[0]?.markup ?? CUSTOMER_MARKUP,
       supplier: preferredRow?.supplier || rows[0]?.supplier || ""
     };
   };
@@ -275,6 +295,20 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       ],
       [isSuperAdmin]
     );
+
+  const mergeUpdatedProduct = (updatedProduct) => {
+    if (!updatedProduct?.id) {
+      return;
+    }
+    setProducts((prev) => {
+      const exists = prev.some((item) => String(item.id) === String(updatedProduct.id));
+      if (!exists) {
+        return prev;
+      }
+      return prev.map((item) => (String(item.id) === String(updatedProduct.id) ? updatedProduct : item));
+    });
+  };
+
   const adminColorwayOptions = useMemo(() => {
     const selectedProduct = products.find((product) => String(product.id) === String(stockForm.productId));
     return getProductColorways(selectedProduct);
@@ -821,7 +855,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               size: row.baseSize,
               sizeGroup: getStockStorageGroup(stockModalDepartment, section.key),
               quantityChange: 0,
-              stockSourceType: stockForm.stockSourceType,
               price: Number(parsedPrice.toFixed(2))
             },
             token
@@ -857,7 +890,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       ? 0
       : (mode === "remove" ? -requestedQuantity : requestedQuantity);
 
-    await apiRequest(
+    const updatedProduct = await apiRequest(
       `/api/admin/products/${stockForm.productId}/stocks`,
       "POST",
       {
@@ -865,12 +898,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         size: stockForm.size,
         sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
         quantityChange,
-        stockSourceType: stockForm.stockSourceType,
         price: hasPriceInput ? Number(parsedPrice.toFixed(2)) : null,
         supplier: normalizedSupplier || null
       },
       token
     );
+    mergeUpdatedProduct(updatedProduct);
     // Preserve selected size and group so user can continue adjusting same size
     setStockForm((prev) => ({
       ...prev,
@@ -878,7 +911,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       sizeGroup: prev.sizeGroup,
       quantityChange: 1,
       actionType: prev.actionType,
-      stockSourceType: prev.stockSourceType,
       price: prev.price,
       supplier: prev.supplier
     }));
@@ -890,19 +922,21 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     await loadAdminData(token, adminRole);
   };
 
-  const runStockSummaryQuickAction = async (row, action) => {
+  const runStockSummaryQuickAction = async (row, action, options = {}) => {
     if (!row) {
       return;
     }
     const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
-    const draft = stockSummaryRowDrafts[rowKey] || {};
-    const quantity = Number(draft.quantityChange);
-    const stockSourceType = String(draft.stockSourceType || "ON_HAND");
+    const draft = options.values || {};
+    const quantity = Number(draft.quantityChange) || 1;
     const supplier = String(draft.supplier || "").trim();
+    const referenceSupplier = String(draft.referenceSupplier || "").trim();
     const priceRaw = String(draft.price ?? "").trim();
+    const markupRaw = String(draft.markup ?? "").trim();
 
     let quantityChange = 0;
     let price = null;
+    let markup = null;
 
     if (action === "add" || action === "remove") {
       if (!Number.isInteger(quantity) || quantity < 1) {
@@ -916,10 +950,20 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
     if (action === "price") {
       const parsedPrice = Number(priceRaw);
-      if (!priceRaw || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
-        throw new Error("Enter a valid price (0 or higher).");
+      const parsedMarkup = Number(markupRaw);
+      const hasPrice = priceRaw.length > 0;
+      const hasMarkup = markupRaw.length > 0;
+      if (!hasPrice && !hasMarkup) {
+        throw new Error("Enter supplier price and/or markup (0 or higher).");
       }
-      price = Number(parsedPrice.toFixed(2));
+      if (hasPrice && (!Number.isFinite(parsedPrice) || parsedPrice < 0)) {
+        throw new Error("Enter a valid supplier price (0 or higher).");
+      }
+      if (hasMarkup && (!Number.isFinite(parsedMarkup) || parsedMarkup < 0)) {
+        throw new Error("Enter a valid markup (0 or higher).");
+      }
+      price = hasPrice ? Number(parsedPrice.toFixed(2)) : null;
+      markup = hasMarkup ? Number(parsedMarkup.toFixed(2)) : Number(CUSTOMER_MARKUP.toFixed(2));
     }
 
     if (action === "supplier" && !supplier) {
@@ -928,7 +972,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
     setStockSummarySavingRow(`${rowKey}:${action}`);
     try {
-      await apiRequest(
+      const updatedProduct = await apiRequest(
         `/api/admin/products/${stockForm.productId}/stocks`,
         "POST",
         {
@@ -936,20 +980,28 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
           size: row.baseSize,
           sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
           quantityChange,
-          stockSourceType,
           price,
-          supplier: supplier || null
+            markup,
+            referenceSupplier: action === "remove" || action === "supplier" || action === "price"
+              ? (referenceSupplier || null)
+              : null,
+            supplier: action === "add" || action === "supplier" || action === "price"
+              ? (supplier || null)
+              : null
         },
         token
       );
-      if (action === "price") {
-        setSuccessModal({ isOpen: true, message: `US ${row.displaySize} price updated.` });
-      } else if (action === "supplier") {
-        setSuccessModal({ isOpen: true, message: `US ${row.displaySize} supplier updated.` });
-      } else {
-        setSuccessModal({ isOpen: true, message: action === "remove" ? `US ${row.displaySize} stock removed.` : `US ${row.displaySize} stock added.` });
+      mergeUpdatedProduct(updatedProduct);
+      if (!options.skipReload) {
+        if (action === "price") {
+          setSuccessModal({ isOpen: true, message: `US ${row.displaySize} supplier price/markup updated.` });
+        } else if (action === "supplier") {
+          setSuccessModal({ isOpen: true, message: `US ${row.displaySize} supplier updated.` });
+        } else {
+          setSuccessModal({ isOpen: true, message: action === "remove" ? `US ${row.displaySize} stock removed.` : `US ${row.displaySize} stock added.` });
+        }
+        await loadAdminData(token, adminRole);
       }
-      await loadAdminData(token, adminRole);
     } finally {
       setStockSummarySavingRow("");
     }
@@ -1246,7 +1298,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       sizeGroup: preferredSelection.sizeGroup || getDefaultSizeGroup(nextDepartment),
       actionType: prev.actionType || "ADD",
       quantityChange: 1,
-      stockSourceType: "ON_HAND",
       price: priceValue,
       supplier: preferredSelection.supplier || ""
     }));
@@ -1257,10 +1308,288 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       localStorage.setItem("adminStockGuideOnboardingShown", "1");
     }
     setIsStockSummaryOpen(false);
-    setStockSummaryQuickFilters({ lowStockOnly: false, noSupplierOnly: false, withInTransitOnly: false });
-    setStockSummaryRowDrafts({});
+    setStockSummaryQuickFilters({ lowStockOnly: false, noSupplierOnly: false });
+    setStockSummaryBulkAction({
+      ...DEFAULT_STOCK_SUMMARY_BULK_ACTION,
+      supplier: preferredSelection.supplier || "",
+      price: priceValue
+    });
     setStockSummarySavingRow("");
     setProductActionModal({ type: "stock", productId: String(productId) });
+  };
+
+  const closeStockSummaryView = () => {
+    setIsStockSummaryOpen(false);
+    setStockSummarySelectedRows(new Set());
+    setStockSummarySupplierSelections({});
+    setStockSummarySavingRow("");
+    setStockSummaryBulkAction({ ...DEFAULT_STOCK_SUMMARY_BULK_ACTION });
+    setStockSummaryResetModal({ ...DEFAULT_STOCK_SUMMARY_RESET_MODAL });
+    setProductActionModal({ type: null, productId: "" });
+  };
+
+  const handleStockSummaryColorwayChange = (nextColorway) => {
+    setStockForm((prev) => ({ ...prev, colorway: nextColorway }));
+    setStockSummarySelectedRows(new Set());
+    setStockSummarySupplierSelections({});
+  };
+
+  const handleStockSummaryBulkFieldChange = (field, value) => {
+    setStockSummaryBulkAction((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const decrementStockSummaryQuantity = () => {
+    setStockSummaryBulkAction((prev) => {
+      const current = prev.quantityChange ? Number(prev.quantityChange) : 1;
+      return { ...prev, quantityChange: String(Math.max(1, current - 1)) };
+    });
+  };
+
+  const incrementStockSummaryQuantity = () => {
+    setStockSummaryBulkAction((prev) => {
+      const current = prev.quantityChange ? Number(prev.quantityChange) : 0;
+      return { ...prev, quantityChange: String(current + 1) };
+    });
+  };
+
+  const clearStockSummaryBulkAction = () => {
+    setStockSummaryBulkAction({ ...DEFAULT_STOCK_SUMMARY_BULK_ACTION });
+  };
+
+  const handleStockSummarySortChange = (column) => {
+    if (stockSummarySortColumn === column) {
+      setStockSummarySortAsc((prev) => !prev);
+      return;
+    }
+    setStockSummarySortColumn(column);
+    setStockSummarySortAsc(column === "size" || column === "supplier");
+  };
+
+  const handleStockSummarySelectAllToggle = (checked) => {
+    if (checked) {
+      setStockSummarySelectedRows(new Set(sortedStockSummaryRows.map((row) => `${activeStockSizeGroup}-${row.baseSize}`)));
+      return;
+    }
+    setStockSummarySelectedRows(new Set());
+  };
+
+  const handleStockSummaryRowToggle = (rowKey, checked) => {
+    setStockSummarySelectedRows((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(rowKey);
+      } else {
+        next.delete(rowKey);
+      }
+      return next;
+    });
+  };
+
+  const handleStockSummarySupplierSelectionChange = (rowKey, supplier) => {
+    setStockSummarySupplierSelections((prev) => ({ ...prev, [rowKey]: supplier }));
+  };
+
+  const applyStockSummaryBulkChanges = async () => {
+    if (stockSummarySelectedRows.size === 0) return;
+
+    const normalizedSupplier = String(stockSummaryBulkAction.supplier || "").trim();
+    const priceRaw = String(stockSummaryBulkAction.price ?? "").trim();
+    const markupRaw = String(stockSummaryBulkAction.markup ?? "").trim();
+    const quantityValue = Number(stockSummaryBulkAction.quantityChange);
+    const useQuantity = Number.isInteger(quantityValue) && quantityValue > 0;
+    const useSupplier = Boolean(normalizedSupplier);
+    const usePrice = priceRaw.length > 0;
+    const useMarkup = markupRaw.length > 0;
+
+    if (!useQuantity && !useSupplier && !usePrice && !useMarkup) {
+      setMessage("Fill in at least one field before applying changes.");
+      return;
+    }
+
+    if (usePrice && (!Number.isFinite(Number(priceRaw)) || Number(priceRaw) < 0)) {
+      setMessage("Enter a valid supplier price (0 or higher).");
+      return;
+    }
+
+    if (useMarkup && (!Number.isFinite(Number(markupRaw)) || Number(markupRaw) < 0)) {
+      setMessage("Enter a valid markup (0 or higher).");
+      return;
+    }
+
+    const isAdd = stockSummaryBulkAction.quantityMode !== "REMOVE";
+
+    setStockSummaryBulkAction((prev) => ({ ...prev, applying: true }));
+    try {
+      let successCount = 0;
+      const skippedQuantityRows = [];
+      const failedRows = [];
+      const rowsToUpdate = Array.from(stockSummarySelectedRows).map((rowKey) => {
+        const [, baseSize] = rowKey.split("-");
+        return sortedStockSummaryRows.find((candidate) => candidate.baseSize === baseSize) || null;
+      }).filter(Boolean);
+
+      for (const row of rowsToUpdate) {
+        if (!row) continue;
+
+        const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
+        const selectedSupplier = String(
+          stockSummarySupplierSelections[rowKey]
+          ?? row.supplierEntries?.[0]?.supplier
+          ?? row.supplier
+          ?? ""
+        ).trim();
+        const rowSupplier = selectedSupplier || String(row.supplier || "").trim();
+        const effectiveSupplier = normalizedSupplier || rowSupplier;
+        let rowUpdated = false;
+
+        try {
+          const requestValues = {
+            quantityChange: useQuantity ? quantityValue : "",
+            supplier: effectiveSupplier,
+            referenceSupplier: normalizedSupplier || rowSupplier || "",
+            price: usePrice ? priceRaw : row.price ?? "",
+            markup: useMarkup ? markupRaw : ""
+          };
+
+          if (useQuantity) {
+            if (isAdd && !effectiveSupplier) {
+              skippedQuantityRows.push(`US ${row.displaySize}`);
+            } else {
+              await runStockSummaryQuickAction(row, isAdd ? "add" : "remove", { skipReload: true, values: requestValues });
+              rowUpdated = true;
+            }
+          }
+          if (useSupplier) {
+            await runStockSummaryQuickAction(row, "supplier", { skipReload: true, values: requestValues });
+            rowUpdated = true;
+          }
+          if (usePrice || useMarkup) {
+            await runStockSummaryQuickAction(row, "price", { skipReload: true, values: requestValues });
+            rowUpdated = true;
+          }
+          if (rowUpdated) {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Error updating size ${row.displaySize}:`, err);
+          failedRows.push(`US ${row.displaySize}`);
+        }
+      }
+
+      if (successCount > 0) {
+        await loadAdminData(token, adminRole);
+      }
+
+      const summarizeSizes = (sizes) => {
+        if (sizes.length <= 3) {
+          return sizes.join(", ");
+        }
+        return `${sizes.slice(0, 3).join(", ")} +${sizes.length - 3} more`;
+      };
+
+      if (successCount === 0) {
+        if (skippedQuantityRows.length > 0 && !useSupplier && !usePrice) {
+          setMessage(`No stock was added. Missing supplier for ${summarizeSizes(skippedQuantityRows)}.`);
+          return;
+        }
+        if (failedRows.length > 0) {
+          setMessage(`No changes were applied. Failed sizes: ${summarizeSizes(failedRows)}.`);
+          return;
+        }
+        setMessage("No changes were applied.");
+        return;
+      }
+
+      const messageParts = [`Applied changes for ${successCount}/${stockSummarySelectedRows.size} sizes.`];
+
+      if (skippedQuantityRows.length > 0) {
+        messageParts.push(`Skipped quantity add for ${skippedQuantityRows.length} size(s) with no supplier: ${summarizeSizes(skippedQuantityRows)}.`);
+      }
+      if (failedRows.length > 0) {
+        messageParts.push(`Failed to update ${failedRows.length} size(s): ${summarizeSizes(failedRows)}.`);
+      }
+
+      setMessage(messageParts.join(" "));
+      setStockSummaryBulkAction((prev) => ({
+        ...DEFAULT_STOCK_SUMMARY_BULK_ACTION,
+        quantityMode: prev.quantityMode,
+        applying: prev.applying
+      }));
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setStockSummaryBulkAction((prev) => ({ ...prev, applying: false }));
+    }
+  };
+
+  const closeStockSummaryResetModal = () => {
+    if (stockSummaryBulkAction.applying) return;
+    setStockSummaryResetModal({ ...DEFAULT_STOCK_SUMMARY_RESET_MODAL });
+  };
+
+  const openStockSummaryResetModal = () => {
+    if (stockSummarySelectedRows.size === 0) {
+      setMessage("Please select at least one size to reset.");
+      return;
+    }
+    setStockSummaryResetModal({
+      isOpen: true,
+      count: stockSummarySelectedRows.size,
+      colorway: stockForm.colorway,
+      productName: stockModalProduct?.name || ""
+    });
+  };
+
+  const confirmStockSummaryReset = async () => {
+    setStockSummaryBulkAction((prev) => ({ ...prev, applying: true }));
+    try {
+      let successCount = 0;
+      const rowsToDelete = Array.from(stockSummarySelectedRows);
+
+      for (const rowKey of rowsToDelete) {
+        const [, baseSize] = rowKey.split("-");
+        const row = sortedStockSummaryRows.find((r) => r.baseSize === baseSize);
+        if (!row) continue;
+
+        try {
+          const supplierEntries = row.supplierEntries?.length
+            ? row.supplierEntries
+            : [{ supplier: row.supplier || "", quantity: Number(row.total || 0) }];
+
+          for (const entry of supplierEntries) {
+            await apiRequest(
+              `/api/admin/products/${stockForm.productId}/stocks`,
+              "POST",
+              {
+                colorway: stockForm.colorway,
+                size: row.baseSize,
+                sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
+                quantityChange: Number(entry.quantity || 0) > 0 ? -Number(entry.quantity || 0) : 0,
+                price: null,
+                referenceSupplier: entry.supplier || null,
+                supplier: null,
+                clearPrice: true,
+                clearSupplier: true
+              },
+              token
+            );
+          }
+          successCount++;
+        } catch (err) {
+          console.error(`Error resetting size ${row.displaySize}:`, err);
+        }
+      }
+
+      await loadAdminData(token, adminRole);
+
+      setMessage(`Reset stock data for ${successCount}/${stockSummarySelectedRows.size} sizes.`);
+      setStockSummarySelectedRows(new Set());
+      setStockSummaryResetModal({ ...DEFAULT_STOCK_SUMMARY_RESET_MODAL });
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setStockSummaryBulkAction((prev) => ({ ...prev, applying: false }));
+    }
   };
 
   const filteredAdminProducts = useMemo(() => {
@@ -1307,19 +1636,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     () => activeStockSizeSection?.rows?.find((row) => row.baseSize === stockForm.size) || null,
     [activeStockSizeSection, stockForm.size]
   );
-  const selectedStockSourceQuantity = useMemo(() => {
-    if (!selectedStockRow) {
-      return 0;
-    }
-    if (stockForm.stockSourceType === "IN_TRANSIT") {
-      return selectedStockRow.inTransit;
-    }
-    if (stockForm.stockSourceType === "PRE_ORDER") {
-      return selectedStockRow.preOrder;
-    }
-    return selectedStockRow.onHand;
-  }, [selectedStockRow, stockForm.stockSourceType]);
-
   useEffect(() => {
     if (productActionModal.type !== "stock") {
       return;
@@ -1336,8 +1652,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     const nextSupplier = String(selectedStockRow?.supplier || "");
     setStockForm((prev) => (prev.supplier === nextSupplier ? prev : { ...prev, supplier: nextSupplier }));
-  }, [productActionModal.type, selectedStockRow?.supplier, stockForm.size, stockForm.colorway, activeStockSizeGroup]);
-  const stockGuideSection = useMemo(
+   }, [productActionModal.type, selectedStockRow?.supplier, stockForm.size, stockForm.colorway, activeStockSizeGroup]);
+
+   // Auto-open stock summary when stock modal opens
+   useEffect(() => {
+     if (productActionModal.type === "stock") {
+       const timer = setTimeout(() => {
+         setIsStockSummaryOpen(true);
+       }, 100);
+       return () => clearTimeout(timer);
+     }
+   }, [productActionModal.type]);
+
+   const stockGuideSection = useMemo(
     () => getGuideSectionForContext(stockSizeGuide, { sizeGroup: activeStockSizeGroup, department: stockModalDepartment }),
     [stockSizeGuide, activeStockSizeGroup, stockModalDepartment]
   );
@@ -1345,35 +1672,34 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     if (!activeStockSizeSection?.rows) return [];
     return activeStockSizeSection.rows;
   }, [activeStockSizeSection]);
-  const stockSummaryTotals = useMemo(() => activeStockRows.reduce((acc, row) => ({
-    onHand: acc.onHand + (row.onHand || 0),
-    inTransit: acc.inTransit + (row.inTransit || 0),
-    preOrder: acc.preOrder + (row.preOrder || 0),
-    total: acc.total + (row.total || 0)
-  }), {
-    onHand: 0,
-    inTransit: 0,
-    preOrder: 0,
-    total: 0
-  }), [activeStockRows]);
-  const stockSummaryMetrics = useMemo(() => {
-    const rowsWithStock = activeStockRows.filter((row) => Number(row.total || 0) > 0).length;
-    const lowStockRows = activeStockRows.filter((row) => Number(row.total || 0) > 0 && Number(row.total || 0) <= 3).length;
-    const suppliers = [...new Set(activeStockRows.map((row) => String(row.supplier || "").trim()).filter(Boolean))];
-    return {
-      rowsWithStock,
-      lowStockRows,
-      uniqueSuppliers: suppliers.length
-    };
-  }, [activeStockRows]);
+  useEffect(() => {
+    if (!isStockSummaryOpen || productActionModal.type !== "stock") {
+      return;
+    }
+    setStockSummarySupplierSelections((prev) => {
+      const next = {};
+      activeStockRows.forEach((row) => {
+        const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
+        const options = (row.supplierEntries || []).map((entry) => String(entry.supplier || ""));
+        const previousValue = prev[rowKey];
+        next[rowKey] = options.includes(previousValue)
+          ? previousValue
+          : (options[0] || "");
+      });
+
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      if (prevKeys.length === nextKeys.length && nextKeys.every((key) => prev[key] === next[key])) {
+        return prev;
+      }
+      return next;
+    });
+  }, [activeStockRows, activeStockSizeGroup, isStockSummaryOpen, productActionModal.type]);
   const filteredStockSummaryRows = useMemo(() => activeStockRows.filter((row) => {
     if (stockSummaryQuickFilters.lowStockOnly && !(Number(row.total || 0) > 0 && Number(row.total || 0) <= 3)) {
       return false;
     }
-    if (stockSummaryQuickFilters.noSupplierOnly && String(row.supplier || "").trim()) {
-      return false;
-    }
-    if (stockSummaryQuickFilters.withInTransitOnly && Number(row.inTransit || 0) <= 0) {
+    if (stockSummaryQuickFilters.noSupplierOnly && (row.supplierEntries || []).some((entry) => String(entry.supplier || "").trim())) {
       return false;
     }
     return true;
@@ -1387,10 +1713,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         case "size":
           aVal = Number(a.baseSize || 0);
           bVal = Number(b.baseSize || 0);
-          break;
-        case "onhand":
-          aVal = Number(a.onHand || 0);
-          bVal = Number(b.onHand || 0);
           break;
         case "total":
           aVal = Number(a.total || 0);
@@ -1413,37 +1735,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   }, [filteredStockSummaryRows, stockSummarySortColumn, stockSummarySortAsc]);
 
   const stockSummaryVisibleTotals = useMemo(() => filteredStockSummaryRows.reduce((acc, row) => ({
-    onHand: acc.onHand + (row.onHand || 0),
-    inTransit: acc.inTransit + (row.inTransit || 0),
-    preOrder: acc.preOrder + (row.preOrder || 0),
     total: acc.total + (row.total || 0)
   }), {
-    onHand: 0,
-    inTransit: 0,
-    preOrder: 0,
     total: 0
   }), [filteredStockSummaryRows]);
-  useEffect(() => {
-    if (productActionModal.type !== "stock") {
-      return;
-    }
-    setStockSummaryRowDrafts((prev) => {
-      const next = {};
-      activeStockRows.forEach((row) => {
-        const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
-        const previous = prev[rowKey] || {};
-        next[rowKey] = {
-          quantityChange: Number(previous.quantityChange) >= 1 ? Number(previous.quantityChange) : 1,
-          stockSourceType: previous.stockSourceType || "ON_HAND",
-          supplier: Object.prototype.hasOwnProperty.call(previous, "supplier") ? previous.supplier : (row.supplier || ""),
-          price: Object.prototype.hasOwnProperty.call(previous, "price")
-            ? previous.price
-            : (row.price === null || row.price === undefined ? "" : String(row.price))
-        };
-      });
-      return next;
-    });
-  }, [productActionModal.type, activeStockRows, activeStockSizeGroup]);
+
   const handleStockSizeGroupChange = (nextSizeGroup) => {
     const targetSection = stockSizeSections.find((section) => section.key === nextSizeGroup);
     const hasCurrentSize = targetSection?.rows?.some((row) => row.baseSize === stockForm.size);
@@ -1793,8 +2089,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                       <button
                         type="button"
                         className="admin-action-btn quick-tooltip"
-                        data-tooltip="Stock"
-                        aria-label="Open stock manager"
+                        data-tooltip="Manage Stock"
+                        aria-label="Manage stock"
                         onClick={(event) => {
                           event.stopPropagation();
                           openStockModal(product.id, selectedColorway);
@@ -2044,7 +2340,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                         <td className="reservation-items-cell">
                           {(order.items || []).map((item, index) => (
                             <div key={`${order.id}-${item.productId || item.productName}-${index}`} className="reservation-item-line">
-                              <strong>{item.productName}</strong>
+                              <strong>
+                                {item.productName}
+                                {item.supplierBreakdown === PREORDER_SUPPLIER_BREAKDOWN_MARKER ? (
+                                  <span className="reservation-preorder-badge">Pre-Order</span>
+                                ) : null}
+                              </strong>
                               <span>
                                 {formatColorwayLabel(item.colorway)} · {formatReservationItemSizeLabel(item)} · Qty {item.quantity}
                               </span>
@@ -2485,7 +2786,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       {productActionModal.type ? (
         <div className="modal-backdrop" onClick={() => setProductActionModal({ type: null, productId: "" })}>
           <section className="modal-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="breakdown-header">
+            <div className="breakdown-header stock-summary-header">
               <h2>
                 {productActionModal.type === "create" ? "Add Product" : null}
                 {productActionModal.type === "edit"
@@ -2879,189 +3180,51 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             ) : null}
 
             {productActionModal.type === "stock" ? (
-              <>
-                <p className="field-hint">Choose colorway/size, set quantity or price, then run the matching action below.</p>
-                {stockModalProduct ? (
-                  <p className="field-hint stock-size-selection-note">
-                    Product: <strong>{`${stockModalProduct.brand || ""} ${stockModalProduct.name || ""}`.trim() || `#${stockModalProduct.id}`}</strong>
-                  </p>
-                ) : null}
-                <section className="stock-controls-card">
-                  <div className="stock-controls-grid">
-                    <label className="stock-field">
-                      <span className="stock-field-label">Colorway</span>
-                      <select value={stockForm.colorway} onChange={(e) => setStockForm({ ...stockForm, colorway: e.target.value })}>
-                        {adminColorwayOptions.map((colorway) => (
-                          <option key={colorway} value={colorway}>
-                            {formatColorwayLabel(colorway)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="stock-field">
-                      <span className="stock-field-label">Stock source</span>
-                      <select
-                        value={stockForm.stockSourceType}
-                        onChange={(e) => setStockForm({ ...stockForm, stockSourceType: e.target.value })}
-                      >
-                        {STOCK_SOURCE_TYPES.map((type) => (
-                          <option key={type} value={type}>
-                            {STOCK_SOURCE_LABELS[type]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="stock-field">
-                      <span className="stock-field-label">Supplier / stock origin</span>
-                      <input
-                        type="text"
-                        maxLength={140}
-                        placeholder="ex: Nike PH, Titan, Direct Supplier"
-                        value={stockForm.supplier}
-                        onChange={(e) => setStockForm({ ...stockForm, supplier: e.target.value })}
-                      />
-                    </label>
-
-                    {isUnisexDepartment(stockModalDepartment) ? (
-                      <label className="stock-field">
-                        <span className="stock-field-label">Size view</span>
-                        <select value={activeStockSizeGroup} onChange={(e) => handleStockSizeGroupChange(e.target.value)}>
-                          {stockSizeSections.map((section) => (
-                            <option key={`stock-group-${section.key}`} value={section.key}>
-                              {section.key === "WOMEN" ? "Women's size group" : "Men's size group"}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : null}
-
-                    <label className="stock-field">
-                      <span className="stock-field-label">Size</span>
-                      <select
-                        value={stockForm.size}
-                        onChange={(e) => setStockForm({ ...stockForm, size: e.target.value, sizeGroup: activeStockSizeGroup })}
-                      >
-                        {activeStockRows.length === 0 ? (
-                          <option value={stockForm.size}>US {stockForm.size}</option>
-                        ) : (
-                          activeStockRows.map((row) => (
-                            <option key={`stock-size-${activeStockSizeGroup}-${row.baseSize}`} value={row.baseSize}>
-                              US {row.displaySize}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                    </label>
-
-                    <label className="stock-field">
-                      <span className="stock-field-label">Quantity change</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        placeholder="ex: 2"
-                        value={stockForm.quantityChange}
-                        disabled={stockForm.actionType === "PRICE"}
-                        onChange={(e) => setStockForm({ ...stockForm, quantityChange: Number(e.target.value) || 0 })}
-                      />
-                    </label>
-
-                    <label className="stock-field">
-                      <span className="stock-field-label">Size price (PHP)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="ex: 5699"
-                        value={stockForm.price}
-                        disabled={stockForm.actionType !== "PRICE"}
-                        onChange={(e) => setStockForm({ ...stockForm, price: e.target.value })}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="stock-action-cluster">
-                    <label className="stock-field stock-action-select">
-                      <span className="stock-field-label">Action</span>
-                      <select
-                        value={stockForm.actionType}
-                        onChange={(e) => setStockForm({ ...stockForm, actionType: e.target.value })}
-                      >
-                        <option value="ADD">Add stock</option>
-                        <option value="REMOVE">Remove stock</option>
-                        <option value="PRICE">Save size price</option>
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      className="stock-mode-toggle stock-apply-btn"
-                      onClick={() => adjustStock().catch((err) => setMessage(err.message))}
-                    >
-                      {stockForm.actionType === "REMOVE"
-                        ? "Apply Remove"
-                        : stockForm.actionType === "PRICE"
-                          ? "Save Price"
-                          : "Apply Add"}
-                    </button>
-                    {stockForm.actionType === "PRICE" ? (
-                      <button
-                        type="button"
-                        className="stock-mode-toggle stock-apply-btn"
-                        style={{ marginTop: "6px" }}
-                        onClick={() => applyPriceToAllSizes().catch((err) => setMessage(err.message))}
-                      >
-                        Save to All Sizes
-                      </button>
-                    ) : null}
-                  </div>
-                </section>
-
-                <div className="stock-meta-list">
-                  <p className="field-hint stock-size-selection-note">
-                    Selected size: <strong>{selectedStockSizeLabel || `US ${stockForm.size}`}</strong>
-                    {isUnisexDepartment(stockModalDepartment) ? ` · ${activeStockSizeGroup === "WOMEN" ? "women's" : "men's"} stock group` : ""}
-                  </p>
-                  <p className="field-hint stock-size-selection-note">
-                    Current {STOCK_SOURCE_LABELS[stockForm.stockSourceType]}: <strong>{selectedStockSourceQuantity}</strong>
-                    {selectedStockRow ? ` · Total: ${selectedStockRow.total}` : ""}
-                  </p>
-                  {stockForm.supplier.trim() ? (
-                    <p className="field-hint stock-size-selection-note">
-                      Supplier / origin: <strong>{stockForm.supplier.trim()}</strong>
-                    </p>
-                  ) : null}
-                  {stockForm.price !== "" ? (
-                    <p className="field-hint stock-size-selection-note">
-                      Selected size price: <strong>{formatPriceLabel(stockForm.price)}</strong>
-                    </p>
-                  ) : null}
-                </div>
-                <p className="field-hint stock-size-guide-helper">
-                  Tip: Check the brand size guide before updating stock so sizes stay accurate.
-                </p>
-                <div className="row">
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={() => setIsStockSummaryOpen(true)}
-                  >
-                    View Stock Summary
-                  </button>
-                </div>
-                {stockSizeGuide && stockGuideSection ? (
-                  <button type="button" className="button-secondary stock-size-guide-cta" onClick={() => setIsStockGuideOpen(true)}>
-                    <Ruler size={16} />
-                    <span>Open Size Guide</span>
-                  </button>
-                ) : null}
-              </>
+              <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                <p style={{ fontSize: "15px", color: "#64748b" }}>Loading stock summary...</p>
+              </div>
             ) : null}
             <p className="message">{message}</p>
           </section>
         </div>
       ) : null}
+
+      <StockSummaryModal
+        isOpen={isStockSummaryOpen && productActionModal.type === "stock"}
+        onClose={closeStockSummaryView}
+        productName={stockModalProduct?.name || ""}
+        colorway={stockForm.colorway}
+        colorwayOptions={adminColorwayOptions}
+        onColorwayChange={handleStockSummaryColorwayChange}
+        stockModalDepartment={stockModalDepartment}
+        activeStockSizeGroup={activeStockSizeGroup}
+        stockSizeSections={stockSizeSections}
+        onSizeGroupChange={handleStockSizeGroupChange}
+        bulkAction={stockSummaryBulkAction}
+        onBulkFieldChange={handleStockSummaryBulkFieldChange}
+        onQuantityDecrement={decrementStockSummaryQuantity}
+        onQuantityIncrement={incrementStockSummaryQuantity}
+        onApply={() => applyStockSummaryBulkChanges().catch((err) => setMessage(err.message))}
+        onClear={clearStockSummaryBulkAction}
+        onResetClick={openStockSummaryResetModal}
+        selectedRows={stockSummarySelectedRows}
+        supplierSelections={stockSummarySupplierSelections}
+        onSupplierSelectionChange={handleStockSummarySupplierSelectionChange}
+        sortedRows={sortedStockSummaryRows}
+        sortColumn={stockSummarySortColumn}
+        sortAsc={stockSummarySortAsc}
+        onSortChange={handleStockSummarySortChange}
+        onToggleAllRows={handleStockSummarySelectAllToggle}
+        onToggleRow={handleStockSummaryRowToggle}
+        visibleTotals={stockSummaryVisibleTotals}
+        resetModal={stockSummaryResetModal}
+        onResetCancel={closeStockSummaryResetModal}
+        onResetConfirm={() => confirmStockSummaryReset().catch((err) => setMessage(err.message))}
+        formatPriceLabel={formatPriceLabel}
+        customerMarkup={CUSTOMER_MARKUP}
+        hasSizeGuide={Boolean(stockSizeGuide && stockGuideSection)}
+        onOpenSizeGuide={() => setIsStockGuideOpen(true)}
+      />
 
       {isStockGuideOpen && stockSizeGuide && stockGuideSection ? (
         <div className="modal-overlay" onClick={() => setIsStockGuideOpen(false)}>
@@ -3095,463 +3258,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             </small>
             {stockSizeGuide.fitNote ? (
               <small className="field-hint" style={{ marginTop: 0 }}>{stockSizeGuide.fitNote}</small>
-            ) : null}
-          </section>
-        </div>
-      ) : null}
-
-      {isStockSummaryOpen && productActionModal.type === "stock" ? (
-        <div className="modal-overlay" onClick={() => setIsStockSummaryOpen(false)}>
-          <section className="modal-panel stock-summary-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="breakdown-header">
-              <div>
-                <h2 style={{ margin: "0 0 4px" }}>
-                  Stock Summary - {formatColorwayLabel(stockForm.colorway)}
-                  {isUnisexDepartment(stockModalDepartment) ? ` (${activeStockSizeGroup === "WOMEN" ? "Women's" : "Men's"})` : ""}
-                </h2>
-                <p style={{ margin: "0", fontSize: "12px", color: "#64748b" }}>Click headers to sort • Click cells to edit • Press Enter to save</p>
-              </div>
-              <button
-                type="button"
-                className="modal-close-btn"
-                aria-label="Close stock summary"
-                onClick={() => setIsStockSummaryOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="stock-summary-metrics-grid">
-              <article className="stock-summary-metric-card">
-                <p>Sizes with stock</p>
-                <h3>{stockSummaryMetrics.rowsWithStock}</h3>
-              </article>
-              <article className="stock-summary-metric-card">
-                <p>Low stock sizes</p>
-                <h3>{stockSummaryMetrics.lowStockRows}</h3>
-              </article>
-              <article className="stock-summary-metric-card">
-                <p>Suppliers listed</p>
-                <h3>{stockSummaryMetrics.uniqueSuppliers}</h3>
-              </article>
-              <article className="stock-summary-metric-card">
-                <p>Total units</p>
-                <h3>{stockSummaryTotals.total}</h3>
-              </article>
-            </div>
-
-            <div className="stock-summary-filter-bar">
-              <button
-                type="button"
-                className={`stock-summary-filter-chip ${stockSummaryQuickFilters.lowStockOnly ? "active" : ""}`}
-                onClick={() => setStockSummaryQuickFilters((prev) => ({ ...prev, lowStockOnly: !prev.lowStockOnly }))}
-              >
-                Low stock only
-              </button>
-              <button
-                type="button"
-                className={`stock-summary-filter-chip ${stockSummaryQuickFilters.noSupplierOnly ? "active" : ""}`}
-                onClick={() => setStockSummaryQuickFilters((prev) => ({ ...prev, noSupplierOnly: !prev.noSupplierOnly }))}
-              >
-                Missing supplier
-              </button>
-              <button
-                type="button"
-                className={`stock-summary-filter-chip ${stockSummaryQuickFilters.withInTransitOnly ? "active" : ""}`}
-                onClick={() => setStockSummaryQuickFilters((prev) => ({ ...prev, withInTransitOnly: !prev.withInTransitOnly }))}
-              >
-                With in-transit
-              </button>
-              <button
-                type="button"
-                className="stock-summary-filter-chip clear"
-                onClick={() => setStockSummaryQuickFilters({ lowStockOnly: false, noSupplierOnly: false, withInTransitOnly: false })}
-              >
-                Clear filters
-              </button>
-              <div style={{ marginLeft: "auto" }}>
-                <button
-                  type="button"
-                  className="stock-summary-filter-chip"
-                  onClick={() => setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, isOpen: true })}
-                  title="Set supplier for all visible sizes"
-                >
-                  📋 Bulk Set Supplier
-                </button>
-              </div>
-            </div>
-
-            <div className="modal-table-wrap">
-              <table className="stock-summary-table">
-                <thead>
-                  <tr>
-                    <th 
-                      onClick={() => {
-                        if (stockSummarySortColumn === "size") setStockSummarySortAsc(!stockSummarySortAsc);
-                        else { setStockSummarySortColumn("size"); setStockSummarySortAsc(true); }
-                      }}
-                      className="stock-header-sortable"
-                      title="Click to sort by size"
-                    >
-                      US Size {stockSummarySortColumn === "size" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
-                    </th>
-                    <th 
-                      onClick={() => {
-                        if (stockSummarySortColumn === "onhand") setStockSummarySortAsc(!stockSummarySortAsc);
-                        else { setStockSummarySortColumn("onhand"); setStockSummarySortAsc(false); }
-                      }}
-                      className="stock-header-sortable"
-                      title="Click to sort by on-hand quantity"
-                    >
-                      On-hand {stockSummarySortColumn === "onhand" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
-                    </th>
-                    <th>In-transit</th>
-                    <th>Pre-order</th>
-                    <th 
-                      onClick={() => {
-                        if (stockSummarySortColumn === "total") setStockSummarySortAsc(!stockSummarySortAsc);
-                        else { setStockSummarySortColumn("total"); setStockSummarySortAsc(false); }
-                      }}
-                      className="stock-header-sortable"
-                      title="Click to sort by total quantity"
-                    >
-                      Total {stockSummarySortColumn === "total" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
-                    </th>
-                    <th 
-                      onClick={() => {
-                        if (stockSummarySortColumn === "supplier") setStockSummarySortAsc(!stockSummarySortAsc);
-                        else { setStockSummarySortColumn("supplier"); setStockSummarySortAsc(true); }
-                      }}
-                      className="stock-header-sortable"
-                      title="Click to sort by supplier"
-                    >
-                      Supplier / Origin {stockSummarySortColumn === "supplier" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
-                    </th>
-                    <th 
-                      onClick={() => {
-                        if (stockSummarySortColumn === "price") setStockSummarySortAsc(!stockSummarySortAsc);
-                        else { setStockSummarySortColumn("price"); setStockSummarySortAsc(false); }
-                      }}
-                      className="stock-header-sortable"
-                      title="Click to sort by price"
-                    >
-                      Price {stockSummarySortColumn === "price" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedStockSummaryRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={7}>No sizes match the selected filters.</td>
-                    </tr>
-                  ) : sortedStockSummaryRows.map((row) => {
-                    const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
-                    const rowDraft = stockSummaryRowDrafts[rowKey] || {
-                      quantityChange: 1,
-                      stockSourceType: "ON_HAND",
-                      supplier: row.supplier || "",
-                      price: row.price === null || row.price === undefined ? "" : String(row.price)
-                    };
-                     const isSavingRow = stockSummarySavingRow.startsWith(`${rowKey}:`);
-                     const editingOnhand = editingCell === `${rowKey}:onhand`;
-                     const editingSupplier = editingCell === `${rowKey}:supplier`;
-                     const editingPrice = editingCell === `${rowKey}:price`;
-
-                     const handleApplyOnhand = async () => {
-                       try {
-                         const quantityChange = Number(rowDraft.quantityChange);
-                         const isAdd = rowDraft.stockSourceType !== "REMOVE_MODE";
-                         const action = isAdd ? "add" : "remove";
-
-                         if (!Number.isInteger(quantityChange) || quantityChange < 1) {
-                           throw new Error("Quantity must be at least 1.");
-                         }
-
-                         setEditingCell(null);
-                         await runStockSummaryQuickAction(row, action);
-                       } catch (err) {
-                         setMessage(err.message);
-                       }
-                     };
-
-                     const handleSaveSupplier = async () => {
-                       try {
-                         await runStockSummaryQuickAction(row, "supplier");
-                       } catch (err) {
-                         setMessage(err.message);
-                       } finally {
-                         setEditingCell(null);
-                       }
-                     };
-
-                     const handleSavePrice = async () => {
-                       try {
-                         await runStockSummaryQuickAction(row, "price");
-                       } catch (err) {
-                         setMessage(err.message);
-                       } finally {
-                         setEditingCell(null);
-                       }
-                     };
-
-                    return (
-                      <tr key={`stock-summary-${activeStockSizeGroup}-${row.baseSize}`}>
-                        <td>US {row.displaySize}</td>
-                        <td 
-                          className="stock-cell-editable"
-                          onClick={() => !editingOnhand && !isSavingRow && setEditingCell(`${rowKey}:onhand`)}
-                          title="Click to adjust on-hand quantity"
-                        >
-                          {editingOnhand ? (
-                            <div className="stock-inline-edit-group" onClick={(e) => e.stopPropagation()}>
-                              <select
-                                value={rowDraft.stockSourceType === "REMOVE_MODE" ? "remove" : "add"}
-                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
-                                  ...prev,
-                                  [rowKey]: { ...rowDraft, stockSourceType: e.target.value === "remove" ? "REMOVE_MODE" : "ON_HAND" }
-                                }))}
-                                disabled={isSavingRow}
-                              >
-                                <option value="add">Add</option>
-                                <option value="remove">Remove</option>
-                              </select>
-                              <input
-                                autoFocus
-                                type="number"
-                                min="1"
-                                step="1"
-                                value={rowDraft.quantityChange}
-                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
-                                  ...prev,
-                                  [rowKey]: { ...rowDraft, quantityChange: Number(e.target.value) || 0 }
-                                }))}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    handleApplyOnhand();
-                                  }
-                                  if (e.key === "Escape") {
-                                    e.preventDefault();
-                                    setEditingCell(null);
-                                  }
-                                }}
-                                disabled={isSavingRow}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleApplyOnhand()}
-                                disabled={isSavingRow}
-                                title="Apply change"
-                              >
-                                {isSavingRow ? "..." : "Apply"}
-                              </button>
-                            </div>
-                          ) : (
-                            <span>{row.onHand}</span>
-                          )}
-                        </td>
-                        <td>{row.inTransit}</td>
-                        <td>{row.preOrder}</td>
-                        <td>
-                          <span className={`stock-summary-total-pill ${row.total > 0 && row.total <= 3 ? "is-low" : ""}`}>
-                            {row.total}
-                          </span>
-                        </td>
-                        <td 
-                          className="stock-cell-editable"
-                          onClick={() => !editingSupplier && !isSavingRow && setEditingCell(`${rowKey}:supplier`)}
-                          title="Click to edit supplier"
-                        >
-                          {editingSupplier ? (
-                            <div className="stock-inline-edit-single" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                autoFocus
-                                type="text"
-                                maxLength={140}
-                                placeholder="Supplier / origin"
-                                value={rowDraft.supplier}
-                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
-                                  ...prev,
-                                  [rowKey]: { ...rowDraft, supplier: e.target.value }
-                                }))}
-                                onBlur={handleSaveSupplier}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    handleSaveSupplier();
-                                  }
-                                  if (e.key === "Escape") {
-                                    e.preventDefault();
-                                    setEditingCell(null);
-                                  }
-                                }}
-                                disabled={isSavingRow}
-                              />
-                            </div>
-                          ) : (
-                            <>
-                              {row.supplier ? (
-                                <span className="stock-supplier-chip">{row.supplier}</span>
-                              ) : (
-                                <span className="stock-supplier-chip muted">Not set</span>
-                              )}
-                            </>
-                          )}
-                        </td>
-                        <td 
-                          className="stock-cell-editable"
-                          onClick={() => !editingPrice && !isSavingRow && setEditingCell(`${rowKey}:price`)}
-                          title="Click to edit price"
-                        >
-                          {editingPrice ? (
-                            <div className="stock-inline-edit-single" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                autoFocus
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                placeholder="Price"
-                                value={rowDraft.price}
-                                onChange={(e) => setStockSummaryRowDrafts((prev) => ({
-                                  ...prev,
-                                  [rowKey]: { ...rowDraft, price: e.target.value }
-                                }))}
-                                onBlur={handleSavePrice}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    handleSavePrice();
-                                  }
-                                  if (e.key === "Escape") {
-                                    e.preventDefault();
-                                    setEditingCell(null);
-                                  }
-                                }}
-                                disabled={isSavingRow}
-                              />
-                            </div>
-                          ) : (
-                            <span>{formatPriceLabel(row.price)}</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr>
-                    <td><strong>Total</strong></td>
-                    <td><strong>{stockSummaryVisibleTotals.onHand}</strong></td>
-                    <td><strong>{stockSummaryVisibleTotals.inTransit}</strong></td>
-                    <td><strong>{stockSummaryVisibleTotals.preOrder}</strong></td>
-                    <td><strong>{stockSummaryVisibleTotals.total}</strong></td>
-                    <td>
-                      <strong>{stockSummaryMetrics.uniqueSuppliers > 0 ? `${stockSummaryMetrics.uniqueSuppliers} supplier(s)` : "-"}</strong>
-                    </td>
-                    <td><strong>-</strong></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {stockSummaryBulkSupplier.isOpen ? (
-              <div className="stock-summary-bulk-panel">
-                <h4 style={{ margin: "0 0 10px", fontSize: "13px", fontWeight: "600" }}>📋 Set Supplier for All Visible Sizes</h4>
-                <div style={{ display: "grid", gap: "8px", gridTemplateColumns: "1fr auto auto" }}>
-                  <input
-                    type="text"
-                    maxLength={140}
-                    placeholder="Enter supplier/origin name"
-                    value={stockSummaryBulkSupplier.supplier}
-                    onChange={(e) => setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, supplier: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !stockSummaryBulkSupplier.applying) {
-                        e.preventDefault();
-                        (async () => {
-                          const supplierName = stockSummaryBulkSupplier.supplier.trim();
-                          if (!supplierName) {
-                            setMessage("Enter a supplier name.");
-                            return;
-                          }
-                          setStockSummaryBulkSupplier((prev) => ({ ...prev, applying: true }));
-                          try {
-                            let successCount = 0;
-                            for (const row of sortedStockSummaryRows) {
-                              const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
-                              setStockSummaryRowDrafts((prev) => ({
-                                ...prev,
-                                [rowKey]: { ...(prev[rowKey] || {}), supplier: supplierName }
-                              }));
-                              try {
-                                await runStockSummaryQuickAction(row, "supplier");
-                                successCount++;
-                              } catch (err) {
-                                console.error(`Failed to update size ${row.displaySize}:`, err.message);
-                              }
-                            }
-                            setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
-                            setMessage(`Supplier updated for ${successCount}/${sortedStockSummaryRows.length} sizes.`);
-                          } catch (err) {
-                            setMessage(`Error: ${err.message}`);
-                            setStockSummaryBulkSupplier((prev) => ({ ...prev, applying: false }));
-                          }
-                        })();
-                      }
-                      if (e.key === "Escape" && !stockSummaryBulkSupplier.applying) {
-                        e.preventDefault();
-                        setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
-                      }
-                    }}
-                    disabled={stockSummaryBulkSupplier.applying}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const supplierName = stockSummaryBulkSupplier.supplier.trim();
-                      if (!supplierName) {
-                        setMessage("Enter a supplier name.");
-                        return;
-                      }
-                      setStockSummaryBulkSupplier((prev) => ({ ...prev, applying: true }));
-                      try {
-                        let successCount = 0;
-                        for (const row of sortedStockSummaryRows) {
-                          const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
-                          setStockSummaryRowDrafts((prev) => ({
-                            ...prev,
-                            [rowKey]: { ...(prev[rowKey] || {}), supplier: supplierName }
-                          }));
-                          try {
-                            await runStockSummaryQuickAction(row, "supplier");
-                            successCount++;
-                          } catch (err) {
-                            console.error(`Failed to update size ${row.displaySize}:`, err.message);
-                          }
-                        }
-                        setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
-                        setMessage(`Supplier updated for ${successCount}/${sortedStockSummaryRows.length} sizes.`);
-                      } catch (err) {
-                        setMessage(`Error: ${err.message}`);
-                        setStockSummaryBulkSupplier((prev) => ({ ...prev, applying: false }));
-                      }
-                    }}
-                    disabled={stockSummaryBulkSupplier.applying}
-                    title="Apply supplier to all visible sizes"
-                  >
-                    {stockSummaryBulkSupplier.applying ? "Applying..." : "Apply"}
-                  </button>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={() => setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false })}
-                    disabled={stockSummaryBulkSupplier.applying}
-                  >
-                    Cancel
-                  </button>
-                </div>
-                <small style={{ marginTop: "6px", display: "block", color: "#64748b", fontSize: "11px" }}>
-                  💡 Press Enter to apply • Escape to cancel
-                </small>
-              </div>
             ) : null}
           </section>
         </div>

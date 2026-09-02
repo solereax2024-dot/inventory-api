@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { LayoutDashboard, LogOut, Menu, Palette, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import { apiRequest } from "../utils/api";
+import { getColorwayImageUrl } from "../utils/colorway";
 import "../styles/header.css";
 
 const TRENDING_SEARCHES = ["Jordan", "Nike", "Samba", "Dunk", "Yeezy", "New Balance"];
@@ -90,10 +91,39 @@ export default function SiteHeader({
       return brand || name || "Suggested Pick";
     };
 
+    const resolveSuggestionImageUrl = (product) => {
+      const stockColorway = product?.stocks?.[0]?.colorway;
+      return getColorwayImageUrl(product, product?.mainColor)
+        || getColorwayImageUrl(product, stockColorway)
+        || getColorwayImageUrl(product)
+        || null;
+    };
+
+    const buildSuggestionFromProduct = (product, preferredQuery = "") => {
+      const imageUrl = resolveSuggestionImageUrl(product);
+      if (!imageUrl) {
+        return null;
+      }
+      const label = buildProductSuggestionLabel(product);
+      const guaranteedSearchTerm = String(product?.name || product?.brand || "").trim();
+      const query = String(preferredQuery || product?.brand || product?.name || "").trim();
+      if (!query || !guaranteedSearchTerm) {
+        return null;
+      }
+      return {
+        label,
+        query,
+        imageUrl,
+        searchTerm: guaranteedSearchTerm
+      };
+    };
+
     const loadVisualSuggestions = async () => {
       try {
         const data = await apiRequest("/api/public/products");
-        const products = Array.isArray(data) ? data.filter((item) => item?.imageUrl) : [];
+        const products = Array.isArray(data)
+          ? data.filter((item) => resolveSuggestionImageUrl(item))
+          : [];
         if (!products.length || cancelled) {
           return;
         }
@@ -115,12 +145,9 @@ export default function SiteHeader({
 
         const findByBrand = (brandName) => {
           const normalizedBrand = String(brandName || "").trim().toLowerCase();
-          return pickProduct(({ product, text }) => {
+          return pickProduct(({ product }) => {
             const productBrand = String(product?.brand || "").trim().toLowerCase();
-            if (productBrand && productBrand === normalizedBrand) {
-              return true;
-            }
-            return text.includes(normalizedBrand);
+            return Boolean(productBrand) && productBrand === normalizedBrand;
           });
         };
 
@@ -130,11 +157,7 @@ export default function SiteHeader({
             if (!matchedProduct) {
               return null;
             }
-            return {
-              label: item.label,
-              query: item.query,
-              imageUrl: matchedProduct.imageUrl
-            };
+            return buildSuggestionFromProduct(matchedProduct, item.query);
           })
           .filter(Boolean);
 
@@ -146,14 +169,12 @@ export default function SiteHeader({
             if (!fallbackProduct) {
               break;
             }
-            const label = buildProductSuggestionLabel(fallbackProduct);
-            fallbackSuggestions.push({
-              label,
-              query: String(fallbackProduct.brand || fallbackProduct.name || "").trim(),
-              imageUrl: fallbackProduct.imageUrl
-            });
+            const fallbackSuggestion = buildSuggestionFromProduct(fallbackProduct);
+            if (fallbackSuggestion) {
+              fallbackSuggestions.push(fallbackSuggestion);
+            }
           }
-          nextSuggestions.push(...fallbackSuggestions.filter((item) => item.query));
+          nextSuggestions.push(...fallbackSuggestions);
         }
 
         if (!cancelled && nextSuggestions.length > 0) {
@@ -388,7 +409,7 @@ export default function SiteHeader({
                       key={`visual-${item.label}`}
                       type="button"
                       className="search-visual-card"
-                      onClick={() => applySuggestedSearch(item.query)}
+                      onClick={() => applySuggestedSearch(item.searchTerm || item.query)}
                     >
                       <span className="search-visual-image-wrap">
                         <img src={item.imageUrl} alt={item.label} className="search-visual-image" />

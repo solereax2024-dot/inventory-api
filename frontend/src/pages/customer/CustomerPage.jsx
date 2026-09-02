@@ -19,7 +19,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [productTypeFilter, setProductTypeFilter] = useState("ALL");
   const [colorwayFilter, setColorwayFilter] = useState("ALL");
   const [sizeFilter, setSizeFilter] = useState("ALL");
-  const [stateFilter, setStateFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("BRAND_ASC");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -257,35 +256,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
        });
      }
 
-     if (stateFilter !== "ALL") {
-       next = next.filter((product) => {
-         if (sizeFilter !== "ALL") {
-           const sizeStatesByColorway = product.stockStateBySize || {};
-           let scopedColorways = colorwayFilter === "ALL"
-             ? Object.keys(sizeStatesByColorway)
-             : [colorwayFilter];
-           
-           // If this is a variant, only use the variant colorway
-           if (product._colorwayVariant) {
-             scopedColorways = [product._colorwayVariant];
-           }
-           
-           return scopedColorways.some((colorway) => Number(sizeStatesByColorway?.[colorway]?.[sizeFilter]?.[stateFilter] || 0) > 0);
-         }
-         const stateByColorway = product.stockStates || {};
-         let scopedColorways = colorwayFilter === "ALL"
-           ? Object.keys(stateByColorway)
-           : [colorwayFilter];
-         
-         // If this is a variant, only use the variant colorway
-         if (product._colorwayVariant) {
-           scopedColorways = [product._colorwayVariant];
-         }
-         
-         return scopedColorways.some((colorway) => Number(stateByColorway?.[colorway]?.[stateFilter] || 0) > 0);
-       });
-     }
-
     next.sort((a, b) => {
       const brandA = (a.brand || "").toLowerCase();
       const brandB = (b.brand || "").toLowerCase();
@@ -318,13 +288,12 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     searchParams,
     sizeFilter,
     stockFilter,
-    colorwayFilter,
-    stateFilter
+    colorwayFilter
   ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [brandFilter, departmentFilter, categoryFilter, productTypeFilter, sortBy, searchText, sizeFilter, stockFilter, colorwayFilter, stateFilter]);
+  }, [brandFilter, departmentFilter, categoryFilter, productTypeFilter, sortBy, searchText, sizeFilter, stockFilter, colorwayFilter]);
 
   const catalogPageSize = isDesktopCatalog ? CATALOG_PAGE_SIZE : 12;
   const activeFilterCount = [
@@ -335,7 +304,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     sizeFilter !== "ALL",
     colorwayFilter !== "ALL",
     stockFilter !== "ALL",
-    stateFilter !== "ALL",
     sortBy !== "BRAND_ASC",
     Boolean(searchText.trim())
   ].filter(Boolean).length;
@@ -468,7 +436,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     setProductTypeFilter("ALL");
     setSizeFilter("ALL");
     setColorwayFilter("ALL");
-    setStateFilter("ALL");
     setSortBy("BRAND_ASC");
   };
 

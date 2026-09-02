@@ -51,14 +51,6 @@ export function getSortedColorwaysFromStocks(stocks) {
   });
 }
 
-export function buildStateValuesLine(stockStates, selectedColorway) {
-  const stateValues = stockStates?.[selectedColorway] || {};
-  const onHand = Number(stateValues.ON_HAND || 0);
-  const inTransit = Number(stateValues.IN_TRANSIT || 0);
-  const preOrder = Number(stateValues.PRE_ORDER || 0);
-  return `On-hand: ${onHand}, In-transit: ${inTransit}, Pre-order: ${preOrder}`;
-}
-
 export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup = null, department = "", sizeValues = US_SIZES) {
   const storageGroup = requestedSizeGroup ? getStockStorageGroup(department, requestedSizeGroup) : null;
   const stocks = (product?.stocks || []).filter((stock) => {
@@ -69,39 +61,69 @@ export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup
   });
   const quantityBySize = new Map();
   const priceBySize = new Map();
+  const markupBySize = new Map();
   const supplierBySize = new Map();
+  const supplierEntriesBySize = new Map();
   stocks.forEach((stock) => {
     const key = String(stock.size);
+    const quantity = Number(stock.quantity || 0);
+    const supplier = String(stock.supplier || "").trim();
     quantityBySize.set(key, Number(quantityBySize.get(key) || 0) + Number(stock.quantity || 0));
     const parsedPrice = Number(stock.price);
+    const parsedMarkup = Number(stock.markup);
     if (!priceBySize.has(key) && Number.isFinite(parsedPrice) && parsedPrice >= 0) {
       priceBySize.set(key, parsedPrice);
     }
-    const supplier = String(stock.supplier || "").trim();
+    if (!markupBySize.has(key) && Number.isFinite(parsedMarkup) && parsedMarkup >= 0) {
+      markupBySize.set(key, parsedMarkup);
+    }
     if (!supplierBySize.has(key) && supplier) {
       supplierBySize.set(key, supplier);
     }
+
+    if (supplier || quantity > 0) {
+      if (!supplierEntriesBySize.has(key)) {
+        supplierEntriesBySize.set(key, new Map());
+      }
+      const entries = supplierEntriesBySize.get(key);
+      const entryKey = supplier || "__NO_SUPPLIER__";
+      const existing = entries.get(entryKey) || {
+        supplier,
+        quantity: 0,
+        price: Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null,
+        markup: Number.isFinite(parsedMarkup) && parsedMarkup >= 0 ? parsedMarkup : null
+      };
+      existing.quantity += quantity;
+      if (existing.price === null && Number.isFinite(parsedPrice) && parsedPrice >= 0) {
+        existing.price = parsedPrice;
+      }
+      if (existing.markup === null && Number.isFinite(parsedMarkup) && parsedMarkup >= 0) {
+        existing.markup = parsedMarkup;
+      }
+      entries.set(entryKey, existing);
+    }
   });
-  const bySize = storageGroup
-    ? product?.stockStateBySizeGroup?.[selectedColorway]?.[storageGroup] || {}
-    : product?.stockStateBySize?.[selectedColorway] || {};
   const sizeList = (Array.isArray(sizeValues) && sizeValues.length > 0 ? sizeValues : US_SIZES)
     .map((size) => String(size).trim())
     .filter(Boolean);
   return [...new Set(sizeList)].map((size) => {
-    const stateValues = bySize?.[size] || {};
-    const onHand = Number(stateValues.ON_HAND || 0);
-    const inTransit = Number(stateValues.IN_TRANSIT || 0);
-    const preOrder = Number(stateValues.PRE_ORDER || 0);
     const total = Number(quantityBySize.get(size) || 0);
+    const supplierEntries = [...(supplierEntriesBySize.get(size)?.values() || [])]
+      .sort((a, b) => {
+        if (!a.supplier && b.supplier) return 1;
+        if (a.supplier && !b.supplier) return -1;
+        return String(a.supplier || "").localeCompare(String(b.supplier || ""));
+      });
     return {
       size,
-      onHand,
-      inTransit,
-      preOrder,
+      onHand: total,
+      inTransit: 0,
+      preOrder: 0,
       total,
       price: priceBySize.get(size) ?? null,
-      supplier: supplierBySize.get(size) || ""
+      markup: markupBySize.get(size) ?? null,
+      supplier: supplierBySize.get(size) || supplierEntries[0]?.supplier || "",
+      supplierEntries
     };
   });
 }

@@ -384,8 +384,25 @@
 }
 
 .reservation-item-line strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: #0f172a;
+}
+
+.reservation-preorder-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #9a3412;
+  background: #ffedd5;
+  border: 1px solid #fdba74;
 }
 
 .reservation-item-line span {
@@ -443,6 +460,20 @@
 .reservation-price-input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* Keep product list action controls in a horizontal row with icon + label. */
+.products-table .actions-inline {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.products-table .admin-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .reservation-original-price {
@@ -785,330 +816,6 @@
   padding: 10px 10px 0;
 }
 
-.stock-summary-metrics-grid {
-  margin-top: 8px;
-  margin-bottom: 10px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.stock-summary-metric-card {
-  border: 1px solid #dbe4ef;
-  border-radius: 10px;
-  padding: 10px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-}
-
-.stock-summary-metric-card p {
-  margin: 0;
-  font-size: 11px;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-weight: 700;
-}
-
-.stock-summary-metric-card h3 {
-  margin: 4px 0 0;
-  font-size: 18px;
-  color: #0f172a;
-}
-
-.stock-summary-table {
-  min-width: 1120px;
-}
-
-.stock-header-sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.15s ease, color 0.15s ease;
-  white-space: nowrap;
-}
-
-.stock-header-sortable:hover {
-  background: color-mix(in srgb, var(--primary-soft) 12%, transparent);
-  color: var(--primary-dark);
-}
-
-.stock-summary-filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
-  align-items: center;
-}
-
-.stock-summary-filter-chip {
-  margin: 0;
-  width: auto;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
-  font-size: 11.5px;
-  font-weight: 700;
-  box-shadow: none;
-}
-
-.stock-summary-filter-chip.active {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary-soft) 36%, #ffffff);
-  color: color-mix(in srgb, var(--primary-dark) 86%, #1e293b);
-}
-
-.stock-summary-filter-chip.clear {
-  border-color: #dbe4ef;
-  color: #64748b;
-}
-
-.stock-summary-total-pill {
-  display: inline-flex;
-  min-width: 38px;
-  justify-content: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  font-weight: 700;
-}
-
-.stock-summary-total-pill.is-low {
-  border-color: #f59e0b;
-  background: #fffbeb;
-  color: #92400e;
-}
-
-.stock-supplier-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 9px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, #cbd5e1);
-  background: color-mix(in srgb, var(--primary-soft) 22%, #ffffff);
-  color: #1e293b;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.stock-supplier-chip.muted {
-  border-color: #d1d5db;
-  background: #f8fafc;
-  color: #64748b;
-}
-
-.stock-quick-edit-cell {
-  display: grid;
-  gap: 6px;
-  min-width: 280px;
-}
-
-.stock-quick-edit-line {
-  display: grid;
-  gap: 6px;
-  align-items: center;
-}
-
-.stock-quick-edit-line:first-child {
-  grid-template-columns: 62px minmax(0, 1fr) auto auto;
-}
-
-.stock-quick-edit-line:not(:first-child) {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.stock-quick-edit-line input,
-.stock-quick-edit-line select,
-.stock-quick-edit-line button {
-  margin-top: 0;
-  min-height: 30px;
-}
-
-.stock-quick-edit-line input,
-.stock-quick-edit-line select {
-  font-size: 11.5px;
-}
-
-.stock-quick-edit-line button {
-  width: auto;
-  padding: 0 10px;
-  font-size: 11px;
-}
-
-.stock-cell-editable {
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.stock-cell-editable:hover {
-  background: color-mix(in srgb, var(--primary-soft) 18%, transparent);
-  border-radius: 4px;
-}
-
-.stock-inline-edit-group {
-  display: grid;
-  gap: 4px;
-  align-items: center;
-  grid-template-columns: 54px minmax(0, 1fr) 22px 22px;
-  padding: 2px 0;
-}
-
-.stock-inline-edit-group input,
-.stock-inline-edit-group select,
-.stock-inline-edit-group button {
-  margin: 0;
-  min-height: 28px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #cbd5e1;
-  font-size: 11px;
-}
-
-.stock-inline-edit-group input {
-  background: #ffffff;
-  color: #1e293b;
-}
-
-.stock-inline-edit-group select {
-  background: #ffffff;
-  color: #1e293b;
-}
-
-.stock-inline-edit-group button {
-  width: 22px;
-  padding: 2px;
-  border-color: #cbd5e1;
-  background: #f8fafc;
-  color: #334155;
-  font-weight: 600;
-  transition: all 0.15s ease;
-}
-
-.stock-inline-edit-group button:hover:not(:disabled) {
-  background: var(--primary-soft);
-  border-color: var(--primary);
-  color: var(--primary-dark);
-}
-
-.stock-inline-edit-single {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  padding: 2px 0;
-}
-
-.stock-inline-edit-single input {
-  margin: 0;
-  min-height: 28px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #1e293b;
-  font-size: 11px;
-}
-
-.stock-inline-edit-single input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 16%, transparent);
-}
-
-.stock-summary-bulk-panel {
-  margin-top: 12px;
-  padding: 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-}
-
-.stock-summary-bulk-panel input,
-.stock-summary-bulk-panel button {
-  margin: 0;
-}
-
-.stock-guide-panel {
-  margin-top: 0;
-  padding: 10px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-}
-
-.stock-guide-panel .size-section-heading {
-  margin-bottom: 8px;
-}
-
-.remove-colorway-btn {
-  width: auto;
-  justify-self: start;
-  border-color: #fca5a5;
-  color: #991b1b;
-  background: linear-gradient(180deg, #ffffff, #fef2f2);
-}
-
-.remove-colorway-btn:hover:not(:disabled) {
-  border-color: #ef4444;
-  background: linear-gradient(180deg, #fef2f2, #fee2e2);
-}
-
-.products-table thead input,
-.products-table thead select {
-  margin-top: 0;
-  min-width: 120px;
-}
-
-.products-state,
-.products-stocks {
-  min-width: 190px;
-  line-height: 1.4;
-  color: #374151;
-}
-
-.products-table .actions-inline {
-  flex-wrap: nowrap;
-  align-items: center;
-}
-
-.products-table tbody td > select {
-  margin-top: 0;
-  min-height: 38px;
-}
-
-.admin-actions-inline,
-.admin-user-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
-}
-
-.admin-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  white-space: nowrap;
-  min-height: 38px;
-}
-
-.admin-action-label {
-  display: inline;
-}
-
-.admin-user-action {
-  justify-content: flex-start;
-}
-
-.admin-user-action button {
-  margin-top: 0;
-  width: auto;
-}
-
-.admin-login-card {
-  max-width: 460px;
-  margin-inline: auto;
-}
 
 @media (max-width: 1024px) {
    .admin-section {
@@ -1157,20 +864,6 @@
       font-size: 12px;
     }
 
-    .stock-summary-table {
-      min-width: 420px;
-      font-size: 11px;
-    }
-
-    .stock-summary-table th,
-    .stock-summary-table td {
-      padding: 6px 4px;
-    }
-
-    .stock-header-sortable {
-      font-size: 10px;
-    }
-
     .admin-table th,
     .admin-table td,
     .products-table th,
@@ -1178,48 +871,6 @@
       padding: 8px;
     }
 
-    /* Stock summary column widths for mobile */
-    .stock-summary-table th:nth-child(1),
-    .stock-summary-table td:nth-child(1) {
-      width: 10%;
-      min-width: 50px;
-    }
-
-    .stock-summary-table th:nth-child(2),
-    .stock-summary-table td:nth-child(2) {
-      width: 12%;
-      min-width: 45px;
-    }
-
-    .stock-summary-table th:nth-child(3),
-    .stock-summary-table td:nth-child(3) {
-      width: 12%;
-      min-width: 45px;
-    }
-
-    .stock-summary-table th:nth-child(4),
-    .stock-summary-table td:nth-child(4) {
-      width: 10%;
-      min-width: 40px;
-    }
-
-    .stock-summary-table th:nth-child(5),
-    .stock-summary-table td:nth-child(5) {
-      width: 10%;
-      min-width: 40px;
-    }
-
-    .stock-summary-table th:nth-child(6),
-    .stock-summary-table td:nth-child(6) {
-      width: 28%;
-      min-width: 90px;
-    }
-
-    .stock-summary-table th:nth-child(7),
-    .stock-summary-table td:nth-child(7) {
-      width: 18%;
-      min-width: 60px;
-    }
 
     .stock-inline-edit-group {
       grid-template-columns: 50px minmax(0, 1fr) auto;
@@ -1354,18 +1005,12 @@
       grid-template-columns: 1fr;
     }
 
-     .stock-summary-metrics-grid {
-       grid-template-columns: repeat(2, minmax(0, 1fr));
-     }
 
      .stock-quick-edit-line:first-child,
      .stock-quick-edit-line:not(:first-child) {
        grid-template-columns: 1fr;
      }
 
-     .stock-summary-filter-chip {
-       min-height: 34px;
-     }
 
 }
 
@@ -1421,63 +1066,6 @@ body.theme-dark .edit-modal-section h3 {
    background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
  }
 
- body.theme-dark .stock-summary-metric-card {
-   border-color: var(--dark-border);
-   background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
- }
-
- body.theme-dark .stock-summary-metric-card p {
-   color: #94a3b8;
- }
-
- body.theme-dark .stock-summary-metric-card h3 {
-   color: #f8fafc;
- }
-
- body.theme-dark .stock-summary-total-pill {
-   border-color: var(--dark-border);
-   background: color-mix(in srgb, var(--dark-surface) 92%, transparent);
-   color: #e2e8f0;
- }
-
- body.theme-dark .stock-summary-total-pill.is-low {
-   border-color: #f59e0b;
-   background: rgba(217, 119, 6, 0.2);
-   color: #fcd34d;
- }
-
- body.theme-dark .stock-supplier-chip {
-   border-color: color-mix(in srgb, var(--primary-soft) 26%, var(--dark-border));
-   background: color-mix(in srgb, var(--primary) 12%, var(--dark-surface));
-   color: #e2e8f0;
- }
-
- body.theme-dark .stock-supplier-chip.muted {
-   border-color: var(--dark-border);
-   background: color-mix(in srgb, var(--dark-surface) 92%, transparent);
-   color: #94a3b8;
- }
-
- body.theme-dark .stock-summary-filter-chip {
-   border-color: var(--dark-border);
-   background: color-mix(in srgb, var(--dark-surface) 92%, transparent);
-   color: #cbd5e1;
- }
-
- body.theme-dark .stock-summary-filter-chip.active {
-   border-color: var(--primary);
-   background: color-mix(in srgb, var(--primary) 28%, var(--dark-surface));
-   color: #f8fafc;
- }
-
-  body.theme-dark .stock-summary-filter-chip.clear {
-    color: #94a3b8;
-  }
-
-  body.theme-dark .stock-header-sortable:hover {
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    color: #93c5fd;
-  }
 
   body.theme-dark .stock-cell-editable:hover {
     background: color-mix(in srgb, var(--primary) 12%, transparent);
@@ -1508,10 +1096,6 @@ body.theme-dark .edit-modal-section h3 {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
   }
 
-  body.theme-dark .stock-summary-bulk-panel {
-    border-color: var(--dark-border);
-    background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
-  }
 
   body.theme-dark .stock-field-label {
     color: #94a3b8;
@@ -1554,6 +1138,12 @@ body.theme-dark .reservation-item-line span {
 
 body.theme-dark .reservation-item-line strong {
   color: #e2e8f0;
+}
+
+body.theme-dark .reservation-preorder-badge {
+  color: #fed7aa;
+  background: color-mix(in srgb, #fb923c 24%, #0f172a);
+  border-color: color-mix(in srgb, #fb923c 42%, #334155);
 }
 
 body.theme-dark .reservation-other-input {
@@ -1607,8 +1197,8 @@ body.theme-dark .reservation-delete-btn {
   color: #fecaca;
 }
 
-body.theme-dark .reservation-delete-btn:hover {
-  background: rgba(153, 27, 27, 0.42);
-  color: #ffe4e6;
-}
+  body.theme-dark .reservation-delete-btn:hover {
+    background: rgba(153, 27, 27, 0.42);
+    color: #ffe4e6;
+  }
 

@@ -1,7 +1,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--primary-dark) 40%, rgba(15, 23, 42, 0.52));
+  background: color-mix(in srgb, var(--primary-dark) 22%, rgba(15, 23, 42, 0.28));
   display: grid;
   place-items: center;
   padding: 16px;
@@ -13,7 +13,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--primary-dark) 40%, rgba(15, 23, 42, 0.52));
+  background: color-mix(in srgb, var(--primary-dark) 22%, rgba(15, 23, 42, 0.28));
   display: grid;
   place-items: center;
   padding: 16px;
@@ -204,10 +204,6 @@
   max-height: 88vh;
 }
 
-.stock-summary-modal {
-  width: min(760px, 100%);
-  max-height: 88vh;
-}
 
 .size-guide-modal-tabs {
   display: flex;
@@ -410,6 +406,20 @@ body.theme-dark .reserve-success-ref strong {
 .reserve-confirm-subtle {
   font-size: 12px;
   color: #64748b;
+}
+
+.reserve-confirm-preorder-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9a3412;
+  background: #ffedd5;
+  border: 1px solid #fdba74;
 }
 
 .reserve-confirm-actions {
@@ -1661,6 +1671,12 @@ body.theme-dark .reserve-confirm-label {
 
 body.theme-dark .reserve-confirm-subtle {
   color: #94a3b8;
+}
+
+body.theme-dark .reserve-confirm-preorder-badge {
+  color: #fed7aa;
+  background: color-mix(in srgb, #fb923c 24%, #0f172a);
+  border-color: color-mix(in srgb, #fb923c 42%, #334155);
 }
 
 /* Size group toggle */

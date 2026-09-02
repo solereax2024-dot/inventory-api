@@ -10,6 +10,7 @@ import com.solereax.inventory.inventory.StockMovement;
 import com.solereax.inventory.inventory.StockMovementRepository;
 import com.solereax.inventory.inventory.UsSizeStandard;
 import com.solereax.inventory.inventory.ColorwayStandard;
+import com.solereax.inventory.pricing.PricingPolicy;
 import com.solereax.inventory.order.dto.OrderItemResponse;
 import com.solereax.inventory.order.dto.OrderResponse;
 import com.solereax.inventory.order.dto.ReserveOrderItemRequest;
@@ -18,10 +19,16 @@ import com.solereax.inventory.order.dto.UpdateOrderStatusRequest;
 import com.solereax.inventory.shared.NotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderService {
     private static final Set<String> ALLOWED_COURIERS = Set.of("LALAMOVE", "GRAB", "LBC", "OTHER");
     private static final Set<String> ALLOWED_MOPS = Set.of("GCASH", "MAYA", "BPI", "MARIBANK", "OTHER");
+    private static final String PREORDER_SUPPLIER_BREAKDOWN_MARKER = "__PREORDER__";
 
     private final CustomerOrderRepository customerOrderRepository;
     private final ProductRepository productRepository;
@@ -69,20 +77,20 @@ public class OrderService {
             String department = resolveDepartmentForColorway(product, colorway);
             StockSizeGroup stockSizeGroup = StockSizeGroup.forDepartment(department, itemRequest.sizeGroup());
             String reservationSizeGroup = resolveReservationSizeGroup(department, itemRequest.sizeGroup());
-            ProductStock stock = productStockRepository.findForUpdate(product.getId(), colorway, size, stockSizeGroup.name())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Colorway " + colorway + " size " + size + " is not available for " + product.getName()));
-
             int quantity = itemRequest.quantity();
-            if (stock.getQuantity() < quantity) {
+            List<ProductStock> matchingStocks = productStockRepository.findAllForUpdate(
+                    product.getId(),
+                    colorway,
+                    size,
+                    stockSizeGroup.name()
+            );
+            int availableQuantity = matchingStocks.stream().mapToInt(ProductStock::getQuantity).sum();
+            boolean isPreOrderOnly = availableQuantity == 0;
+            if (!isPreOrderOnly && availableQuantity < quantity) {
                 throw new IllegalArgumentException(
                         "Insufficient stock for " + product.getName() + " " + colorway + " size " + size
                 );
             }
-
-            stock.setQuantity(stock.getQuantity() - quantity);
-            stock.setUpdatedAt(Instant.now());
-            productStockRepository.save(stock);
 
             CustomerOrderItem item = new CustomerOrderItem();
             item.setOrder(order);
@@ -92,19 +100,59 @@ public class OrderService {
             item.setSizeLabel(size);
             item.setSizeGroup(reservationSizeGroup);
             item.setQuantity(quantity);
-            order.getItems().add(item);
+            Map<String, Integer> supplierBreakdown = new LinkedHashMap<>();
+            BigDecimal itemTotalPrice = BigDecimal.ZERO;
 
-            BigDecimal unitPrice = resolveReservedUnitPrice(product, stock, colorway);
-            if (unitPrice != null) {
-                computedTotalPrice = computedTotalPrice.add(unitPrice.multiply(BigDecimal.valueOf(quantity)));
+            if (isPreOrderOnly) {
+                BigDecimal unitPrice = resolveReservedUnitPrice(product, matchingStocks.isEmpty() ? null : matchingStocks.getFirst(), colorway);
+                if (unitPrice != null) {
+                    itemTotalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
+                }
+                item.setSupplierBreakdown(PREORDER_SUPPLIER_BREAKDOWN_MARKER);
+                order.getItems().add(item);
+                computedTotalPrice = computedTotalPrice.add(itemTotalPrice);
+                continue;
             }
 
-            StockMovement movement = new StockMovement();
-            movement.setProductStock(stock);
-            movement.setQuantityChange(-quantity);
-            movement.setReason("Reservation");
-            movement.setChangedBy("customer:" + order.getCustomerName());
-            stockMovementRepository.save(movement);
+            int remaining = quantity;
+            for (ProductStock stock : matchingStocks) {
+                if (remaining <= 0) {
+                    break;
+                }
+                if (stock.getQuantity() <= 0) {
+                    continue;
+                }
+
+                int allocated = Math.min(stock.getQuantity(), remaining);
+                stock.setQuantity(stock.getQuantity() - allocated);
+                stock.setUpdatedAt(Instant.now());
+                productStockRepository.save(stock);
+
+                supplierBreakdown.merge(normalizeSupplierKey(stock.getSupplier()), allocated, Integer::sum);
+                BigDecimal unitPrice = resolveReservedUnitPrice(product, stock, colorway);
+                if (unitPrice != null) {
+                    itemTotalPrice = itemTotalPrice.add(unitPrice.multiply(BigDecimal.valueOf(allocated)));
+                }
+
+                StockMovement movement = new StockMovement();
+                movement.setProductStock(stock);
+                movement.setQuantityChange(-allocated);
+                movement.setReason("Reservation");
+                movement.setChangedBy("customer:" + order.getCustomerName());
+                stockMovementRepository.save(movement);
+
+                remaining -= allocated;
+            }
+
+            if (remaining > 0) {
+                throw new IllegalStateException(
+                        "Unable to fully allocate stock for " + product.getName() + " " + colorway + " size " + size
+                );
+            }
+
+            item.setSupplierBreakdown(serializeSupplierBreakdown(supplierBreakdown));
+            order.getItems().add(item);
+            computedTotalPrice = computedTotalPrice.add(itemTotalPrice);
         }
 
         if (computedTotalPrice.compareTo(BigDecimal.ZERO) > 0) {
@@ -191,18 +239,21 @@ public class OrderService {
             String colorway = normalizeColorway(item.getColorway());
             String department = resolveDepartmentForColorway(product, colorway);
             String stockSizeGroup = StockSizeGroup.forDepartment(department, item.getSizeGroup()).name();
-            ProductStock stock = findOrCreateStockForReservationRestore(product, colorway, size, stockSizeGroup);
+            if (PREORDER_SUPPLIER_BREAKDOWN_MARKER.equals(trimToNull(item.getSupplierBreakdown()))) {
+                continue;
+            }
+            Map<String, Integer> supplierBreakdown = parseSupplierBreakdown(item.getSupplierBreakdown());
 
-            stock.setQuantity(stock.getQuantity() + item.getQuantity());
-            stock.setUpdatedAt(Instant.now());
-            productStockRepository.save(stock);
+            if (supplierBreakdown.isEmpty()) {
+                ProductStock stock = findOrCreateStockForReservationRestore(product, colorway, size, stockSizeGroup, null);
+                restoreSupplierStock(stock, item.getQuantity(), orderId, deletedBy);
+                continue;
+            }
 
-            StockMovement movement = new StockMovement();
-            movement.setProductStock(stock);
-            movement.setQuantityChange(item.getQuantity());
-            movement.setReason("Reservation deleted #" + orderId);
-            movement.setChangedBy(deletedBy);
-            stockMovementRepository.save(movement);
+            supplierBreakdown.forEach((supplierKey, restoredQuantity) -> {
+                ProductStock stock = findOrCreateStockForReservationRestore(product, colorway, size, stockSizeGroup, denormalizeSupplierKey(supplierKey));
+                restoreSupplierStock(stock, restoredQuantity, orderId, deletedBy);
+            });
         }
 
         customerOrderRepository.delete(order);
@@ -216,7 +267,8 @@ public class OrderService {
                         item.getColorway(),
                         item.getSizeLabel(),
                         item.getSizeGroup(),
-                        item.getQuantity()
+                        item.getQuantity(),
+                        item.getSupplierBreakdown()
                 ))
                 .toList();
         return new OrderResponse(
@@ -246,8 +298,25 @@ public class OrderService {
             Product product,
             String colorway,
             String size,
-            String preferredSizeGroup
+            String preferredSizeGroup,
+            String supplier
     ) {
+        if (supplier != null) {
+            return productStockRepository.findForUpdateBySupplier(product.getId(), colorway, size, preferredSizeGroup, supplier)
+                    .orElseGet(() -> {
+                        ProductStock createdStock = new ProductStock();
+                        createdStock.setProduct(product);
+                        createdStock.setColorway(colorway);
+                        createdStock.setSizeLabel(size);
+                        createdStock.setSizeGroup(preferredSizeGroup);
+                        createdStock.setQuantity(0);
+                        createdStock.setSupplier(supplier);
+                        createdStock.setPrice(resolveReservedUnitPrice(product, createdStock, colorway));
+                        createdStock.setUpdatedAt(Instant.now());
+                        return productStockRepository.save(createdStock);
+                    });
+        }
+
         return productStockRepository.findForUpdate(product.getId(), colorway, size, preferredSizeGroup)
                 .orElseGet(() -> {
                     List<ProductStock> matchingStocks = productStockRepository.findAllByProductIdAndColorwayAndSizeLabel(
@@ -273,10 +342,81 @@ public class OrderService {
                     createdStock.setSizeLabel(size);
                     createdStock.setSizeGroup(preferredSizeGroup);
                     createdStock.setQuantity(0);
+                    createdStock.setSupplier(null);
                     createdStock.setPrice(resolveReservedUnitPrice(product, createdStock, colorway));
                     createdStock.setUpdatedAt(Instant.now());
                     return productStockRepository.save(createdStock);
                 });
+    }
+
+    private void restoreSupplierStock(ProductStock stock, int restoredQuantity, Long orderId, String deletedBy) {
+        stock.setQuantity(stock.getQuantity() + restoredQuantity);
+        stock.setUpdatedAt(Instant.now());
+        productStockRepository.save(stock);
+
+        StockMovement movement = new StockMovement();
+        movement.setProductStock(stock);
+        movement.setQuantityChange(restoredQuantity);
+        movement.setReason("Reservation deleted #" + orderId);
+        movement.setChangedBy(deletedBy);
+        stockMovementRepository.save(movement);
+    }
+
+    private String serializeSupplierBreakdown(Map<String, Integer> supplierBreakdown) {
+        if (supplierBreakdown == null || supplierBreakdown.isEmpty()) {
+            return null;
+        }
+        return supplierBreakdown.entrySet().stream()
+                .filter(entry -> entry.getValue() != null && entry.getValue() > 0)
+                .map(entry -> encodeSupplierKey(entry.getKey()) + ":" + entry.getValue())
+                .reduce((left, right) -> left + "|" + right)
+                .orElse(null);
+    }
+
+    private Map<String, Integer> parseSupplierBreakdown(String rawSupplierBreakdown) {
+        String normalized = trimToNull(rawSupplierBreakdown);
+        if (normalized == null) {
+            return Collections.emptyMap();
+        }
+        Map<String, Integer> sanitized = new LinkedHashMap<>();
+        for (String entry : normalized.split("\\|")) {
+            String trimmedEntry = entry.trim();
+            if (trimmedEntry.isEmpty()) {
+                continue;
+            }
+            int separatorIndex = trimmedEntry.lastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex >= trimmedEntry.length() - 1) {
+                continue;
+            }
+            String supplierKey = decodeSupplierKey(trimmedEntry.substring(0, separatorIndex));
+            int quantity;
+            try {
+                quantity = Integer.parseInt(trimmedEntry.substring(separatorIndex + 1));
+            } catch (NumberFormatException ex) {
+                continue;
+            }
+            if (quantity > 0) {
+                sanitized.put(normalizeSupplierKey(denormalizeSupplierKey(supplierKey)), quantity);
+            }
+        }
+        return sanitized;
+    }
+
+    private String normalizeSupplierKey(String supplier) {
+        String normalized = trimToNull(supplier);
+        return normalized == null ? "__NO_SUPPLIER__" : normalized;
+    }
+
+    private String denormalizeSupplierKey(String supplierKey) {
+        return "__NO_SUPPLIER__".equals(supplierKey) ? null : trimToNull(supplierKey);
+    }
+
+    private String encodeSupplierKey(String supplierKey) {
+        return URLEncoder.encode(supplierKey, StandardCharsets.UTF_8);
+    }
+
+    private String decodeSupplierKey(String supplierKey) {
+        return URLDecoder.decode(supplierKey, StandardCharsets.UTF_8);
     }
 
     private String resolveReservationSizeGroup(String department, String requestedGroup) {
@@ -333,8 +473,11 @@ public class OrderService {
     }
 
     private BigDecimal resolveReservedUnitPrice(Product product, ProductStock stock, String normalizedColorway) {
-        if (stock.getPrice() != null) {
-            return stock.getPrice();
+        BigDecimal supplierPrice;
+        BigDecimal markup = stock == null ? null : stock.getMarkup();
+        if (stock != null && stock.getPrice() != null) {
+            supplierPrice = stock.getPrice();
+            return PricingPolicy.toCustomerPrice(supplierPrice, markup);
         }
         BigDecimal colorwayPrice = product.getColorwayDetails().stream()
                 .filter(entry -> normalizedColorway.equals(normalizeColorway(entry.getColorway())))
@@ -343,7 +486,8 @@ public class OrderService {
                 .findFirst()
                 .orElse(null);
         if (colorwayPrice != null) {
-            return colorwayPrice;
+            supplierPrice = colorwayPrice;
+            return PricingPolicy.toCustomerPrice(supplierPrice, markup);
         }
         BigDecimal defaultColorwayPrice = product.getColorwayDetails().stream()
                 .filter(entry -> "DEFAULT".equals(normalizeColorway(entry.getColorway())))
@@ -351,7 +495,8 @@ public class OrderService {
                 .filter(value -> value != null)
                 .findFirst()
                 .orElse(null);
-        return defaultColorwayPrice != null ? defaultColorwayPrice : product.getPrice();
+        supplierPrice = defaultColorwayPrice != null ? defaultColorwayPrice : product.getPrice();
+        return PricingPolicy.toCustomerPrice(supplierPrice, markup);
     }
 
     private OrderStatus parseStatus(String rawStatus) {

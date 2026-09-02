@@ -18,9 +18,6 @@ public record PublicProductResponse(
         Map<String, String> colorwayImages,
         Map<String, ColorwayDetailsResponse> colorwayDetails,
         List<SizeStockResponse> stocks,
-        Map<String, Map<String, Integer>> stockStates,
-        Map<String, Map<String, Map<String, Integer>>> stockStateBySize,
-        Map<String, Map<String, Map<String, Map<String, Integer>>>> stockStateBySizeGroup,
         Long viewCount
 ) {
 }
