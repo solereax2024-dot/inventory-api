@@ -1016,7 +1016,20 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 16%, transparent);
 }
 
+.stock-summary-bulk-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
 
+.stock-summary-bulk-panel input,
+.stock-summary-bulk-panel button {
+  margin: 0;
+}
+
+.stock-guide-panel {
   margin-top: 0;
   padding: 10px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
@@ -1420,9 +1433,14 @@ body.theme-dark .edit-modal-section h3 {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
   }
 
+  body.theme-dark .stock-summary-bulk-panel {
+    border-color: var(--dark-border);
+    background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
+  }
+
   body.theme-dark .stock-field-label {
-   color: #94a3b8;
- }
+    color: #94a3b8;
+  }
 
 body.theme-dark .stock-guide-panel {
   background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));

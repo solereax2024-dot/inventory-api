@@ -3104,10 +3104,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         <div className="modal-overlay" onClick={() => setIsStockSummaryOpen(false)}>
           <section className="modal-panel stock-summary-modal" onClick={(e) => e.stopPropagation()}>
             <div className="breakdown-header">
-              <h2>
-                Stock Summary - {formatColorwayLabel(stockForm.colorway)}
-                {isUnisexDepartment(stockModalDepartment) ? ` (${activeStockSizeGroup === "WOMEN" ? "Women's" : "Men's"})` : ""}
-              </h2>
+              <div>
+                <h2 style={{ margin: "0 0 4px" }}>
+                  Stock Summary - {formatColorwayLabel(stockForm.colorway)}
+                  {isUnisexDepartment(stockModalDepartment) ? ` (${activeStockSizeGroup === "WOMEN" ? "Women's" : "Men's"})` : ""}
+                </h2>
+                <p style={{ margin: "0", fontSize: "12px", color: "#64748b" }}>Click headers to sort • Click cells to edit • Press Enter to save</p>
+              </div>
               <button
                 type="button"
                 className="modal-close-btn"
@@ -3426,9 +3429,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             </div>
 
             {stockSummaryBulkSupplier.isOpen ? (
-              <div style={{ marginTop: "12px", padding: "12px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "var(--surface-raised)" }}>
-                <h4 style={{ margin: "0 0 10px", fontSize: "13px", fontWeight: "600" }}>Set Supplier for All Visible Sizes</h4>
-                <div style={{ display: "grid", gap: "8px", gridTemplateColumns: "1fr auto" }}>
+              <div className="stock-summary-bulk-panel">
+                <h4 style={{ margin: "0 0 10px", fontSize: "13px", fontWeight: "600" }}>📋 Set Supplier for All Visible Sizes</h4>
+                <div style={{ display: "grid", gap: "8px", gridTemplateColumns: "1fr auto auto" }}>
                   <input
                     type="text"
                     maxLength={140}
@@ -3436,62 +3439,79 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     value={stockSummaryBulkSupplier.supplier}
                     onChange={(e) => setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, supplier: e.target.value })}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                      if (e.key === "Enter" && !stockSummaryBulkSupplier.applying) {
                         e.preventDefault();
                         (async () => {
-                          if (!stockSummaryBulkSupplier.supplier.trim()) {
+                          const supplierName = stockSummaryBulkSupplier.supplier.trim();
+                          if (!supplierName) {
                             setMessage("Enter a supplier name.");
                             return;
                           }
-                          setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, applying: true });
+                          setStockSummaryBulkSupplier((prev) => ({ ...prev, applying: true }));
                           try {
+                            let successCount = 0;
                             for (const row of sortedStockSummaryRows) {
                               const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
                               setStockSummaryRowDrafts((prev) => ({
                                 ...prev,
-                                [rowKey]: { ...(prev[rowKey] || {}), supplier: stockSummaryBulkSupplier.supplier.trim() }
+                                [rowKey]: { ...(prev[rowKey] || {}), supplier: supplierName }
                               }));
-                              await runStockSummaryQuickAction(row, "supplier");
+                              try {
+                                await runStockSummaryQuickAction(row, "supplier");
+                                successCount++;
+                              } catch (err) {
+                                console.error(`Failed to update size ${row.displaySize}:`, err.message);
+                              }
                             }
                             setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
-                            setMessage("Supplier updated for all sizes.");
+                            setMessage(`Supplier updated for ${successCount}/${sortedStockSummaryRows.length} sizes.`);
                           } catch (err) {
-                            setMessage(err.message);
-                            setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, applying: false });
+                            setMessage(`Error: ${err.message}`);
+                            setStockSummaryBulkSupplier((prev) => ({ ...prev, applying: false }));
                           }
                         })();
                       }
-                      if (e.key === "Escape") {
+                      if (e.key === "Escape" && !stockSummaryBulkSupplier.applying) {
                         e.preventDefault();
                         setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
                       }
                     }}
+                    disabled={stockSummaryBulkSupplier.applying}
+                    autoFocus
                   />
                   <button
                     type="button"
                     onClick={async () => {
-                      if (!stockSummaryBulkSupplier.supplier.trim()) {
+                      const supplierName = stockSummaryBulkSupplier.supplier.trim();
+                      if (!supplierName) {
                         setMessage("Enter a supplier name.");
                         return;
                       }
-                      setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, applying: true });
+                      setStockSummaryBulkSupplier((prev) => ({ ...prev, applying: true }));
                       try {
+                        let successCount = 0;
                         for (const row of sortedStockSummaryRows) {
                           const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
                           setStockSummaryRowDrafts((prev) => ({
                             ...prev,
-                            [rowKey]: { ...(prev[rowKey] || {}), supplier: stockSummaryBulkSupplier.supplier.trim() }
+                            [rowKey]: { ...(prev[rowKey] || {}), supplier: supplierName }
                           }));
-                          await runStockSummaryQuickAction(row, "supplier");
+                          try {
+                            await runStockSummaryQuickAction(row, "supplier");
+                            successCount++;
+                          } catch (err) {
+                            console.error(`Failed to update size ${row.displaySize}:`, err.message);
+                          }
                         }
                         setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
-                        setMessage("Supplier updated for all sizes.");
+                        setMessage(`Supplier updated for ${successCount}/${sortedStockSummaryRows.length} sizes.`);
                       } catch (err) {
-                        setMessage(err.message);
-                        setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, applying: false });
+                        setMessage(`Error: ${err.message}`);
+                        setStockSummaryBulkSupplier((prev) => ({ ...prev, applying: false }));
                       }
                     }}
                     disabled={stockSummaryBulkSupplier.applying}
+                    title="Apply supplier to all visible sizes"
                   >
                     {stockSummaryBulkSupplier.applying ? "Applying..." : "Apply"}
                   </button>
@@ -3500,11 +3520,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                     className="button-secondary"
                     onClick={() => setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false })}
                     disabled={stockSummaryBulkSupplier.applying}
-                    style={{ gridColumn: "1 / -1" }}
                   >
                     Cancel
                   </button>
                 </div>
+                <small style={{ marginTop: "6px", display: "block", color: "#64748b", fontSize: "11px" }}>
+                  💡 Press Enter to apply • Escape to cancel
+                </small>
               </div>
             ) : null}
           </section>
