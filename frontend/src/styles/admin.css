@@ -819,11 +819,24 @@
   min-width: 1120px;
 }
 
+.stock-header-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.stock-header-sortable:hover {
+  background: color-mix(in srgb, var(--primary-soft) 12%, transparent);
+  color: var(--primary-dark);
+}
+
 .stock-summary-filter-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
+  align-items: center;
 }
 
 .stock-summary-filter-chip {
@@ -1371,6 +1384,11 @@ body.theme-dark .edit-modal-section h3 {
 
   body.theme-dark .stock-summary-filter-chip.clear {
     color: #94a3b8;
+  }
+
+  body.theme-dark .stock-header-sortable:hover {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: #93c5fd;
   }
 
   body.theme-dark .stock-cell-editable:hover {

@@ -217,6 +217,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const [stockSummaryRowDrafts, setStockSummaryRowDrafts] = useState({});
     const [stockSummarySavingRow, setStockSummarySavingRow] = useState("");
     const [editingCell, setEditingCell] = useState(null);
+    const [stockSummarySortColumn, setStockSummarySortColumn] = useState("size");
+    const [stockSummarySortAsc, setStockSummarySortAsc] = useState(true);
+    const [stockSummaryBulkSupplier, setStockSummaryBulkSupplier] = useState({ isOpen: false, supplier: "", applying: false });
   const [hasStockGuideOnboardingShown, setHasStockGuideOnboardingShown] = useState(
     () => localStorage.getItem("adminStockGuideOnboardingShown") === "1"
   );
@@ -1375,6 +1378,40 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     return true;
   }), [activeStockRows, stockSummaryQuickFilters]);
+
+  const sortedStockSummaryRows = useMemo(() => {
+    const sorted = [...filteredStockSummaryRows];
+    sorted.sort((a, b) => {
+      let aVal, bVal;
+      switch (stockSummarySortColumn) {
+        case "size":
+          aVal = Number(a.baseSize || 0);
+          bVal = Number(b.baseSize || 0);
+          break;
+        case "onhand":
+          aVal = Number(a.onHand || 0);
+          bVal = Number(b.onHand || 0);
+          break;
+        case "total":
+          aVal = Number(a.total || 0);
+          bVal = Number(b.total || 0);
+          break;
+        case "supplier":
+          aVal = String(a.supplier || "");
+          bVal = String(b.supplier || "");
+          return stockSummarySortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        case "price":
+          aVal = Number(a.price || 0);
+          bVal = Number(b.price || 0);
+          break;
+        default:
+          return 0;
+      }
+      return stockSummarySortAsc ? aVal - bVal : bVal - aVal;
+    });
+    return sorted;
+  }, [filteredStockSummaryRows, stockSummarySortColumn, stockSummarySortAsc]);
+
   const stockSummaryVisibleTotals = useMemo(() => filteredStockSummaryRows.reduce((acc, row) => ({
     onHand: acc.onHand + (row.onHand || 0),
     inTransit: acc.inTransit + (row.inTransit || 0),
@@ -3129,27 +3166,82 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               >
                 Clear filters
               </button>
+              <div style={{ marginLeft: "auto" }}>
+                <button
+                  type="button"
+                  className="stock-summary-filter-chip"
+                  onClick={() => setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, isOpen: true })}
+                  title="Set supplier for all visible sizes"
+                >
+                  📋 Bulk Set Supplier
+                </button>
+              </div>
             </div>
 
             <div className="modal-table-wrap">
               <table className="stock-summary-table">
                 <thead>
                   <tr>
-                    <th>US Size</th>
-                    <th>On-hand</th>
+                    <th 
+                      onClick={() => {
+                        if (stockSummarySortColumn === "size") setStockSummarySortAsc(!stockSummarySortAsc);
+                        else { setStockSummarySortColumn("size"); setStockSummarySortAsc(true); }
+                      }}
+                      className="stock-header-sortable"
+                      title="Click to sort by size"
+                    >
+                      US Size {stockSummarySortColumn === "size" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
+                    </th>
+                    <th 
+                      onClick={() => {
+                        if (stockSummarySortColumn === "onhand") setStockSummarySortAsc(!stockSummarySortAsc);
+                        else { setStockSummarySortColumn("onhand"); setStockSummarySortAsc(false); }
+                      }}
+                      className="stock-header-sortable"
+                      title="Click to sort by on-hand quantity"
+                    >
+                      On-hand {stockSummarySortColumn === "onhand" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
+                    </th>
                     <th>In-transit</th>
                     <th>Pre-order</th>
-                    <th>Total</th>
-                    <th>Supplier / Origin</th>
-                    <th>Price</th>
+                    <th 
+                      onClick={() => {
+                        if (stockSummarySortColumn === "total") setStockSummarySortAsc(!stockSummarySortAsc);
+                        else { setStockSummarySortColumn("total"); setStockSummarySortAsc(false); }
+                      }}
+                      className="stock-header-sortable"
+                      title="Click to sort by total quantity"
+                    >
+                      Total {stockSummarySortColumn === "total" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
+                    </th>
+                    <th 
+                      onClick={() => {
+                        if (stockSummarySortColumn === "supplier") setStockSummarySortAsc(!stockSummarySortAsc);
+                        else { setStockSummarySortColumn("supplier"); setStockSummarySortAsc(true); }
+                      }}
+                      className="stock-header-sortable"
+                      title="Click to sort by supplier"
+                    >
+                      Supplier / Origin {stockSummarySortColumn === "supplier" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
+                    </th>
+                    <th 
+                      onClick={() => {
+                        if (stockSummarySortColumn === "price") setStockSummarySortAsc(!stockSummarySortAsc);
+                        else { setStockSummarySortColumn("price"); setStockSummarySortAsc(false); }
+                      }}
+                      className="stock-header-sortable"
+                      title="Click to sort by price"
+                    >
+                      Price {stockSummarySortColumn === "price" ? (stockSummarySortAsc ? "↑" : "↓") : ""}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredStockSummaryRows.length === 0 ? (
+                  {sortedStockSummaryRows.length === 0 ? (
                     <tr>
                       <td colSpan={7}>No sizes match the selected filters.</td>
                     </tr>
-                  ) : filteredStockSummaryRows.map((row) => {
+                  ) : sortedStockSummaryRows.map((row) => {
                     const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
                     const rowDraft = stockSummaryRowDrafts[rowKey] || {
                       quantityChange: 1,
@@ -3332,6 +3424,89 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                 </tbody>
               </table>
             </div>
+
+            {stockSummaryBulkSupplier.isOpen ? (
+              <div style={{ marginTop: "12px", padding: "12px", border: "1px solid #cbd5e1", borderRadius: "8px", backgroundColor: "var(--surface-raised)" }}>
+                <h4 style={{ margin: "0 0 10px", fontSize: "13px", fontWeight: "600" }}>Set Supplier for All Visible Sizes</h4>
+                <div style={{ display: "grid", gap: "8px", gridTemplateColumns: "1fr auto" }}>
+                  <input
+                    type="text"
+                    maxLength={140}
+                    placeholder="Enter supplier/origin name"
+                    value={stockSummaryBulkSupplier.supplier}
+                    onChange={(e) => setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, supplier: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        (async () => {
+                          if (!stockSummaryBulkSupplier.supplier.trim()) {
+                            setMessage("Enter a supplier name.");
+                            return;
+                          }
+                          setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, applying: true });
+                          try {
+                            for (const row of sortedStockSummaryRows) {
+                              const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
+                              setStockSummaryRowDrafts((prev) => ({
+                                ...prev,
+                                [rowKey]: { ...(prev[rowKey] || {}), supplier: stockSummaryBulkSupplier.supplier.trim() }
+                              }));
+                              await runStockSummaryQuickAction(row, "supplier");
+                            }
+                            setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
+                            setMessage("Supplier updated for all sizes.");
+                          } catch (err) {
+                            setMessage(err.message);
+                            setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, applying: false });
+                          }
+                        })();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!stockSummaryBulkSupplier.supplier.trim()) {
+                        setMessage("Enter a supplier name.");
+                        return;
+                      }
+                      setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, applying: true });
+                      try {
+                        for (const row of sortedStockSummaryRows) {
+                          const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
+                          setStockSummaryRowDrafts((prev) => ({
+                            ...prev,
+                            [rowKey]: { ...(prev[rowKey] || {}), supplier: stockSummaryBulkSupplier.supplier.trim() }
+                          }));
+                          await runStockSummaryQuickAction(row, "supplier");
+                        }
+                        setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false });
+                        setMessage("Supplier updated for all sizes.");
+                      } catch (err) {
+                        setMessage(err.message);
+                        setStockSummaryBulkSupplier({ ...stockSummaryBulkSupplier, applying: false });
+                      }
+                    }}
+                    disabled={stockSummaryBulkSupplier.applying}
+                  >
+                    {stockSummaryBulkSupplier.applying ? "Applying..." : "Apply"}
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setStockSummaryBulkSupplier({ isOpen: false, supplier: "", applying: false })}
+                    disabled={stockSummaryBulkSupplier.applying}
+                    style={{ gridColumn: "1 / -1" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
       ) : null}
