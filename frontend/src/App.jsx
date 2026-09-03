@@ -10,6 +10,7 @@ import AdminPage from "./pages/admin/AdminPage";
 import ThemeColorPicker from "./components/ThemeColorPicker";
 import WelcomeThemeModal from "./components/WelcomeThemeModal";
 import { DEFAULT_THEME, THEMES } from "./constants/themes";
+import { trackMetaEvent } from "./utils/metaPixel";
 import "./styles/modals.css";
 import "./styles/theme-picker-modal.css";
 
@@ -173,6 +174,12 @@ export default function App() {
   useEffect(() => {
     document.title = "Sole Reax PH | Official Site";
   }, [location.pathname]);
+
+  useEffect(() => {
+    trackMetaEvent("PageView", {
+      page_path: `${location.pathname}${location.search || ""}`
+    });
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });

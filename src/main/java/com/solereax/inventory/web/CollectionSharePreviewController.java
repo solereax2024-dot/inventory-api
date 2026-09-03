@@ -185,7 +185,13 @@ public class CollectionSharePreviewController {
     }
 
     private String baseUrl(HttpServletRequest request) {
-        String scheme = request.getScheme();
+        String scheme = safe(request.getHeader("X-Forwarded-Proto"));
+        if (scheme.isBlank()) {
+            scheme = request.getScheme();
+        }
+        if ("http".equalsIgnoreCase(scheme)) {
+            scheme = "https";
+        }
         String host = request.getServerName();
         int port = request.getServerPort();
 

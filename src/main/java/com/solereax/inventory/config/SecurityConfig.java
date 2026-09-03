@@ -51,6 +51,7 @@ public class SecurityConfig {
                                 "/assets/**",
                                 "/uploads/**",
                                 "/favicon.ico",
+                                "/logo.png",
                                 "/api/public/**",
                                 "/api/auth/login"
                         ).permitAll()

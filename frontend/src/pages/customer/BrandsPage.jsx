@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Layers3 } from "lucide-react";
 import { apiRequest } from "../../utils/api";
+import { trackMetaEvent } from "../../utils/metaPixel";
 import "../../styles/brands-page.css";
 
 export default function BrandsPage({ onCatalogNavChange = () => {} }) {
@@ -33,6 +34,13 @@ export default function BrandsPage({ onCatalogNavChange = () => {} }) {
       onBrandChange: (brand) => navigate(`/collections${brand && brand !== "ALL" ? `?brand=${encodeURIComponent(brand)}` : ""}`)
     });
   }, [brandData, navigate, onCatalogNavChange]);
+
+  useEffect(() => {
+    trackMetaEvent("ViewContent", {
+      content_type: "brand_directory",
+      page_path: "/brands"
+    });
+  }, []);
 
   const openBrandCollection = (brand) => {
     navigate(`/collections?brand=${encodeURIComponent(brand)}`);

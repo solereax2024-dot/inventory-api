@@ -5,6 +5,7 @@ import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
 import { getColorwayDetails, getColorwayImageUrl, normalizeColorwayValue, sanitizeColorways, sortColorways } from "../../utils/colorway";
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
+import { trackMetaEvent } from "../../utils/metaPixel";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "../../components/ProductCard";
 import BrandsMarquee from "../../components/BrandsMarquee";
@@ -423,6 +424,17 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const openBrandCollection = (brandName) => {
     navigate(`/collections?brand=${encodeURIComponent(brandName)}`);
   };
+
+  useEffect(() => {
+    const payload = {
+      content_type: "product_catalog",
+      page_path: "/collections"
+    };
+    if (brandFilter !== "ALL") payload.brand = brandFilter;
+    if (departmentFilter !== "ALL") payload.department = departmentFilter;
+    if (searchText.trim()) payload.search_string = searchText.trim();
+    trackMetaEvent("ViewContent", payload);
+  }, [brandFilter, departmentFilter, searchText]);
 
   const resetCatalogFilters = () => {
     const next = new URLSearchParams(searchParams);

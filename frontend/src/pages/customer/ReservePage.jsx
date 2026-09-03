@@ -10,6 +10,7 @@ import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDep
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 import { PHP_CURRENCY, formatPriceDisplay } from "../../utils/price";
+import { trackMetaEvent } from "../../utils/metaPixel";
 import ProductCard from "../../components/ProductCard";
 
 const ZOOM_LEVELS = [1, 2, 3];
@@ -53,6 +54,7 @@ export default function ReservePage() {
   const sizeSectionRef = useRef(null);
   const customerNameInputRef = useRef(null);
   const customerContactInputRef = useRef(null);
+  const trackedMetaViewRef = useRef("");
   const [thumbnailRailScrollRatio, setThumbnailRailScrollRatio] = useState(0);
   const [canScrollThumbnailRail, setCanScrollThumbnailRail] = useState(false);
   const [relatedRailScrollRatio, setRelatedRailScrollRatio] = useState(0);
@@ -101,6 +103,30 @@ export default function ReservePage() {
       colorwayKey: reserve.colorway
     }).catch(() => {});
   }, [product?.id, reserve.colorway]);
+
+  useEffect(() => {
+    if (!product?.id || !reserve.colorway) {
+      return;
+    }
+    const viewKey = `${product.id}:${reserve.colorway}`;
+    if (trackedMetaViewRef.current === viewKey) {
+      return;
+    }
+    trackedMetaViewRef.current = viewKey;
+    const payload = {
+      content_ids: [String(product.id)],
+      content_name: product.name || "",
+      content_type: "product",
+      currency: "PHP"
+    };
+    if (product.brand) {
+      payload.brand = product.brand;
+    }
+    if (estimatedReservationValue !== null) {
+      payload.value = estimatedReservationValue;
+    }
+    trackMetaEvent("ViewContent", payload);
+  }, [product?.id, product?.name, product?.brand, reserve.colorway, estimatedReservationValue]);
 
   const colorways = useMemo(
     () => (product ? getSortedColorwaysFromStocks(product.stocks) : []),
@@ -162,6 +188,17 @@ export default function ReservePage() {
     [selectedColorwayDetails]
   );
   const selectedColorwayPriceLabel = selectedSizePriceLabel || selectedColorwayPriceRange;
+  const estimatedReservationValue = useMemo(() => {
+    if (selectedSizePrice === null) {
+      return null;
+    }
+    const quantity = Number(reserve.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return selectedSizePrice;
+    }
+    return selectedSizePrice * quantity;
+  }, [selectedSizePrice, reserve.quantity]);
+
   const selectReserveSize = (baseSize, sizeGroup) => {
     setReserve((prev) => ({
       ...prev,
@@ -479,7 +516,18 @@ export default function ReservePage() {
 
    const openConfirmation = () => {
      try {
-       validateReserve();
+       const payload = validateReserve();
+       const metaPayload = {
+         content_ids: [String(product.id)],
+         content_name: product.name || "",
+         content_type: "product",
+         currency: "PHP",
+         quantity: Number(payload?.items?.[0]?.quantity || reserve.quantity || 1)
+       };
+       if (estimatedReservationValue !== null) {
+         metaPayload.value = estimatedReservationValue;
+       }
+       trackMetaEvent("AddToCart", metaPayload);
        setIsConfirmOpen(true);
      } catch (err) {
        setMessage(err.message);
@@ -500,6 +548,20 @@ export default function ReservePage() {
       setIsConfirmOpen(false);
       setSuccessReference(reservationRef);
       setIsSuccessOpen(true);
+      const metaPayload = {
+        content_ids: [String(product.id)],
+        content_name: product.name || "",
+        content_type: "product",
+        currency: "PHP",
+        quantity: Number(payload?.items?.[0]?.quantity || reserve.quantity || 1)
+      };
+      if (estimatedReservationValue !== null) {
+        metaPayload.value = estimatedReservationValue;
+      }
+      if (reservationRef) {
+        metaPayload.order_id = reservationRef;
+      }
+      trackMetaEvent("Lead", metaPayload);
     } finally {
       setIsSubmitting(false);
     }
