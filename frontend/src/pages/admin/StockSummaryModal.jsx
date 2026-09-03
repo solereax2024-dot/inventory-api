@@ -65,7 +65,8 @@ export default function StockSummaryModal({
   formatPriceLabel,
   customerMarkup,
   hasSizeGuide,
-  onOpenSizeGuide
+  onOpenSizeGuide,
+  supplierSuggestions = []
 }) {
   if (!isOpen) return null;
 
@@ -74,6 +75,7 @@ export default function StockSummaryModal({
   const allVisibleSelected = sortedRows.length > 0 && sortedRows.every((row) => selectedRows.has(`${activeStockSizeGroup}-${row.baseSize}`));
   const parsedMarkup = Number(bulkAction.markup);
   const activeMarkup = Number.isFinite(parsedMarkup) && parsedMarkup >= 0 ? parsedMarkup : customerMarkup;
+  const supplierDatalistId = "stock-summary-supplier-options";
 
   const sortLabel = (column) => (sortColumn === column ? (sortAsc ? "↑" : "↓") : "");
   const renderSupplierContent = (rowKey, supplierBreakdownEntries, selectedSupplierEntry, selectedSupplier) => {
@@ -217,11 +219,17 @@ export default function StockSummaryModal({
                   type="text"
                   maxLength={100}
                   placeholder="Supplier name"
+                  list={supplierDatalistId}
                   value={bulkAction.supplier}
                   onChange={(e) => onBulkFieldChange("supplier", e.target.value)}
                   disabled={bulkAction.applying}
                   className="stock-summary-field-input"
                 />
+                <datalist id={supplierDatalistId}>
+                  {supplierSuggestions.map((supplier) => (
+                    <option key={`supplier-option-${supplier}`} value={supplier} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="stock-summary-field stock-field stock-summary-field-price">

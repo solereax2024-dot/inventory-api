@@ -1672,6 +1672,24 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     if (!activeStockSizeSection?.rows) return [];
     return activeStockSizeSection.rows;
   }, [activeStockSizeSection]);
+  const stockSummarySupplierSuggestions = useMemo(() => {
+    const uniqueByLower = new Map();
+    activeStockRows.forEach((row) => {
+      const entries = Array.isArray(row.supplierEntries) && row.supplierEntries.length
+        ? row.supplierEntries
+        : [{ supplier: row.supplier || "" }];
+      entries.forEach((entry) => {
+        const supplier = String(entry?.supplier || "").trim();
+        if (!supplier) return;
+        const key = supplier.toLowerCase();
+        if (!uniqueByLower.has(key)) {
+          uniqueByLower.set(key, supplier);
+        }
+      });
+    });
+    return Array.from(uniqueByLower.values()).sort((a, b) => a.localeCompare(b));
+  }, [activeStockRows]);
+
   useEffect(() => {
     if (!isStockSummaryOpen || productActionModal.type !== "stock") {
       return;
@@ -3224,6 +3242,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         customerMarkup={CUSTOMER_MARKUP}
         hasSizeGuide={Boolean(stockSizeGuide && stockGuideSection)}
         onOpenSizeGuide={() => setIsStockGuideOpen(true)}
+        supplierSuggestions={stockSummarySupplierSuggestions}
       />
 
       {isStockGuideOpen && stockSizeGuide && stockGuideSection ? (

@@ -104,30 +104,6 @@ export default function ReservePage() {
     }).catch(() => {});
   }, [product?.id, reserve.colorway]);
 
-  useEffect(() => {
-    if (!product?.id || !reserve.colorway) {
-      return;
-    }
-    const viewKey = `${product.id}:${reserve.colorway}`;
-    if (trackedMetaViewRef.current === viewKey) {
-      return;
-    }
-    trackedMetaViewRef.current = viewKey;
-    const payload = {
-      content_ids: [String(product.id)],
-      content_name: product.name || "",
-      content_type: "product",
-      currency: "PHP"
-    };
-    if (product.brand) {
-      payload.brand = product.brand;
-    }
-    if (estimatedReservationValue !== null) {
-      payload.value = estimatedReservationValue;
-    }
-    trackMetaEvent("ViewContent", payload);
-  }, [product?.id, product?.name, product?.brand, reserve.colorway, estimatedReservationValue]);
-
   const colorways = useMemo(
     () => (product ? getSortedColorwaysFromStocks(product.stocks) : []),
     [product]
@@ -198,6 +174,30 @@ export default function ReservePage() {
     }
     return selectedSizePrice * quantity;
   }, [selectedSizePrice, reserve.quantity]);
+
+  useEffect(() => {
+    if (!product?.id || !reserve.colorway) {
+      return;
+    }
+    const viewKey = `${product.id}:${reserve.colorway}`;
+    if (trackedMetaViewRef.current === viewKey) {
+      return;
+    }
+    trackedMetaViewRef.current = viewKey;
+    const payload = {
+      content_ids: [String(product.id)],
+      content_name: product.name || "",
+      content_type: "product",
+      currency: "PHP"
+    };
+    if (product.brand) {
+      payload.brand = product.brand;
+    }
+    if (estimatedReservationValue !== null) {
+      payload.value = estimatedReservationValue;
+    }
+    trackMetaEvent("ViewContent", payload);
+  }, [product?.id, product?.name, product?.brand, reserve.colorway, estimatedReservationValue]);
 
   const selectReserveSize = (baseSize, sizeGroup) => {
     setReserve((prev) => ({
