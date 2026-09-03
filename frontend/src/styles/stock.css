@@ -624,17 +624,18 @@ body.theme-dark .stock-size-guide-cta {
 
   .stock-summary-mobile-actions {
     position: sticky;
-    bottom: -10px;
+      bottom: 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin: 6px -10px -10px;
+      margin: 6px -10px 0;
     padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
     border-top: 1px solid #e2e8f0;
     background: rgba(248, 250, 252, 0.96);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     box-shadow: 0 -10px 24px rgba(15, 23, 42, 0.08);
+      z-index: 10;
   }
 
   .stock-summary-mobile-actions .stock-summary-apply-btn {
@@ -698,9 +699,9 @@ body.theme-dark .stock-size-guide-cta {
 
   .stock-summary-mobile-actions {
     margin-inline: -8px;
-    margin-bottom: -8px;
+      margin-bottom: 0;
     padding-inline: 8px;
-    bottom: -8px;
+      bottom: 0;
   }
 }
 

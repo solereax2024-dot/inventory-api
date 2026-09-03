@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.net.URLDecoder;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -35,17 +36,23 @@ public class CollectionSharePreviewController {
         this.productRepository = productRepository;
     }
 
-    @GetMapping(value = {"/collections", "/collections/", "/collection", "/collection/", "/shop", "/shop/", "/brands", "/brands/"}, produces = MediaType.TEXT_HTML_VALUE)
+    @GetMapping(value = {
+            "/collections", "/collections/", "/collections/**",
+            "/collection", "/collection/", "/collection/**",
+            "/shop", "/shop/", "/shop/**",
+            "/brands", "/brands/", "/brands/**"
+    }, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> collectionPage(
             @RequestParam(value = "brand", required = false) String brand,
             @RequestParam(value = "department", required = false) String department,
             HttpServletRequest request
     ) throws IOException {
         String html = readSpaIndex();
+        String effectiveBrand = inferBrand(brand, request.getRequestURI());
         String canonicalUrl = buildCanonicalUrl(request);
-        String title = buildTitle(brand, department, request.getRequestURI());
-        String description = buildDescription(brand, department, request.getRequestURI());
-        String imageUrl = toAbsoluteUrl(request, resolvePreviewImage(brand));
+        String title = buildTitle(effectiveBrand, department, request.getRequestURI());
+        String description = buildDescription(effectiveBrand, department, request.getRequestURI());
+        String imageUrl = toAbsoluteUrl(request, resolvePreviewImage(effectiveBrand));
 
         String updated = html;
         updated = replaceTag(updated, "<title>Sole Reax PH | Official Site</title>", "<title>" + escapeHtml(title) + "</title>");
@@ -202,9 +209,39 @@ public class CollectionSharePreviewController {
         return baseUrl(request) + normalized;
     }
 
+    private String inferBrand(String brand, String requestUri) {
+        String queryBrand = safe(brand);
+        if (!queryBrand.isBlank()) {
+            return queryBrand;
+        }
+
+        String path = safe(requestUri);
+        if (path.startsWith("/brands/")) {
+            return decodePathBrand(path.substring("/brands/".length()));
+        }
+        if (path.startsWith("/collections/")) {
+            return decodePathBrand(path.substring("/collections/".length()));
+        }
+        if (path.startsWith("/collection/")) {
+            return decodePathBrand(path.substring("/collection/".length()));
+        }
+        return "";
+    }
+
+    private String decodePathBrand(String value) {
+        String segment = safe(value);
+        if (segment.isBlank()) {
+            return "";
+        }
+
+        String firstSegment = segment.split("/")[0];
+        String decoded = URLDecoder.decode(firstSegment, StandardCharsets.UTF_8);
+        return decoded.replace('-', ' ').trim();
+    }
+
     private String replaceMetaContent(String html, String attr, String attrValue, String content) {
-        String regex = "(<meta\\s+[^>]*" + Pattern.quote(attr) + "=\"" + Pattern.quote(attrValue)
-                + "\"[^>]*content=\")([^\"]*)(\"[^>]*>)";
+        String regex = "(<meta\\s+[^>]*" + Pattern.quote(attr) + "=\\\"" + Pattern.quote(attrValue)
+                + "\\\"[^>]*content=\\\")([^\\\"]*)(\\\"[^>]*>)";
         Matcher matcher = Pattern.compile(regex).matcher(html);
         if (!matcher.find()) {
             return html;
@@ -214,7 +251,7 @@ public class CollectionSharePreviewController {
     }
 
     private String replaceLinkHref(String html, String relValue, String href) {
-        String regex = "(<link\\s+[^>]*rel=\"" + Pattern.quote(relValue) + "\"[^>]*href=\")([^\"]*)(\"[^>]*>)";
+        String regex = "(<link\\s+[^>]*rel=\\\"" + Pattern.quote(relValue) + "\\\"[^>]*href=\\\")([^\\\"]*)(\\\"[^>]*>)";
         Matcher matcher = Pattern.compile(regex).matcher(html);
         if (!matcher.find()) {
             return html;

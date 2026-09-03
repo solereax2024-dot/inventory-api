@@ -161,7 +161,7 @@ export default function ReservePage() {
     () => formatPriceDisplay(selectedColorwayDetails?.minPrice, selectedColorwayDetails?.maxPrice),
     [selectedColorwayDetails]
   );
-  const selectedColorwayPriceLabel = selectedColorwayPriceRange || selectedSizePriceLabel;
+  const selectedColorwayPriceLabel = selectedSizePriceLabel || selectedColorwayPriceRange;
   const selectReserveSize = (baseSize, sizeGroup) => {
     setReserve((prev) => ({
       ...prev,
