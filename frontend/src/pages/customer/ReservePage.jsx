@@ -18,6 +18,16 @@ const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to rese
 const DESKTOP_BREAKPOINT = 901;
 const DESKTOP_BASE_IMAGE_SCALE = 1;
 const MOBILE_BASE_IMAGE_SCALE = 1;
+const ENABLE_ONLINE_PAYMENT = String(import.meta.env.VITE_ENABLE_PAYMONGO_CHECKOUT || "").toLowerCase() === "true";
+const CUSTOMER_MOP_OPTIONS = [
+  { value: "GCASH", label: "GCash" },
+  { value: "MAYA", label: "Maya" },
+  { value: "BPI", label: "BPI" },
+  { value: "BDO", label: "BDO" },
+  { value: "MARIBANK", label: "MariBank" },
+  { value: "PAYMONGO", label: "PayMongo Checkout" },
+  { value: "OTHER", label: "Other" }
+];
 
 export default function ReservePage() {
   const navigate = useNavigate();
@@ -30,6 +40,8 @@ export default function ReservePage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [successReference, setSuccessReference] = useState("");
+  const [successOrderId, setSuccessOrderId] = useState(null);
+  const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [mobileOpenSection, setMobileOpenSection] = useState("size");
@@ -38,6 +50,8 @@ export default function ReservePage() {
     customerName: "",
     customerContact: "",
     notes: "",
+    mop: "",
+    mopOther: "",
     colorway: "",
     size: String(US_SIZES[0]),
     sizeGroup: "MEN",
@@ -54,6 +68,8 @@ export default function ReservePage() {
   const sizeSectionRef = useRef(null);
   const customerNameInputRef = useRef(null);
   const customerContactInputRef = useRef(null);
+  const customerMopInputRef = useRef(null);
+  const customerMopOtherInputRef = useRef(null);
   const trackedMetaViewRef = useRef("");
   const [thumbnailRailScrollRatio, setThumbnailRailScrollRatio] = useState(0);
   const [canScrollThumbnailRail, setCanScrollThumbnailRail] = useState(false);
@@ -394,6 +410,21 @@ export default function ReservePage() {
   }, [product, reserve.size, reserve.sizeGroup, sizeSections, selectedDepartment, defaultSizeGroup, activeSizeGroup]);
 
   useEffect(() => {
+    const paymentState = searchParams.get("payment");
+    if (paymentState === "success") {
+      setMessage("Payment completed. We will verify and update your reservation status shortly.");
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("payment");
+      setSearchParams(nextParams, { replace: true });
+    } else if (paymentState === "cancel") {
+      setMessage("Payment was cancelled. You can try again anytime.");
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("payment");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
     if (!message) return undefined;
     const timer = window.setTimeout(() => setMessage(""), 2800);
     return () => window.clearTimeout(timer);
@@ -465,6 +496,16 @@ export default function ReservePage() {
        error.fieldId = "customerContact";
        throw error;
      }
+     if (!reserve.mop || reserve.mop.trim() === "") {
+       const error = new Error("Please select your preferred payment method.");
+       error.fieldId = "mop";
+       throw error;
+     }
+     if (reserve.mop === "OTHER" && (!reserve.mopOther || reserve.mopOther.trim() === "")) {
+       const error = new Error("Please specify your payment method.");
+       error.fieldId = "mopOther";
+       throw error;
+     }
 
      const quantity = Number(reserve.quantity);
      if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -477,6 +518,8 @@ export default function ReservePage() {
        customerName: reserve.customerName.trim(),
        customerContact: reserve.customerContact.trim(),
        notes: reserve.notes.trim(),
+       mop: reserve.mop,
+       mopOther: reserve.mop === "OTHER" ? reserve.mopOther.trim() : "",
        items: [
          {
            productId: Number(product.id),
@@ -496,10 +539,28 @@ export default function ReservePage() {
      if (fieldId === "size" && sizeSectionRef.current) {
        targetElement = sizeSectionRef.current;
      } else if (fieldId === "customerName" && customerNameInputRef.current) {
+       if (window.innerWidth < DESKTOP_BREAKPOINT) {
+         setMobileOpenSection("info");
+       }
        targetElement = customerNameInputRef.current;
        scrollOptions = { behavior: "smooth", block: "nearest" };
      } else if (fieldId === "customerContact" && customerContactInputRef.current) {
+       if (window.innerWidth < DESKTOP_BREAKPOINT) {
+         setMobileOpenSection("info");
+       }
        targetElement = customerContactInputRef.current;
+       scrollOptions = { behavior: "smooth", block: "nearest" };
+     } else if (fieldId === "mop" && customerMopInputRef.current) {
+       if (window.innerWidth < DESKTOP_BREAKPOINT) {
+         setMobileOpenSection("info");
+       }
+       targetElement = customerMopInputRef.current;
+       scrollOptions = { behavior: "smooth", block: "nearest" };
+     } else if (fieldId === "mopOther" && customerMopOtherInputRef.current) {
+       if (window.innerWidth < DESKTOP_BREAKPOINT) {
+         setMobileOpenSection("info");
+       }
+       targetElement = customerMopOtherInputRef.current;
        scrollOptions = { behavior: "smooth", block: "nearest" };
      }
 
@@ -508,13 +569,28 @@ export default function ReservePage() {
        targetElement.scrollIntoView(scrollOptions);
 
        // Focus on input fields for better UX
-       if (fieldId === "customerName" || fieldId === "customerContact") {
+       if (fieldId === "customerName" || fieldId === "customerContact" || fieldId === "mop" || fieldId === "mopOther") {
          setTimeout(() => targetElement?.focus(), 300);
        }
      }
    };
 
    const openConfirmation = () => {
+     const isMobileView = window.innerWidth < DESKTOP_BREAKPOINT;
+     if (isMobileView) {
+       const missingFieldId = !reserve.customerName.trim()
+         ? "customerName"
+         : !reserve.customerContact.trim()
+           ? "customerContact"
+           : !reserve.mop.trim()
+             ? "mop"
+             : (reserve.mop === "OTHER" && !reserve.mopOther.trim() ? "mopOther" : "");
+       if (missingFieldId) {
+         setMobileOpenSection("info");
+         scrollToField(missingFieldId);
+         return;
+       }
+     }
      try {
        const payload = validateReserve();
        const metaPayload = {
@@ -547,6 +623,7 @@ export default function ReservePage() {
       const reservationRef = String(response?.orderCode || response?.reference || response?.id || "").trim();
       setIsConfirmOpen(false);
       setSuccessReference(reservationRef);
+      setSuccessOrderId(response?.id ?? null);
       setIsSuccessOpen(true);
       const metaPayload = {
         content_ids: [String(product.id)],
@@ -569,13 +646,46 @@ export default function ReservePage() {
 
   const handleReserveAnother = () => {
     setIsSuccessOpen(false);
+    setSuccessOrderId(null);
+    setSuccessReference("");
     setReserve((prev) => ({
       ...prev,
       customerName: "",
       customerContact: "",
       notes: "",
+        mop: "",
+        mopOther: "",
       quantity: 1
     }));
+  };
+
+  const startOnlinePayment = async () => {
+    if (!ENABLE_ONLINE_PAYMENT) {
+      setMessage("Online payment is coming soon.");
+      return;
+    }
+    if (!successOrderId) {
+      setMessage("Missing reservation ID. Please refresh and try again.");
+      return;
+    }
+
+    setIsPaymentRedirecting(true);
+    try {
+      const currentPath = `${window.location.origin}${location.pathname}`;
+      const response = await apiRequest("/api/public/payments/paymongo/checkout", "POST", {
+        orderId: Number(successOrderId),
+        successUrl: `${currentPath}?payment=success`,
+        cancelUrl: `${currentPath}?payment=cancel`
+      });
+      const checkoutUrl = String(response?.checkoutUrl || "").trim();
+      if (!checkoutUrl) {
+        throw new Error("No checkout URL received.");
+      }
+      window.location.assign(checkoutUrl);
+    } catch (err) {
+      setMessage(err.message || "Unable to start online payment.");
+      setIsPaymentRedirecting(false);
+    }
   };
 
   if (isLoading) {
@@ -951,6 +1061,40 @@ export default function ReservePage() {
                      required
                    />
                  </div>
+                 <div className="customer-info-field">
+                   <span className="customer-field-label">Preferred MOP <span className="required">*</span></span>
+                   <select
+                     ref={customerMopInputRef}
+                     value={reserve.mop}
+                     onChange={(e) => {
+                       const nextMop = e.target.value;
+                       setReserve((prev) => ({
+                         ...prev,
+                         mop: nextMop,
+                         mopOther: nextMop === "OTHER" ? prev.mopOther : ""
+                       }));
+                     }}
+                     required
+                   >
+                     <option value="">Select payment method</option>
+                     {CUSTOMER_MOP_OPTIONS.map((option) => (
+                       <option key={`customer-mop-${option.value}`} value={option.value}>{option.label}</option>
+                     ))}
+                   </select>
+                 </div>
+                 {reserve.mop === "OTHER" ? (
+                   <div className="customer-info-field">
+                     <span className="customer-field-label">Specify MOP <span className="required">*</span></span>
+                     <input
+                       ref={customerMopOtherInputRef}
+                       placeholder="Example: Bank transfer"
+                       maxLength={120}
+                       value={reserve.mopOther}
+                       onChange={(e) => setReserve((prev) => ({ ...prev, mopOther: e.target.value }))}
+                       required
+                     />
+                   </div>
+                 ) : null}
               </div>
               <div className="customer-notes-field">
                 <span className="customer-field-label">Notes <span className="field-hint-inline">(optional)</span></span>
@@ -1089,11 +1233,22 @@ export default function ReservePage() {
                   <span className="reserve-confirm-label">Contact</span>
                   <strong>{reserve.customerContact.trim()}</strong>
                 </div>
+                <div className="reserve-confirm-item">
+                  <span className="reserve-confirm-label">MOP</span>
+                  <strong>
+                    {reserve.mop === "OTHER"
+                      ? (reserve.mopOther.trim() || "Other")
+                      : (CUSTOMER_MOP_OPTIONS.find((option) => option.value === reserve.mop)?.label || reserve.mop || "-")}
+                  </strong>
+                </div>
                 <div className="reserve-confirm-item reserve-confirm-item-wide">
                   <span className="reserve-confirm-label">Notes</span>
                   <strong>{reserve.notes.trim() || "No notes provided"}</strong>
                 </div>
               </div>
+              <p className="field-hint" style={{ marginTop: 10 }}>
+                Sole Reax will contact you once the item is ship.
+              </p>
             </div>
 
             <div className="reserve-confirm-actions">
@@ -1124,7 +1279,7 @@ export default function ReservePage() {
               <div className="reserve-success-icon" aria-hidden="true">✓</div>
               <h2>Reservation sent</h2>
               <p className="reserve-success-copy">
-                Thanks! We received your reservation request and will contact you shortly.
+                Thanks! We received your reservation request. Sole Reax will contact you once the item is ship.
               </p>
               {successReference ? (
                 <p className="reserve-success-ref">
@@ -1136,13 +1291,34 @@ export default function ReservePage() {
                   type="button"
                   className="btn-cancel reserve-success-secondary-btn"
                   onClick={handleReserveAnother}
+                  disabled={isPaymentRedirecting}
                 >
                   Reserve Another
                 </button>
+                {ENABLE_ONLINE_PAYMENT ? (
+                  <button
+                    type="button"
+                    className="btn-primary reserve-success-primary-btn"
+                    onClick={() => startOnlinePayment().catch((err) => setMessage(err.message))}
+                    disabled={!successOrderId || isPaymentRedirecting}
+                  >
+                    {isPaymentRedirecting ? "Redirecting..." : "Pay Online (GCash/Maya/Banks)"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-cancel reserve-success-secondary-btn"
+                    disabled
+                    title="Online payment is coming soon"
+                  >
+                    Pay Online (Soon)
+                  </button>
+                )}
                 <button
                   type="button"
-                  className="btn-primary reserve-success-primary-btn"
+                  className="btn-cancel reserve-success-secondary-btn"
                   onClick={() => navigate(backToCollectionsPath)}
+                  disabled={isPaymentRedirecting}
                 >
                   Back to Collections
                 </button>

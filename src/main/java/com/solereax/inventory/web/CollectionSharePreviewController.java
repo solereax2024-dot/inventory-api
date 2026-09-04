@@ -185,15 +185,38 @@ public class CollectionSharePreviewController {
     }
 
     private String baseUrl(HttpServletRequest request) {
-        String scheme = safe(request.getHeader("X-Forwarded-Proto"));
+        String scheme = firstHeaderValue(request.getHeader("X-Forwarded-Proto"));
+        boolean hasForwardedScheme = !scheme.isBlank();
         if (scheme.isBlank()) {
             scheme = request.getScheme();
         }
         if ("http".equalsIgnoreCase(scheme)) {
             scheme = "https";
         }
-        String host = request.getServerName();
-        int port = request.getServerPort();
+
+        String host = firstHeaderValue(request.getHeader("X-Forwarded-Host"));
+        if (host.isBlank()) {
+            host = firstHeaderValue(request.getHeader("Host"));
+        }
+        if (host.isBlank()) {
+            host = request.getServerName();
+        }
+        host = stripPort(host);
+
+        String forwardedPort = firstHeaderValue(request.getHeader("X-Forwarded-Port"));
+        int port = parsePort(forwardedPort);
+        if (port <= 0) {
+            port = request.getServerPort();
+        }
+
+        // Common proxy setup: app sees http:80 while public URL is https:443.
+        if (hasForwardedScheme && forwardedPort.isBlank()) {
+            if ("https".equalsIgnoreCase(scheme) && port == 80) {
+                port = 443;
+            } else if ("http".equalsIgnoreCase(scheme) && port == 443) {
+                port = 80;
+            }
+        }
 
         boolean defaultPort = ("http".equalsIgnoreCase(scheme) && port == 80)
                 || ("https".equalsIgnoreCase(scheme) && port == 443);
@@ -202,6 +225,43 @@ public class CollectionSharePreviewController {
             return scheme + "://" + host;
         }
         return scheme + "://" + host + ":" + port;
+    }
+
+    private String firstHeaderValue(String headerValue) {
+        if (headerValue == null || headerValue.isBlank()) {
+            return "";
+        }
+        return headerValue.split(",")[0].trim();
+    }
+
+    private int parsePort(String rawPort) {
+        if (rawPort == null || rawPort.isBlank()) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(rawPort.trim());
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
+    private String stripPort(String host) {
+        String value = safe(host);
+        if (value.isBlank()) {
+            return value;
+        }
+        if (value.startsWith("[")) {
+            int closingBracket = value.indexOf(']');
+            if (closingBracket > 0) {
+                return value.substring(0, closingBracket + 1);
+            }
+            return value;
+        }
+        int colonIndex = value.lastIndexOf(':');
+        if (colonIndex > 0 && value.indexOf(':') == colonIndex) {
+            return value.substring(0, colonIndex);
+        }
+        return value;
     }
 
     private String toAbsoluteUrl(HttpServletRequest request, String value) {

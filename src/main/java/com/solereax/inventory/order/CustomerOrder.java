@@ -60,6 +60,27 @@ public class CustomerOrder {
     @Column(name = "balance", precision = 12, scale = 2)
     private BigDecimal balance;
 
+    @Column(name = "payment_provider", length = 40)
+    private String paymentProvider;
+
+    @Column(name = "payment_status", length = 30)
+    private String paymentStatus;
+
+    @Column(name = "payment_reference", length = 120)
+    private String paymentReference;
+
+    @Column(name = "payment_checkout_id", length = 120)
+    private String paymentCheckoutId;
+
+    @Column(name = "payment_checkout_url", length = 500)
+    private String paymentCheckoutUrl;
+
+    @Column(name = "payment_last_event", length = 120)
+    private String paymentLastEvent;
+
+    @Column(name = "payment_paid_at")
+    private Instant paymentPaidAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

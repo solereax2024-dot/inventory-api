@@ -35,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OrderService {
     private static final Set<String> ALLOWED_COURIERS = Set.of("LALAMOVE", "GRAB", "LBC", "OTHER");
-    private static final Set<String> ALLOWED_MOPS = Set.of("GCASH", "MAYA", "BPI", "MARIBANK", "OTHER");
+    private static final Set<String> ALLOWED_MOPS = Set.of("GCASH", "MAYA", "BPI", "BDO", "MARIBANK", "PAYMONGO", "OTHER");
     private static final String PREORDER_SUPPLIER_BREAKDOWN_MARKER = "__PREORDER__";
 
     private final CustomerOrderRepository customerOrderRepository;
@@ -61,6 +61,20 @@ public class OrderService {
         order.setCustomerName(request.customerName().trim());
         order.setCustomerContact(request.customerContact().trim());
         order.setNotes(trimToNull(request.notes()));
+        String mop = normalizeChoice(request.mop());
+        if (mop == null || !ALLOWED_MOPS.contains(mop)) {
+            throw new IllegalArgumentException("Please select a valid payment method.");
+        }
+        order.setMop(mop);
+        String mopOther = trimToNull(request.mopOther());
+        if ("OTHER".equals(mop)) {
+            if (mopOther == null) {
+                throw new IllegalArgumentException("Please specify your payment method.");
+            }
+            order.setMopOther(mopOther);
+        } else {
+            order.setMopOther(null);
+        }
         order.setStatus(OrderStatus.ORDERED);
         order.setStatusUpdatedBy("customer:" + order.getCustomerName());
         BigDecimal computedTotalPrice = BigDecimal.ZERO;

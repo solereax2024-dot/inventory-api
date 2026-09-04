@@ -54,6 +54,8 @@ class OrderServiceIntegrationTest {
                 "Ana",
                 "09171234567",
                 "",
+                "GCASH",
+                "",
                 List.of(new ReserveOrderItemRequest(product.getId(), "WHITE", "7", "WOMEN", 1))
         ));
 
@@ -67,6 +69,7 @@ class OrderServiceIntegrationTest {
 
         assertThat(response.items()).hasSize(1);
         assertThat(response.items().getFirst().sizeGroup()).isEqualTo("WOMEN");
+        assertThat(response.mop()).isEqualTo("GCASH");
         assertThat(response.totalPrice()).isEqualByComparingTo(PricingPolicy.toCustomerPrice(new BigDecimal("5999.00")));
         assertThat(savedStock.getQuantity()).isEqualTo(2);
     }
@@ -79,6 +82,8 @@ class OrderServiceIntegrationTest {
                 "Marco",
                 "09991234567",
                 "Delete test",
+                "MAYA",
+                "",
                 List.of(new ReserveOrderItemRequest(product.getId(), "WHITE", "9", "MEN", 2))
         ));
 
@@ -146,6 +151,8 @@ class OrderServiceIntegrationTest {
                 "Ivy",
                 "09170000000",
                 "Split supplier reservation",
+                "BPI",
+                "",
                 List.of(new ReserveOrderItemRequest(savedProduct.getId(), "WHITE", "9", "MEN", 4))
         ));
 
@@ -194,6 +201,8 @@ class OrderServiceIntegrationTest {
                 "Paolo",
                 "09990001111",
                 "Pre-order when out of stock",
+                "OTHER",
+                "UnionBank",
                 List.of(new ReserveOrderItemRequest(product.getId(), "WHITE", "9", "MEN", 1))
         ));
 
@@ -206,6 +215,8 @@ class OrderServiceIntegrationTest {
                 .orElseThrow();
 
         assertThat(reserved.items()).hasSize(1);
+        assertThat(reserved.mop()).isEqualTo("OTHER");
+        assertThat(reserved.mopOther()).isEqualTo("UnionBank");
         assertThat(reserved.totalPrice()).isEqualByComparingTo(PricingPolicy.toCustomerPrice(new BigDecimal("5999.00")));
         assertThat(stockAfterReserve.getQuantity()).isZero();
 

@@ -10,6 +10,8 @@ public record ReserveOrderRequest(
         @NotBlank @Size(max = 150) String customerName,
         @NotBlank @Size(max = 100) String customerContact,
         @Size(max = 500) String notes,
+        @Size(max = 30) String mop,
+        @Size(max = 120) String mopOther,
         @NotEmpty List<@Valid ReserveOrderItemRequest> items
 ) {
 }

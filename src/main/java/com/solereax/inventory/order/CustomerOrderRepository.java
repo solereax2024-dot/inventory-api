@@ -11,4 +11,6 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 
     @Query("select o from CustomerOrder o left join fetch o.items where o.id = :id")
     Optional<CustomerOrder> findByIdWithItems(Long id);
+
+    Optional<CustomerOrder> findByPaymentCheckoutId(String paymentCheckoutId);
 }

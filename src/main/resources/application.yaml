@@ -31,6 +31,16 @@ app:
     password: ${ADMIN_PASSWORD:admin123}
   media:
     upload-dir: ${MEDIA_UPLOAD_DIR:uploads}
+  paymongo:
+    enabled: ${PAYMONGO_ENABLED:false}
+    api-base-url: ${PAYMONGO_API_BASE_URL:https://api.paymongo.com/v1}
+    secret-key: ${PAYMONGO_SECRET_KEY:}
+    webhook-token: ${PAYMONGO_WEBHOOK_TOKEN:}
+    webhook-signing-secret: ${PAYMONGO_WEBHOOK_SIGNING_SECRET:}
+    webhook-tolerance-seconds: ${PAYMONGO_WEBHOOK_TOLERANCE_SECONDS:300}
+    checkout-success-url: ${PAYMONGO_CHECKOUT_SUCCESS_URL:https://solereax.com/collections?payment=success}
+    checkout-cancel-url: ${PAYMONGO_CHECKOUT_CANCEL_URL:https://solereax.com/collections?payment=cancel}
+    payment-method-types: ${PAYMONGO_PAYMENT_METHOD_TYPES:gcash,paymaya,card}
 
 server:
   port: 8080

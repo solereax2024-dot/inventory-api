@@ -38,7 +38,9 @@ const RESERVATION_MOP_OPTIONS = [
   { value: "GCASH", label: "GCash" },
   { value: "MAYA", label: "Maya" },
   { value: "BPI", label: "BPI" },
+  { value: "BDO", label: "BDO" },
   { value: "MARIBANK", label: "MariBank" },
+  { value: "PAYMONGO", label: "PayMongo Checkout" },
   { value: "OTHER", label: "Other" }
 ];
 
@@ -1674,12 +1676,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   }, [activeStockSizeSection]);
   const stockSummarySupplierSuggestions = useMemo(() => {
     const uniqueByLower = new Map();
-    activeStockRows.forEach((row) => {
-      const entries = Array.isArray(row.supplierEntries) && row.supplierEntries.length
-        ? row.supplierEntries
-        : [{ supplier: row.supplier || "" }];
-      entries.forEach((entry) => {
-        const supplier = String(entry?.supplier || "").trim();
+    products.forEach((product) => {
+      (product?.stocks || []).forEach((stock) => {
+        const supplier = String(stock?.supplier || "").trim();
         if (!supplier) return;
         const key = supplier.toLowerCase();
         if (!uniqueByLower.has(key)) {
@@ -1688,7 +1687,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       });
     });
     return Array.from(uniqueByLower.values()).sort((a, b) => a.localeCompare(b));
-  }, [activeStockRows]);
+  }, [products]);
 
   useEffect(() => {
     if (!isStockSummaryOpen || productActionModal.type !== "stock") {
