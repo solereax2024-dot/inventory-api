@@ -174,8 +174,11 @@
   flex-wrap: wrap;
 }
 
-.size-label-row label {
-  margin: 0;
+.size-label-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .size-guide-pill-btn {
@@ -1886,8 +1889,9 @@ body.theme-dark .size-guide-pill-btn {
   }
 
   .reserve-product-title {
-    font-size: clamp(19px, 5vw, 21px);
-    line-height: 1.3;
+    font-size: clamp(24px, 6vw, 28px);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
   }
 
   .reserve-product-desc {
@@ -2144,7 +2148,7 @@ body.theme-dark .size-price-hint strong {
 
 /* ── Quantity stepper ───────────────────────────────────────────── */
 
-.qty-stepper {
+ qty-stepper {
   display: inline-flex;
   align-items: center;
   border: 1.5px solid color-mix(in srgb, var(--primary) 24%, #cbd5e1);
@@ -2154,7 +2158,7 @@ body.theme-dark .size-price-hint strong {
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
-.qty-btn {
+ qty-btn {
   width: 40px;
   height: 40px;
   margin: 0;
@@ -2174,13 +2178,13 @@ body.theme-dark .size-price-hint strong {
   line-height: 1;
 }
 
-.qty-btn:hover {
+ qty-btn:hover {
   background: color-mix(in srgb, var(--primary-soft) 48%, #f8fafc);
   transform: none;
   box-shadow: none;
 }
 
-.qty-value {
+ qty-value {
   min-width: 40px;
   text-align: center;
   font-size: 15px;
@@ -2951,7 +2955,7 @@ body.theme-dark .reserve-accordion-icon {
 .reserve-submit-btn:focus-visible,
 .reserve-sticky-cta-btn:focus-visible,
 .reserve-accordion-toggle:focus-visible,
-.qty-btn:focus-visible,
+ qty-btn:focus-visible,
 .size-group-btn:focus-visible,
 .size-btn:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
@@ -2968,4 +2972,3 @@ body.theme-dark .reserve-accordion-icon {
     transition: none !important;
   }
 }
-

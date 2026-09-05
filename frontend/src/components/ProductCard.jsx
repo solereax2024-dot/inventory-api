@@ -15,11 +15,16 @@ export default function ProductCard({
   autoCycleIntervalMs = 2200,
   autoCycleJitterMs = 0
 }) {
+  const fallbackPrimaryColorway = String(product?.primaryColorway || product?.mainColor || "DEFAULT");
   const colorways = useMemo(() => {
-    return sortColorways(sanitizeColorways((product.stocks || []).map((stock) => stock.colorway)));
-  }, [product.stocks]);
+    const fromStocks = sortColorways(sanitizeColorways((product?.stocks || []).map((stock) => stock.colorway)));
+    if (fromStocks.length > 0) {
+      return fromStocks;
+    }
+    return [fallbackPrimaryColorway];
+  }, [product?.stocks, fallbackPrimaryColorway]);
 
-  const [selectedColorway, setSelectedColorway] = useState(initialColorway || colorways[0] || "DEFAULT");
+  const [selectedColorway, setSelectedColorway] = useState(initialColorway || fallbackPrimaryColorway || colorways[0] || "DEFAULT");
   const [isCyclePaused, setIsCyclePaused] = useState(false);
   const hasCycleStartedRef = useRef(false);
   const resumeTimerRef = useRef(null);
@@ -106,7 +111,20 @@ export default function ProductCard({
   }, [autoCycleColorways, autoCycleOffsetMs, autoCycleIntervalMs, autoCycleJitterMs, colorways, isCyclePaused]);
 
   const colorwayDetails = useMemo(
-    () => getColorwayDetails(product, selectedColorway),
+    () => {
+      if (product?.colorwayDetails && typeof product.colorwayDetails === "object" && Object.keys(product.colorwayDetails).length > 0) {
+        return getColorwayDetails(product, selectedColorway);
+      }
+      return {
+        description: product?.description || "",
+        department: product?.department || "",
+        category: product?.category || "",
+        productType: product?.productType || "",
+        price: product?.price ?? null,
+        minPrice: product?.minPrice ?? product?.price ?? null,
+        maxPrice: product?.maxPrice ?? product?.price ?? null
+      };
+    },
     [product, selectedColorway]
   );
   const uniqueViewCount = Number(product?.viewCount || 0);
@@ -149,7 +167,9 @@ export default function ProductCard({
           {uniqueViewCount.toLocaleString()}
         </small>
         {(() => {
-          const imgUrl = getColorwayImageUrl(product, selectedColorway);
+          const imgUrl = product?.colorwayImages
+            ? getColorwayImageUrl(product, selectedColorway)
+            : (product?.imageUrl || null);
           if (imgUrl) {
             return (
               <img

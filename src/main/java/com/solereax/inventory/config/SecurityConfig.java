@@ -51,6 +51,10 @@ public class SecurityConfig {
                                 "/assets/**",
                                 "/uploads/**",
                                 "/favicon.ico",
+                                "/favicon-48x48.png",
+                                "/favicon-192x192.png",
+                                "/apple-touch-icon.png",
+                                "/site.webmanifest",
                                 "/logo.png",
                                 "/api/public/**",
                                 "/api/auth/login"

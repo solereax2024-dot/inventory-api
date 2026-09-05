@@ -2,6 +2,7 @@ package com.solereax.inventory.inventory;
 
 import com.solereax.inventory.inventory.dto.PublicProductResponse;
 import java.util.List;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,5 +19,10 @@ public class PublicInventoryController {
     @GetMapping
     public List<PublicProductResponse> listProducts() {
         return inventoryService.listPublicProducts();
+    }
+
+    @GetMapping("/{id}")
+    public PublicProductResponse getProduct(@PathVariable Long id) {
+        return inventoryService.getPublicProduct(id);
     }
 }

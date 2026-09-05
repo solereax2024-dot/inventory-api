@@ -119,6 +119,9 @@ export default function SiteHeader({
     };
 
     const loadVisualSuggestions = async () => {
+      if (!isSearchDrawerOpen || visualSuggestions.length > 0) {
+        return;
+      }
       try {
         const data = await apiRequest("/api/public/products");
         const products = Array.isArray(data)
@@ -190,7 +193,7 @@ export default function SiteHeader({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isSearchDrawerOpen, visualSuggestions.length]);
 
   useEffect(() => {
     const shouldLockScroll = isMobileViewport && (isMenuOpen || isSearchDrawerOpen);

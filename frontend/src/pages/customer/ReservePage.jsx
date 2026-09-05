@@ -85,19 +85,40 @@ export default function ReservePage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadProducts = async () => {
       setIsLoading(true);
       try {
-        const data = await apiRequest("/api/public/products");
-        setProducts(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setMessage(err.message);
-      } finally {
+        const selectedProduct = await apiRequest(`/api/public/products/${productId}`);
+        if (cancelled) {
+          return;
+        }
+
+        setProducts(selectedProduct ? [selectedProduct] : []);
         setIsLoading(false);
+
+        apiRequest("/api/public/products")
+          .then((data) => {
+            if (cancelled) {
+              return;
+            }
+            setProducts(Array.isArray(data) ? data : (selectedProduct ? [selectedProduct] : []));
+          })
+          .catch(() => {});
+      } catch (err) {
+        if (!cancelled) {
+          setMessage(err.message);
+          setIsLoading(false);
+        }
       }
     };
     loadProducts().catch((err) => setMessage(err.message));
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   const product = useMemo(
     () => products.find((p) => String(p.id) === String(productId)),
@@ -353,6 +374,13 @@ export default function ReservePage() {
     const raw = (location.state && location.state.fromCollectionsQuery) || "";
     return raw ? `/collections?${raw}` : "/collections";
   }, [location.state]);
+
+  const brandCollectionsPath = useMemo(() => {
+    if (!product?.brand) return "/collections";
+    const params = new URLSearchParams();
+    params.set("brand", product.brand);
+    return `/collections?${params.toString()}`;
+  }, [product?.brand]);
 
   const navigateToReserve = (nextProductId, colorway) => {
     const params = new URLSearchParams();
@@ -747,14 +775,16 @@ export default function ReservePage() {
 
         {/* Breadcrumb */}
         <nav className="reserve-breadcrumb" aria-label="Breadcrumb">
-          <Link className="reserve-page-crumb-link reserve-back-link" to={backToCollectionsPath}>
+          <Link className="reserve-page-crumb-link reserve-back-link" to="/collections">
             <span className="reserve-back-arrow" aria-hidden="true">←</span>
             Collections
           </Link>
           <span className="reserve-page-crumb-separator" aria-hidden="true">/</span>
           {product.brand ? (
             <>
-              <span className="reserve-page-crumb-brand">{product.brand}</span>
+              <Link className="reserve-page-crumb-link reserve-page-crumb-brand-link" to={brandCollectionsPath}>
+                {product.brand}
+              </Link>
               <span className="reserve-page-crumb-separator" aria-hidden="true">/</span>
             </>
           ) : null}
@@ -895,15 +925,17 @@ export default function ReservePage() {
               <div className="reserve-accordion-body" id={sizeSectionId}>
               <div className="size-label-row">
                 <label>Size &amp; Availability</label>
-                {sizeGuide ? (
-                  <button
-                    type="button"
-                    className="size-guide-pill-btn"
-                    onClick={() => setIsSizeGuideOpen((prev) => !prev)}
-                  >
-                    {isSizeGuideOpen ? "✕ Hide Size Guide" : "📏 Size Guide"}
-                  </button>
-                ) : null}
+                <div className="size-label-actions">
+                  {sizeGuide ? (
+                    <button
+                      type="button"
+                      className="size-guide-pill-btn"
+                      onClick={() => setIsSizeGuideOpen((prev) => !prev)}
+                    >
+                      {isSizeGuideOpen ? "✕ Hide Size Guide" : "📏 Size Guide"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
               {isUnisexDepartment(selectedDepartment) ? (
                 <div className="size-group-toggle" role="tablist" aria-label="Choose sizing view">

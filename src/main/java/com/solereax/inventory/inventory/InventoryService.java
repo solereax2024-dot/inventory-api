@@ -2,6 +2,9 @@ package com.solereax.inventory.inventory;
 
 import com.solereax.inventory.inventory.dto.AdminAdjustStockRequest;
 import com.solereax.inventory.inventory.dto.AdminCreateProductRequest;
+import com.solereax.inventory.inventory.dto.PublicCatalogFacetResponse;
+import com.solereax.inventory.inventory.dto.PublicCatalogPageResponse;
+import com.solereax.inventory.inventory.dto.PublicCatalogProductResponse;
 import com.solereax.inventory.inventory.dto.AdminUpdateColorwayDetailsRequest;
 import com.solereax.inventory.inventory.dto.ColorwayDetailsResponse;
 import com.solereax.inventory.inventory.dto.PublicProductResponse;
@@ -16,9 +19,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +59,76 @@ public class InventoryService {
                 .stream()
                 .map(product -> toPublicResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PublicCatalogPageResponse listPublicCatalog(
+            String brand,
+            String department,
+            String category,
+            String productType,
+            String colorway,
+            String sizeFilter,
+            String stock,
+            String search,
+            String sort,
+            int page,
+            int pageSize
+    ) {
+        int safePageSize = Math.max(1, Math.min(pageSize, 48));
+        int safePage = Math.max(1, page);
+        Pageable pageable = PageRequest.of(safePage - 1, safePageSize, resolveCatalogSort(sort));
+        String searchPattern = buildSearchPattern(search);
+        Page<Long> idPage = productRepository.findCatalogProductIds(
+                normalizeLower(brand),
+                normalizeUpper(department),
+                normalizeUpper(category),
+                normalizeUpper(productType),
+                normalizeUpper(colorway),
+                normalizeUpper(sizeFilter),
+                normalizeStockFilter(stock),
+                searchPattern,
+                pageable
+        );
+
+        List<Long> pageIds = idPage.getContent();
+        if (pageIds.isEmpty()) {
+            return new PublicCatalogPageResponse(Collections.emptyList(), idPage.getTotalElements(), safePage, safePageSize);
+        }
+
+        List<Product> hydrated = productRepository.findAllByIdInWithStocks(pageIds);
+        Map<Long, Product> productById = new HashMap<>();
+        hydrated.forEach(product -> productById.put(product.getId(), product));
+        List<Product> orderedProducts = pageIds.stream()
+                .map(productById::get)
+                .filter(product -> product != null)
+                .toList();
+
+        Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
+        List<PublicCatalogProductResponse> items = orderedProducts.stream()
+                .map(product -> toCatalogResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
+                .toList();
+
+        return new PublicCatalogPageResponse(items, idPage.getTotalElements(), safePage, safePageSize);
+    }
+
+    @Transactional(readOnly = true)
+    public PublicCatalogFacetResponse getPublicCatalogFacets() {
+        return new PublicCatalogFacetResponse(
+                productRepository.findDistinctActiveBrands(),
+                productRepository.findDistinctActiveDepartments(),
+                productRepository.findDistinctActiveCategories(),
+                productRepository.findDistinctActiveProductTypes(),
+                productRepository.findDistinctActiveColorways()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public PublicProductResponse getPublicProduct(Long productId) {
+        Product product = productRepository.findActiveByIdWithStocks(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
+        long viewCount = product.getId() == null ? 0L : productViewSessionRepository.countByProductId(product.getId());
+        return toPublicResponse(product, viewCount);
     }
 
     @Transactional(readOnly = true)
@@ -413,6 +491,50 @@ public class InventoryService {
         return ColorwayStandard.normalizeAndValidate(normalized);
     }
 
+    private Sort resolveCatalogSort(String sort) {
+        String normalizedSort = trimToNull(sort);
+        if ("BRAND_DESC".equalsIgnoreCase(normalizedSort)) {
+            return Sort.by(Sort.Order.desc("brand"), Sort.Order.asc("name"), Sort.Order.asc("id"));
+        }
+        if ("NAME_ASC".equalsIgnoreCase(normalizedSort)) {
+            return Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"));
+        }
+        if ("NAME_DESC".equalsIgnoreCase(normalizedSort)) {
+            return Sort.by(Sort.Order.desc("name"), Sort.Order.asc("id"));
+        }
+        return Sort.by(Sort.Order.asc("brand"), Sort.Order.asc("name"), Sort.Order.asc("id"));
+    }
+
+    private String buildSearchPattern(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return null;
+        }
+        return "%" + normalized.toLowerCase(Locale.ROOT) + "%";
+    }
+
+    private String normalizeStockFilter(String stock) {
+        String normalized = trimToNull(stock);
+        if (normalized == null) {
+            return null;
+        }
+        String upper = normalized.toUpperCase(Locale.ROOT);
+        if ("IN_STOCK".equals(upper) || "LOW_STOCK".equals(upper) || "OUT_OF_STOCK".equals(upper)) {
+            return upper;
+        }
+        return null;
+    }
+
+    private String normalizeLower(String value) {
+        String normalized = trimToNull(value);
+        return normalized == null ? null : normalized.toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeUpper(String value) {
+        String normalized = trimToNull(value);
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
+    }
+
     private Map<Long, Long> mapViewCountByProductId(List<Product> products) {
         List<Long> productIds = new ArrayList<>();
         products.forEach(product -> {
@@ -429,6 +551,77 @@ public class InventoryService {
                 byProductId.put(row.getProductId(), row.getViewCount() == null ? 0L : row.getViewCount())
         );
         return byProductId;
+    }
+
+    private PublicCatalogProductResponse toCatalogResponse(Product product, Long viewCount) {
+        String primaryColorway = resolvePrimaryColorway(product);
+        Map<String, String> colorwayImages = mapColorwayImages(product);
+        String imageUrl = colorwayImages.get(primaryColorway);
+        if (imageUrl == null) {
+            imageUrl = trimToNull(product.getImageUrl());
+        }
+
+        Map<String, PriceRange> ranges = buildPriceRangesByColorway(product, true);
+        PriceRange primaryRange = ranges.get(primaryColorway);
+        BigDecimal minPrice = primaryRange == null ? null : primaryRange.min();
+        BigDecimal maxPrice = primaryRange == null ? null : primaryRange.max();
+        if (minPrice == null || maxPrice == null) {
+            for (PriceRange range : ranges.values()) {
+                if (range == null) {
+                    continue;
+                }
+                if (range.min() != null) {
+                    minPrice = minPrice == null ? range.min() : minPrice.min(range.min());
+                }
+                if (range.max() != null) {
+                    maxPrice = maxPrice == null ? range.max() : maxPrice.max(range.max());
+                }
+            }
+        }
+
+        return new PublicCatalogProductResponse(
+                product.getId(),
+                product.getName(),
+                product.getBrand(),
+                product.getDescription(),
+                product.getMainColor(),
+                product.getDepartment(),
+                product.getCategory(),
+                product.getProductType(),
+                imageUrl,
+                primaryColorway,
+                minPrice,
+                maxPrice,
+                viewCount == null ? 0L : viewCount
+        );
+    }
+
+    private String resolvePrimaryColorway(Product product) {
+        String mainColor = trimToNull(product.getMainColor());
+        if (mainColor != null) {
+            return normalizeColorway(mainColor);
+        }
+
+        String fromImages = product.getColorwayImages().stream()
+                .map(ProductColorwayImage::getColorway)
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
+        if (fromImages != null) {
+            return normalizeColorway(fromImages);
+        }
+
+        String fromStocks = product.getStocks().stream()
+                .map(ProductStock::getColorway)
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .findFirst()
+                .orElse(null);
+        if (fromStocks != null) {
+            return normalizeColorway(fromStocks);
+        }
+        return "DEFAULT";
     }
 
     private PublicProductResponse toPublicResponse(Product product, Long viewCount) {

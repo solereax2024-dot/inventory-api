@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
-import { getColorwayDetails, getColorwayImageUrl, normalizeColorwayValue, sanitizeColorways, sortColorways } from "../../utils/colorway";
+import { getColorwayImageUrl, normalizeColorwayValue } from "../../utils/colorway";
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 import { trackMetaEvent } from "../../utils/metaPixel";
 import { SlidersHorizontal } from "lucide-react";
@@ -14,7 +14,8 @@ import "../../styles/popular-rail.css";
 export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState([]);
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [catalogTotalElements, setCatalogTotalElements] = useState(0);
   const [message, setMessage] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [productTypeFilter, setProductTypeFilter] = useState("ALL");
@@ -27,52 +28,41 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [isDesktopCatalog, setIsDesktopCatalog] = useState(() => window.innerWidth > 720);
   const [siteUniqueViews, setSiteUniqueViews] = useState(null);
   const [topViewedItems, setTopViewedItems] = useState([]);
+  const [catalogFacets, setCatalogFacets] = useState({
+    brands: [],
+    departments: [],
+    categories: [],
+    productTypes: [],
+    colorways: []
+  });
+  const [popularProducts, setPopularProducts] = useState([]);
   const [brandBannerItems, setBrandBannerItems] = useState([]);
   const [popularRailScrollRatio, setPopularRailScrollRatio] = useState(0);
   const [canScrollPopularRail, setCanScrollPopularRail] = useState(false);
   const popularRailRef = useRef(null);
 
-  // Transform products into colorway variants
-  const expandProductsByColorway = (productsData) => {
-    if (!Array.isArray(productsData) || productsData.length === 0) {
-      return [];
-    }
-    const expanded = [];
-    productsData.forEach((product) => {
-      const colorways = sortColorways(sanitizeColorways((product.stocks || []).map((stock) => stock.colorway)));
-      if (colorways.length === 0) {
-        expanded.push(product);
-        return;
-      }
-      colorways.forEach((colorway) => {
-        const colorwayDetails = getColorwayDetails(product, colorway);
-        expanded.push({
-          ...product,
-          description: colorwayDetails.description || product.description,
-          department: colorwayDetails.department || product.department,
-          category: colorwayDetails.category || product.category,
-          productType: colorwayDetails.productType || product.productType,
-          _colorwayVariant: colorway,
-          _variantId: `${product.id}-${colorway}`,
-        });
-      });
-    });
-    return expanded;
-  };
+  useEffect(() => {
+    let cancelled = false;
 
-  const loadProducts = async () => {
-    setIsLoadingProducts(true);
-    try {
-      const data = await apiRequest("/api/public/products");
-      const expandedProducts = expandProductsByColorway(Array.isArray(data) ? data : []);
-      setProducts(expandedProducts);
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  };
+    apiRequest("/api/public/catalog/facets")
+      .then((data) => {
+        if (cancelled) return;
+        setCatalogFacets({
+          brands: Array.isArray(data?.brands) ? data.brands.filter(Boolean) : [],
+          departments: Array.isArray(data?.departments) ? data.departments.filter(Boolean) : [],
+          categories: Array.isArray(data?.categories) ? data.categories.filter(Boolean) : [],
+          productTypes: Array.isArray(data?.productTypes) ? data.productTypes.filter(Boolean) : [],
+          colorways: Array.isArray(data?.colorways) ? data.colorways.filter(Boolean) : []
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    loadProducts().catch((err) => setMessage(err.message));
 
     const sessionId = getOrCreateViewSessionId();
     if (shouldTrackViewForScope("site")) {
@@ -116,30 +106,15 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     return () => window.clearTimeout(timer);
   }, [message]);
 
-  const brandOptions = useMemo(
-    () => ["ALL", ...new Set(products.map((product) => (product.brand || "").trim()).filter(Boolean))],
-    [products]
-  );
+  const brandOptions = useMemo(() => ["ALL", ...(catalogFacets.brands || [])], [catalogFacets.brands]);
   // Derive directly from URL — no intermediate state, no sync effects
   const brandFilter = useMemo(() => {
     const q = (searchParams.get("brand") || "").trim();
     if (!q) return "ALL";
     return brandOptions.find((b) => b.toLowerCase() === q.toLowerCase()) || "ALL";
   }, [searchParams, brandOptions]);
-  const colorwayOptions = useMemo(() => {
-     // Get all unique colorways from the original products, not variants
-     const uniqueColorways = new Set();
-     products.forEach((variant) => {
-       if (variant._colorwayVariant) {
-         uniqueColorways.add(variant._colorwayVariant);
-       }
-     });
-     return ["ALL", ...sortColorways(sanitizeColorways(Array.from(uniqueColorways)))];
-   }, [products]);
-  const departmentOptions = useMemo(
-    () => ["ALL", ...new Set(products.map((product) => (product.department || "").trim()).filter(Boolean))],
-    [products]
-  );
+  const colorwayOptions = useMemo(() => ["ALL", ...(catalogFacets.colorways || [])], [catalogFacets.colorways]);
+  const departmentOptions = useMemo(() => ["ALL", ...(catalogFacets.departments || [])], [catalogFacets.departments]);
   // Derive directly from URL — no intermediate state, no sync effects
   const departmentFilter = useMemo(() => {
     const q = (searchParams.get("department") || "").trim();
@@ -150,14 +125,8 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     const q = (searchParams.get("stock") || "").trim().toUpperCase();
     return ["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"].includes(q) ? q : "ALL";
   }, [searchParams]);
-  const categoryOptions = useMemo(
-    () => ["ALL", ...new Set(products.map((product) => (product.category || "").trim()).filter(Boolean))],
-    [products]
-  );
-  const productTypeOptions = useMemo(
-    () => ["ALL", ...new Set(products.map((product) => (product.productType || "").trim()).filter(Boolean))],
-    [products]
-  );
+  const categoryOptions = useMemo(() => ["ALL", ...(catalogFacets.categories || [])], [catalogFacets.categories]);
+  const productTypeOptions = useMemo(() => ["ALL", ...(catalogFacets.productTypes || [])], [catalogFacets.productTypes]);
 
   // One-way sync: URL ?q -> App-level searchText, only when URL params change.
   useEffect(() => {
@@ -178,119 +147,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     });
   }, [brandOptions, brandFilter, onCatalogNavChange, searchParams, setSearchParams]);
 
-  const visibleProducts = useMemo(() => {
-    let next = [...products];
-
-    if (brandFilter !== "ALL") {
-      next = next.filter((product) => (product.brand || "").toLowerCase() === brandFilter.toLowerCase());
-    }
-    if (departmentFilter !== "ALL") {
-      next = next.filter((product) => (product.department || "").toUpperCase() === departmentFilter);
-    }
-    if (categoryFilter !== "ALL") {
-      next = next.filter((product) => (product.category || "").toUpperCase() === categoryFilter);
-    }
-    if (productTypeFilter !== "ALL") {
-      next = next.filter((product) => (product.productType || "").toUpperCase() === productTypeFilter);
-    }
-
-    const keyword = (searchText || searchParams.get("q") || "").trim().toLowerCase();
-    if (keyword) {
-      next = next.filter((product) => {
-        const name = (product.name || "").toLowerCase();
-        const brand = (product.brand || "").toLowerCase();
-        const department = formatEnumLabel(product.department).toLowerCase();
-        const category = formatEnumLabel(product.category).toLowerCase();
-        const productType = formatEnumLabel(product.productType).toLowerCase();
-        return name.includes(keyword) || brand.includes(keyword) || department.includes(keyword) || category.includes(keyword) || productType.includes(keyword);
-      });
-    }
-
-    if (sizeFilter !== "ALL") {
-      next = next.filter((product) => (product.stocks || []).some((stock) => stock.size === sizeFilter));
-    }
-
-     if (colorwayFilter !== "ALL") {
-       next = next.filter((product) => {
-         const variantColorway = product._colorwayVariant;
-         if (variantColorway) {
-           return variantColorway === colorwayFilter;
-         }
-         return (product.stocks || []).some((stock) => stock.colorway === colorwayFilter);
-       });
-     }
-
-     if (stockFilter !== "ALL") {
-       next = next.filter((product) => {
-         const stocks = product.stocks || [];
-         let scopedStocks = stocks;
-         
-         // If this is a variant, filter to only that colorway
-         if (product._colorwayVariant) {
-           scopedStocks = stocks.filter((stock) => stock.colorway === product._colorwayVariant);
-         } else if (colorwayFilter !== "ALL") {
-           scopedStocks = stocks.filter((stock) => stock.colorway === colorwayFilter);
-         }
-         
-         const sizeStock = sizeFilter === "ALL"
-           ? null
-           : scopedStocks.find((stock) => String(stock.size) === String(sizeFilter));
-         const sizeQty = sizeStock ? Number(sizeStock.quantity) : 0;
-
-         if (sizeFilter !== "ALL") {
-           if (stockFilter === "OUT_OF_STOCK") {
-             return sizeQty <= 0;
-           }
-           if (stockFilter === "LOW_STOCK") {
-             return sizeQty > 0 && sizeQty <= 3;
-           }
-           return sizeQty > 0;
-         }
-
-         if (stockFilter === "OUT_OF_STOCK") {
-           return scopedStocks.every((stock) => Number(stock.quantity) <= 0);
-         }
-         if (stockFilter === "LOW_STOCK") {
-           return scopedStocks.some((stock) => Number(stock.quantity) > 0 && Number(stock.quantity) <= 3);
-         }
-         return scopedStocks.some((stock) => Number(stock.quantity) > 0);
-       });
-     }
-
-    next.sort((a, b) => {
-      const brandA = (a.brand || "").toLowerCase();
-      const brandB = (b.brand || "").toLowerCase();
-      const nameA = (a.name || "").toLowerCase();
-      const nameB = (b.name || "").toLowerCase();
-
-      if (sortBy === "BRAND_DESC") {
-        const brandCompare = brandB.localeCompare(brandA);
-        return brandCompare !== 0 ? brandCompare : nameA.localeCompare(nameB);
-      }
-      if (sortBy === "NAME_ASC") {
-        return nameA.localeCompare(nameB);
-      }
-      if (sortBy === "NAME_DESC") {
-        return nameB.localeCompare(nameA);
-      }
-      const brandCompare = brandA.localeCompare(brandB);
-      return brandCompare !== 0 ? brandCompare : nameA.localeCompare(nameB);
-    });
-
-    return next;
-  }, [
-    products,
-    brandFilter,
-    departmentFilter,
-    categoryFilter,
-    productTypeFilter,
-    sortBy,
-    searchText,
-    searchParams,
-    sizeFilter,
-    stockFilter,
-    colorwayFilter
-  ]);
+  const visibleProducts = catalogProducts;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -309,51 +166,107 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     Boolean(searchText.trim())
   ].filter(Boolean).length;
   const shouldShowPopularRail = activeFilterCount === 0 && !searchText.trim();
-  const popularProducts = useMemo(() => {
-    if (!shouldShowPopularRail || !topViewedItems.length || !products.length) {
-      return [];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCatalog = async () => {
+      setIsLoadingProducts(true);
+      try {
+        const params = new URLSearchParams();
+        if (brandFilter !== "ALL") params.set("brand", brandFilter);
+        if (departmentFilter !== "ALL") params.set("department", departmentFilter);
+        if (categoryFilter !== "ALL") params.set("category", categoryFilter);
+        if (productTypeFilter !== "ALL") params.set("productType", productTypeFilter);
+        if (colorwayFilter !== "ALL") params.set("colorway", colorwayFilter);
+        if (sizeFilter !== "ALL") params.set("sizeFilter", sizeFilter);
+        if (stockFilter !== "ALL") params.set("stock", stockFilter);
+        const keyword = (searchText || searchParams.get("q") || "").trim();
+        if (keyword) params.set("q", keyword);
+        if (sortBy !== "BRAND_ASC") params.set("sort", sortBy);
+        params.set("page", String(currentPage));
+        params.set("pageSize", String(catalogPageSize));
+
+        const data = await apiRequest(`/api/public/catalog?${params.toString()}`);
+        if (cancelled) return;
+        setCatalogProducts(Array.isArray(data?.items) ? data.items : []);
+        setCatalogTotalElements(Number(data?.totalElements || 0));
+      } catch (err) {
+        if (!cancelled) {
+          setMessage(err.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingProducts(false);
+        }
+      }
+    };
+
+    loadCatalog().catch((err) => {
+      if (!cancelled) {
+        setMessage(err.message);
+        setIsLoadingProducts(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    brandFilter,
+    departmentFilter,
+    categoryFilter,
+    productTypeFilter,
+    colorwayFilter,
+    sizeFilter,
+    stockFilter,
+    sortBy,
+    searchText,
+    searchParams,
+    currentPage,
+    catalogPageSize
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!shouldShowPopularRail || !topViewedItems.length) {
+      setPopularProducts([]);
+      return undefined;
     }
 
-    const result = [];
-    const usedProductIds = new Set();
-    for (const topItem of topViewedItems) {
-      if (usedProductIds.has(topItem.productId)) {
-        continue;
-      }
-      const productMatches = products.filter((item) => item.id === topItem.productId);
-      const exactMatch = topItem.hasColorwayKey
-        ? productMatches.find(
-            (item) => normalizeColorwayValue(item._colorwayVariant || "DEFAULT") === topItem.colorwayKey
-          )
-        : null;
-      const fallbackMatch = productMatches.find(
-        (item) => getColorwayImageUrl(item, item._colorwayVariant || "DEFAULT")
-      ) || productMatches[0];
-      const match = exactMatch || fallbackMatch;
-      const resolvedColorway = topItem.hasColorwayKey
-        ? topItem.colorwayKey
-        : normalizeColorwayValue(match?._colorwayVariant || "DEFAULT");
-      if (match && getColorwayImageUrl(match, resolvedColorway)) {
-        usedProductIds.add(topItem.productId);
-        result.push({
-          ...match,
-          _popularColorway: resolvedColorway,
-          _popularUsesExactColorway: topItem.hasColorwayKey,
-          _popularUniqueViews: topItem.uniqueViews
-        });
-      }
-      if (result.length >= 6) {
-        break;
-      }
-    }
-    return result.sort((a, b) => {
-      const viewDiff = Number(b?.viewCount || 0) - Number(a?.viewCount || 0);
-      if (viewDiff !== 0) {
-        return viewDiff;
-      }
-      return String(a?.name || "").localeCompare(String(b?.name || ""));
-    });
-  }, [shouldShowPopularRail, topViewedItems, products]);
+    apiRequest("/api/public/products")
+      .then((data) => {
+        if (cancelled) return;
+        const products = Array.isArray(data) ? data : [];
+        const result = [];
+        const usedProductIds = new Set();
+        for (const topItem of topViewedItems) {
+          if (usedProductIds.has(topItem.productId)) continue;
+          const match = products.find((item) => item.id === topItem.productId);
+          const resolvedColorway = topItem.hasColorwayKey ? topItem.colorwayKey : "DEFAULT";
+          if (match && getColorwayImageUrl(match, resolvedColorway)) {
+            usedProductIds.add(topItem.productId);
+            result.push({
+              ...match,
+              _popularColorway: normalizeColorwayValue(resolvedColorway),
+              _popularUsesExactColorway: topItem.hasColorwayKey,
+              _popularUniqueViews: topItem.uniqueViews
+            });
+          }
+          if (result.length >= 6) break;
+        }
+        setPopularProducts(result);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPopularProducts([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldShowPopularRail, topViewedItems]);
 
   useEffect(() => {
     const rail = popularRailRef.current;
@@ -385,8 +298,14 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     };
   }, [shouldShowPopularRail, popularProducts.length]);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(visibleProducts.length / catalogPageSize)), [visibleProducts.length, catalogPageSize]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(catalogTotalElements / catalogPageSize)), [catalogTotalElements, catalogPageSize]);
   const activePage = Math.min(currentPage, totalPages);
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const paginationItems = useMemo(() => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, index) => ({ type: "page", value: index + 1 }));
@@ -406,10 +325,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     items.push({ type: "page", value: totalPages });
     return items;
   }, [activePage, totalPages]);
-  const paginatedProducts = useMemo(() => {
-    const start = (activePage - 1) * catalogPageSize;
-    return visibleProducts.slice(start, start + catalogPageSize);
-  }, [visibleProducts, activePage, catalogPageSize]);
+  const paginatedProducts = visibleProducts;
 
   const openReservePage = (productId, initialColorway, preferredSize = US_SIZES[0]) => {
     const params = new URLSearchParams();
@@ -458,7 +374,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         <div className="filter-bar-top">
           <div className="filter-results">
             <span className="filter-results-count">
-              {visibleProducts.length} result{visibleProducts.length === 1 ? "" : "s"}
+              {catalogTotalElements} result{catalogTotalElements === 1 ? "" : "s"}
             </span>
           </div>
           <div className="filter-bar-actions">
@@ -612,7 +528,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 Reset filters
               </button>
               <button type="button" className="filter-drawer-btn active" onClick={() => setIsFilterDrawerOpen(false)}>
-                Show Results ({visibleProducts.length})
+                Show Results ({catalogTotalElements})
               </button>
             </div>
           </aside>
@@ -637,13 +553,13 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
            ))
            : paginatedProducts.map((product) => (
              <ProductCard
-               key={product._variantId || product.id}
+                key={product.id}
                product={product}
                onReserveClick={openReservePage}
-               initialColorway={product._colorwayVariant}
+                initialColorway={product._popularColorway || product.primaryColorway}
              />
            ))}
-         {visibleProducts.length === 0 ? <p className="field-hint">No products match your filters.</p> : null}
+         {!isLoadingProducts && catalogTotalElements === 0 ? <p className="field-hint">No products match your filters.</p> : null}
        </section>
 
       <nav className="pagination-inline" aria-label="Collections pages">
