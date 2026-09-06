@@ -47,7 +47,8 @@
 .popular-rail-track {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(170px, auto);
+  grid-auto-columns: minmax(178px, 1fr);
+  align-items: start;
   gap: 12px;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
@@ -61,6 +62,15 @@
   --rail-edge-fade: 0;
   -webkit-mask-image: none;
   mask-image: none;
+}
+
+@media (min-width: 721px) {
+  .popular-rail-track.is-few-items {
+    grid-auto-columns: clamp(210px, 20vw, 236px);
+    justify-content: center;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
 }
 
 .popular-rail-track::-webkit-scrollbar {
@@ -105,18 +115,66 @@
   object-position: center;
 }
 
+/* Keep media box stable regardless of colorway price/image changes. */
+.popular-rail .product-image-wrap {
+  min-height: 0;
+}
+
+/* Avoid zoom-like pulse in rail while auto-cycling images. */
+.popular-rail .product-image-cycle {
+  animation: popular-rail-image-fade 360ms ease-out;
+}
+
+@keyframes popular-rail-image-fade {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 
 .popular-rail-item {
   scroll-snap-align: start;
+  display: flex;
 }
 
 .popular-rail-item .product-card {
   animation: none;
+  width: 100%;
+  min-height: 100%;
+}
+
+/* Lock vertical slots so rotating colorways do not resize the card footprint. */
+.popular-rail-item .product-image-wrap {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin-bottom: 8px;
+}
+
+.popular-rail-item .product-card-footer {
+  min-height: 78px;
+  align-content: start;
+}
+
+.popular-rail-item .product-card h3 {
+  min-height: 48px;
+}
+
+.popular-rail-item .product-price-row {
+  min-height: 21px;
+}
+
+.popular-rail-item .product-price {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (min-width: 1280px) {
   .popular-rail-track {
-    grid-auto-columns: minmax(180px, auto);
+    grid-auto-columns: minmax(188px, 1fr);
   }
 }
 
@@ -165,7 +223,7 @@
   }
 
   .popular-rail-track {
-    grid-auto-columns: minmax(152px, auto);
+    grid-auto-columns: 152px;
     gap: 10px;
     --rail-edge-fade: 0;
     -webkit-mask-image: none;
@@ -188,7 +246,7 @@
   }
 
   .popular-rail-track {
-    grid-auto-columns: minmax(140px, auto);
+    grid-auto-columns: 140px;
     gap: 8px;
     --rail-edge-fade: 0;
   }

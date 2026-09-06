@@ -31,7 +31,7 @@ public class AdminBrandController {
     public BrandService.BrandDto uploadBrandLogo(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
-        String url = mediaStorageService.storeImage(file, "brands");
+        String url = mediaStorageService.storeImage(file, "branding");
         return brandService.updateBrandLogo(id, url);
     }
 

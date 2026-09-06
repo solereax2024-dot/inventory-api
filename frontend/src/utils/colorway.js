@@ -68,7 +68,6 @@ export function getColorwayImageUrl(product, colorway) {
     return product.imageUrl;
   }
 
-  console.log("[IMAGE] No image found for", product?.name, normalizedColorway, "colorwayImages:", colorwayImages);
   return null;
 }
 

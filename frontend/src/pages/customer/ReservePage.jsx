@@ -11,6 +11,7 @@ import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGu
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
 import { PHP_CURRENCY, formatPriceDisplay } from "../../utils/price";
 import { trackMetaEvent } from "../../utils/metaPixel";
+import { stripColorwayFromDescription } from "../../utils/productDescription";
 import ProductCard from "../../components/ProductCard";
 
 const ZOOM_LEVELS = [1, 2, 3];
@@ -44,7 +45,7 @@ export default function ReservePage() {
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
-  const [mobileOpenSection, setMobileOpenSection] = useState("size");
+  const [mobileOpenSection, setMobileOpenSection] = useState("");
   const [entryColorway, setEntryColorway] = useState("");
   const [reserve, setReserve] = useState({
     customerName: "",
@@ -53,10 +54,15 @@ export default function ReservePage() {
     mop: "",
     mopOther: "",
     colorway: "",
-    size: String(US_SIZES[0]),
+    size: "",
     sizeGroup: "MEN",
-    quantity: 1
+    quantity: 0
   });
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromotion, setAppliedPromotion] = useState(null);
+  const [promoMessage, setPromoMessage] = useState("");
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [hasConfirmedQuantity, setHasConfirmedQuantity] = useState(false);
   const [zoomIdx, setZoomIdx] = useState(0);
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const [baseImageScale, setBaseImageScale] = useState(() => (
@@ -66,6 +72,7 @@ export default function ReservePage() {
   const thumbnailRailRef = useRef(null);
   const relatedRailRef = useRef(null);
   const sizeSectionRef = useRef(null);
+  const quantitySectionRef = useRef(null);
   const customerNameInputRef = useRef(null);
   const customerContactInputRef = useRef(null);
   const customerMopInputRef = useRef(null);
@@ -79,6 +86,9 @@ export default function ReservePage() {
   useEffect(() => {
     const updateScaleByViewport = () => {
       setBaseImageScale(window.innerWidth >= DESKTOP_BREAKPOINT ? DESKTOP_BASE_IMAGE_SCALE : MOBILE_BASE_IMAGE_SCALE);
+      if (window.innerWidth < DESKTOP_BREAKPOINT) {
+        setZoomIdx(0);
+      }
     };
     window.addEventListener("resize", updateScaleByViewport);
     return () => window.removeEventListener("resize", updateScaleByViewport);
@@ -194,10 +204,62 @@ export default function ReservePage() {
     const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
     return Number(selectedRow?.total || 0);
   }, [activeSizeSection, reserve.size]);
-  const isSelectedSizePreOrder = selectedSizeAvailableQuantity <= 0;
+  const hasValidSelectedSize = useMemo(() => {
+    if (!reserve.size) {
+      return false;
+    }
+    return (activeSizeSection?.rows || []).some((row) => row.baseSize === reserve.size);
+  }, [activeSizeSection, reserve.size]);
+  const hasValidConfirmedQuantity = useMemo(() => {
+    const quantity = Number(reserve.quantity);
+    return hasConfirmedQuantity && Number.isFinite(quantity) && quantity > 0;
+  }, [hasConfirmedQuantity, reserve.quantity]);
+  const hasCompletedInfoStep = useMemo(() => {
+    if (!reserve.customerName || reserve.customerName.trim() === "") {
+      return false;
+    }
+    if (!reserve.customerContact || reserve.customerContact.trim() === "") {
+      return false;
+    }
+    if (!reserve.mop || reserve.mop.trim() === "") {
+      return false;
+    }
+    if (reserve.mop === "OTHER" && (!reserve.mopOther || reserve.mopOther.trim() === "")) {
+      return false;
+    }
+    return true;
+  }, [reserve.customerContact, reserve.customerName, reserve.mop, reserve.mopOther]);
+  const isSelectedSizePreOrder = Boolean(reserve.size) && selectedSizeAvailableQuantity <= 0;
   const primaryActionLabel = isSelectedSizePreOrder ? "Pre-Order Now" : "Reserve Now";
+  const guidedActionLabel = !hasValidSelectedSize
+    ? "Select Size First"
+    : !hasValidConfirmedQuantity
+      ? "Confirm Quantity"
+      : !hasCompletedInfoStep
+        ? "Complete Your Info"
+        : primaryActionLabel;
+  const guidedActionStep = !hasValidSelectedSize
+    ? "size"
+    : !hasValidConfirmedQuantity
+      ? "quantity"
+      : !hasCompletedInfoStep
+        ? "info"
+        : "ready";
+  const guidedActionClassName = `reserve-step-${guidedActionStep}`;
+  const guidedActionProgressLabel = guidedActionStep === "size"
+    ? "Step 1 of 4"
+    : guidedActionStep === "quantity"
+      ? "Step 2 of 4"
+      : guidedActionStep === "info"
+        ? "Step 3 of 4"
+        : "Step 4 of 4";
+  const isDecrementDisabled = Number(reserve.quantity) <= 0;
   const selectedColorwayPriceRange = useMemo(
     () => formatPriceDisplay(selectedColorwayDetails?.minPrice, selectedColorwayDetails?.maxPrice),
+    [selectedColorwayDetails]
+  );
+  const selectedProductDescription = useMemo(
+    () => stripColorwayFromDescription(selectedColorwayDetails?.description),
     [selectedColorwayDetails]
   );
   const selectedColorwayPriceLabel = selectedSizePriceLabel || selectedColorwayPriceRange;
@@ -211,6 +273,30 @@ export default function ReservePage() {
     }
     return selectedSizePrice * quantity;
   }, [selectedSizePrice, reserve.quantity]);
+  const promoAppliedTotal = useMemo(() => {
+    if (estimatedReservationValue === null) {
+      return null;
+    }
+    if (!appliedPromotion) {
+      return estimatedReservationValue;
+    }
+    const parsed = Number(appliedPromotion.totalAfterDiscount);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : estimatedReservationValue;
+  }, [appliedPromotion, estimatedReservationValue]);
+  const promoAppliedDiscount = useMemo(() => {
+    if (!appliedPromotion) {
+      return 0;
+    }
+    const parsed = Number(appliedPromotion.discountAmount);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  }, [appliedPromotion]);
+
+  useEffect(() => {
+    if (appliedPromotion) {
+      setAppliedPromotion(null);
+      setPromoMessage("");
+    }
+  }, [product?.id, reserve.colorway, reserve.size, reserve.quantity]);
 
   useEffect(() => {
     if (!product?.id || !reserve.colorway) {
@@ -230,11 +316,11 @@ export default function ReservePage() {
     if (product.brand) {
       payload.brand = product.brand;
     }
-    if (estimatedReservationValue !== null) {
-      payload.value = estimatedReservationValue;
+    if (promoAppliedTotal !== null) {
+      payload.value = promoAppliedTotal;
     }
     trackMetaEvent("ViewContent", payload);
-  }, [product?.id, product?.name, product?.brand, reserve.colorway, estimatedReservationValue]);
+  }, [product?.id, product?.name, product?.brand, reserve.colorway, promoAppliedTotal]);
 
   const selectReserveSize = (baseSize, sizeGroup) => {
     setReserve((prev) => ({
@@ -242,6 +328,7 @@ export default function ReservePage() {
       size: baseSize,
       sizeGroup
     }));
+    setHasConfirmedQuantity(false);
   };
   const sizeGuide = useMemo(() => getBrandSizeGuide(product?.brand), [product?.brand]);
   const sizeGuideSection = useMemo(
@@ -394,7 +481,6 @@ export default function ReservePage() {
    useEffect(() => {
      if (!product || colorways.length === 0) return;
      const preferredColorway = searchParams.get("colorway");
-     const preferredSize = searchParams.get("size") || String(US_SIZES[0]);
      const matchedPreferredColorway = colorways.find(
        (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(preferredColorway)
      );
@@ -405,9 +491,10 @@ export default function ReservePage() {
      setReserve((prev) => ({
        ...prev,
        colorway: selectedColorway,
-       size: prev.size || preferredSize,
+        size: "",
        sizeGroup: prev.sizeGroup || "MEN"
      }));
+     setHasConfirmedQuantity(false);
    }, [product?.id, colorways]);
 
 
@@ -422,8 +509,7 @@ export default function ReservePage() {
     const activeSection = sizeSections.find((section) => section.key === activeSizeGroup) || sizeSections[0];
     const availableRows = activeSection?.rows || [];
     const hasCurrentSize = availableRows.some((row) => row.baseSize === reserve.size);
-    const fallbackRow = availableRows.find((row) => row.total > 0) || availableRows[0];
-    const nextSize = hasCurrentSize ? reserve.size : (fallbackRow?.baseSize || "");
+    const nextSize = hasCurrentSize ? reserve.size : "";
     const nextSizeGroup = isUnisexDepartment(selectedDepartment)
       ? (reserve.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
       : defaultSizeGroup;
@@ -463,7 +549,7 @@ export default function ReservePage() {
   }, [product?.id, product?.brand]);
 
   useEffect(() => {
-    setMobileOpenSection("size");
+    setMobileOpenSection("");
   }, [product?.id]);
 
   const toggleMobileSection = (sectionKey) => {
@@ -514,6 +600,13 @@ export default function ReservePage() {
        error.fieldId = "size";
        throw error;
      }
+     const quantity = Number(reserve.quantity);
+     if (!hasConfirmedQuantity || !Number.isFinite(quantity) || quantity <= 0) {
+       const error = new Error("Please confirm your quantity.");
+       error.fieldId = "quantity";
+       throw error;
+     }
+
      if (!reserve.customerName || reserve.customerName.trim() === "") {
        const error = new Error("Please enter your name.");
        error.fieldId = "customerName";
@@ -535,19 +628,13 @@ export default function ReservePage() {
        throw error;
      }
 
-     const quantity = Number(reserve.quantity);
-     if (!Number.isFinite(quantity) || quantity <= 0) {
-       const error = new Error("Please enter a valid quantity.");
-       error.fieldId = "quantity";
-       throw error;
-     }
-
      return {
        customerName: reserve.customerName.trim(),
        customerContact: reserve.customerContact.trim(),
        notes: reserve.notes.trim(),
        mop: reserve.mop,
        mopOther: reserve.mop === "OTHER" ? reserve.mopOther.trim() : "",
+        promoCode: (appliedPromotion?.code || promoCode).trim(),
        items: [
          {
            productId: Number(product.id),
@@ -565,7 +652,15 @@ export default function ReservePage() {
      let scrollOptions = { behavior: "smooth", block: "center" };
 
      if (fieldId === "size" && sizeSectionRef.current) {
+       if (window.innerWidth < DESKTOP_BREAKPOINT) {
+         setMobileOpenSection("size");
+       }
        targetElement = sizeSectionRef.current;
+     } else if (fieldId === "quantity" && quantitySectionRef.current) {
+       if (window.innerWidth < DESKTOP_BREAKPOINT) {
+         setMobileOpenSection("quantity");
+       }
+       targetElement = quantitySectionRef.current;
      } else if (fieldId === "customerName" && customerNameInputRef.current) {
        if (window.innerWidth < DESKTOP_BREAKPOINT) {
          setMobileOpenSection("info");
@@ -603,22 +698,36 @@ export default function ReservePage() {
      }
    };
 
-   const openConfirmation = () => {
-     const isMobileView = window.innerWidth < DESKTOP_BREAKPOINT;
-     if (isMobileView) {
-       const missingFieldId = !reserve.customerName.trim()
-         ? "customerName"
-         : !reserve.customerContact.trim()
-           ? "customerContact"
-           : !reserve.mop.trim()
-             ? "mop"
-             : (reserve.mop === "OTHER" && !reserve.mopOther.trim() ? "mopOther" : "");
-       if (missingFieldId) {
-         setMobileOpenSection("info");
-         scrollToField(missingFieldId);
-         return;
-       }
+   const applyPromoVoucher = async () => {
+     const code = promoCode.trim();
+     if (!code) {
+       setPromoMessage("Enter a promo code first.");
+       return;
      }
+     if (estimatedReservationValue === null) {
+       setPromoMessage("Select a size and quantity first.");
+       return;
+     }
+
+     setIsApplyingPromo(true);
+     setPromoMessage("");
+     try {
+       const response = await apiRequest("/api/public/promotions/validate", "POST", {
+         code,
+         subtotal: estimatedReservationValue
+       });
+       setAppliedPromotion(response);
+       setPromoCode(String(response?.code || code).toUpperCase());
+       setPromoMessage(`Voucher ${String(response?.code || code).toUpperCase()} applied.`);
+     } catch (err) {
+       setAppliedPromotion(null);
+       setPromoMessage(err.message || "Invalid promo code.");
+     } finally {
+       setIsApplyingPromo(false);
+     }
+   };
+
+   const openConfirmation = () => {
      try {
        const payload = validateReserve();
        const metaPayload = {
@@ -628,8 +737,8 @@ export default function ReservePage() {
          currency: "PHP",
          quantity: Number(payload?.items?.[0]?.quantity || reserve.quantity || 1)
        };
-       if (estimatedReservationValue !== null) {
-         metaPayload.value = estimatedReservationValue;
+        if (promoAppliedTotal !== null) {
+          metaPayload.value = promoAppliedTotal;
        }
        trackMetaEvent("AddToCart", metaPayload);
        setIsConfirmOpen(true);
@@ -660,8 +769,8 @@ export default function ReservePage() {
         currency: "PHP",
         quantity: Number(payload?.items?.[0]?.quantity || reserve.quantity || 1)
       };
-      if (estimatedReservationValue !== null) {
-        metaPayload.value = estimatedReservationValue;
+      if (promoAppliedTotal !== null) {
+        metaPayload.value = promoAppliedTotal;
       }
       if (reservationRef) {
         metaPayload.order_id = reservationRef;
@@ -683,8 +792,12 @@ export default function ReservePage() {
       notes: "",
         mop: "",
         mopOther: "",
-      quantity: 1
+      quantity: 0
     }));
+    setPromoCode("");
+    setAppliedPromotion(null);
+    setPromoMessage("");
+    setHasConfirmedQuantity(false);
   };
 
   const startOnlinePayment = async () => {
@@ -771,6 +884,7 @@ export default function ReservePage() {
 
   return (
     <main className="container container-wide reserve-page-shell">
+
       <section className="reserve-page-panel">
 
         {/* Breadcrumb */}
@@ -800,17 +914,24 @@ export default function ReservePage() {
               onMouseMove={(e) => getOriginFromPoint(e.clientX, e.clientY)}
               onMouseLeave={() => zoomLevel === 1 && setOrigin({ x: 50, y: 50 })}
               onTouchStart={(e) => {
+                if (window.innerWidth < DESKTOP_BREAKPOINT) return;
                 const touch = e.touches[0];
                 if (!touch) return;
                 getOriginFromPoint(touch.clientX, touch.clientY);
               }}
               onTouchMove={(e) => {
+                if (window.innerWidth < DESKTOP_BREAKPOINT) return;
                 if (zoomLevel <= 1) return;
                 const touch = e.touches[0];
                 if (!touch) return;
                 getOriginFromPoint(touch.clientX, touch.clientY);
               }}
-              onClick={() => setZoomIdx((prev) => (prev + 1) % ZOOM_LEVELS.length)}
+              onClick={() => {
+                if (window.innerWidth < DESKTOP_BREAKPOINT) {
+                  return;
+                }
+                setZoomIdx((prev) => (prev + 1) % ZOOM_LEVELS.length);
+              }}
             >
               {(() => {
                 const imgUrl = getColorwayImageUrl(product, reserve.colorway);
@@ -834,7 +955,7 @@ export default function ReservePage() {
                   </div>
                 );
               })()}
-              <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span>
+              {window.innerWidth >= DESKTOP_BREAKPOINT ? <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span> : null}
             </div>
 
             <div className="reserve-media-meta">
@@ -886,6 +1007,7 @@ export default function ReservePage() {
 
             {/* Product header */}
             <div className="reserve-product-header">
+              <h1 className="reserve-product-title">{product.name}</h1>
               <div className="reserve-product-meta-row">
                 {product.brand ? <span className="reserve-brand-chip">{product.brand}</span> : null}
                 {selectedColorwayDetails?.department ? (
@@ -893,14 +1015,13 @@ export default function ReservePage() {
                 ) : null}
                 {Number(product.viewCount || 0) > 0 ? (
                   <span className="reserve-view-badge">
-                    <Eye size={11} strokeWidth={2.2} />
+                    <Eye size={10} strokeWidth={2.1} />
                     {Number(product.viewCount).toLocaleString()} views
                   </span>
                 ) : null}
               </div>
-              <h1 className="reserve-product-title">{product.name}</h1>
-              {selectedColorwayDetails?.description ? (
-                <p className="reserve-product-desc">{selectedColorwayDetails.description}</p>
+              {selectedProductDescription ? (
+                <p className="reserve-product-desc">{selectedProductDescription}</p>
               ) : null}
               {selectedColorwayPriceLabel ? (
                 <div className="reserve-product-price-display">{selectedColorwayPriceLabel}</div>
@@ -1023,7 +1144,7 @@ export default function ReservePage() {
             </div>
 
             {/* Quantity stepper */}
-            <div className={`form-section reserve-accordion-section ${isMobileSectionOpen("quantity") ? "open" : ""}`}>
+            <div ref={quantitySectionRef} className={`form-section reserve-accordion-section ${isMobileSectionOpen("quantity") ? "open" : ""}`}>
               <button
                 type="button"
                 className="reserve-accordion-toggle"
@@ -1040,7 +1161,11 @@ export default function ReservePage() {
                 <button
                   type="button"
                   className="qty-btn"
-                  onClick={() => setReserve({ ...reserve, quantity: Math.max(1, Number(reserve.quantity) - 1) })}
+                  disabled={isDecrementDisabled}
+                  onClick={() => {
+                    setReserve({ ...reserve, quantity: Math.max(0, Number(reserve.quantity) - 1) });
+                    setHasConfirmedQuantity(true);
+                  }}
                   aria-label="Decrease quantity"
                 >
                   −
@@ -1049,7 +1174,10 @@ export default function ReservePage() {
                 <button
                   type="button"
                   className="qty-btn"
-                  onClick={() => setReserve({ ...reserve, quantity: Number(reserve.quantity) + 1 })}
+                  onClick={() => {
+                    setReserve({ ...reserve, quantity: Number(reserve.quantity) + 1 });
+                    setHasConfirmedQuantity(true);
+                  }}
                   aria-label="Increase quantity"
                 >
                   +
@@ -1143,10 +1271,13 @@ export default function ReservePage() {
 
             <div className="reserve-form-actions">
               <button
-                className="btn-primary reserve-submit-btn"
+                className={`btn-primary reserve-submit-btn ${guidedActionClassName}`}
                 onClick={openConfirmation}
               >
-                {primaryActionLabel}
+                <span className="reserve-cta-content">
+                  <span className="reserve-cta-step">{guidedActionProgressLabel}</span>
+                  <span>{guidedActionLabel}</span>
+                </span>
               </button>
             </div>
           </div>
@@ -1157,8 +1288,11 @@ export default function ReservePage() {
             <span className="reserve-sticky-cta-size">{selectedSizeLabel || `US ${reserve.size}`}</span>
             <span className="reserve-sticky-cta-price">{selectedColorwayPriceLabel || "Select size"}</span>
           </div>
-          <button type="button" className="btn-primary reserve-sticky-cta-btn" onClick={openConfirmation}>
-            {primaryActionLabel}
+          <button type="button" className={`btn-primary reserve-sticky-cta-btn ${guidedActionClassName}`} onClick={openConfirmation}>
+            <span className="reserve-cta-content">
+              <span className="reserve-cta-step">{guidedActionProgressLabel}</span>
+              <span>{guidedActionLabel}</span>
+            </span>
           </button>
         </div>
 
@@ -1276,6 +1410,66 @@ export default function ReservePage() {
                 <div className="reserve-confirm-item reserve-confirm-item-wide">
                   <span className="reserve-confirm-label">Notes</span>
                   <strong>{reserve.notes.trim() || "No notes provided"}</strong>
+                </div>
+              </div>
+
+              <div className="reserve-confirm-promo-panel" style={{ marginTop: 16, padding: 14, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, background: "rgba(255,255,255,0.65)" }}>
+                <div className="reserve-confirm-promo-head" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 10 }}>
+                  <div>
+                    <strong>Promo Voucher</strong>
+                    <p className="field-hint" style={{ margin: 0 }}>Apply a code from the super admin promotion list to lower the reservation total.</p>
+                  </div>
+                  {appliedPromotion ? (
+                    <span className="order-status-chip status-paid">Applied</span>
+                  ) : null}
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <input
+                    value={promoCode}
+                    onChange={(e) => {
+                      const nextValue = e.target.value.toUpperCase();
+                      setPromoCode(nextValue);
+                      if (appliedPromotion && nextValue.trim() !== String(appliedPromotion.code || "").toUpperCase()) {
+                        setAppliedPromotion(null);
+                        setPromoMessage("");
+                      }
+                    }}
+                    placeholder="Enter promo code"
+                    maxLength={40}
+                    style={{ flex: "1 1 220px", textTransform: "uppercase" }}
+                  />
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => applyPromoVoucher().catch((err) => setPromoMessage(err.message))}
+                    disabled={isApplyingPromo}
+                  >
+                    {isApplyingPromo ? "Checking..." : "Apply Voucher"}
+                  </button>
+                </div>
+                {promoMessage ? (
+                  <p className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>{promoMessage}</p>
+                ) : (
+                  <p className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>You can still confirm with a voucher code typed here — we will validate it on submit if needed.</p>
+                )}
+              </div>
+
+              <div className="reserve-confirm-total-panel" style={{ marginTop: 16, padding: 14, borderRadius: 14, background: "linear-gradient(180deg, rgba(15,23,42,0.04), rgba(15,23,42,0.02))" }}>
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                    <span className="field-hint">Subtotal</span>
+                    <strong>{formatPriceLabel(estimatedReservationValue)}</strong>
+                  </div>
+                  {appliedPromotion ? (
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                      <span className="field-hint">Promo Discount</span>
+                      <strong style={{ color: "#0f766e" }}>- {formatPriceLabel(promoAppliedDiscount)}</strong>
+                    </div>
+                  ) : null}
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, paddingTop: 8, borderTop: "1px dashed rgba(15,23,42,0.15)" }}>
+                    <span className="field-hint"><strong>Total Due</strong></span>
+                    <strong>{formatPriceLabel(promoAppliedTotal)}</strong>
+                  </div>
                 </div>
               </div>
               <p className="field-hint" style={{ marginTop: 10 }}>

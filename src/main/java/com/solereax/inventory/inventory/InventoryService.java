@@ -62,6 +62,40 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
+    public List<PublicProductResponse> listPublicProductsByIds(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> orderedIds = productIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+        if (orderedIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Product> hydrated = productRepository.findAllByIdInWithStocks(orderedIds);
+        Map<Long, Product> productById = new HashMap<>();
+        hydrated.stream()
+                .filter(Product::isActive)
+                .forEach(product -> productById.put(product.getId(), product));
+
+        List<Product> orderedProducts = orderedIds.stream()
+                .map(productById::get)
+                .filter(product -> product != null)
+                .toList();
+        if (orderedProducts.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
+        return orderedProducts.stream()
+                .map(product -> toPublicResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public PublicCatalogPageResponse listPublicCatalog(
             String brand,
             String department,

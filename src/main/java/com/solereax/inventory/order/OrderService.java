@@ -16,6 +16,7 @@ import com.solereax.inventory.order.dto.OrderResponse;
 import com.solereax.inventory.order.dto.ReserveOrderItemRequest;
 import com.solereax.inventory.order.dto.ReserveOrderRequest;
 import com.solereax.inventory.order.dto.UpdateOrderStatusRequest;
+import com.solereax.inventory.promotion.PromotionService;
 import com.solereax.inventory.shared.NotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -42,17 +43,20 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final ProductStockRepository productStockRepository;
     private final StockMovementRepository stockMovementRepository;
+    private final PromotionService promotionService;
 
     public OrderService(
             CustomerOrderRepository customerOrderRepository,
             ProductRepository productRepository,
             ProductStockRepository productStockRepository,
-            StockMovementRepository stockMovementRepository
+            StockMovementRepository stockMovementRepository,
+            PromotionService promotionService
     ) {
         this.customerOrderRepository = customerOrderRepository;
         this.productRepository = productRepository;
         this.productStockRepository = productStockRepository;
         this.stockMovementRepository = stockMovementRepository;
+        this.promotionService = promotionService;
     }
 
     @Transactional
@@ -77,7 +81,7 @@ public class OrderService {
         }
         order.setStatus(OrderStatus.ORDERED);
         order.setStatusUpdatedBy("customer:" + order.getCustomerName());
-        BigDecimal computedTotalPrice = BigDecimal.ZERO;
+        BigDecimal computedSubtotalPrice = BigDecimal.ZERO;
 
         for (ReserveOrderItemRequest itemRequest : request.items()) {
             Product product = productRepository.findById(itemRequest.productId())
@@ -124,7 +128,7 @@ public class OrderService {
                 }
                 item.setSupplierBreakdown(PREORDER_SUPPLIER_BREAKDOWN_MARKER);
                 order.getItems().add(item);
-                computedTotalPrice = computedTotalPrice.add(itemTotalPrice);
+                computedSubtotalPrice = computedSubtotalPrice.add(itemTotalPrice);
                 continue;
             }
 
@@ -166,11 +170,24 @@ public class OrderService {
 
             item.setSupplierBreakdown(serializeSupplierBreakdown(supplierBreakdown));
             order.getItems().add(item);
-            computedTotalPrice = computedTotalPrice.add(itemTotalPrice);
+            computedSubtotalPrice = computedSubtotalPrice.add(itemTotalPrice);
         }
 
-        if (computedTotalPrice.compareTo(BigDecimal.ZERO) > 0) {
-            order.setTotalPrice(computedTotalPrice.setScale(2, RoundingMode.HALF_UP));
+        BigDecimal subtotalPrice = computedSubtotalPrice.setScale(2, RoundingMode.HALF_UP);
+        order.setSubtotalPrice(subtotalPrice);
+
+        String promoCode = trimToNull(request.promoCode());
+        if (promoCode != null) {
+            PromotionService.PromotionApplication promotionApplication = promotionService.applyPromotion(promoCode, subtotalPrice);
+            order.setPromoCode(promotionApplication.promotion().code());
+            order.setPromoName(promotionApplication.promotion().name());
+            order.setPromoDiscountAmount(promotionApplication.discountAmount());
+            order.setTotalPrice(promotionApplication.totalAfterDiscount());
+        } else {
+            order.setPromoCode(null);
+            order.setPromoName(null);
+            order.setPromoDiscountAmount(null);
+            order.setTotalPrice(subtotalPrice);
         }
 
         CustomerOrder savedOrder = customerOrderRepository.save(order);
@@ -294,6 +311,10 @@ public class OrderService {
                 order.getCourier(),
                 order.getMop(),
                 order.getMopOther(),
+                order.getSubtotalPrice(),
+                order.getPromoCode(),
+                order.getPromoName(),
+                order.getPromoDiscountAmount(),
                 order.getTotalPrice(),
                 order.getDownpayment(),
                 order.getBalance(),

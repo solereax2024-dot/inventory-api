@@ -1,0 +1,2 @@
+http://localhost:8080/uploads/branding/a86b4b8c-1e7c-40ed-951c-b018b6fc2e36.png => 200 image/png b'\x89PNG'
+http://localhost:8080/uploads/products/8b161719-3fb7-4927-a458-b5db1e563eec.avif => 200 image/avif b'\x00\x00\x00 '

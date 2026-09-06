@@ -29,14 +29,19 @@ function formatEnumLabel(value = "") {
     .join(" ");
 }
 
+export function stripColorwayFromDescription(description = "") {
+  return String(description)
+    .replace(/\s*Colorway:\s*[^.]+\.?\s*$/i, "")
+    .trim();
+}
+
 export function buildDefaultProductDescription(form = {}) {
   const namePart = [form.brand, form.name].filter(Boolean).map((value) => value.trim()).filter(Boolean).join(" ");
   const title = namePart || "This product";
   const department = formatEnumLabel(form.department || "UNISEX").toLowerCase();
   const productType = formatEnumLabel(form.productType || "LIFESTYLE_SNEAKERS").toLowerCase();
   const defaultCopy = PRODUCT_TYPE_DEFAULT_COPY[form.productType] || "Great option for everyday use.";
-  const colorLine = (form.mainColor || "").trim() ? ` Colorway: ${(form.mainColor || "").trim()}.` : "";
 
-  return `${title} is a ${department} ${productType}. ${defaultCopy}${colorLine}`;
+  return `${title} is a ${department} ${productType}. ${defaultCopy}`;
 }
 

@@ -48,6 +48,16 @@ export default function BrandsPage({ onCatalogNavChange = () => {} }) {
 
   return (
     <main className="container container-customer brands-page-shell">
+      <nav className="reserve-breadcrumb" aria-label="Breadcrumb">
+        <Link className="reserve-page-crumb-link reserve-back-link" to="/collections">
+          <span className="reserve-back-arrow" aria-hidden="true">←</span>
+          Collections
+        </Link>
+        <span className="reserve-page-crumb-separator" aria-hidden="true">/</span>
+        <span className="reserve-page-crumb-current">Brands</span>
+      </nav>
+
+
       <section className="hero brands-hero">
         <div className="brands-hero-copy">
           <span className="eyebrow">Brand Directory</span>

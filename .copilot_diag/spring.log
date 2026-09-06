@@ -1,0 +1,105 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------------< com.solereax:inventory-api >---------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:4.1.0:run (default-cli) > test-compile @ inventory-api >>>
+[INFO] 
+[INFO] --- exec:3.5.1:exec (build-frontend-assets) @ inventory-api ---
+npm warn Unknown user config "always-auth" (//artifactory.code.bestbuy.com/artifactory/api/npm/npm-virtual/:always-auth). This will stop working in the next major version of npm.
+
+> sole-reax-frontend@1.0.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 1852 modules transformed.
+rendering chunks...
+computing gzip size...
+../src/main/resources/static/index.html                   3.00 kB │ gzip:   1.19 kB
+../src/main/resources/static/assets/index-IDtT3P17.css  177.73 kB │ gzip:  29.38 kB
+../src/main/resources/static/assets/index-aQ8DLo_J.js   367.34 kB │ gzip: 106.01 kB
+✓ built in 1.04s
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ inventory-api ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] Copying 43 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ inventory-api ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ inventory-api ---
+[INFO] skip non existing resourceDirectory /Users/Domingo/Documents/inventory-api/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ inventory-api ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:4.1.0:run (default-cli) < test-compile @ inventory-api <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:4.1.0:run (default-cli) @ inventory-api ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.0)
+
+2026-09-06T01:53:09.660+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] c.s.inventory.InventoryApiApplication    : Starting InventoryApiApplication using Java 21.0.10 with PID 73766 (/Users/Domingo/Documents/inventory-api/target/classes started by Domingo in /Users/Domingo/Documents/inventory-api)
+2026-09-06T01:53:09.662+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] c.s.inventory.InventoryApiApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-09-06T01:53:10.005+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-09-06T01:53:10.043+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 34 ms. Found 10 JPA repository interfaces.
+2026-09-06T01:53:10.326+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-09-06T01:53:10.334+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-09-06T01:53:10.335+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.22]
+2026-09-06T01:53:10.369+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 683 ms
+2026-09-06T01:53:10.498+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-09-06T01:53:10.645+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@a316f6b
+2026-09-06T01:53:10.645+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-09-06T01:53:10.660+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/sole_reax (PostgreSQL 17.10)
+2026-09-06T01:53:10.788+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 32 migrations (execution time 00:00.036s)
+2026-09-06T01:53:10.801+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 32
+2026-09-06T01:53:10.803+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-09-06T01:53:10.869+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-09-06T01:53:10.901+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.1.Final
+2026-09-06T01:53:11.114+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-09-06T01:53:11.167+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:5432/sole_reax]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.10
+	Default catalog/schema: sole_reax/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-09-06T01:53:11.884+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-09-06T01:53:11.921+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-09-06T01:53:11.956+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-09-06T01:53:16.484+08:00  WARN 73766 --- [sole-reax-inventory-api] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-09-06T01:53:16.532+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name appUserDetailsService
+2026-09-06T01:53:16.605+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page: class path resource [static/index.html]
+2026-09-06T01:53:16.769+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-09-06T01:53:16.772+08:00  INFO 73766 --- [sole-reax-inventory-api] [           main] c.s.inventory.InventoryApiApplication    : Started InventoryApiApplication in 7.327 seconds (process running for 7.503)
+2026-09-06T01:53:19.502+08:00  INFO 73766 --- [sole-reax-inventory-api] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-09-06T01:53:19.502+08:00  INFO 73766 --- [sole-reax-inventory-api] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-09-06T01:53:19.503+08:00  INFO 73766 --- [sole-reax-inventory-api] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-09-06T02:02:57.383+08:00  INFO 73766 --- [sole-reax-inventory-api] [ionShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+2026-09-06T02:02:57.389+08:00  INFO 73766 --- [sole-reax-inventory-api] [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
+2026-09-06T02:02:57.395+08:00  INFO 73766 --- [sole-reax-inventory-api] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-09-06T02:02:57.399+08:00  INFO 73766 --- [sole-reax-inventory-api] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-09-06T02:02:57.401+08:00  INFO 73766 --- [sole-reax-inventory-api] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  09:52 min
+[INFO] Finished at: 2026-09-06T02:02:57+08:00
+[INFO] ------------------------------------------------------------------------

@@ -1,0 +1,14 @@
+npm warn Unknown user config "always-auth" (//artifactory.code.bestbuy.com/artifactory/api/npm/npm-virtual/:always-auth). This will stop working in the next major version of npm.
+
+> sole-reax-frontend@1.0.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 1852 modules transformed.
+rendering chunks...
+computing gzip size...
+../src/main/resources/static/index.html                   3.00 kB │ gzip:   1.19 kB
+../src/main/resources/static/assets/index-CB6xFN-0.css  177.94 kB │ gzip:  29.47 kB
+../src/main/resources/static/assets/index-CVbvzBpW.js   368.64 kB │ gzip: 106.37 kB
+✓ built in 1.19s

@@ -21,7 +21,7 @@
   min-width: 0;
   overflow: hidden;
   padding: 6px 0;
-  cursor: grab;
+  cursor: default;
   touch-action: pan-y;
   user-select: none;
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8%, #000 92%, transparent 100%);

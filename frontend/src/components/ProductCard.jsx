@@ -10,6 +10,7 @@ export default function ProductCard({
   product,
   onReserveClick,
   initialColorway,
+  metaLayout = "line",
   autoCycleColorways = false,
   autoCycleOffsetMs = 0,
   autoCycleIntervalMs = 2200,
@@ -128,6 +129,20 @@ export default function ProductCard({
     [product, selectedColorway]
   );
   const uniqueViewCount = Number(product?.viewCount || 0);
+  const isLegacyMetaLayout = metaLayout === "legacy";
+  const productMetaItems = useMemo(() => {
+    const items = [];
+    if (product?.brand) {
+      items.push(product.brand);
+    }
+    if (colorwayDetails?.department) {
+      items.push(formatEnumLabel(colorwayDetails.department));
+    }
+    if (uniqueViewCount > 0) {
+      items.push(`${uniqueViewCount.toLocaleString()} views`);
+    }
+    return items;
+  }, [product?.brand, colorwayDetails?.department, uniqueViewCount]);
   const priceLabel = formatPriceDisplay(colorwayDetails?.minPrice, colorwayDetails?.maxPrice);
 
   return (
@@ -159,13 +174,15 @@ export default function ProductCard({
           onReserveClick(product.id, selectedColorway);
         }}
       >
-        {colorwayDetails.department && (
+        {isLegacyMetaLayout && colorwayDetails.department ? (
           <span className="department-chip department-chip-bottom">{formatEnumLabel(colorwayDetails.department)}</span>
-        )}
-        <small className="product-demand-overlay">
-          <Eye size={11} strokeWidth={2.2} />
-          {uniqueViewCount.toLocaleString()}
-        </small>
+        ) : null}
+        {isLegacyMetaLayout ? (
+          <small className="product-demand-overlay">
+            <Eye size={11} strokeWidth={2.2} />
+            {uniqueViewCount.toLocaleString()}
+          </small>
+        ) : null}
         {(() => {
           const imgUrl = product?.colorwayImages
             ? getColorwayImageUrl(product, selectedColorway)
@@ -190,10 +207,22 @@ export default function ProductCard({
         })()}
       </button>
       <div className="product-card-footer">
-        <div className="product-card-meta">
-          <small className="brand">{product.brand || ""}</small>
-        </div>
+        {isLegacyMetaLayout ? (
+          <div className="product-card-meta">
+            <small className="brand">{product.brand || ""}</small>
+          </div>
+        ) : null}
         <h3>{product.name}</h3>
+        {!isLegacyMetaLayout && productMetaItems.length > 0 ? (
+          <div className="product-card-meta">
+            {productMetaItems.map((item, index) => (
+              <span key={`${item}-${index}`} className="product-card-meta-item">
+                {index > 0 ? <span className="product-card-meta-separator" aria-hidden="true">•</span> : null}
+                <span>{item}</span>
+              </span>
+            ))}
+          </div>
+        ) : null}
         <div className={`product-price-row${priceLabel ? "" : " empty"}`}>
           {priceLabel ? (
             <p className="product-price">{priceLabel}</p>

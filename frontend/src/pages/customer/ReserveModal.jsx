@@ -1,11 +1,14 @@
 import { useRef, useState } from "react";
-import { getColorwayImageUrl } from "../../utils/colorway";
-import { formatColorwayLabel } from "../../utils/format";
+import { Eye } from "lucide-react";
+import { getColorwayDetails, getColorwayImageUrl } from "../../utils/colorway";
+import { formatColorwayLabel, formatEnumLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
+import { stripColorwayFromDescription } from "../../utils/productDescription";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
+const DESKTOP_BREAKPOINT = 901;
 
 export default function ReserveModal({ reserveModal, setReserveModal, products, reserve, setReserve, reserveNow, setMessage }) {
   const [zoomIdx, setZoomIdx] = useState(0);
@@ -17,6 +20,8 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
   const product = products.find((p) => String(p.id) === String(reserveModal.productId));
   const colorways = product ? getSortedColorwaysFromStocks(product.stocks) : [];
   const selectedDepartment = getDepartmentForColorway(product, reserve.colorway);
+  const selectedColorwayDetails = getColorwayDetails(product, reserve.colorway);
+  const selectedProductDescription = stripColorwayFromDescription(selectedColorwayDetails?.description);
   const sizeSections = buildSizeSections(product, reserve.colorway);
   const activeSizeGroup = isUnisexDepartment(selectedDepartment)
     ? (reserve.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
@@ -61,6 +66,7 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
   };
 
   const handleTouchMove = (e) => {
+    if (window.innerWidth < DESKTOP_BREAKPOINT) return;
     if (zoomLevel <= 1) return;
     const touch = e.touches[0];
     if (!touch) return;
@@ -68,12 +74,16 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
   };
 
   const handleTouchStart = (e) => {
+    if (window.innerWidth < DESKTOP_BREAKPOINT) return;
     const touch = e.touches[0];
     if (!touch) return;
     getOriginFromPoint(touch.clientX, touch.clientY);
   };
 
   const handleClick = () => {
+    if (window.innerWidth < DESKTOP_BREAKPOINT) {
+      return;
+    }
     setZoomIdx((prev) => (prev + 1) % ZOOM_LEVELS.length);
   };
 
@@ -86,7 +96,7 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
     <div className="modal-backdrop" onClick={() => { setReserveModal({ isOpen: false, productId: "" }); resetZoom(); }}>
       <section className="modal-panel reserve-modal" onClick={(e) => e.stopPropagation()}>
         <div className="breakdown-header">
-          <h2>{product?.name || "Product"}</h2>
+          <h2>Reserve Item</h2>
           <button
             type="button"
             className="modal-close-btn"
@@ -97,7 +107,24 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
         </div>
 
         {product ? (
-          <div className="reserve-modal-content">
+          <>
+            <div className="reserve-product-header reserve-modal-product-header">
+              <h2 className="reserve-product-title">{product.name}</h2>
+              <div className="reserve-product-meta-row">
+                {product.brand ? <span className="reserve-brand-chip">{product.brand}</span> : null}
+                {selectedColorwayDetails?.department ? (
+                  <span className="reserve-dept-chip">{formatEnumLabel(selectedColorwayDetails.department)}</span>
+                ) : null}
+                {Number(product.viewCount || 0) > 0 ? (
+                  <span className="reserve-view-badge">
+                    <Eye size={10} strokeWidth={2.1} />
+                    {Number(product.viewCount).toLocaleString()} views
+                  </span>
+                ) : null}
+              </div>
+              {selectedProductDescription ? <p className="reserve-product-desc">{selectedProductDescription}</p> : null}
+            </div>
+            <div className="reserve-modal-content">
             <div
               ref={imgWrapRef}
               className={`reserve-modal-image${zoomLevel > 1 ? " zoomed" : ""}`}
@@ -129,7 +156,7 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
                   </div>
                 );
               })()}
-              <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span>
+              {window.innerWidth >= DESKTOP_BREAKPOINT ? <span className="zoom-hint">{ZOOM_LABELS[zoomIdx]}</span> : null}
             </div>
 
             {colorways.length > 1 ? (
@@ -266,6 +293,7 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
               </div>
             </div>
           </div>
+          </>
         ) : null}
       </section>
     </div>

@@ -18,6 +18,14 @@ public class MediaResourceConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String location = "file:" + mediaStorageService.getUploadBaseDirectoryAbsolutePath() + "/";
+        // Canonical brand/logo path
+        registry.addResourceHandler("/uploads/branding/**")
+                .addResourceLocations(location + "branding/", location + "brands/")
+                .setCacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic());
+        // Backward compatibility for older URLs/files
+        registry.addResourceHandler("/uploads/brands/**")
+                .addResourceLocations(location + "brands/", location + "branding/")
+                .setCacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic());
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(location)
                 .setCacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic());

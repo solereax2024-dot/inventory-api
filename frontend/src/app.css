@@ -668,7 +668,7 @@ table {
 }
 
 .catalog-section-head {
-  margin: 8px 0 10px;
+  margin: 10px 0 12px;
   display: flex;
   justify-content: center;
   text-align: center;
@@ -676,18 +676,60 @@ table {
 
 .catalog-section-head-copy {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   justify-items: center;
 }
 
 .catalog-section-label {
   margin: 0;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #64748b;
 }
+
+.catalog-section-label.is-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.catalog-section-separator {
+  color: #94a3b8;
+  margin: 0 4px;
+  font-size: 12px;
+}
+
+.catalog-section-current {
+  color: #334155;
+  font-weight: 600;
+}
+
+.catalog-section-link {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.16s ease, opacity 0.16s ease;
+}
+
+.catalog-section-link:hover,
+.catalog-section-link:focus-visible {
+  color: #334155;
+  opacity: 0.95;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+
 
 .catalog-section-head p {
   margin: 0;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
@@ -234,18 +234,33 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
       return undefined;
     }
 
-    apiRequest("/api/public/products")
+    const prioritizedTopItems = [];
+    const seenProductIds = new Set();
+    for (const topItem of topViewedItems) {
+      if (seenProductIds.has(topItem.productId)) continue;
+      seenProductIds.add(topItem.productId);
+      prioritizedTopItems.push(topItem);
+    }
+
+    const ids = prioritizedTopItems.map((item) => item.productId).filter((id) => Number.isFinite(id) && id > 0);
+    if (!ids.length) {
+      setPopularProducts([]);
+      return undefined;
+    }
+
+    const params = new URLSearchParams();
+    ids.forEach((id) => params.append("ids", String(id)));
+
+    apiRequest(`/api/public/products/by-ids?${params.toString()}`)
       .then((data) => {
         if (cancelled) return;
         const products = Array.isArray(data) ? data : [];
+        const productsById = new Map(products.map((item) => [item.id, item]));
         const result = [];
-        const usedProductIds = new Set();
-        for (const topItem of topViewedItems) {
-          if (usedProductIds.has(topItem.productId)) continue;
-          const match = products.find((item) => item.id === topItem.productId);
+        for (const topItem of prioritizedTopItems) {
+          const match = productsById.get(topItem.productId);
           const resolvedColorway = topItem.hasColorwayKey ? topItem.colorwayKey : "DEFAULT";
           if (match && getColorwayImageUrl(match, resolvedColorway)) {
-            usedProductIds.add(topItem.productId);
             result.push({
               ...match,
               _popularColorway: normalizeColorwayValue(resolvedColorway),
@@ -326,8 +341,9 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     return items;
   }, [activePage, totalPages]);
   const paginatedProducts = visibleProducts;
+  const isFewPopularItems = popularProducts.length > 0 && popularProducts.length <= 3;
 
-  const openReservePage = (productId, initialColorway, preferredSize = US_SIZES[0]) => {
+  const openReservePage = (productId, initialColorway, preferredSize = "") => {
     const params = new URLSearchParams();
     if (initialColorway) params.set("colorway", initialColorway);
     if (preferredSize) params.set("size", preferredSize);
@@ -367,8 +383,26 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     setSortBy("BRAND_ASC");
   };
 
+  const clearBrandFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("brand");
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <main className="container container-customer">
+
+      {brandFilter !== "ALL" ? (
+        <nav className="reserve-breadcrumb" aria-label="Breadcrumb">
+          <Link className="reserve-page-crumb-link reserve-back-link" to="/collections">
+            <span className="reserve-back-arrow" aria-hidden="true">←</span>
+            Collections
+          </Link>
+          <span className="reserve-page-crumb-separator" aria-hidden="true">/</span>
+          <span className="reserve-page-crumb-current">{brandFilter}</span>
+        </nav>
+      ) : null}
+
 
       <section className="filter-bar">
         <div className="filter-bar-top">
@@ -401,12 +435,13 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
               <p>{siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}</p>
             ) : null}
           </div>
-          <div className="popular-rail-track" ref={popularRailRef}>
+          <div className={`popular-rail-track${isFewPopularItems ? " is-few-items" : ""}`} ref={popularRailRef}>
             {popularProducts.map((product) => (
               <article key={`popular-${product.id}-${product._popularColorway || product._colorwayVariant || "DEFAULT"}`} className="popular-rail-item">
                 <ProductCard
                   product={product}
                   onReserveClick={openReservePage}
+                  metaLayout="legacy"
                   initialColorway={product._popularColorway || product._colorwayVariant}
                   autoCycleColorways
                   autoCycleOffsetMs={((product.id || 0) % 5) * 360}
@@ -535,12 +570,16 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         </div>
       ) : null}
 
-       <section className="catalog-section-head" aria-label="Collection heading">
+       {brandFilter === "ALL" ? (
+         <section className="catalog-section-head" aria-label="Collection heading">
          <div className="catalog-section-head-copy">
-           <span className="catalog-section-label">Collections</span>
+           <span className={`catalog-section-label ${brandFilter !== "ALL" ? "is-breadcrumb" : ""}`}>
+               Collections
+           </span>
            <p>Explore standout pieces across featured brands.</p>
          </div>
-       </section>
+         </section>
+       ) : null}
 
        <section className="grid">
          {isLoadingProducts
@@ -556,6 +595,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 key={product.id}
                product={product}
                onReserveClick={openReservePage}
+                metaLayout="legacy"
                 initialColorway={product._popularColorway || product.primaryColorway}
              />
            ))}

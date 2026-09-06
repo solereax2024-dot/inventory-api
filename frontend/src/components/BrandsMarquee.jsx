@@ -2,11 +2,16 @@ import { useRef, useState } from "react";
 import "../styles/brands-marquee.css";
 
 export default function BrandsMarquee({ brands = [], onBrandClick = () => {} }) {
+  const MOUSE_DRAG_THRESHOLD_PX = 12;
+  const TOUCH_DRAG_THRESHOLD_PX = 10;
   const wrapRef = useRef(null);
   const dragStartXRef = useRef(0);
   const dragStartOffsetRef = useRef(0);
   const dragOffsetRef = useRef(0);
   const dragMovedRef = useRef(0);
+  const isPointerDownRef = useRef(false);
+  const didDragRef = useRef(false);
+  const pointerTypeRef = useRef("mouse");
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
 
@@ -34,28 +39,47 @@ export default function BrandsMarquee({ brands = [], onBrandClick = () => {} }) 
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;
     }
+    if (event.pointerType === "mouse") {
+      // Desktop prioritizes logo clicks; drag gesture remains for touch/pen.
+      return;
+    }
     dragMovedRef.current = 0;
+    didDragRef.current = false;
+    isPointerDownRef.current = true;
+    pointerTypeRef.current = event.pointerType || "mouse";
     dragStartXRef.current = event.clientX;
     dragStartOffsetRef.current = dragOffsetRef.current;
-    setIsDragging(true);
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
   const handlePointerMove = (event) => {
-    if (!isDragging) {
+    if (!isPointerDownRef.current) {
       return;
     }
     const deltaX = event.clientX - dragStartXRef.current;
-    dragMovedRef.current = Math.max(dragMovedRef.current, Math.abs(deltaX));
+    const moved = Math.abs(deltaX);
+    dragMovedRef.current = Math.max(dragMovedRef.current, moved);
+    const dragThreshold = pointerTypeRef.current === "mouse"
+      ? MOUSE_DRAG_THRESHOLD_PX
+      : TOUCH_DRAG_THRESHOLD_PX;
+    if (!didDragRef.current && moved >= dragThreshold) {
+      didDragRef.current = true;
+      setIsDragging(true);
+    }
+    if (!didDragRef.current) {
+      return;
+    }
     const nextOffset = dragStartOffsetRef.current + deltaX;
     dragOffsetRef.current = nextOffset;
     setDragOffset(nextOffset);
   };
 
   const stopDragging = () => {
-    if (!isDragging) {
+    isPointerDownRef.current = false;
+    if (!didDragRef.current) {
       return;
     }
+    didDragRef.current = false;
     setIsDragging(false);
     const normalized = normalizeOffset(dragOffsetRef.current);
     dragOffsetRef.current = normalized;
@@ -63,7 +87,7 @@ export default function BrandsMarquee({ brands = [], onBrandClick = () => {} }) 
   };
 
   const handleLogoClick = (event, brandName) => {
-    if (dragMovedRef.current > 6) {
+    if (didDragRef.current || isDragging) {
       event.preventDefault();
       return;
     }

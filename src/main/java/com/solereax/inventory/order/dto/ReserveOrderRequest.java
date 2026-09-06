@@ -12,6 +12,7 @@ public record ReserveOrderRequest(
         @Size(max = 500) String notes,
         @Size(max = 30) String mop,
         @Size(max = 120) String mopOther,
+        @Size(max = 40) String promoCode,
         @NotEmpty List<@Valid ReserveOrderItemRequest> items
 ) {
 }

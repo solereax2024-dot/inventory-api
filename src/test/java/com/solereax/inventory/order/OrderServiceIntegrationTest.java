@@ -56,6 +56,7 @@ class OrderServiceIntegrationTest {
                 "",
                 "GCASH",
                 "",
+                "",
                 List.of(new ReserveOrderItemRequest(product.getId(), "WHITE", "7", "WOMEN", 1))
         ));
 
@@ -83,6 +84,7 @@ class OrderServiceIntegrationTest {
                 "09991234567",
                 "Delete test",
                 "MAYA",
+                "",
                 "",
                 List.of(new ReserveOrderItemRequest(product.getId(), "WHITE", "9", "MEN", 2))
         ));
@@ -153,6 +155,7 @@ class OrderServiceIntegrationTest {
                 "Split supplier reservation",
                 "BPI",
                 "",
+                "",
                 List.of(new ReserveOrderItemRequest(savedProduct.getId(), "WHITE", "9", "MEN", 4))
         ));
 
@@ -203,6 +206,7 @@ class OrderServiceIntegrationTest {
                 "Pre-order when out of stock",
                 "OTHER",
                 "UnionBank",
+                "",
                 List.of(new ReserveOrderItemRequest(product.getId(), "WHITE", "9", "MEN", 1))
         ));
 

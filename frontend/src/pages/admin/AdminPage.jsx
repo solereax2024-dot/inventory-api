@@ -17,6 +17,7 @@ import NewBrandModal from "./NewBrandModal";
 import NewAdminModal from "./NewAdminModal";
 import NewProductNameModal from "./NewProductNameModal";
 import StockSummaryModal from "./StockSummaryModal";
+import PromotionsSection from "./PromotionsSection";
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 
 const RESERVATION_STATUS_OPTIONS = [
@@ -293,7 +294,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       () => [
         { key: "products", label: "Products" },
         { key: "reservations", label: "Reservations" },
-        ...(isSuperAdmin ? [{ key: "users", label: "Admin Users" }] : [])
+        ...(isSuperAdmin ? [{ key: "promotions", label: "Promotions" }, { key: "users", label: "Admin Users" }] : [])
       ],
       [isSuperAdmin]
     );
@@ -1985,7 +1986,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   };
 
   useEffect(() => {
-    if (!isSuperAdmin && activeAdminSection === "users") {
+    if (!isSuperAdmin && (activeAdminSection === "users" || activeAdminSection === "promotions")) {
       setActiveAdminSection("products");
     }
   }, [isSuperAdmin, activeAdminSection]);
@@ -2527,6 +2528,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                                 {formatPriceLabel(order.totalPrice)}
                               </span>
                             )}
+                            {order.promoCode ? (
+                              <small className="reservation-original-price">
+                                Promo {order.promoCode} · Discount {formatPriceLabel(order.promoDiscountAmount)}
+                              </small>
+                            ) : null}
+                            {order.promoCode && order.subtotalPrice ? (
+                              <small className="reservation-original-price">
+                                Subtotal: {formatPriceLabel(order.subtotalPrice)}
+                              </small>
+                            ) : null}
                             <button
                               type="button"
                               className="reservation-inline-icon-btn"
@@ -2729,6 +2740,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             </table>
           </div>
         </section>
+      ) : null}
+
+      {isSuperAdmin && activeAdminSection === "promotions" ? (
+        <PromotionsSection token={token} isSuperAdmin={isSuperAdmin} />
       ) : null}
 
       {isSuperAdmin && activeAdminSection === "users" ? (

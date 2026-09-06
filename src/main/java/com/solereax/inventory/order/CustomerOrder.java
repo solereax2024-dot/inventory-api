@@ -54,6 +54,18 @@ public class CustomerOrder {
     @Column(name = "total_price", precision = 12, scale = 2)
     private BigDecimal totalPrice;
 
+    @Column(name = "subtotal_price", precision = 12, scale = 2)
+    private BigDecimal subtotalPrice;
+
+    @Column(name = "promo_code", length = 40)
+    private String promoCode;
+
+    @Column(name = "promo_name", length = 120)
+    private String promoName;
+
+    @Column(name = "promo_discount_amount", precision = 12, scale = 2)
+    private BigDecimal promoDiscountAmount;
+
     @Column(name = "downpayment", precision = 12, scale = 2)
     private BigDecimal downpayment;
 
