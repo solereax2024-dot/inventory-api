@@ -67,7 +67,7 @@ function formatDiscountSummary(promo) {
   return `${amountLabel}${limitLabel}`;
 }
 
-export default function PromotionsSection({ token, isSuperAdmin }) {
+export default function PromotionsSection({ token }) {
   const [promotions, setPromotions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -80,10 +80,6 @@ export default function PromotionsSection({ token, isSuperAdmin }) {
   const totalUsage = useMemo(() => promotions.reduce((sum, promo) => sum + Number(promo.usedCount || 0), 0), [promotions]);
 
   const loadPromotions = async () => {
-    if (!isSuperAdmin) {
-      setPromotions([]);
-      return;
-    }
     setIsLoading(true);
     try {
       const data = await apiRequest("/api/admin/promotions", "GET", undefined, token);
@@ -98,7 +94,7 @@ export default function PromotionsSection({ token, isSuperAdmin }) {
   useEffect(() => {
     loadPromotions().catch((err) => setMessage(err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, isSuperAdmin]);
+  }, [token]);
 
   const generateCode = () => {
     const random = Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -180,16 +176,6 @@ export default function PromotionsSection({ token, isSuperAdmin }) {
     }
   };
 
-  if (!isSuperAdmin) {
-    return (
-      <section className="card products-card admin-section">
-        <div className="section-head">
-          <h2>Promotions</h2>
-        </div>
-        <p className="field-hint">Promotion management is available for SUPER_ADMIN only.</p>
-      </section>
-    );
-  }
 
   return (
     <section className="card products-card admin-section">

@@ -28,11 +28,34 @@ public class MediaUploadController {
         this.uploadBaseDirectory = Path.of(mediaStorageService.getUploadBaseDirectoryAbsolutePath()).normalize();
     }
 
+    private Path resolveWithBrandFallback(Path baseDir, String normalizedPath) {
+        Path resolved = baseDir.resolve(normalizedPath).normalize();
+        if (resolved.startsWith(baseDir) && Files.exists(resolved) && Files.isReadable(resolved)) {
+            return resolved;
+        }
+
+        if (normalizedPath.startsWith("branding/")) {
+            String legacyPath = "brands/" + normalizedPath.substring("branding/".length());
+            Path legacyResolved = baseDir.resolve(legacyPath).normalize();
+            if (legacyResolved.startsWith(baseDir) && Files.exists(legacyResolved) && Files.isReadable(legacyResolved)) {
+                return legacyResolved;
+            }
+        } else if (normalizedPath.startsWith("brands/")) {
+            String canonicalPath = "branding/" + normalizedPath.substring("brands/".length());
+            Path canonicalResolved = baseDir.resolve(canonicalPath).normalize();
+            if (canonicalResolved.startsWith(baseDir) && Files.exists(canonicalResolved) && Files.isReadable(canonicalResolved)) {
+                return canonicalResolved;
+            }
+        }
+
+        return null;
+    }
+
     @GetMapping("/uploads/{*path}")
     public ResponseEntity<Resource> getUpload(@PathVariable("path") String path) throws IOException {
         String normalizedPath = path == null ? "" : path.startsWith("/") ? path.substring(1) : path;
-        Path resolved = uploadBaseDirectory.resolve(normalizedPath).normalize();
-        if (resolved.startsWith(uploadBaseDirectory) && Files.exists(resolved) && Files.isReadable(resolved)) {
+        Path resolved = resolveWithBrandFallback(uploadBaseDirectory, normalizedPath);
+        if (resolved != null) {
             Resource resource = new UrlResource(resolved.toUri());
             String contentType = Files.probeContentType(resolved);
             MediaType mediaType = contentType != null ? MediaType.parseMediaType(contentType) : MediaType.APPLICATION_OCTET_STREAM;

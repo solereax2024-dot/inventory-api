@@ -1458,17 +1458,17 @@ export default function ReservePage() {
                 <div style={{ display: "grid", gap: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                     <span className="field-hint">Subtotal</span>
-                    <strong>{formatPriceLabel(estimatedReservationValue)}</strong>
+                    <strong>{PHP_CURRENCY.format(estimatedReservationValue)}</strong>
                   </div>
                   {appliedPromotion ? (
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                       <span className="field-hint">Promo Discount</span>
-                      <strong style={{ color: "#0f766e" }}>- {formatPriceLabel(promoAppliedDiscount)}</strong>
+                      <strong style={{ color: "#0f766e" }}>- {PHP_CURRENCY.format(promoAppliedDiscount)}</strong>
                     </div>
                   ) : null}
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, paddingTop: 8, borderTop: "1px dashed rgba(15,23,42,0.15)" }}>
                     <span className="field-hint"><strong>Total Due</strong></span>
-                    <strong>{formatPriceLabel(promoAppliedTotal)}</strong>
+                    <strong>{PHP_CURRENCY.format(promoAppliedTotal)}</strong>
                   </div>
                 </div>
               </div>

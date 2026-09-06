@@ -294,7 +294,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       () => [
         { key: "products", label: "Products" },
         { key: "reservations", label: "Reservations" },
-        ...(isSuperAdmin ? [{ key: "promotions", label: "Promotions" }, { key: "users", label: "Admin Users" }] : [])
+          { key: "promotions", label: "Promotions" },
+          ...(isSuperAdmin ? [{ key: "users", label: "Admin Users" }] : [])
       ],
       [isSuperAdmin]
     );
@@ -1888,7 +1889,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         return haystack.includes(keyword);
       });
   }, [orders, reservationFilters.keyword, reservationFilters.status]);
-  const reservationTableColumnCount = isSuperAdmin ? 12 : 11;
+  const reservationTableColumnCount = isSuperAdmin ? 13 : 12;
 
   const reservationMopTotals = useMemo(() => {
     const totals = new Map();
@@ -1986,7 +1987,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   };
 
   useEffect(() => {
-    if (!isSuperAdmin && (activeAdminSection === "users" || activeAdminSection === "promotions")) {
+    if (!isSuperAdmin && activeAdminSection === "users") {
       setActiveAdminSection("products");
     }
   }, [isSuperAdmin, activeAdminSection]);
@@ -2284,6 +2285,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                   <th>Created</th>
                   <th>Courier</th>
                   <th>MOP</th>
+                  <th>Promo</th>
                   <th>Price</th>
                   <th>Downpayment</th>
                   <th>Balance</th>
@@ -2496,6 +2498,18 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                               <small className="field-hint">Other: {order.mopOther}</small>
                             ) : null}
                           </div>
+                        </td>
+                        <td>
+                          {order.promoCode ? (
+                            <div style={{ display: "grid", gap: 4 }}>
+                              <strong>{order.promoCode}</strong>
+                              {order.promoDiscountAmount ? (
+                                <small className="reservation-original-price">-{formatPriceLabel(order.promoDiscountAmount)}</small>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <span className="field-hint">-</span>
+                          )}
                         </td>
                         <td>
                           <div className="reservation-field-cell">
@@ -2742,8 +2756,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         </section>
       ) : null}
 
-      {isSuperAdmin && activeAdminSection === "promotions" ? (
-        <PromotionsSection token={token} isSuperAdmin={isSuperAdmin} />
+      {activeAdminSection === "promotions" ? (
+        <PromotionsSection token={token} />
       ) : null}
 
       {isSuperAdmin && activeAdminSection === "users" ? (
