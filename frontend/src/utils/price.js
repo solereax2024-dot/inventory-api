@@ -16,7 +16,8 @@ export function toCustomerPriceFromSupplier(supplierPrice, markup = CUSTOMER_MAR
   return Number((supplier + markupValue).toFixed(2));
 }
 
-export function formatPriceDisplay(minPrice, maxPrice) {
+export function formatPriceDisplay(minPrice, maxPrice, options = {}) {
+  const { minimumOnly = false } = options || {};
   const min = Number(minPrice);
   const max = Number(maxPrice);
   const hasMin = Number.isFinite(min) && min > 0;
@@ -27,6 +28,9 @@ export function formatPriceDisplay(minPrice, maxPrice) {
   }
 
   if (hasMin && hasMax) {
+    if (minimumOnly) {
+      return PHP_CURRENCY.format(Math.min(min, max));
+    }
     if (Math.abs(min - max) < 0.01) {
       return PHP_CURRENCY.format(min);
     }

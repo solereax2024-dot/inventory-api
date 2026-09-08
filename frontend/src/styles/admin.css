@@ -159,6 +159,26 @@
    min-width: 140px;
 }
 
+/* Promotions table has 9 columns, so override generic 6-column sizing. */
+.promotions-table th:nth-child(1),
+.promotions-table td:nth-child(1) { min-width: 110px; width: 11%; }
+.promotions-table th:nth-child(2),
+.promotions-table td:nth-child(2) { min-width: 220px; width: 19%; }
+.promotions-table th:nth-child(3),
+.promotions-table td:nth-child(3) { min-width: 100px; width: 9%; }
+.promotions-table th:nth-child(4),
+.promotions-table td:nth-child(4) { min-width: 130px; width: 12%; }
+.promotions-table th:nth-child(5),
+.promotions-table td:nth-child(5) { min-width: 190px; width: 15%; }
+.promotions-table th:nth-child(6),
+.promotions-table td:nth-child(6) { min-width: 100px; width: 9%; }
+.promotions-table th:nth-child(7),
+.promotions-table td:nth-child(7) { min-width: 100px; width: 8%; }
+.promotions-table th:nth-child(8),
+.promotions-table td:nth-child(8) { min-width: 220px; width: 11%; }
+.promotions-table th:nth-child(9),
+.promotions-table td:nth-child(9) { min-width: 290px; width: 16%; }
+
 .reservation-status-select {
    margin-top: 0;
    width: 140px;
@@ -217,6 +237,12 @@
   align-items: center;
   justify-content: center;
   justify-self: end;
+  line-height: 1;
+}
+
+.reservation-inline-icon-btn svg {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .reservation-inline-icon-btn:hover {
@@ -253,6 +279,12 @@
   box-shadow: none;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1;
+}
+
+.reservation-delete-btn svg {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .reservation-delete-btn:hover {
@@ -284,6 +316,12 @@
   background: color-mix(in srgb, var(--primary-soft-2) 82%, #eef2ff);
   border-color: color-mix(in srgb, var(--primary) 36%, #c7d2fe);
   color: var(--primary-dark);
+}
+
+.order-status-chip.status-disabled {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
 }
 
 .order-status-chip.status-preparing {
@@ -462,17 +500,51 @@
   appearance: textfield;
 }
 
+/* Shared admin action button look used across products/promotions/users tables. */
+.admin-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  margin-top: 0;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.admin-action-btn svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
 /* Keep product list action controls in a horizontal row with icon + label. */
 .products-table .actions-inline {
   flex-wrap: nowrap;
   align-items: center;
 }
 
-.products-table .admin-action-btn {
+/* Keep admin table actions (e.g. promotions) in one horizontal row. */
+.admin-actions-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.admin-actions-inline .admin-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  width: auto;
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 
@@ -940,6 +1012,7 @@
    }
 
    .products-table .actions-inline button,
+   .promotions-table .actions-inline button,
    .admin-user-action button {
      width: 36px;
      min-width: 36px;

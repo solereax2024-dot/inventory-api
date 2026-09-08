@@ -17,7 +17,13 @@ public record CreatePromotionRequest(
         Integer usageLimit,
         Instant startsAt,
         Instant endsAt,
-        Boolean active
+        Boolean active,
+        Boolean lowStockOnly,
+        String targetBrands,
+        String targetCategories,
+        String targetProductTypes,
+        String targetProductIds,
+        Boolean buyOneTakeOne
 ) {
 }
 

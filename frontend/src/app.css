@@ -225,6 +225,7 @@ body {
 .container-customer {
   max-width: none;
   width: 100%;
+  margin: 0 auto;
   padding-inline: clamp(12px, 3vw, 32px);
 }
 
@@ -665,6 +666,17 @@ table {
   margin-top: 0;
   width: auto;
   padding-inline: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1;
+}
+
+.section-head button svg,
+.actions-inline button svg {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .catalog-section-head {
@@ -739,6 +751,53 @@ table {
   line-height: 1.55;
 }
 
+.sale-page-banner {
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, #cbd5e1);
+  border-radius: 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-soft) 36%, #ffffff), #ffffff);
+}
+
+.sale-page-banner-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.sale-page-banner-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.sale-page-banner-head p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.sale-page-banner-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sale-page-banner-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, #cbd5e1);
+  background: color-mix(in srgb, var(--primary-soft-2) 72%, #eef2ff);
+  color: color-mix(in srgb, var(--primary-dark) 78%, #1e293b);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .actions-inline {
   display: flex;
   gap: 8px;
@@ -782,7 +841,7 @@ table {
 
 .filter-results-count {
   color: #334155;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: var(--typo-numeric-track);
   font-variant-numeric: tabular-nums;
@@ -1944,7 +2003,7 @@ body.theme-dark .reserve-form-actions {
   }
 
   .app-shell {
-    padding-top: 66px;
+    padding-top: 0;
   }
 
   .container {
@@ -1999,6 +2058,7 @@ body.theme-dark .reserve-form-actions {
   }
 
   .container-customer {
+    margin: 0 auto;
     padding-inline: 16px;
   }
 
@@ -2118,6 +2178,7 @@ body.theme-dark .reserve-form-actions {
 
 @media (max-width: 420px) {
   .container-customer {
+    margin: 0 auto;
     padding-inline: 10px;
   }
 

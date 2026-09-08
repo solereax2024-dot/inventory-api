@@ -59,7 +59,25 @@ public class Promotion {
     private Instant endsAt;
 
     @Column(nullable = false)
-    private boolean active = true;
+    private boolean active = false;
+
+    @Column(name = "low_stock_only", nullable = false)
+    private boolean lowStockOnly = false;
+
+    @Column(name = "target_brands", length = 2000)
+    private String targetBrands;
+
+    @Column(name = "target_categories", length = 2000)
+    private String targetCategories;
+
+    @Column(name = "target_product_types", length = 2000)
+    private String targetProductTypes;
+
+    @Column(name = "target_product_ids", length = 2000)
+    private String targetProductIds;
+
+    @Column(name = "buy_one_take_one", nullable = false)
+    private boolean buyOneTakeOne = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

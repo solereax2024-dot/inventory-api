@@ -1,18 +1,24 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Eye } from "lucide-react";
-import { US_SIZES } from "../../constants";
+import { Eye, Minus, Plus } from "lucide-react";
+import { CUSTOMER_MOP_OPTIONS } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { getColorwayDetails, getColorwayImageUrl, normalizeColorwayValue } from "../../utils/colorway";
 import { formatColorwayLabel, formatEnumLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
-import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
+import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/tracking";
 import { PHP_CURRENCY, formatPriceDisplay } from "../../utils/price";
-import { trackMetaEvent } from "../../utils/metaPixel";
+import { trackMetaEvent } from "../../utils/tracking";
 import { stripColorwayFromDescription } from "../../utils/productDescription";
-import ProductCard from "../../components/ProductCard";
+import { ProductCard } from "../../components/catalog";
+import {
+  ReserveConfirmModal,
+  ReserveSizeGuideModal,
+  ReserveSuccessModal
+} from "../../components/modals/customer";
+import { useModalState, useToggleState } from "../../hooks";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
@@ -20,16 +26,6 @@ const DESKTOP_BREAKPOINT = 901;
 const DESKTOP_BASE_IMAGE_SCALE = 1;
 const MOBILE_BASE_IMAGE_SCALE = 1;
 const ENABLE_ONLINE_PAYMENT = String(import.meta.env.VITE_ENABLE_PAYMONGO_CHECKOUT || "").toLowerCase() === "true";
-const CUSTOMER_MOP_OPTIONS = [
-  { value: "GCASH", label: "GCash" },
-  { value: "MAYA", label: "Maya" },
-  { value: "BPI", label: "BPI" },
-  { value: "BDO", label: "BDO" },
-  { value: "MARIBANK", label: "MariBank" },
-  { value: "PAYMONGO", label: "PayMongo Checkout" },
-  { value: "OTHER", label: "Other" }
-];
-
 export default function ReservePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,14 +34,31 @@ export default function ReservePage() {
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const {
+    isOpen: isConfirmOpen,
+    open: openConfirmModal,
+    close: closeConfirmModal
+  } = useModalState(false);
+  const {
+    isOpen: isSuccessOpen,
+    open: openSuccessModal,
+    close: closeSuccessModal
+  } = useModalState(false);
   const [successReference, setSuccessReference] = useState("");
   const [successOrderId, setSuccessOrderId] = useState(null);
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
-  const [mobileOpenSection, setMobileOpenSection] = useState("");
+  const {
+    isOpen: isSizeGuideOpen,
+    toggle: toggleSizeGuideModal,
+    close: closeSizeGuideModal
+  } = useModalState(false);
+  const {
+    value: mobileOpenSection,
+    setValue: setMobileOpenSection,
+    toggle: toggleMobileSection,
+    reset: resetMobileSection
+  } = useToggleState("");
   const [entryColorway, setEntryColorway] = useState("");
   const [reserve, setReserve] = useState({
     customerName: "",
@@ -60,9 +73,12 @@ export default function ReservePage() {
   });
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromotion, setAppliedPromotion] = useState(null);
+  const [autoSalePromotion, setAutoSalePromotion] = useState(null);
   const [promoMessage, setPromoMessage] = useState("");
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [hasConfirmedQuantity, setHasConfirmedQuantity] = useState(false);
+  const [quantityPulseDirection, setQuantityPulseDirection] = useState("neutral");
+  const [quantityPulseTick, setQuantityPulseTick] = useState(0);
   const [zoomIdx, setZoomIdx] = useState(0);
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
   const [baseImageScale, setBaseImageScale] = useState(() => (
@@ -215,19 +231,12 @@ export default function ReservePage() {
     return hasConfirmedQuantity && Number.isFinite(quantity) && quantity > 0;
   }, [hasConfirmedQuantity, reserve.quantity]);
   const hasCompletedInfoStep = useMemo(() => {
-    if (!reserve.customerName || reserve.customerName.trim() === "") {
-      return false;
-    }
-    if (!reserve.customerContact || reserve.customerContact.trim() === "") {
-      return false;
-    }
-    if (!reserve.mop || reserve.mop.trim() === "") {
-      return false;
-    }
-    if (reserve.mop === "OTHER" && (!reserve.mopOther || reserve.mopOther.trim() === "")) {
-      return false;
-    }
-    return true;
+    return Boolean(
+      reserve.customerName?.trim()
+      && reserve.customerContact?.trim()
+      && reserve.mop?.trim()
+      && (reserve.mop !== "OTHER" || reserve.mopOther?.trim())
+    );
   }, [reserve.customerContact, reserve.customerName, reserve.mop, reserve.mopOther]);
   const isSelectedSizePreOrder = Boolean(reserve.size) && selectedSizeAvailableQuantity <= 0;
   const primaryActionLabel = isSelectedSizePreOrder ? "Pre-Order Now" : "Reserve Now";
@@ -274,29 +283,108 @@ export default function ReservePage() {
     return selectedSizePrice * quantity;
   }, [selectedSizePrice, reserve.quantity]);
   const promoAppliedTotal = useMemo(() => {
+    const effectivePromotion = appliedPromotion || autoSalePromotion;
     if (estimatedReservationValue === null) {
       return null;
     }
-    if (!appliedPromotion) {
+    if (!effectivePromotion) {
       return estimatedReservationValue;
     }
-    const parsed = Number(appliedPromotion.totalAfterDiscount);
+    const parsed = Number(effectivePromotion.totalAfterDiscount);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : estimatedReservationValue;
-  }, [appliedPromotion, estimatedReservationValue]);
+  }, [appliedPromotion, autoSalePromotion, estimatedReservationValue]);
   const promoAppliedDiscount = useMemo(() => {
-    if (!appliedPromotion) {
+    const effectivePromotion = appliedPromotion || autoSalePromotion;
+    if (!effectivePromotion) {
       return 0;
     }
-    const parsed = Number(appliedPromotion.discountAmount);
+    const parsed = Number(effectivePromotion.discountAmount);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-  }, [appliedPromotion]);
+  }, [appliedPromotion, autoSalePromotion]);
+  const hasAutoSaleApplied = !appliedPromotion && Boolean(autoSalePromotion?.valid);
+  const hasSalePromoAvailable = Array.isArray(product?.salePromotions) && product.salePromotions.length > 0;
+  const visibleSalePromoName = autoSalePromotion?.name || product?.salePromotions?.[0]?.name || "Sale Promo";
+  const primarySalePromotion = hasSalePromoAvailable ? product.salePromotions[0] : null;
+  const pendingSalePreviewLabel = primarySalePromotion
+    ? (primarySalePromotion.buyOneTakeOne
+      ? "Buy 1 Take 1 promo available for this product."
+      : (primarySalePromotion.discountType === "PERCENT"
+        ? `${Number(primarySalePromotion.discountValue || 0)}% off promo available.`
+        : "Fixed-amount sale promo available."))
+    : "Sale promo available.";
+  const autoSaleDiscountPreview = hasAutoSaleApplied && promoAppliedDiscount > 0
+    ? `- ${PHP_CURRENCY.format(promoAppliedDiscount)} off`
+    : "Discount will be calculated automatically.";
+  const autoSaleTotalPreview = hasAutoSaleApplied && Number.isFinite(promoAppliedTotal)
+    ? `Total now ${PHP_CURRENCY.format(promoAppliedTotal)}.`
+    : "";
 
   useEffect(() => {
-    if (appliedPromotion) {
+    if (appliedPromotion || autoSalePromotion) {
       setAppliedPromotion(null);
+      setAutoSalePromotion(null);
       setPromoMessage("");
     }
   }, [product?.id, reserve.colorway, reserve.size, reserve.quantity]);
+
+  const buildPromoValidationItems = () => {
+    const normalizedCategory = String(selectedColorwayDetails?.category || product?.category || "").trim().toUpperCase();
+    const normalizedProductType = String(selectedColorwayDetails?.productType || product?.productType || "").trim().toUpperCase();
+    const normalizedQuantity = Math.max(1, Number(reserve.quantity || 0));
+    const isLowStockSelection = selectedSizeAvailableQuantity > 0 && selectedSizeAvailableQuantity <= 3;
+    return [{
+      productId: product?.id,
+      brand: product?.brand || "",
+      category: normalizedCategory,
+      productType: normalizedProductType,
+      lowStock: isLowStockSelection,
+      quantity: normalizedQuantity
+    }];
+  };
+
+  const resolveAutoSalePromotion = async () => {
+    if (estimatedReservationValue === null) {
+      setAutoSalePromotion(null);
+      return null;
+    }
+    try {
+      const response = await apiRequest("/api/public/promotions/auto-sale", "POST", {
+        subtotal: estimatedReservationValue,
+        items: buildPromoValidationItems()
+      });
+      if (response?.valid) {
+        setAutoSalePromotion(response);
+        return response;
+      }
+      setAutoSalePromotion(null);
+      return null;
+    } catch {
+      setAutoSalePromotion(null);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (appliedPromotion) {
+      return;
+    }
+    if (!hasValidSelectedSize || !hasValidConfirmedQuantity || estimatedReservationValue === null) {
+      setAutoSalePromotion(null);
+      return;
+    }
+    resolveAutoSalePromotion().catch(() => {
+      // Keep UI resilient if auto-sale lookup fails.
+    });
+  }, [
+    appliedPromotion,
+    estimatedReservationValue,
+    hasValidConfirmedQuantity,
+    hasValidSelectedSize,
+    product?.id,
+    reserve.colorway,
+    reserve.size,
+    reserve.quantity
+  ]);
 
   useEffect(() => {
     if (!product?.id || !reserve.colorway) {
@@ -545,16 +633,12 @@ export default function ReservePage() {
   }, [message]);
 
   useEffect(() => {
-    setIsSizeGuideOpen(false);
-  }, [product?.id, product?.brand]);
+    closeSizeGuideModal();
+  }, [product?.id, product?.brand, closeSizeGuideModal]);
 
   useEffect(() => {
-    setMobileOpenSection("");
-  }, [product?.id]);
-
-  const toggleMobileSection = (sectionKey) => {
-    setMobileOpenSection((prev) => (prev === sectionKey ? "" : sectionKey));
-  };
+    resetMobileSection();
+  }, [product?.id, resetMobileSection]);
 
   const isMobileSectionOpen = (sectionKey) => mobileOpenSection === sectionKey;
 
@@ -653,35 +737,35 @@ export default function ReservePage() {
 
      if (fieldId === "size" && sizeSectionRef.current) {
        if (window.innerWidth < DESKTOP_BREAKPOINT) {
-         setMobileOpenSection("size");
+          setMobileOpenSection("size");
        }
        targetElement = sizeSectionRef.current;
      } else if (fieldId === "quantity" && quantitySectionRef.current) {
        if (window.innerWidth < DESKTOP_BREAKPOINT) {
-         setMobileOpenSection("quantity");
+          setMobileOpenSection("quantity");
        }
        targetElement = quantitySectionRef.current;
      } else if (fieldId === "customerName" && customerNameInputRef.current) {
        if (window.innerWidth < DESKTOP_BREAKPOINT) {
-         setMobileOpenSection("info");
+          setMobileOpenSection("info");
        }
        targetElement = customerNameInputRef.current;
        scrollOptions = { behavior: "smooth", block: "nearest" };
      } else if (fieldId === "customerContact" && customerContactInputRef.current) {
        if (window.innerWidth < DESKTOP_BREAKPOINT) {
-         setMobileOpenSection("info");
+          setMobileOpenSection("info");
        }
        targetElement = customerContactInputRef.current;
        scrollOptions = { behavior: "smooth", block: "nearest" };
      } else if (fieldId === "mop" && customerMopInputRef.current) {
        if (window.innerWidth < DESKTOP_BREAKPOINT) {
-         setMobileOpenSection("info");
+          setMobileOpenSection("info");
        }
        targetElement = customerMopInputRef.current;
        scrollOptions = { behavior: "smooth", block: "nearest" };
      } else if (fieldId === "mopOther" && customerMopOtherInputRef.current) {
        if (window.innerWidth < DESKTOP_BREAKPOINT) {
-         setMobileOpenSection("info");
+          setMobileOpenSection("info");
        }
        targetElement = customerMopOtherInputRef.current;
        scrollOptions = { behavior: "smooth", block: "nearest" };
@@ -714,7 +798,8 @@ export default function ReservePage() {
      try {
        const response = await apiRequest("/api/public/promotions/validate", "POST", {
          code,
-         subtotal: estimatedReservationValue
+         subtotal: estimatedReservationValue,
+          items: buildPromoValidationItems()
        });
        setAppliedPromotion(response);
        setPromoCode(String(response?.code || code).toUpperCase());
@@ -727,9 +812,12 @@ export default function ReservePage() {
      }
    };
 
-   const openConfirmation = () => {
+   const openConfirmation = async () => {
      try {
        const payload = validateReserve();
+        if (!appliedPromotion) {
+          await resolveAutoSalePromotion();
+        }
        const metaPayload = {
          content_ids: [String(product.id)],
          content_name: product.name || "",
@@ -741,7 +829,7 @@ export default function ReservePage() {
           metaPayload.value = promoAppliedTotal;
        }
        trackMetaEvent("AddToCart", metaPayload);
-       setIsConfirmOpen(true);
+       openConfirmModal();
      } catch (err) {
        setMessage(err.message);
        // Scroll to the field that caused the error
@@ -758,10 +846,10 @@ export default function ReservePage() {
     try {
       const response = await apiRequest("/api/public/orders/reserve", "POST", payload);
       const reservationRef = String(response?.orderCode || response?.reference || response?.id || "").trim();
-      setIsConfirmOpen(false);
+      closeConfirmModal();
       setSuccessReference(reservationRef);
       setSuccessOrderId(response?.id ?? null);
-      setIsSuccessOpen(true);
+      openSuccessModal();
       const metaPayload = {
         content_ids: [String(product.id)],
         content_name: product.name || "",
@@ -782,7 +870,7 @@ export default function ReservePage() {
   };
 
   const handleReserveAnother = () => {
-    setIsSuccessOpen(false);
+    closeSuccessModal();
     setSuccessOrderId(null);
     setSuccessReference("");
     setReserve((prev) => ({
@@ -796,6 +884,7 @@ export default function ReservePage() {
     }));
     setPromoCode("");
     setAppliedPromotion(null);
+    setAutoSalePromotion(null);
     setPromoMessage("");
     setHasConfirmedQuantity(false);
   };
@@ -820,7 +909,9 @@ export default function ReservePage() {
       });
       const checkoutUrl = String(response?.checkoutUrl || "").trim();
       if (!checkoutUrl) {
-        throw new Error("No checkout URL received.");
+        setMessage("No checkout URL received.");
+        setIsPaymentRedirecting(false);
+        return;
       }
       window.location.assign(checkoutUrl);
     } catch (err) {
@@ -1026,6 +1117,19 @@ export default function ReservePage() {
               {selectedColorwayPriceLabel ? (
                 <div className="reserve-product-price-display">{selectedColorwayPriceLabel}</div>
               ) : null}
+              {hasAutoSaleApplied ? (
+                <div className="reserve-sale-indicator" role="status" aria-live="polite">
+                  <span className="reserve-sale-indicator-chip">Sale Auto Applied</span>
+                  <span className="reserve-sale-indicator-text">
+                    {visibleSalePromoName}: {autoSaleDiscountPreview} {autoSaleTotalPreview}
+                  </span>
+                </div>
+              ) : hasSalePromoAvailable ? (
+                <div className="reserve-sale-indicator">
+                  <span className="reserve-sale-indicator-chip reserve-sale-indicator-chip-pending">Sale Promo Available</span>
+                  <span className="reserve-sale-indicator-text">{pendingSalePreviewLabel} Select size and quantity to preview exact discount.</span>
+                </div>
+              ) : null}
             </div>
 
              {/* Size & Availability */}
@@ -1051,7 +1155,7 @@ export default function ReservePage() {
                     <button
                       type="button"
                       className="size-guide-pill-btn"
-                      onClick={() => setIsSizeGuideOpen((prev) => !prev)}
+                      onClick={toggleSizeGuideModal}
                     >
                       {isSizeGuideOpen ? "✕ Hide Size Guide" : "📏 Size Guide"}
                     </button>
@@ -1104,42 +1208,12 @@ export default function ReservePage() {
               {selectedSizePriceLabel ? (
                 <div className="size-price-hint">Selected size: <strong>{selectedSizePriceLabel}</strong></div>
               ) : null}
-              {isSizeGuideOpen && sizeGuide && sizeGuideSection ? (
-                <div className="modal-overlay" onClick={() => setIsSizeGuideOpen(false)}>
-                  <section className="modal-panel modal-panel-compact size-guide-modal" onClick={(e) => e.stopPropagation()}>
-                    <div className="breakdown-header">
-                      <h2>{sizeGuide.brandLabel} Size Guide</h2>
-                      <button type="button" className="modal-close-btn" aria-label="Close size guide" onClick={() => setIsSizeGuideOpen(false)}>✕</button>
-                    </div>
-                    <div className="size-guide-table-wrap">
-                      <table className="size-guide-table">
-                        <thead>
-                          <tr>
-                            {sizeGuideSection.columns.map((column) => (
-                              <th key={`guide-head-${column.key}`}>{column.label}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sizeGuideSection.rows.map((row, index) => (
-                            <tr key={`${sizeGuide.brandLabel}-${sizeGuideSection.label || "guide"}-${index}`}>
-                              {sizeGuideSection.columns.map((column) => (
-                                <td key={`guide-cell-${column.key}-${index}`}>{row[column.key] || "-"}</td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <small className="field-hint" style={{ marginTop: 4 }}>
-                      Reference from {sizeGuide.sourceLabel}. Actual fit may vary by model.
-                    </small>
-                    {sizeGuide.fitNote ? (
-                      <small className="field-hint" style={{ marginTop: 0 }}>{sizeGuide.fitNote}</small>
-                    ) : null}
-                  </section>
-                </div>
-              ) : null}
+              <ReserveSizeGuideModal
+                isOpen={isSizeGuideOpen && Boolean(sizeGuide) && Boolean(sizeGuideSection)}
+                onClose={closeSizeGuideModal}
+                sizeGuide={sizeGuide}
+                sizeGuideSection={sizeGuideSection}
+              />
               </div>
             </div>
 
@@ -1160,29 +1234,41 @@ export default function ReservePage() {
               <div className="qty-stepper">
                 <button
                   type="button"
-                  className="qty-btn"
+                  className="qty-btn qty-btn-minus"
                   disabled={isDecrementDisabled}
                   onClick={() => {
                     setReserve({ ...reserve, quantity: Math.max(0, Number(reserve.quantity) - 1) });
                     setHasConfirmedQuantity(true);
+                    setQuantityPulseDirection("down");
+                    setQuantityPulseTick((prev) => prev + 1);
                   }}
                   aria-label="Decrease quantity"
                 >
-                  −
+                  <Minus size={16} />
                 </button>
-                <span className="qty-value">{reserve.quantity}</span>
+                <div className={`qty-value-stack qty-value-${quantityPulseDirection}`} key={`qty-${quantityPulseTick}`}>
+                  <span className="qty-caption">Qty</span>
+                  <span className="qty-value">{reserve.quantity}</span>
+                </div>
                 <button
                   type="button"
-                  className="qty-btn"
+                  className="qty-btn qty-btn-plus"
                   onClick={() => {
                     setReserve({ ...reserve, quantity: Number(reserve.quantity) + 1 });
                     setHasConfirmedQuantity(true);
+                    setQuantityPulseDirection("up");
+                    setQuantityPulseTick((prev) => prev + 1);
                   }}
                   aria-label="Increase quantity"
                 >
-                  +
+                  <Plus size={16} />
                 </button>
               </div>
+              <small className="qty-helper field-hint">
+                {isSelectedSizePreOrder
+                  ? "Pre-order mode: quantity will be requested from supplier."
+                  : `Available now: ${selectedSizeAvailableQuantity}`}
+              </small>
               </div>
             </div>
 
@@ -1272,7 +1358,7 @@ export default function ReservePage() {
             <div className="reserve-form-actions">
               <button
                 className={`btn-primary reserve-submit-btn ${guidedActionClassName}`}
-                onClick={openConfirmation}
+                onClick={() => openConfirmation().catch((err) => setMessage(err.message))}
               >
                 <span className="reserve-cta-content">
                   <span className="reserve-cta-step">{guidedActionProgressLabel}</span>
@@ -1288,7 +1374,11 @@ export default function ReservePage() {
             <span className="reserve-sticky-cta-size">{selectedSizeLabel || `US ${reserve.size}`}</span>
             <span className="reserve-sticky-cta-price">{selectedColorwayPriceLabel || "Select size"}</span>
           </div>
-          <button type="button" className={`btn-primary reserve-sticky-cta-btn ${guidedActionClassName}`} onClick={openConfirmation}>
+          <button
+            type="button"
+            className={`btn-primary reserve-sticky-cta-btn ${guidedActionClassName}`}
+            onClick={() => openConfirmation().catch((err) => setMessage(err.message))}
+          >
             <span className="reserve-cta-content">
               <span className="reserve-cta-step">{guidedActionProgressLabel}</span>
               <span>{guidedActionLabel}</span>
@@ -1336,223 +1426,48 @@ export default function ReservePage() {
         ) : null}
       </section>
 
-      {/* Confirm modal */}
-      {isConfirmOpen ? (
-        <div className="modal-overlay" onClick={() => !isSubmitting && setIsConfirmOpen(false)}>
-          <section className="modal-panel reserve-confirm-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="breakdown-header reserve-confirm-header">
-              <h2>Confirm Reservation</h2>
-              <button
-                type="button"
-                className="modal-close-btn"
-                aria-label="Close reservation confirmation"
-                onClick={() => setIsConfirmOpen(false)}
-                disabled={isSubmitting}
-              >
-                ✕
-              </button>
-            </div>
+      <ReserveConfirmModal
+        isOpen={isConfirmOpen}
+        isSubmitting={isSubmitting}
+        onClose={closeConfirmModal}
+        onSubmit={() => reserveNow().catch((err) => setMessage(err.message))}
+        product={product}
+        reserve={reserve}
+        isSelectedSizePreOrder={isSelectedSizePreOrder}
+        selectedColorwayPriceLabel={selectedColorwayPriceLabel}
+        selectedSizeLabel={selectedSizeLabel}
+        selectedSizePrice={selectedSizePrice}
+        selectedSizePriceLabel={selectedSizePriceLabel}
+        CUSTOMER_MOP_OPTIONS={CUSTOMER_MOP_OPTIONS}
+        promoCode={promoCode}
+        onPromoCodeChange={(nextValue) => {
+          setPromoCode(nextValue);
+          if (appliedPromotion && nextValue.trim() !== String(appliedPromotion.code || "").toUpperCase()) {
+            setAppliedPromotion(null);
+            setPromoMessage("");
+          }
+        }}
+        appliedPromotion={appliedPromotion}
+        autoSalePromotion={autoSalePromotion}
+        onApplyPromo={() => applyPromoVoucher().catch((err) => setPromoMessage(err.message))}
+        isApplyingPromo={isApplyingPromo}
+        promoMessage={promoMessage}
+        estimatedReservationValue={estimatedReservationValue}
+        promoAppliedDiscount={promoAppliedDiscount}
+        promoAppliedTotal={promoAppliedTotal}
+      />
 
-            <div className="reserve-confirm-summary">
-              {/* Product visual */}
-              <div className="reserve-confirm-product-visual">
-                {(() => {
-                  const imgUrl = getColorwayImageUrl(product, reserve.colorway);
-                  return imgUrl
-                    ? <img src={imgUrl} alt={reserve.colorway} className="reserve-confirm-thumb" />
-                    : <div className="reserve-confirm-thumb-fallback">👟</div>;
-                })()}
-                <div className="reserve-confirm-product-info">
-                  <div className="reserve-confirm-product-name">{product.name}</div>
-                  {product.brand ? <div className="reserve-confirm-product-brand">{product.brand}</div> : null}
-                  {isSelectedSizePreOrder ? <span className="reserve-confirm-preorder-badge">Pre-Order Item</span> : null}
-                  {selectedColorwayPriceLabel ? (
-                    <div className="reserve-confirm-price-hint">{selectedColorwayPriceLabel}</div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="reserve-confirm-grid">
-                <div className="reserve-confirm-item">
-                  <span className="reserve-confirm-label">Colorway</span>
-                  <strong>{formatColorwayLabel(reserve.colorway)}</strong>
-                </div>
-                <div className="reserve-confirm-item">
-                  <span className="reserve-confirm-label">Size</span>
-                  <strong>{selectedSizeLabel || `US ${reserve.size}`}</strong>
-                </div>
-                <div className="reserve-confirm-item">
-                  <span className="reserve-confirm-label">Quantity</span>
-                  <strong>{reserve.quantity}</strong>
-                </div>
-                {selectedSizePrice !== null ? (
-                  <div className="reserve-confirm-item">
-                    <span className="reserve-confirm-label">Unit Price</span>
-                    <strong>{selectedSizePriceLabel}</strong>
-                  </div>
-                ) : null}
-                <div className="reserve-confirm-item">
-                  <span className="reserve-confirm-label">Name</span>
-                  <strong>{reserve.customerName.trim()}</strong>
-                </div>
-                <div className="reserve-confirm-item">
-                  <span className="reserve-confirm-label">Contact</span>
-                  <strong>{reserve.customerContact.trim()}</strong>
-                </div>
-                <div className="reserve-confirm-item">
-                  <span className="reserve-confirm-label">MOP</span>
-                  <strong>
-                    {reserve.mop === "OTHER"
-                      ? (reserve.mopOther.trim() || "Other")
-                      : (CUSTOMER_MOP_OPTIONS.find((option) => option.value === reserve.mop)?.label || reserve.mop || "-")}
-                  </strong>
-                </div>
-                <div className="reserve-confirm-item reserve-confirm-item-wide">
-                  <span className="reserve-confirm-label">Notes</span>
-                  <strong>{reserve.notes.trim() || "No notes provided"}</strong>
-                </div>
-              </div>
-
-              <div className="reserve-confirm-promo-panel" style={{ marginTop: 16, padding: 14, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, background: "rgba(255,255,255,0.65)" }}>
-                <div className="reserve-confirm-promo-head" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 10 }}>
-                  <div>
-                    <strong>Promo Voucher</strong>
-                    <p className="field-hint" style={{ margin: 0 }}>Apply a code from the super admin promotion list to lower the reservation total.</p>
-                  </div>
-                  {appliedPromotion ? (
-                    <span className="order-status-chip status-paid">Applied</span>
-                  ) : null}
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <input
-                    value={promoCode}
-                    onChange={(e) => {
-                      const nextValue = e.target.value.toUpperCase();
-                      setPromoCode(nextValue);
-                      if (appliedPromotion && nextValue.trim() !== String(appliedPromotion.code || "").toUpperCase()) {
-                        setAppliedPromotion(null);
-                        setPromoMessage("");
-                      }
-                    }}
-                    placeholder="Enter promo code"
-                    maxLength={40}
-                    style={{ flex: "1 1 220px", textTransform: "uppercase" }}
-                  />
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={() => applyPromoVoucher().catch((err) => setPromoMessage(err.message))}
-                    disabled={isApplyingPromo}
-                  >
-                    {isApplyingPromo ? "Checking..." : "Apply Voucher"}
-                  </button>
-                </div>
-                {promoMessage ? (
-                  <p className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>{promoMessage}</p>
-                ) : (
-                  <p className="field-hint" style={{ marginTop: 8, marginBottom: 0 }}>You can still confirm with a voucher code typed here — we will validate it on submit if needed.</p>
-                )}
-              </div>
-
-              <div className="reserve-confirm-total-panel" style={{ marginTop: 16, padding: 14, borderRadius: 14, background: "linear-gradient(180deg, rgba(15,23,42,0.04), rgba(15,23,42,0.02))" }}>
-                <div style={{ display: "grid", gap: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <span className="field-hint">Subtotal</span>
-                    <strong>{PHP_CURRENCY.format(estimatedReservationValue)}</strong>
-                  </div>
-                  {appliedPromotion ? (
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                      <span className="field-hint">Promo Discount</span>
-                      <strong style={{ color: "#0f766e" }}>- {PHP_CURRENCY.format(promoAppliedDiscount)}</strong>
-                    </div>
-                  ) : null}
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, paddingTop: 8, borderTop: "1px dashed rgba(15,23,42,0.15)" }}>
-                    <span className="field-hint"><strong>Total Due</strong></span>
-                    <strong>{PHP_CURRENCY.format(promoAppliedTotal)}</strong>
-                  </div>
-                </div>
-              </div>
-              <p className="field-hint" style={{ marginTop: 10 }}>
-                Sole Reax will contact you once the item is ship.
-              </p>
-            </div>
-
-            <div className="reserve-confirm-actions">
-              <button
-                type="button"
-                className="btn-cancel reserve-confirm-cancel-btn"
-                onClick={() => setIsConfirmOpen(false)}
-                disabled={isSubmitting}
-              >
-                Edit Details
-              </button>
-              <button
-                type="button"
-                className="btn-primary reserve-confirm-submit-btn"
-                onClick={() => reserveNow().catch((err) => setMessage(err.message))}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Submitting..." : "Confirm Reservation"}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
-      {isSuccessOpen ? (
-        <div className="modal-overlay" onClick={() => setIsSuccessOpen(false)}>
-          <section className="modal-panel reserve-success-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="reserve-success-content">
-              <div className="reserve-success-icon" aria-hidden="true">✓</div>
-              <h2>Reservation sent</h2>
-              <p className="reserve-success-copy">
-                Thanks! We received your reservation request. Sole Reax will contact you once the item is ship.
-              </p>
-              {successReference ? (
-                <p className="reserve-success-ref">
-                  Reference: <strong>{successReference}</strong>
-                </p>
-              ) : null}
-              <div className="reserve-success-actions">
-                <button
-                  type="button"
-                  className="btn-cancel reserve-success-secondary-btn"
-                  onClick={handleReserveAnother}
-                  disabled={isPaymentRedirecting}
-                >
-                  Reserve Another
-                </button>
-                {ENABLE_ONLINE_PAYMENT ? (
-                  <button
-                    type="button"
-                    className="btn-primary reserve-success-primary-btn"
-                    onClick={() => startOnlinePayment().catch((err) => setMessage(err.message))}
-                    disabled={!successOrderId || isPaymentRedirecting}
-                  >
-                    {isPaymentRedirecting ? "Redirecting..." : "Pay Online (GCash/Maya/Banks)"}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-cancel reserve-success-secondary-btn"
-                    disabled
-                    title="Online payment is coming soon"
-                  >
-                    Pay Online (Soon)
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn-cancel reserve-success-secondary-btn"
-                  onClick={() => navigate(backToCollectionsPath)}
-                  disabled={isPaymentRedirecting}
-                >
-                  Back to Collections
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
-      ) : null}
+      <ReserveSuccessModal
+        isOpen={isSuccessOpen}
+        onClose={closeSuccessModal}
+        successReference={successReference}
+        onReserveAnother={handleReserveAnother}
+        enableOnlinePayment={ENABLE_ONLINE_PAYMENT}
+        onPayment={() => startOnlinePayment().catch((err) => setMessage(err.message))}
+        successOrderId={successOrderId}
+        isPaymentRedirecting={isPaymentRedirecting}
+        onBackToCollections={() => navigate(backToCollectionsPath)}
+      />
       {message ? <div className="toast-banner">{message}</div> : null}
     </main>
   );

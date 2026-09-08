@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import AppErrorBoundary from "./components/AppErrorBoundary";
+import AppErrorBoundary from "./components/core/AppErrorBoundary.jsx";
 import "./app.css";
 
 const rootElement = document.getElementById("root");

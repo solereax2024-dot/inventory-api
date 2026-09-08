@@ -4,12 +4,13 @@ import { US_SIZES, CATALOG_PAGE_SIZE } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { formatEnumLabel } from "../../utils/format";
 import { getColorwayImageUrl, normalizeColorwayValue } from "../../utils/colorway";
-import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/viewSession";
-import { trackMetaEvent } from "../../utils/metaPixel";
+import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/tracking";
+import { trackMetaEvent } from "../../utils/tracking";
 import { SlidersHorizontal } from "lucide-react";
-import ProductCard from "../../components/ProductCard";
-import BrandsMarquee from "../../components/BrandsMarquee";
+import { BrandsMarquee, ProductCard, SalePromosMarquee } from "../../components/catalog";
 import "../../styles/popular-rail.css";
+
+const SALE_BANNER_VARIANT = "luxe";
 
 export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
   const navigate = useNavigate();
@@ -125,6 +126,10 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     const q = (searchParams.get("stock") || "").trim().toUpperCase();
     return ["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"].includes(q) ? q : "ALL";
   }, [searchParams]);
+  const saleFilter = useMemo(() => {
+    const q = (searchParams.get("sale") || "").trim().toLowerCase();
+    return q === "true";
+  }, [searchParams]);
   const categoryOptions = useMemo(() => ["ALL", ...(catalogFacets.categories || [])], [catalogFacets.categories]);
   const productTypeOptions = useMemo(() => ["ALL", ...(catalogFacets.productTypes || [])], [catalogFacets.productTypes]);
 
@@ -148,6 +153,19 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   }, [brandOptions, brandFilter, onCatalogNavChange, searchParams, setSearchParams]);
 
   const visibleProducts = catalogProducts;
+  const activeSalePromotionNames = useMemo(() => {
+    if (!saleFilter) return [];
+    const names = new Set();
+    (catalogProducts || []).forEach((product) => {
+      (product?.salePromotions || []).forEach((promo) => {
+        const name = String(promo?.name || "").trim();
+        if (name) {
+          names.add(name);
+        }
+      });
+    });
+    return Array.from(names);
+  }, [saleFilter, catalogProducts]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -162,10 +180,11 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     sizeFilter !== "ALL",
     colorwayFilter !== "ALL",
     stockFilter !== "ALL",
+    saleFilter,
     sortBy !== "BRAND_ASC",
     Boolean(searchText.trim())
   ].filter(Boolean).length;
-  const shouldShowPopularRail = activeFilterCount === 0 && !searchText.trim();
+  const shouldShowPopularRail = !saleFilter && activeFilterCount === 0 && !searchText.trim();
 
   useEffect(() => {
     let cancelled = false;
@@ -181,6 +200,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         if (colorwayFilter !== "ALL") params.set("colorway", colorwayFilter);
         if (sizeFilter !== "ALL") params.set("sizeFilter", sizeFilter);
         if (stockFilter !== "ALL") params.set("stock", stockFilter);
+        if (saleFilter) params.set("sale", "true");
         const keyword = (searchText || searchParams.get("q") || "").trim();
         if (keyword) params.set("q", keyword);
         if (sortBy !== "BRAND_ASC") params.set("sort", sortBy);
@@ -220,6 +240,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     colorwayFilter,
     sizeFilter,
     stockFilter,
+    saleFilter,
     sortBy,
     searchText,
     searchParams,
@@ -373,6 +394,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     next.delete("brand");
     next.delete("department");
     next.delete("stock");
+    next.delete("sale");
     next.delete("q");
     setSearchParams(next, { replace: true });
     setSearchText("");
@@ -383,11 +405,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     setSortBy("BRAND_ASC");
   };
 
-  const clearBrandFilter = () => {
-    const next = new URLSearchParams(searchParams);
-    next.delete("brand");
-    setSearchParams(next, { replace: true });
-  };
 
   return (
     <main className="container container-customer">
@@ -401,6 +418,14 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
           <span className="reserve-page-crumb-separator" aria-hidden="true">/</span>
           <span className="reserve-page-crumb-current">{brandFilter}</span>
         </nav>
+      ) : null}
+
+      {saleFilter ? (
+        <SalePromosMarquee
+          names={activeSalePromotionNames}
+          itemCount={catalogTotalElements}
+          variant={SALE_BANNER_VARIANT}
+        />
       ) : null}
 
 
@@ -441,7 +466,8 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 <ProductCard
                   product={product}
                   onReserveClick={openReservePage}
-                  metaLayout="legacy"
+                  showSaleBadge={saleFilter}
+                  metaLayout={saleFilter ? "line" : "legacy"}
                   initialColorway={product._popularColorway || product._colorwayVariant}
                   autoCycleColorways
                   autoCycleOffsetMs={((product.id || 0) % 5) * 360}
@@ -595,7 +621,8 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 key={product.id}
                product={product}
                onReserveClick={openReservePage}
-                metaLayout="legacy"
+                showSaleBadge={saleFilter}
+                 metaLayout={saleFilter ? "line" : "legacy"}
                 initialColorway={product._popularColorway || product.primaryColorway}
              />
            ))}

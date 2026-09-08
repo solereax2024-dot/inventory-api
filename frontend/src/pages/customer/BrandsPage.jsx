@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Layers3 } from "lucide-react";
 import { apiRequest } from "../../utils/api";
-import { trackMetaEvent } from "../../utils/metaPixel";
+import { trackMetaEvent } from "../../utils/tracking";
 import "../../styles/brands-page.css";
 
 export default function BrandsPage({ onCatalogNavChange = () => {} }) {

@@ -44,19 +44,19 @@
 .site-center-nav {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 .site-center-nav-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
-  padding: 0 8px;
+  min-height: 38px;
+  padding: 0 10px;
   border: 0;
   border-radius: 0;
   text-decoration: none;
-  font-size: var(--typo-button-size);
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.005em;
   color: color-mix(in srgb, var(--primary-dark) 48%, #475569);
@@ -933,7 +933,7 @@
 
 @media (max-width: 720px) {
   .site-header {
-    position: fixed;
+    position: sticky;
     top: 0;
     left: 0;
     right: 0;
@@ -1348,5 +1348,3 @@ body.theme-dark .search-drawer-clear-btn {
   border-color: color-mix(in srgb, var(--dark-border) 84%, rgba(148, 163, 184, 0.5));
   color: #cbd5e1;
 }
-
-

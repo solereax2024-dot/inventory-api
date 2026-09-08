@@ -17,6 +17,7 @@ import com.solereax.inventory.order.dto.ReserveOrderItemRequest;
 import com.solereax.inventory.order.dto.ReserveOrderRequest;
 import com.solereax.inventory.order.dto.UpdateOrderStatusRequest;
 import com.solereax.inventory.promotion.PromotionService;
+import com.solereax.inventory.promotion.PromotionTargetingSupport;
 import com.solereax.inventory.shared.NotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -175,19 +176,35 @@ public class OrderService {
 
         BigDecimal subtotalPrice = computedSubtotalPrice.setScale(2, RoundingMode.HALF_UP);
         order.setSubtotalPrice(subtotalPrice);
+        List<PromotionTargetingSupport.PromotionLineItem> promotionLineItems = PromotionTargetingSupport.fromOrderItems(order.getItems().stream().toList());
 
         String promoCode = trimToNull(request.promoCode());
         if (promoCode != null) {
-            PromotionService.PromotionApplication promotionApplication = promotionService.applyPromotion(promoCode, subtotalPrice);
+            PromotionService.PromotionApplication promotionApplication = promotionService.applyPromotion(
+                    promoCode,
+                    subtotalPrice,
+                    promotionLineItems
+            );
             order.setPromoCode(promotionApplication.promotion().code());
             order.setPromoName(promotionApplication.promotion().name());
             order.setPromoDiscountAmount(promotionApplication.discountAmount());
             order.setTotalPrice(promotionApplication.totalAfterDiscount());
         } else {
-            order.setPromoCode(null);
-            order.setPromoName(null);
-            order.setPromoDiscountAmount(null);
-            order.setTotalPrice(subtotalPrice);
+            PromotionService.PromotionApplication autoSalePromotion = promotionService.applyBestAutoSalePromotion(
+                    subtotalPrice,
+                    promotionLineItems
+            );
+            if (autoSalePromotion != null) {
+                order.setPromoCode(autoSalePromotion.promotion().code());
+                order.setPromoName(autoSalePromotion.promotion().name());
+                order.setPromoDiscountAmount(autoSalePromotion.discountAmount());
+                order.setTotalPrice(autoSalePromotion.totalAfterDiscount());
+            } else {
+                order.setPromoCode(null);
+                order.setPromoName(null);
+                order.setPromoDiscountAmount(null);
+                order.setTotalPrice(subtotalPrice);
+            }
         }
 
         CustomerOrder savedOrder = customerOrderRepository.save(order);

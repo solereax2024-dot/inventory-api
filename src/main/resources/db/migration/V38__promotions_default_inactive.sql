@@ -1,0 +1,3 @@
+ALTER TABLE promotions
+    ALTER COLUMN active SET DEFAULT FALSE;
+

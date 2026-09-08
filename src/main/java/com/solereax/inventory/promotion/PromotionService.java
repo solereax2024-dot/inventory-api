@@ -10,12 +10,14 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PromotionService {
     private static final int MONEY_SCALE = 2;
+    private static final String SALE_CODE_PREFIX = "SALE-AUTO-";
 
     private final PromotionRepository promotionRepository;
 
@@ -40,6 +42,12 @@ public class PromotionService {
                 promotion.getStartsAt(),
                 promotion.getEndsAt(),
                 promotion.isActive(),
+                promotion.isLowStockOnly(),
+                promotion.getTargetBrands(),
+                promotion.getTargetCategories(),
+                promotion.getTargetProductTypes(),
+                promotion.getTargetProductIds(),
+                promotion.isBuyOneTakeOne(),
                 promotion.getCreatedAt(),
                 promotion.getUpdatedAt()
         );
@@ -77,7 +85,7 @@ public class PromotionService {
 
     @Transactional(readOnly = true)
     public PromotionValidationResponse validatePromotion(String code, BigDecimal subtotal) {
-        PromotionApplication application = resolvePromotion(code, subtotal, false);
+        PromotionApplication application = resolvePromotion(code, subtotal, false, null);
         return new PromotionValidationResponse(
                 true,
                 application.promotion().code(),
@@ -92,10 +100,83 @@ public class PromotionService {
 
     @Transactional
     public PromotionApplication applyPromotion(String code, BigDecimal subtotal) {
-        return resolvePromotion(code, subtotal, true);
+        return resolvePromotion(code, subtotal, true, null);
     }
 
-    private PromotionApplication resolvePromotion(String code, BigDecimal subtotal, boolean incrementUsage) {
+    @Transactional(readOnly = true)
+    public PromotionValidationResponse validatePromotion(
+            String code,
+            BigDecimal subtotal,
+            List<PromotionTargetingSupport.PromotionLineItem> lineItems
+    ) {
+        PromotionApplication application = resolvePromotion(code, subtotal, false, lineItems);
+        return new PromotionValidationResponse(
+                true,
+                application.promotion().code(),
+                application.promotion().name(),
+                application.promotion().description(),
+                application.promotion().discountType(),
+                application.discountAmount(),
+                application.totalAfterDiscount(),
+                "Promotion applied successfully."
+        );
+    }
+
+    @Transactional
+    public PromotionApplication applyPromotion(
+            String code,
+            BigDecimal subtotal,
+            List<PromotionTargetingSupport.PromotionLineItem> lineItems
+    ) {
+        return resolvePromotion(code, subtotal, true, lineItems);
+    }
+
+    @Transactional(readOnly = true)
+    public PromotionValidationResponse resolveAutoSalePromotion(
+            BigDecimal subtotal,
+            List<PromotionTargetingSupport.PromotionLineItem> lineItems
+    ) {
+        BigDecimal normalizedSubtotal = sanitizeMoney(subtotal, "Subtotal must be 0 or higher.");
+        PromotionApplication application = resolveBestAutoSalePromotion(normalizedSubtotal, lineItems, false);
+        if (application == null) {
+            return new PromotionValidationResponse(
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    BigDecimal.ZERO.setScale(MONEY_SCALE, RoundingMode.HALF_UP),
+                    normalizedSubtotal,
+                    "No active sale promo for this reservation item."
+            );
+        }
+        return new PromotionValidationResponse(
+                true,
+                application.promotion().code(),
+                application.promotion().name(),
+                application.promotion().description(),
+                application.promotion().discountType(),
+                application.discountAmount(),
+                application.totalAfterDiscount(),
+                "Sale promo applied automatically."
+        );
+    }
+
+    @Transactional
+    public PromotionApplication applyBestAutoSalePromotion(
+            BigDecimal subtotal,
+            List<PromotionTargetingSupport.PromotionLineItem> lineItems
+    ) {
+        BigDecimal normalizedSubtotal = sanitizeMoney(subtotal, "Subtotal must be 0 or higher.");
+        return resolveBestAutoSalePromotion(normalizedSubtotal, lineItems, true);
+    }
+
+    private PromotionApplication resolvePromotion(
+            String code,
+            BigDecimal subtotal,
+            boolean incrementUsage,
+            List<PromotionTargetingSupport.PromotionLineItem> lineItems
+    ) {
         String normalizedCode = normalizeCode(code);
         BigDecimal normalizedSubtotal = sanitizeMoney(subtotal, "Subtotal must be 0 or higher.");
         if (normalizedCode == null) {
@@ -110,9 +191,22 @@ public class PromotionService {
 
         validatePromotionWindow(promotion);
 
+        if (!PromotionTargetingSupport.isVoucherPromotion(promotion)) {
+            throw new IllegalArgumentException("This sale promo is automatic. No voucher code is needed.");
+        }
+
         BigDecimal minOrderAmount = sanitizeOptionalMoney(promotion.getMinOrderAmount());
         if (minOrderAmount != null && normalizedSubtotal.compareTo(minOrderAmount) < 0) {
             throw new IllegalArgumentException("This promotion requires a higher minimum order amount.");
+        }
+
+        if (lineItems != null && !lineItems.isEmpty()) {
+            if (!PromotionTargetingSupport.hasAnyMatchingItem(promotion, lineItems)) {
+                throw new IllegalArgumentException("This promotion does not apply to the selected product(s).");
+            }
+            if (promotion.isBuyOneTakeOne() && PromotionTargetingSupport.matchingQuantity(promotion, lineItems) < 2) {
+                throw new IllegalArgumentException("Buy 1 Take 1 promo requires at least 2 matching items.");
+            }
         }
 
         BigDecimal discountAmount = calculateDiscountAmount(promotion, normalizedSubtotal);
@@ -126,6 +220,68 @@ public class PromotionService {
         }
 
         return new PromotionApplication(toResponse(promotion), discountAmount, totalAfterDiscount);
+    }
+
+    private PromotionApplication resolveBestAutoSalePromotion(
+            BigDecimal normalizedSubtotal,
+            List<PromotionTargetingSupport.PromotionLineItem> lineItems,
+            boolean incrementUsage
+    ) {
+        if (lineItems == null || lineItems.isEmpty()) {
+            return null;
+        }
+
+        Instant now = Instant.now();
+        Promotion bestPromotion = null;
+        BigDecimal bestDiscount = BigDecimal.ZERO;
+
+        for (Promotion promotion : promotionRepository.findAllByActiveTrue()) {
+            if (!PromotionTargetingSupport.isSalePromotion(promotion)) {
+                continue;
+            }
+            if (!PromotionTargetingSupport.isActiveNow(promotion, now)) {
+                continue;
+            }
+
+            BigDecimal minOrderAmount = sanitizeOptionalMoney(promotion.getMinOrderAmount());
+            if (minOrderAmount != null && normalizedSubtotal.compareTo(minOrderAmount) < 0) {
+                continue;
+            }
+            if (!PromotionTargetingSupport.hasAnyMatchingItem(promotion, lineItems)) {
+                continue;
+            }
+            if (promotion.isBuyOneTakeOne() && PromotionTargetingSupport.matchingQuantity(promotion, lineItems) < 2) {
+                continue;
+            }
+
+            BigDecimal discountAmount = calculateDiscountAmount(promotion, normalizedSubtotal);
+            if (discountAmount.compareTo(bestDiscount) > 0) {
+                bestPromotion = promotion;
+                bestDiscount = discountAmount;
+            }
+        }
+
+        if (bestPromotion == null) {
+            return null;
+        }
+
+        BigDecimal totalAfterDiscount = normalizedSubtotal.subtract(bestDiscount)
+                .max(BigDecimal.ZERO)
+                .setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+
+        if (incrementUsage) {
+            Promotion lockedPromotion = promotionRepository.findByCodeIgnoreCaseForUpdate(bestPromotion.getCode())
+                    .orElseThrow(() -> new IllegalArgumentException("Promotion code not found."));
+            validatePromotionWindow(lockedPromotion);
+            if (!PromotionTargetingSupport.isSalePromotion(lockedPromotion)) {
+                throw new IllegalArgumentException("Selected automatic promotion is not a sale promo.");
+            }
+            lockedPromotion.setUsedCount(lockedPromotion.getUsedCount() + 1);
+            promotionRepository.save(lockedPromotion);
+            return new PromotionApplication(toResponse(lockedPromotion), bestDiscount, totalAfterDiscount);
+        }
+
+        return new PromotionApplication(toResponse(bestPromotion), bestDiscount, totalAfterDiscount);
     }
 
     private void validatePromotionWindow(Promotion promotion) {
@@ -164,12 +320,17 @@ public class PromotionService {
     }
 
     private void applyCreateRequest(Promotion promotion, CreatePromotionRequest request) {
-        String code = normalizeCode(request.code());
-        if (code == null) {
-            throw new IllegalArgumentException("Promotion code cannot be empty.");
-        }
-        if (promotionRepository.findByCodeIgnoreCase(code).isPresent()) {
-            throw new IllegalArgumentException("Promotion already exists: " + code);
+        PromotionTargetingSupport.PromotionType promoType = PromotionTargetingSupport.parseTypeFromDescription(request.description());
+        String code = promoType == PromotionTargetingSupport.PromotionType.SALE
+                ? generateSaleInternalCode()
+                : normalizeCode(request.code());
+        if (promoType == PromotionTargetingSupport.PromotionType.VOUCHER) {
+            if (code == null) {
+                throw new IllegalArgumentException("Promotion code cannot be empty.");
+            }
+            if (promotionRepository.findByCodeIgnoreCase(code).isPresent()) {
+                throw new IllegalArgumentException("Promotion already exists: " + code);
+            }
         }
 
         String name = trimToNull(request.name());
@@ -213,14 +374,30 @@ public class PromotionService {
         promotion.setUsageLimit(request.usageLimit());
         promotion.setStartsAt(request.startsAt());
         promotion.setEndsAt(request.endsAt());
-        promotion.setActive(request.active() == null || request.active());
+        promotion.setActive(false);
+        promotion.setLowStockOnly(Boolean.TRUE.equals(request.lowStockOnly()));
+        promotion.setTargetBrands(PromotionTargetingSupport.normalizeCsvText(request.targetBrands(), false));
+        promotion.setTargetCategories(PromotionTargetingSupport.normalizeCsvText(request.targetCategories(), false));
+        promotion.setTargetProductTypes(PromotionTargetingSupport.normalizeCsvText(request.targetProductTypes(), false));
+        promotion.setTargetProductIds(PromotionTargetingSupport.normalizeCsvText(request.targetProductIds(), true));
+        promotion.setBuyOneTakeOne(Boolean.TRUE.equals(request.buyOneTakeOne()));
     }
 
     private void applyUpdateRequest(Promotion promotion, UpdatePromotionRequest request) {
         PromotionDiscountType effectiveDiscountType = promotion.getDiscountType();
         BigDecimal effectiveDiscountValue = promotion.getDiscountValue();
+        String effectiveDescription = request.description() != null ? trimToNull(request.description()) : promotion.getDescription();
+        PromotionTargetingSupport.PromotionType promoType = PromotionTargetingSupport.parseTypeFromDescription(effectiveDescription);
 
-        if (request.code() != null) {
+        if (promoType == PromotionTargetingSupport.PromotionType.SALE) {
+            String requestedCode = request.code() == null ? null : trimToNull(request.code());
+            if (requestedCode != null) {
+                throw new IllegalArgumentException("Sale promo code is automatic and cannot be edited.");
+            }
+            promotion.setCode(ensureSaleInternalCode(promotion.getCode()));
+        }
+
+        if (request.code() != null && promoType == PromotionTargetingSupport.PromotionType.VOUCHER) {
             String code = normalizeCode(request.code());
             if (code == null) {
                 throw new IllegalArgumentException("Promotion code cannot be empty.");
@@ -294,6 +471,30 @@ public class PromotionService {
             promotion.setActive(request.active());
         }
 
+        if (request.lowStockOnly() != null) {
+            promotion.setLowStockOnly(request.lowStockOnly());
+        }
+
+        if (request.targetBrands() != null) {
+            promotion.setTargetBrands(PromotionTargetingSupport.normalizeCsvText(request.targetBrands(), false));
+        }
+
+        if (request.targetCategories() != null) {
+            promotion.setTargetCategories(PromotionTargetingSupport.normalizeCsvText(request.targetCategories(), false));
+        }
+
+        if (request.targetProductTypes() != null) {
+            promotion.setTargetProductTypes(PromotionTargetingSupport.normalizeCsvText(request.targetProductTypes(), false));
+        }
+
+        if (request.targetProductIds() != null) {
+            promotion.setTargetProductIds(PromotionTargetingSupport.normalizeCsvText(request.targetProductIds(), true));
+        }
+
+        if (request.buyOneTakeOne() != null) {
+            promotion.setBuyOneTakeOne(request.buyOneTakeOne());
+        }
+
         if (effectiveDiscountType == PromotionDiscountType.PERCENT && effectiveDiscountValue.compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new IllegalArgumentException("Percent discounts cannot exceed 100%.");
         }
@@ -305,6 +506,23 @@ public class PromotionService {
     private String normalizeCode(String value) {
         String trimmed = trimToNull(value);
         return trimmed == null ? null : trimmed.toUpperCase(Locale.ROOT);
+    }
+
+    private String ensureSaleInternalCode(String existingCode) {
+        String normalizedExisting = normalizeCode(existingCode);
+        if (normalizedExisting != null && normalizedExisting.startsWith(SALE_CODE_PREFIX)) {
+            return normalizedExisting;
+        }
+        return generateSaleInternalCode();
+    }
+
+    private String generateSaleInternalCode() {
+        String candidate = null;
+        do {
+            String token = UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase(Locale.ROOT);
+            candidate = SALE_CODE_PREFIX + token;
+        } while (promotionRepository.findByCodeIgnoreCase(candidate).isPresent());
+        return candidate;
     }
 
     private String trimToNull(String value) {

@@ -5,11 +5,15 @@ import com.solereax.inventory.inventory.dto.AdminCreateProductRequest;
 import com.solereax.inventory.inventory.dto.PublicCatalogFacetResponse;
 import com.solereax.inventory.inventory.dto.PublicCatalogPageResponse;
 import com.solereax.inventory.inventory.dto.PublicCatalogProductResponse;
+import com.solereax.inventory.inventory.dto.SalePromotionBadgeResponse;
 import com.solereax.inventory.inventory.dto.AdminUpdateColorwayDetailsRequest;
 import com.solereax.inventory.inventory.dto.ColorwayDetailsResponse;
 import com.solereax.inventory.inventory.dto.PublicProductResponse;
 import com.solereax.inventory.inventory.dto.SizeStockResponse;
 import com.solereax.inventory.pricing.PricingPolicy;
+import com.solereax.inventory.promotion.Promotion;
+import com.solereax.inventory.promotion.PromotionRepository;
+import com.solereax.inventory.promotion.PromotionTargetingSupport;
 import com.solereax.inventory.shared.NotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,17 +42,20 @@ public class InventoryService {
     private final ProductViewSessionRepository productViewSessionRepository;
     private final ProductStockRepository productStockRepository;
     private final StockMovementRepository stockMovementRepository;
+    private final PromotionRepository promotionRepository;
 
     public InventoryService(
             ProductRepository productRepository,
             ProductViewSessionRepository productViewSessionRepository,
             ProductStockRepository productStockRepository,
-            StockMovementRepository stockMovementRepository
+            StockMovementRepository stockMovementRepository,
+            PromotionRepository promotionRepository
     ) {
         this.productRepository = productRepository;
         this.productViewSessionRepository = productViewSessionRepository;
         this.productStockRepository = productStockRepository;
         this.stockMovementRepository = stockMovementRepository;
+        this.promotionRepository = promotionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -104,6 +111,7 @@ public class InventoryService {
             String colorway,
             String sizeFilter,
             String stock,
+            Boolean sale,
             String search,
             String sort,
             int page,
@@ -113,6 +121,23 @@ public class InventoryService {
         int safePage = Math.max(1, page);
         Pageable pageable = PageRequest.of(safePage - 1, safePageSize, resolveCatalogSort(sort));
         String searchPattern = buildSearchPattern(search);
+
+        if (Boolean.TRUE.equals(sale)) {
+            return listPublicCatalogSaleFiltered(
+                    normalizeLower(brand),
+                    normalizeUpper(department),
+                    normalizeUpper(category),
+                    normalizeUpper(productType),
+                    normalizeUpper(colorway),
+                    normalizeUpper(sizeFilter),
+                    normalizeStockFilter(stock),
+                    searchPattern,
+                    sort,
+                    safePage,
+                    safePageSize
+            );
+        }
+
         Page<Long> idPage = productRepository.findCatalogProductIds(
                 normalizeLower(brand),
                 normalizeUpper(department),
@@ -138,12 +163,76 @@ public class InventoryService {
                 .filter(product -> product != null)
                 .toList();
 
+        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
+
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
         List<PublicCatalogProductResponse> items = orderedProducts.stream()
-                .map(product -> toCatalogResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
+                .map(product -> toCatalogResponse(
+                        product,
+                        viewCountByProductId.getOrDefault(product.getId(), 0L),
+                        activeSalePromotions
+                ))
                 .toList();
 
         return new PublicCatalogPageResponse(items, idPage.getTotalElements(), safePage, safePageSize);
+    }
+
+    private PublicCatalogPageResponse listPublicCatalogSaleFiltered(
+            String brand,
+            String department,
+            String category,
+            String productType,
+            String colorway,
+            String sizeFilter,
+            String stockFilter,
+            String searchPattern,
+            String sort,
+            int page,
+            int pageSize
+    ) {
+        Pageable allCandidates = PageRequest.of(0, 2000, resolveCatalogSort(sort));
+        Page<Long> candidateIdPage = productRepository.findCatalogProductIds(
+                brand,
+                department,
+                category,
+                productType,
+                colorway,
+                sizeFilter,
+                stockFilter,
+                searchPattern,
+                allCandidates
+        );
+
+        List<Long> candidateIds = candidateIdPage.getContent();
+        if (candidateIds.isEmpty()) {
+            return new PublicCatalogPageResponse(Collections.emptyList(), 0, page, pageSize);
+        }
+
+        List<Product> hydrated = productRepository.findAllByIdInWithStocks(candidateIds);
+        Map<Long, Product> productById = new HashMap<>();
+        hydrated.forEach(product -> productById.put(product.getId(), product));
+        List<Product> orderedProducts = candidateIds.stream()
+                .map(productById::get)
+                .filter(product -> product != null)
+                .toList();
+
+        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
+        Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
+
+        List<PublicCatalogProductResponse> matchedItems = orderedProducts.stream()
+                .map(product -> toCatalogResponse(
+                        product,
+                        viewCountByProductId.getOrDefault(product.getId(), 0L),
+                        activeSalePromotions
+                ))
+                .filter(item -> item.salePromotions() != null && !item.salePromotions().isEmpty())
+                .toList();
+
+        int fromIndex = Math.min((page - 1) * pageSize, matchedItems.size());
+        int toIndex = Math.min(fromIndex + pageSize, matchedItems.size());
+        List<PublicCatalogProductResponse> pageItems = matchedItems.subList(fromIndex, toIndex);
+
+        return new PublicCatalogPageResponse(pageItems, matchedItems.size(), page, pageSize);
     }
 
     @Transactional(readOnly = true)
@@ -587,9 +676,27 @@ public class InventoryService {
         return byProductId;
     }
 
-    private PublicCatalogProductResponse toCatalogResponse(Product product, Long viewCount) {
+    private List<Promotion> loadActiveSalePromotions() {
+        Instant now = Instant.now();
+        return promotionRepository.findAllByActiveTrue().stream()
+                .filter(PromotionTargetingSupport::isSalePromotion)
+                .filter(promotion -> PromotionTargetingSupport.isActiveNow(promotion, now))
+                .toList();
+    }
+
+    private PublicCatalogProductResponse toCatalogResponse(
+            Product product,
+            Long viewCount,
+            List<Promotion> activeSalePromotions
+    ) {
         String primaryColorway = resolvePrimaryColorway(product);
         Map<String, String> colorwayImages = mapColorwayImages(product);
+        Map<String, ColorwayDetailsResponse> colorwayDetails = mapColorwayDetails(product, true);
+        LinkedHashSet<String> catalogColorways = new LinkedHashSet<>();
+        product.getStocks().forEach(stock -> catalogColorways.add(normalizeColorway(stock.getColorway())));
+        product.getColorwayImages().forEach(entry -> catalogColorways.add(normalizeColorway(entry.getColorway())));
+        product.getColorwayDetails().forEach(entry -> catalogColorways.add(normalizeColorway(entry.getColorway())));
+        catalogColorways.add(primaryColorway);
         String imageUrl = colorwayImages.get(primaryColorway);
         if (imageUrl == null) {
             imageUrl = trimToNull(product.getImageUrl());
@@ -613,6 +720,18 @@ public class InventoryService {
             }
         }
 
+        List<SalePromotionBadgeResponse> salePromotions = activeSalePromotions.stream()
+                .filter(promotion -> PromotionTargetingSupport.matchesProduct(promotion, product))
+                .map(promotion -> new SalePromotionBadgeResponse(
+                        promotion.getId(),
+                        promotion.getCode(),
+                        promotion.getName(),
+                        promotion.getDiscountType().name(),
+                        promotion.getDiscountValue(),
+                        promotion.isBuyOneTakeOne()
+                ))
+                .toList();
+
         return new PublicCatalogProductResponse(
                 product.getId(),
                 product.getName(),
@@ -623,10 +742,14 @@ public class InventoryService {
                 product.getCategory(),
                 product.getProductType(),
                 imageUrl,
+                colorwayImages,
+                colorwayDetails,
+                new ArrayList<>(catalogColorways),
                 primaryColorway,
                 minPrice,
                 maxPrice,
-                viewCount == null ? 0L : viewCount
+                viewCount == null ? 0L : viewCount,
+                salePromotions
         );
     }
 

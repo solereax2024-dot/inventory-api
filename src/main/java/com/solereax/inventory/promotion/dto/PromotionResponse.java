@@ -17,6 +17,12 @@ public record PromotionResponse(
         Instant startsAt,
         Instant endsAt,
         boolean active,
+        boolean lowStockOnly,
+        String targetBrands,
+        String targetCategories,
+        String targetProductTypes,
+        String targetProductIds,
+        boolean buyOneTakeOne,
         Instant createdAt,
         Instant updatedAt
 ) {

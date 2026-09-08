@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { apiRequest, uploadImage } from "./utils/api";
-import SiteHeader from "./components/SiteHeader";
-import SiteFooter from "./components/SiteFooter";
+import { SiteFooter, SiteHeader } from "./components/layout";
+import { ThemeColorPicker, WelcomeThemeModal } from "./components/theme";
 import CustomerPage from "./pages/customer/CustomerPage";
 import BrandsPage from "./pages/customer/BrandsPage";
 import ReservePage from "./pages/customer/ReservePage";
 import AdminPage from "./pages/admin/AdminPage";
-import ThemeColorPicker from "./components/ThemeColorPicker";
-import WelcomeThemeModal from "./components/WelcomeThemeModal";
 import { DEFAULT_THEME, THEMES } from "./constants/themes";
-import { trackMetaEvent } from "./utils/metaPixel";
+import { trackMetaEvent } from "./utils/tracking";
 import "./styles/modals.css";
 import "./styles/theme-picker-modal.css";
 

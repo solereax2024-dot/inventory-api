@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface PromotionRepository extends JpaRepository<Promotion, Long> {
     List<Promotion> findAllByOrderByCreatedAtDesc();
 
+    List<Promotion> findAllByActiveTrue();
+
     Optional<Promotion> findByCodeIgnoreCase(String code);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

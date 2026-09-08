@@ -1,6 +1,8 @@
 package com.solereax.inventory.inventory.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 public record PublicCatalogProductResponse(
         Long id,
@@ -12,10 +14,14 @@ public record PublicCatalogProductResponse(
         String category,
         String productType,
         String imageUrl,
+        Map<String, String> colorwayImages,
+        Map<String, ColorwayDetailsResponse> colorwayDetails,
+        List<String> colorways,
         String primaryColorway,
         BigDecimal minPrice,
         BigDecimal maxPrice,
-        Long viewCount
+        Long viewCount,
+        List<SalePromotionBadgeResponse> salePromotions
 ) {
 }
 

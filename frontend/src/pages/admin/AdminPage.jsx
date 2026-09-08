@@ -1,49 +1,52 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, Check, ImagePlus, Pencil, RotateCcw, Ruler, ShieldCheck, ShieldX, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ImagePlus, RotateCcw, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { US_SIZES, DEPARTMENT_OPTIONS, CATEGORY_OPTIONS, ADMIN_PAGE_SIZE } from "../../constants";
+import {
+  US_SIZES,
+  DEPARTMENT_OPTIONS,
+  CATEGORY_OPTIONS,
+  ADMIN_PAGE_SIZE
+} from "../../constants";
 import { apiRequest, uploadImage } from "../../utils/api";
-import { formatEnumLabel, formatColorwayLabel, getProductTypeOptions } from "../../utils/format";
-import { getColorwayDetails, sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
-import { getSortedColorwaysFromStocks, buildSizeStateRows, getStockStorageGroup } from "../../utils/stock";
-import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
+import { formatEnumLabel, getProductTypeOptions } from "../../utils/format";
+import { sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
+import { getAdminScopedColorway, getProductColorways, mapProductToForm } from "../../utils/productFormHelpers";
+import { getStockStorageGroup } from "../../utils/stock";
+import { buildFilteredReservations, buildReservationMopTotals, buildReservationStats } from "../../utils/reservationStatsHelpers";
+import { aggregateStockSummaryTotals, filterStockSummaryRows, sortStockSummaryRows } from "../../utils/stockSummaryHelpers";
+import { buildSizeSections, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { buildDefaultProductDescription } from "../../utils/productDescription";
-import { CUSTOMER_MARKUP, PHP_CURRENCY } from "../../utils/price";
+import { CUSTOMER_MARKUP } from "../../utils/price";
+import {
+  decodeRoleFromToken,
+  formatFileSize,
+  formatPriceLabel,
+  getFileFormatLabel
+} from "../../utils/adminHelpers";
+import { useModalState, useReservationEditorState } from "../../hooks";
 import "../../styles/admin.css";
 import "../../styles/stock.css";
-import ConfirmActionModal from "./ConfirmActionModal";
-import DeleteModal from "./DeleteModal";
-import NewBrandModal from "./NewBrandModal";
-import NewAdminModal from "./NewAdminModal";
-import NewProductNameModal from "./NewProductNameModal";
-import StockSummaryModal from "./StockSummaryModal";
-import PromotionsSection from "./PromotionsSection";
+import {
+  AdminSizeGuideModal,
+  AdminSuccessModal,
+  ConfirmActionModal,
+  DeleteModal,
+  NewBrandModal,
+  NewAdminModal,
+  NewProductNameModal,
+  ProductActionModalShell,
+  StockSummaryModal
+} from "../../components/modals/admin";
+import AdminLoginSection from "./components/AdminLoginSection.jsx";
+import AdminProductsSection from "./components/AdminProductsSection.jsx";
+import AdminSectionTabs from "./components/AdminSectionTabs.jsx";
+import AdminUsersSection from "./components/AdminUsersSection.jsx";
+import PromotionsSection from "./components/PromotionsSection.jsx";
+import AdminReservationsTable from "./components/AdminReservationsTable.jsx";
+import ReservationDashboardCards from "./components/ReservationDashboardCards.jsx";
+import ReservationFilters from "./components/ReservationFilters.jsx";
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 
-const RESERVATION_STATUS_OPTIONS = [
-  { value: "ORDERED", label: "Ordered" },
-  { value: "PREPARING", label: "Preparing" },
-  { value: "SHIPPED", label: "Shipped" },
-  { value: "DELIVERED", label: "Delivered" },
-  { value: "PAID", label: "Paid" }
-];
-
-const RESERVATION_COURIER_OPTIONS = [
-  { value: "LALAMOVE", label: "Lalamove" },
-  { value: "GRAB", label: "Grab" },
-  { value: "LBC", label: "LBC" },
-  { value: "OTHER", label: "Other" }
-];
-
-const RESERVATION_MOP_OPTIONS = [
-  { value: "GCASH", label: "GCash" },
-  { value: "MAYA", label: "Maya" },
-  { value: "BPI", label: "BPI" },
-  { value: "BDO", label: "BDO" },
-  { value: "MARIBANK", label: "MariBank" },
-  { value: "PAYMONGO", label: "PayMongo Checkout" },
-  { value: "OTHER", label: "Other" }
-];
 
 const DEFAULT_STOCK_SUMMARY_BULK_ACTION = {
   quantityChange: "",
@@ -60,80 +63,6 @@ const DEFAULT_STOCK_SUMMARY_RESET_MODAL = {
   colorway: "DEFAULT",
   productName: ""
 };
-
-const PREORDER_SUPPLIER_BREAKDOWN_MARKER = "__PREORDER__";
-
-function normalizeReservationStatus(status) {
-  if (status === "RESERVED") return "ORDERED";
-  return status;
-}
-
-function statusChipClass(status) {
-  const normalized = normalizeReservationStatus(status);
-  if (normalized === "PAID") return "status-paid";
-  if (normalized === "DELIVERED") return "status-delivered";
-  if (normalized === "SHIPPED") return "status-shipped";
-  if (normalized === "PREPARING") return "status-preparing";
-  return "status-ordered";
-}
-
-function formatReservationDateTime(value) {
-  if (!value) return "-";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "-";
-  return parsed.toLocaleString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-function decodeRoleFromToken(token) {
-  if (!token) {
-    return "";
-  }
-  try {
-    const payloadPart = token.split(".")[1];
-    if (!payloadPart) {
-      return "";
-    }
-    const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const json = JSON.parse(window.atob(base64));
-    return typeof json.role === "string" ? json.role : "";
-  } catch {
-    return "";
-  }
-}
-
-function formatFileSize(bytes) {
-  const value = Number(bytes || 0);
-  if (!Number.isFinite(value) || value <= 0) return "0 B";
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
-}
-
-function getFileFormatLabel(file) {
-  if (!file) return "";
-  const byType = (file.type || "").split("/")[1];
-  if (byType) return byType.toUpperCase();
-  const name = String(file.name || "");
-  const ext = name.includes(".") ? name.split(".").pop() : "";
-  return ext ? ext.toUpperCase() : "UNKNOWN";
-}
-
-function formatPriceLabel(value) {
-  if (value === null || value === undefined || value === "") {
-    return PHP_CURRENCY.format(0);
-  }
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return PHP_CURRENCY.format(0);
-  }
-  return PHP_CURRENCY.format(parsed);
-}
 
 export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const UNDO_WINDOW_MS = 5000;
@@ -202,14 +131,23 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     keyword: "",
     status: "ALL"
   });
-  const [reservationEditors, setReservationEditors] = useState({});
-  const [updatingOrderId, setUpdatingOrderId] = useState(null);
-  const [mopOtherDrafts, setMopOtherDrafts] = useState({});
-  const [priceDrafts, setPriceDrafts] = useState({});
-  const [downpaymentDrafts, setDownpaymentDrafts] = useState({});
-  const [balanceDrafts, setBalanceDrafts] = useState({});
-  const [reservationSavedMap, setReservationSavedMap] = useState({});
-  const reservationSavedTimersRef = useRef({});
+  const {
+    updatingOrderId,
+    setUpdatingOrderId,
+    mopOtherDrafts,
+    setMopOtherDrafts,
+    priceDrafts,
+    setPriceDrafts,
+    downpaymentDrafts,
+    setDownpaymentDrafts,
+    balanceDrafts,
+    setBalanceDrafts,
+    markReservationSaved,
+    isReservationSaved,
+    isReservationEditorOpen,
+    setReservationEditorOpen,
+    clearReservationStateForOrder
+  } = useReservationEditorState();
   const [adminPage, setAdminPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null, confirmCode: "", userInput: "" });
   const [reservationDeleteModal, setReservationDeleteModal] = useState({
@@ -228,14 +166,21 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
    const [activeAdminSection, setActiveAdminSection] = useState("products");
    const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
-   const [productImageColorway, setProductImageColorway] = useState("DEFAULT");
-   const [isStockGuideOpen, setIsStockGuideOpen] = useState(false);
-  const [isStockSummaryOpen, setIsStockSummaryOpen] = useState(false);
+  const {
+    isOpen: isStockGuideOpen,
+    open: openStockGuideModal,
+    close: closeStockGuideModal,
+    setIsOpen: setStockGuideModalOpen
+  } = useModalState(false);
+  const {
+    isOpen: isStockSummaryOpen,
+    open: openStockSummaryModal,
+    close: closeStockSummaryModal
+  } = useModalState(false);
     const [stockSummaryQuickFilters, setStockSummaryQuickFilters] = useState({
       lowStockOnly: false,
           noSupplierOnly: false
     });
-     const [stockSummarySavingRow, setStockSummarySavingRow] = useState("");
      const [stockSummarySortColumn, setStockSummarySortColumn] = useState("size");
     const [stockSummarySortAsc, setStockSummarySortAsc] = useState(true);
     const [stockSummarySelectedRows, setStockSummarySelectedRows] = useState(new Set());
@@ -248,26 +193,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const isLoggedIn = useMemo(() => token.length > 0, [token]);
   const isSuperAdmin = useMemo(() => adminRole === "SUPER_ADMIN", [adminRole]);
-  const getProductColorways = (product) => {
-    const values = sanitizeColorways([
-      ...((product?.stocks || []).map((stock) => stock.colorway)),
-      ...Object.keys(product?.colorwayImages || {}),
-      ...Object.keys(product?.colorwayDetails || {}),
-      product?.mainColor
-    ]).map(normalizeColorwayValue);
-    return values.length > 0 ? [...new Set(values)] : ["DEFAULT"];
-  };
-
-  const getAdminScopedColorway = (product, explicitColorway) => {
-    const available = getProductColorways(product);
-    const preferred = normalizeColorwayValue(
-      explicitColorway || product?.mainColor || available[0] || "DEFAULT"
-    );
-    return available.includes(preferred) ? preferred : available[0] || "DEFAULT";
-  };
-
-  const getAdminScopedDetails = (product, explicitColorway) =>
-    getColorwayDetails(product, getAdminScopedColorway(product, explicitColorway));
 
   const getPreferredStockSelection = (product, colorway, preferredSize = null, preferredGroup = null) => {
     const department = getDepartmentForColorway(product, colorway);
@@ -294,8 +219,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       () => [
         { key: "products", label: "Products" },
         { key: "reservations", label: "Reservations" },
-          { key: "promotions", label: "Promotions" },
-          ...(isSuperAdmin ? [{ key: "users", label: "Admin Users" }] : [])
+        ...(isSuperAdmin ? [{ key: "promotions", label: "Promotions" }, { key: "users", label: "Admin Users" }] : [])
       ],
       [isSuperAdmin]
     );
@@ -374,22 +298,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
-  const mapProductToForm = (product, colorway) => {
-    const details = getAdminScopedDetails(product, colorway);
-    return ({
-    name: product?.name || "",
-    brand: product?.brand || "",
-    mainColor: product?.mainColor || "",
-    department: details.department || "UNISEX",
-    category: details.category || "FOOTWEAR",
-    productType: details.productType || "LIFESTYLE_SNEAKERS",
-    imageUrl: product?.imageUrl || "",
-    price: product?.price === null || product?.price === undefined ? "" : String(product.price),
-    colorwayPrice: details?.price === null || details?.price === undefined ? "" : String(details.price),
-    colorwayImages: product?.colorwayImages || {},
-    description: details.description || ""
-  });
-  };
 
   const pushUndoEntry = (type, value, label) => {
     const entry = {
@@ -608,7 +516,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       description: ""
     });
     setIsCreateDescriptionEdited(false);
-    setProductImageColorway("DEFAULT");
     setSuccessModal({ isOpen: true, message: "Product created." });
     await loadAdminData(token, adminRole);
   };
@@ -837,100 +744,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   }, [editDetailColorway, editImageColorway]);
 
-  const applyPriceToAllSizes = async () => {
-    const parsedPrice = Number(stockForm.price);
-    const hasPriceInput = String(stockForm.price).trim() !== "";
-    if (!hasPriceInput || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
-      throw new Error("Enter a valid price (0 or higher) first.");
-    }
-    const allSections = stockSizeSections;
-    if (!allSections || allSections.length === 0) {
-      throw new Error("No sizes found for this product.");
-    }
-    const requests = [];
-    for (const section of allSections) {
-      for (const row of (section.rows || [])) {
-        requests.push(
-          apiRequest(
-            `/api/admin/products/${stockForm.productId}/stocks`,
-            "POST",
-            {
-              colorway: stockForm.colorway,
-              size: row.baseSize,
-              sizeGroup: getStockStorageGroup(stockModalDepartment, section.key),
-              quantityChange: 0,
-              price: Number(parsedPrice.toFixed(2))
-            },
-            token
-          )
-        );
-      }
-    }
-    await Promise.all(requests);
-    setSuccessModal({ isOpen: true, message: `Price ${formatPriceLabel(parsedPrice)} applied to all sizes.` });
-    await loadAdminData(token, adminRole);
-  };
-
-  const adjustStock = async () => {
-    const mode = stockForm.actionType === "REMOVE" ? "remove" : stockForm.actionType === "PRICE" ? "price" : "add";
-    const requestedQuantity = Number(stockForm.quantityChange);
-    const parsedPrice = Number(stockForm.price);
-    const hasPriceInput = String(stockForm.price).trim() !== "";
-    const normalizedSupplier = String(stockForm.supplier || "").trim();
-
-    if (mode === "price") {
-      if (!hasPriceInput || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
-        throw new Error("Enter a valid size price (0 or higher).");
-      }
-    } else if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
-      throw new Error("Enter a stock quantity of at least 1.");
-    }
-
-    if (mode === "add" && !normalizedSupplier) {
-      throw new Error("Enter supplier/source before adding stock.");
-    }
-
-    const quantityChange = mode === "price"
-      ? 0
-      : (mode === "remove" ? -requestedQuantity : requestedQuantity);
-
-    const updatedProduct = await apiRequest(
-      `/api/admin/products/${stockForm.productId}/stocks`,
-      "POST",
-      {
-        colorway: stockForm.colorway,
-        size: stockForm.size,
-        sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
-        quantityChange,
-        price: hasPriceInput ? Number(parsedPrice.toFixed(2)) : null,
-        supplier: normalizedSupplier || null
-      },
-      token
-    );
-    mergeUpdatedProduct(updatedProduct);
-    // Preserve selected size and group so user can continue adjusting same size
-    setStockForm((prev) => ({
-      ...prev,
-      size: prev.size,
-      sizeGroup: prev.sizeGroup,
-      quantityChange: 1,
-      actionType: prev.actionType,
-      price: prev.price,
-      supplier: prev.supplier
-    }));
-    if (mode === "price") {
-      setSuccessModal({ isOpen: true, message: `Size price saved: ${formatPriceLabel(parsedPrice)}.` });
-    } else {
-      setSuccessModal({ isOpen: true, message: mode === "remove" ? "Stock removed." : "Stock added." });
-    }
-    await loadAdminData(token, adminRole);
-  };
 
   const runStockSummaryQuickAction = async (row, action, options = {}) => {
     if (!row) {
       return;
     }
-    const rowKey = `${activeStockSizeGroup}-${row.baseSize}`;
     const draft = options.values || {};
     const quantity = Number(draft.quantityChange) || 1;
     const supplier = String(draft.supplier || "").trim();
@@ -974,7 +792,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       throw new Error("Enter supplier/origin first.");
     }
 
-    setStockSummarySavingRow(`${rowKey}:${action}`);
     try {
       const updatedProduct = await apiRequest(
         `/api/admin/products/${stockForm.productId}/stocks`,
@@ -1007,7 +824,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         await loadAdminData(token, adminRole);
       }
     } finally {
-      setStockSummarySavingRow("");
     }
   };
 
@@ -1039,27 +855,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setSuccessModal({ isOpen: true, message: `Admin user ${enabled ? "enabled" : "disabled"}.` });
     await loadAdminData(token, adminRole);
   };
-
-  const markReservationSaved = (orderId, field) => {
-    if (!field) return;
-    const key = `${orderId}:${field}`;
-    const existingTimer = reservationSavedTimersRef.current[key];
-    if (existingTimer) {
-      window.clearTimeout(existingTimer);
-    }
-    setReservationSavedMap((prev) => ({ ...prev, [key]: true }));
-    reservationSavedTimersRef.current[key] = window.setTimeout(() => {
-      setReservationSavedMap((prev) => {
-        if (!prev[key]) return prev;
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-      delete reservationSavedTimersRef.current[key];
-    }, 1600);
-  };
-
-  const isReservationSaved = (orderId, field) => Boolean(reservationSavedMap[`${orderId}:${field}`]);
 
   const updateReservationStatus = async (orderId, payload, successMessage, savedField) => {
     setUpdatingOrderId(orderId);
@@ -1160,38 +955,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     try {
       await apiRequest(`/api/admin/orders/${orderId}`, "DELETE", undefined, token);
       setOrders((prev) => prev.filter((order) => order.id !== orderId));
-      setReservationEditors((prev) => {
-        const next = { ...prev };
-        delete next[orderId];
-        return next;
-      });
-      setMopOtherDrafts((prev) => {
-        const next = { ...prev };
-        delete next[orderId];
-        return next;
-      });
-      setPriceDrafts((prev) => {
-        const next = { ...prev };
-        delete next[orderId];
-        return next;
-      });
-      setDownpaymentDrafts((prev) => {
-        const next = { ...prev };
-        delete next[orderId];
-        return next;
-      });
-      setBalanceDrafts((prev) => {
-        const next = { ...prev };
-        delete next[orderId];
-        return next;
-      });
-      setReservationSavedMap((prev) => {
-        const next = { ...prev };
-        ["status", "courier", "mop", "mopOther", "price", "downpayment", "balance"].forEach((field) => {
-          delete next[`${orderId}:${field}`];
-        });
-        return next;
-      });
+      clearReservationStateForOrder(orderId);
       setSuccessModal({ isOpen: true, message: `Reservation #${orderId} deleted and stock restored.` });
       closeReservationDeleteModal();
     } catch (err) {
@@ -1201,47 +965,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
-  const isReservationEditorOpen = (orderId, field) => Boolean(reservationEditors?.[orderId]?.[field]);
-
-  const setReservationEditorOpen = (orderId, field, isOpen) => {
-    setReservationEditors((prev) => ({
-      ...prev,
-      [orderId]: {
-        ...(prev[orderId] || {}),
-        [field]: isOpen
-      }
-    }));
-  };
-
-  useEffect(() => {
-    const handlePointerDown = (event) => {
-      if (!(event.target instanceof Element)) {
-        return;
-      }
-      const rowElement = event.target.closest("[data-reservation-row-id]");
-      const clickedOrderId = rowElement?.getAttribute("data-reservation-row-id");
-      setReservationEditors((prev) => {
-        const entries = Object.entries(prev || {});
-        if (entries.length === 0) {
-          return prev;
-        }
-        if (!clickedOrderId) {
-          return {};
-        }
-        const next = Object.fromEntries(entries.filter(([orderId]) => String(orderId) === String(clickedOrderId)));
-        return Object.keys(next).length === entries.length ? prev : next;
-      });
-    };
-
-    window.addEventListener("mousedown", handlePointerDown);
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-    };
-  }, []);
-
-  useEffect(() => () => {
-    Object.values(reservationSavedTimersRef.current).forEach((timerId) => window.clearTimeout(timerId));
-  }, []);
 
   const openCreateModal = () => {
     setProductImageFile(null);
@@ -1306,27 +1029,25 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       supplier: preferredSelection.supplier || ""
     }));
     const shouldAutoOpenGuide = !hasStockGuideOnboardingShown && Boolean(getBrandSizeGuide(selectedProduct?.brand));
-    setIsStockGuideOpen(shouldAutoOpenGuide);
+    setStockGuideModalOpen(shouldAutoOpenGuide);
     if (shouldAutoOpenGuide) {
       setHasStockGuideOnboardingShown(true);
       localStorage.setItem("adminStockGuideOnboardingShown", "1");
     }
-    setIsStockSummaryOpen(false);
+    closeStockSummaryModal();
     setStockSummaryQuickFilters({ lowStockOnly: false, noSupplierOnly: false });
     setStockSummaryBulkAction({
       ...DEFAULT_STOCK_SUMMARY_BULK_ACTION,
       supplier: preferredSelection.supplier || "",
       price: priceValue
     });
-    setStockSummarySavingRow("");
     setProductActionModal({ type: "stock", productId: String(productId) });
   };
 
   const closeStockSummaryView = () => {
-    setIsStockSummaryOpen(false);
+    closeStockSummaryModal();
     setStockSummarySelectedRows(new Set());
     setStockSummarySupplierSelections({});
-    setStockSummarySavingRow("");
     setStockSummaryBulkAction({ ...DEFAULT_STOCK_SUMMARY_BULK_ACTION });
     setStockSummaryResetModal({ ...DEFAULT_STOCK_SUMMARY_RESET_MODAL });
     setProductActionModal({ type: null, productId: "" });
@@ -1602,10 +1323,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       if (productKeyword && !(product.name || "").toLowerCase().includes(productKeyword)) {
         return false;
       }
-      if (tableFilters.brand !== "ALL" && (product.brand || "") !== tableFilters.brand) {
-        return false;
-      }
-      return true;
+      return tableFilters.brand === "ALL" || (product.brand || "") === tableFilters.brand;
     });
   }, [products, tableFilters]);
 
@@ -1631,10 +1349,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const activeStockSizeSection = useMemo(
     () => stockSizeSections.find((section) => section.key === activeStockSizeGroup) || stockSizeSections[0] || null,
     [stockSizeSections, activeStockSizeGroup]
-  );
-  const selectedStockSizeLabel = useMemo(
-    () => formatSelectedSizeLabel(stockForm.size, activeStockSizeGroup, stockModalDepartment),
-    [stockForm.size, activeStockSizeGroup, stockModalDepartment]
   );
   const selectedStockRow = useMemo(
     () => activeStockSizeSection?.rows?.find((row) => row.baseSize === stockForm.size) || null,
@@ -1662,7 +1376,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
    useEffect(() => {
      if (productActionModal.type === "stock") {
        const timer = setTimeout(() => {
-         setIsStockSummaryOpen(true);
+         openStockSummaryModal();
        }, 100);
        return () => clearTimeout(timer);
      }
@@ -1714,50 +1428,20 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       return next;
     });
   }, [activeStockRows, activeStockSizeGroup, isStockSummaryOpen, productActionModal.type]);
-  const filteredStockSummaryRows = useMemo(() => activeStockRows.filter((row) => {
-    if (stockSummaryQuickFilters.lowStockOnly && !(Number(row.total || 0) > 0 && Number(row.total || 0) <= 3)) {
-      return false;
-    }
-    if (stockSummaryQuickFilters.noSupplierOnly && (row.supplierEntries || []).some((entry) => String(entry.supplier || "").trim())) {
-      return false;
-    }
-    return true;
-  }), [activeStockRows, stockSummaryQuickFilters]);
+  const filteredStockSummaryRows = useMemo(
+    () => filterStockSummaryRows(activeStockRows, stockSummaryQuickFilters),
+    [activeStockRows, stockSummaryQuickFilters]
+  );
 
-  const sortedStockSummaryRows = useMemo(() => {
-    const sorted = [...filteredStockSummaryRows];
-    sorted.sort((a, b) => {
-      let aVal, bVal;
-      switch (stockSummarySortColumn) {
-        case "size":
-          aVal = Number(a.baseSize || 0);
-          bVal = Number(b.baseSize || 0);
-          break;
-        case "total":
-          aVal = Number(a.total || 0);
-          bVal = Number(b.total || 0);
-          break;
-        case "supplier":
-          aVal = String(a.supplier || "");
-          bVal = String(b.supplier || "");
-          return stockSummarySortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        case "price":
-          aVal = Number(a.price || 0);
-          bVal = Number(b.price || 0);
-          break;
-        default:
-          return 0;
-      }
-      return stockSummarySortAsc ? aVal - bVal : bVal - aVal;
-    });
-    return sorted;
-  }, [filteredStockSummaryRows, stockSummarySortColumn, stockSummarySortAsc]);
+  const sortedStockSummaryRows = useMemo(
+    () => sortStockSummaryRows(filteredStockSummaryRows, stockSummarySortColumn, stockSummarySortAsc),
+    [filteredStockSummaryRows, stockSummarySortColumn, stockSummarySortAsc]
+  );
 
-  const stockSummaryVisibleTotals = useMemo(() => filteredStockSummaryRows.reduce((acc, row) => ({
-    total: acc.total + (row.total || 0)
-  }), {
-    total: 0
-  }), [filteredStockSummaryRows]);
+  const stockSummaryVisibleTotals = useMemo(
+    () => aggregateStockSummaryTotals(filteredStockSummaryRows),
+    [filteredStockSummaryRows]
+  );
 
   const handleStockSizeGroupChange = (nextSizeGroup) => {
     const targetSection = stockSizeSections.find((section) => section.key === nextSizeGroup);
@@ -1820,118 +1504,21 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     return items;
   }, [adminPage, adminTotalPages]);
 
-  const reservationStats = useMemo(() => {
-    const totalReservations = orders.length;
-    const preparingCount = orders.filter((order) => normalizeReservationStatus(order.status) === "PREPARING").length;
-    const shippedCount = orders.filter((order) => normalizeReservationStatus(order.status) === "SHIPPED").length;
-    const paidCount = orders.filter((order) => normalizeReservationStatus(order.status) === "PAID").length;
-    const totalSalesAll = orders.reduce((sum, order) => {
-      const parsed = Number(order.totalPrice);
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        return sum;
-      }
-      return sum + parsed;
-    }, 0);
-    const totalSalesPaid = orders.reduce((sum, order) => {
-      if (normalizeReservationStatus(order.status) !== "PAID") {
-        return sum;
-      }
-      const parsed = Number(order.totalPrice);
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        return sum;
-      }
-      return sum + parsed;
-    }, 0);
-    const activeProducts = products.length;
-    const lowStockSizes = products.reduce((count, product) => {
-      const colorways = getSortedColorwaysFromStocks(product.stocks);
-      return count + colorways.reduce((nestedCount, colorway) => (
-        nestedCount + buildSizeStateRows(product, colorway).filter((row) => row.total > 0 && row.total <= 3).length
-      ), 0);
-    }, 0);
-    return {
-      totalReservations,
-      preparingCount,
-      shippedCount,
-      paidCount,
-      totalSalesAll,
-      totalSalesPaid,
-      activeProducts,
-      lowStockSizes
-    };
-  }, [orders, products]);
+  const reservationStats = useMemo(
+    () => buildReservationStats(orders, products),
+    [orders, products]
+  );
 
-  const filteredReservations = useMemo(() => {
-    const keyword = reservationFilters.keyword.trim().toLowerCase();
-    const statusFilter = reservationFilters.status;
-
-    return [...orders]
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-      .filter((order) => {
-        const normalizedStatus = normalizeReservationStatus(order.status);
-        if (statusFilter !== "ALL" && normalizedStatus !== statusFilter) {
-          return false;
-        }
-        if (!keyword) {
-          return true;
-        }
-        const itemText = (order.items || []).map((item) => (
-          `${item.productName || ""} ${item.colorway || ""} ${item.size || ""} ${item.sizeGroup || ""}`
-        )).join(" ").toLowerCase();
-        const haystack = [
-          String(order.id || ""),
-          order.customerName || "",
-          order.customerContact || "",
-          order.notes || "",
-          order.status || "",
-          itemText
-        ].join(" ").toLowerCase();
-        return haystack.includes(keyword);
-      });
-  }, [orders, reservationFilters.keyword, reservationFilters.status]);
+  const filteredReservations = useMemo(
+    () => buildFilteredReservations(orders, reservationFilters),
+    [orders, reservationFilters]
+  );
   const reservationTableColumnCount = isSuperAdmin ? 13 : 12;
 
-  const reservationMopTotals = useMemo(() => {
-    const totals = new Map();
-    const otherLabels = new Map();
-    filteredReservations.forEach((order) => {
-      const rawMop = String(order.mop || "").trim().toUpperCase();
-      let key = rawMop || "NO_MOP";
-      if (rawMop === "OTHER") {
-        const rawOther = String(order.mopOther || "").trim();
-        const normalizedOther = rawOther.toUpperCase() || "UNSPECIFIED";
-        key = `OTHER:${normalizedOther}`;
-        if (!otherLabels.has(key)) {
-          otherLabels.set(key, rawOther || "Other (Unspecified)");
-        }
-      }
-      const parsed = Number(order.totalPrice);
-      const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-      totals.set(key, (totals.get(key) || 0) + amount);
-    });
-
-    const standardKeys = RESERVATION_MOP_OPTIONS
-      .map((option) => option.value)
-      .filter((value) => value !== "OTHER");
-    const otherKeys = [...totals.keys()].filter((key) => key.startsWith("OTHER:")).sort();
-    const orderedKeys = [
-      ...standardKeys,
-      ...otherKeys,
-      "NO_MOP"
-    ];
-
-    return orderedKeys
-      .filter((key) => totals.has(key))
-      .map((key) => ({
-        key,
-        label: key === "NO_MOP"
-          ? "No MOP"
-          : (key.startsWith("OTHER:")
-            ? otherLabels.get(key)
-            : (RESERVATION_MOP_OPTIONS.find((option) => option.value === key)?.label || formatEnumLabel(key))),
-        total: totals.get(key) || 0
-      }));
-  }, [filteredReservations]);
+  const reservationMopTotals = useMemo(
+    () => buildReservationMopTotals(filteredReservations),
+    [filteredReservations]
+  );
 
   const productById = useMemo(() => {
     const map = {};
@@ -1941,278 +1528,64 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     return map;
   }, [products]);
 
-  const resolveOriginalUnitPrice = (item) => {
-    const product = productById[String(item?.productId)];
-    if (!product) {
-      return null;
-    }
-    const department = getDepartmentForColorway(product, item?.colorway);
-    const normalizedItemSizeGroup = String(item?.sizeGroup || "").toUpperCase();
-    const storageSizeGroup = getStockStorageGroup(department, normalizedItemSizeGroup);
-    const exactStock = (product.stocks || []).find((stock) => (
-      String(stock.colorway || "").toUpperCase() === String(item.colorway || "").toUpperCase()
-      && String(stock.size) === String(item.size)
-      && String(stock.sizeGroup || "").toUpperCase() === storageSizeGroup
-    ));
-    const stockPrice = Number(exactStock?.price);
-    if (Number.isFinite(stockPrice) && stockPrice >= 0) {
-      return stockPrice;
-    }
-    const colorwayPrice = Number(getColorwayDetails(product, item.colorway)?.price);
-    if (Number.isFinite(colorwayPrice) && colorwayPrice >= 0) {
-      return colorwayPrice;
-    }
-    const productPrice = Number(product?.price);
-    return Number.isFinite(productPrice) && productPrice >= 0 ? productPrice : null;
-  };
-
-  const formatReservationItemSizeLabel = (item) => {
-    const normalizedSizeGroup = String(item?.sizeGroup || "").toUpperCase();
-    const product = productById[String(item?.productId)];
-    const department = product ? getDepartmentForColorway(product, item?.colorway) : normalizedSizeGroup;
-    if (String(department || "").toUpperCase() === "UNISEX" && normalizedSizeGroup === "STANDARD") {
-      return `US ${item?.size || "-"}`;
-    }
-    const formatted = formatSelectedSizeLabel(item?.size, normalizedSizeGroup, department);
-    if (formatted) {
-      return formatted;
-    }
-    if (normalizedSizeGroup === "WOMEN") {
-      return `Women's US ${item?.size || "-"}`;
-    }
-    if (normalizedSizeGroup === "KIDS") {
-      return `Kids' US ${item?.size || "-"}`;
-    }
-    return `Men's US ${item?.size || "-"}`;
-  };
-
   useEffect(() => {
-    if (!isSuperAdmin && activeAdminSection === "users") {
+    if (!isSuperAdmin && (activeAdminSection === "users" || activeAdminSection === "promotions")) {
       setActiveAdminSection("products");
     }
   }, [isSuperAdmin, activeAdminSection]);
 
+  const productActionModalTitle =
+    productActionModal.type === "create"
+      ? "Add Product"
+      : productActionModal.type === "edit"
+        ? `Update Product${editProductForm.name ? ` - ${editProductForm.name}` : ""}${editImageColorway ? ` (${formatColorwayLabel(editImageColorway)})` : ""}`
+        : productActionModal.type === "stock"
+          ? `Manage Stock${stockModalProduct ? ` - ${(stockModalProduct.brand || "").trim()} ${(stockModalProduct.name || "").trim()}`.trim() : ""}${stockForm.colorway ? ` (${formatColorwayLabel(stockForm.colorway)})` : ""}`
+          : "";
+
   if (!isLoggedIn) {
     return (
-      <main className="container container-wide">
-        <section className="card admin-login-card">
-          <h2>Admin Login</h2>
-          <input
-            placeholder="Username"
-            value={loginForm.username}
-            onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-            autoComplete="username"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={loginForm.password}
-            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-            autoComplete="current-password"
-          />
-          <button onClick={() => login().catch((err) => setMessage(err.message))}>Login</button>
-          <button type="button" className="button-secondary" onClick={() => navigate("/")}>
-            Back to Customer Page
-          </button>
-          <p className="message">{message}</p>
-        </section>
-      </main>
+      <AdminLoginSection
+        loginForm={loginForm}
+        setLoginForm={setLoginForm}
+        onLogin={() => login().catch((err) => setMessage(err.message))}
+        onBackToCustomer={() => navigate("/")}
+        message={message}
+      />
     );
   }
 
+  const handleProductFilterChange = (field, value) => {
+    setTableFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
   return (
     <main className="container container-wide">
-      <section className="card admin-subnav">
-        <div className="admin-subnav-tabs">
-          {adminSections.map((section) => (
-            <button
-              key={section.key}
-              type="button"
-              className={`admin-subnav-tab ${activeAdminSection === section.key ? "active" : ""}`}
-              onClick={() => setActiveAdminSection(section.key)}
-            >
-              {section.label}
-            </button>
-          ))}
-        </div>
-      </section>
+      <AdminSectionTabs
+        adminSections={adminSections}
+        activeAdminSection={activeAdminSection}
+        onSelectSection={setActiveAdminSection}
+      />
 
       {activeAdminSection === "products" ? (
-      <section className="card products-card admin-section">
-        <div className="section-head">
-          <h2>Products</h2>
-          <p className="field-hint" style={{ margin: 0 }}>
-            Role: <strong>{adminRole || "ADMIN"}</strong>
-          </p>
-          <button type="button" onClick={openCreateModal}>Add Product</button>
-        </div>
-        <div className="products-table-wrap">
-        <table className="products-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Brand</th>
-              <th>Actions</th>
-            </tr>
-            <tr>
-              <th>
-                <input
-                  value={tableFilters.product}
-                  onChange={(e) => setTableFilters((prev) => ({ ...prev, product: e.target.value }))}
-                  placeholder="Filter product"
-                />
-              </th>
-              <th>
-                <select
-                  value={tableFilters.brand}
-                  onChange={(e) => setTableFilters((prev) => ({ ...prev, brand: e.target.value }))}
-                >
-                  <option value="ALL">All</option>
-                  {brandOptions.map((brand) => (
-                    <option key={brand} value={brand}>
-                      {brand}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {(isAdminLoading
-              ? Array.from({ length: 6 }, (_, index) => ({ id: `loading-${index}` }))
-              : adminPaginatedProducts
-            ).map((product) => {
-              if (isAdminLoading) {
-                return (
-                  <tr key={product.id}>
-                    <td colSpan="3"><div className="skeleton-line" /></td>
-                  </tr>
-                );
-              }
-              const selectedColorway =
-                getAdminScopedColorway(product);
-              return (
-                <tr
-                  key={product.id}
-                  className="clickable-product-row"
-                  onClick={() => openEditModal(product.id, selectedColorway)}
-                >
-                  <td>{product.name}</td>
-                  <td>{product.brand}</td>
-                  <td>
-                    <div className="actions-inline admin-actions-inline">
-                      <button
-                        type="button"
-                        className="admin-action-btn quick-tooltip"
-                        data-tooltip="Manage Stock"
-                        aria-label="Manage stock"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openStockModal(product.id, selectedColorway);
-                        }}
-                      >
-                        <Boxes size={15} />
-                        <span className="admin-action-label">Manage Stock</span>
-                      </button>
-                      {isSuperAdmin ? (
-                        <button
-                          type="button"
-                          className="btn-delete admin-action-btn quick-tooltip"
-                          data-tooltip="Delete"
-                          aria-label="Delete product"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            deleteProduct(product.id);
-                          }}
-                        >
-                          <Trash2 size={15} />
-                          <span className="admin-action-label">Delete</span>
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        </div>
-        <div className="pagination-bar card" style={{ marginTop: "8px" }}>
-          <nav aria-label="Admin products pages">
-            <ul className="pagination-numbers pages-items">
-              {adminPage > 1 ? (
-                <>
-                  <li className="pages-item pages-item-first">
-                    <button
-                      type="button"
-                      className="page-number-btn page-nav-btn"
-                      onClick={() => setAdminPage(1)}
-                      aria-label="First page"
-                    >
-                      «
-                    </button>
-                  </li>
-                  <li className="pages-item pages-item-prev">
-                    <button
-                      type="button"
-                      className="page-number-btn page-nav-btn"
-                      onClick={() => setAdminPage((prev) => Math.max(1, prev - 1))}
-                      aria-label="Previous page"
-                    >
-                      ‹
-                    </button>
-                  </li>
-                </>
-              ) : null}
-              {adminPaginationItems.map((item) =>
-                item.type === "ellipsis" ? (
-                  <li key={item.value} className="pages-item page-ellipsis" aria-hidden="true">…</li>
-                ) : (
-                  <li key={item.value} className={`pages-item ${adminPage === item.value ? "current" : ""}`}>
-                    <button
-                      type="button"
-                      className={`page-number-btn ${adminPage === item.value ? "active" : ""}`}
-                      onClick={() => setAdminPage(item.value)}
-                      aria-label={`Page ${item.value}`}
-                      aria-current={adminPage === item.value ? "page" : undefined}
-                    >
-                      {item.value}
-                    </button>
-                  </li>
-                )
-              )}
-              {adminPage < adminTotalPages ? (
-                <>
-                  <li className="pages-item pages-item-next">
-                    <button
-                      type="button"
-                      className="page-number-btn page-nav-btn"
-                      onClick={() => setAdminPage((prev) => Math.min(adminTotalPages, prev + 1))}
-                      aria-label="Next page"
-                    >
-                      ›
-                    </button>
-                  </li>
-                  <li className="pages-item pages-item-last">
-                    <button
-                      type="button"
-                      className="page-number-btn page-nav-btn"
-                      onClick={() => setAdminPage(adminTotalPages)}
-                      aria-label="Last page"
-                    >
-                      »
-                    </button>
-                  </li>
-                </>
-              ) : null}
-            </ul>
-          </nav>
-        </div>
-      </section>
+        <AdminProductsSection
+          adminRole={adminRole}
+          tableFilters={tableFilters}
+          brandOptions={brandOptions}
+          isLoading={isAdminLoading}
+          paginatedProducts={adminPaginatedProducts}
+          currentPage={adminPage}
+          totalPages={adminTotalPages}
+          paginationItems={adminPaginationItems}
+          isSuperAdmin={isSuperAdmin}
+          resolveSelectedColorway={getAdminScopedColorway}
+          onProductFilterChange={handleProductFilterChange}
+          onAddProduct={openCreateModal}
+          onEditProduct={openEditModal}
+          onManageStock={openStockModal}
+          onDeleteProduct={deleteProduct}
+          onPageChange={setAdminPage}
+        />
       ) : null}
 
       {activeAdminSection === "reservations" ? (
@@ -2224,628 +1597,66 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             </p>
           </div>
 
-          <div className="admin-summary-grid">
-            <article className="admin-summary-card">
-              <p>Total</p>
-              <h3>{reservationStats.totalReservations}</h3>
-            </article>
-            <article className="admin-summary-card">
-              <p>Preparing</p>
-              <h3>{reservationStats.preparingCount}</h3>
-            </article>
-            <article className="admin-summary-card">
-              <p>Total Sales (Paid only)</p>
-              <h3 className="admin-summary-value admin-summary-value-price">{formatPriceLabel(reservationStats.totalSalesPaid)}</h3>
-            </article>
-            <article className="admin-summary-card">
-              <p>Total Sales (All reservations)</p>
-              <h3 className="admin-summary-value admin-summary-value-price">{formatPriceLabel(reservationStats.totalSalesAll)}</h3>
-            </article>
-            <article className="admin-summary-card">
-              <p>Shipped</p>
-              <h3>{reservationStats.shippedCount}</h3>
-            </article>
-            <article className="admin-summary-card">
-              <p>Paid</p>
-              <h3>{reservationStats.paidCount}</h3>
-            </article>
-            {reservationMopTotals.map((entry) => (
-              <article key={`mop-total-${entry.key}`} className="admin-summary-card admin-summary-card-accent">
-                <p>{entry.label} Total</p>
-                <h3 className="admin-summary-value admin-summary-value-price">{formatPriceLabel(entry.total)}</h3>
-              </article>
-            ))}
-          </div>
+          <ReservationDashboardCards
+            reservationStats={reservationStats}
+            reservationMopTotals={reservationMopTotals}
+            formatPriceLabel={formatPriceLabel}
+          />
 
-          <div className="reservation-filter-row">
-            <input
-              value={reservationFilters.keyword}
-              onChange={(e) => setReservationFilters((prev) => ({ ...prev, keyword: e.target.value }))}
-              placeholder="Search by customer, contact, product, colorway, or order #"
-            />
-            <select
-              value={reservationFilters.status}
-              onChange={(e) => setReservationFilters((prev) => ({ ...prev, status: e.target.value }))}
-            >
-              <option value="ALL">All statuses</option>
-              {RESERVATION_STATUS_OPTIONS.map((option) => (
-                <option key={`reservation-status-filter-${option.value}`} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
+          <ReservationFilters
+            reservationFilters={reservationFilters}
+            setReservationFilters={setReservationFilters}
+          />
 
-          <div className="admin-table-wrap">
-            <table className="admin-table reservations-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Customer</th>
-                  <th>Contact</th>
-                  <th>Items</th>
-                  <th>Created</th>
-                  <th>Courier</th>
-                  <th>MOP</th>
-                  <th>Promo</th>
-                  <th>Price</th>
-                  <th>Downpayment</th>
-                  <th>Balance</th>
-                  <th>Status</th>
-                  {isSuperAdmin ? <th>Action</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {isAdminLoading ? (
-                  Array.from({ length: 5 }, (_, index) => (
-                    <tr key={`reservation-loading-${index}`}>
-                      <td colSpan={reservationTableColumnCount}><div className="skeleton-line" /></td>
-                    </tr>
-                  ))
-                ) : filteredReservations.length === 0 ? (
-                  <tr>
-                    <td colSpan={reservationTableColumnCount}>No reservations found.</td>
-                  </tr>
-                ) : (
-                  filteredReservations.map((order) => {
-                    const normalizedStatus = normalizeReservationStatus(order.status);
-                    const normalizedCourier = String(order.courier || "").toUpperCase();
-                    const normalizedMop = String(order.mop || "").toUpperCase();
-                    const mopOtherDraft = mopOtherDrafts[order.id] ?? order.mopOther ?? "";
-                    const trimmedMopOtherDraft = mopOtherDraft.trim();
-                    const hasOrderPrice = order.totalPrice !== null && order.totalPrice !== undefined && order.totalPrice !== "";
-                    const normalizedOrderPrice = hasOrderPrice ? Number(order.totalPrice).toFixed(2) : "";
-                    const originalPriceTotal = (order.items || []).reduce((sum, item) => {
-                      const basePrice = resolveOriginalUnitPrice(item);
-                      const quantity = Number(item.quantity || 0);
-                      if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(quantity) || quantity <= 0) {
-                        return sum;
-                      }
-                      return sum + (basePrice * quantity);
-                    }, 0);
-                    const hasOriginalPrice = originalPriceTotal > 0;
-                    const hasCustomPrice = hasOrderPrice && hasOriginalPrice
-                      && Math.abs(Number(order.totalPrice) - originalPriceTotal) >= 0.01;
-                    const priceDraft = String(priceDrafts[order.id] ?? normalizedOrderPrice);
-                    const trimmedPriceDraft = priceDraft.trim();
-                    const isPriceDirty = trimmedPriceDraft !== normalizedOrderPrice;
-                    const hasDownpayment = order.downpayment !== null && order.downpayment !== undefined && order.downpayment !== "";
-                    const normalizedDownpayment = hasDownpayment ? Number(order.downpayment).toFixed(2) : "";
-                    const downpaymentDraft = String(downpaymentDrafts[order.id] ?? normalizedDownpayment);
-                    const trimmedDownpaymentDraft = downpaymentDraft.trim();
-                    const isDownpaymentDirty = trimmedDownpaymentDraft !== normalizedDownpayment;
-
-                    const computedBalance = hasOrderPrice
-                      ? Math.max(0, Number(order.totalPrice) - Number(order.downpayment || 0))
-                      : null;
-                    const hasBalance = order.balance !== null && order.balance !== undefined && order.balance !== "";
-                    const balanceDisplayValue = hasBalance
-                      ? Number(order.balance)
-                      : computedBalance;
-                    const normalizedBalance = hasBalance
-                      ? Number(order.balance).toFixed(2)
-                      : (computedBalance !== null ? Number(computedBalance).toFixed(2) : "");
-                    const balanceDraft = String(balanceDrafts[order.id] ?? normalizedBalance);
-                    const trimmedBalanceDraft = balanceDraft.trim();
-                    const isBalanceDirty = trimmedBalanceDraft !== normalizedBalance;
-                    const hasUnsavedMopOther = normalizedMop === "OTHER"
-                      && trimmedMopOtherDraft
-                      && trimmedMopOtherDraft !== (order.mopOther || "");
-                    return (
-                      <tr key={order.id} data-reservation-row-id={String(order.id)}>
-                        <td>#{order.id}</td>
-                        <td className="reservation-customer-cell">
-                          <strong>{order.customerName || "-"}</strong>
-                          {order.notes ? <small>Note: {order.notes}</small> : null}
-                        </td>
-                        <td>{order.customerContact || "-"}</td>
-                        <td className="reservation-items-cell">
-                          {(order.items || []).map((item, index) => (
-                            <div key={`${order.id}-${item.productId || item.productName}-${index}`} className="reservation-item-line">
-                              <strong>
-                                {item.productName}
-                                {item.supplierBreakdown === PREORDER_SUPPLIER_BREAKDOWN_MARKER ? (
-                                  <span className="reservation-preorder-badge">Pre-Order</span>
-                                ) : null}
-                              </strong>
-                              <span>
-                                {formatColorwayLabel(item.colorway)} · {formatReservationItemSizeLabel(item)} · Qty {item.quantity}
-                              </span>
-                            </div>
-                          ))}
-                        </td>
-                        <td className="reservation-created-cell">{formatReservationDateTime(order.createdAt)}</td>
-                        <td>
-                          <div className="reservation-field-cell">
-                            {isReservationEditorOpen(order.id, "courier") ? (
-                              <select
-                                className="reservation-status-select"
-                                value={normalizedCourier}
-                                disabled={updatingOrderId === order.id}
-                                onChange={(e) => updateReservationStatus(
-                                  order.id,
-                                  { courier: e.target.value },
-                                  `Reservation #${order.id} courier set to ${formatEnumLabel(e.target.value)}.`,
-                                  "courier"
-                                ).then(() => setReservationEditorOpen(order.id, "courier", false)).catch((err) => setMessage(err.message))}
-                              >
-                                <option value="">Select courier</option>
-                                {RESERVATION_COURIER_OPTIONS.map((option) => (
-                                  <option key={`reservation-courier-${order.id}-${option.value}`} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className={`order-status-chip reservation-final-chip ${normalizedCourier ? "status-shipped" : "status-ordered"}`}>
-                                {normalizedCourier ? formatEnumLabel(normalizedCourier) : "No Courier"}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              className="reservation-inline-icon-btn"
-                              aria-label={isReservationEditorOpen(order.id, "courier") ? "Close courier selector" : "Set courier"}
-                              onClick={() => setReservationEditorOpen(order.id, "courier", !isReservationEditorOpen(order.id, "courier"))}
-                              disabled={updatingOrderId === order.id}
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            {isReservationSaved(order.id, "courier") ? (
-                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="reservation-mop-cell">
-                            <div className="reservation-field-cell">
-                              {isReservationEditorOpen(order.id, "mop") ? (
-                                <select
-                                  className="reservation-status-select"
-                                  value={normalizedMop}
-                                  disabled={updatingOrderId === order.id}
-                                  onChange={(e) => updateReservationStatus(
-                                    order.id,
-                                    { mop: e.target.value },
-                                    `Reservation #${order.id} MOP set to ${formatEnumLabel(e.target.value)}.`,
-                                    "mop"
-                                  ).then(() => {
-                                    if (e.target.value !== "OTHER") {
-                                      setReservationEditorOpen(order.id, "mop", false);
-                                    }
-                                  }).catch((err) => setMessage(err.message))}
-                                >
-                                  <option value="">Select MOP</option>
-                                  {RESERVATION_MOP_OPTIONS.map((option) => (
-                                    <option key={`reservation-mop-${order.id}-${option.value}`} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className={`order-status-chip reservation-final-chip ${normalizedMop ? "status-preparing" : "status-ordered"}`}>
-                                  {normalizedMop ? formatEnumLabel(normalizedMop) : "No MOP"}
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                className="reservation-inline-icon-btn"
-                                aria-label={isReservationEditorOpen(order.id, "mop") ? "Close MOP selector" : "Set MOP"}
-                                onClick={() => setReservationEditorOpen(order.id, "mop", !isReservationEditorOpen(order.id, "mop"))}
-                                disabled={updatingOrderId === order.id}
-                              >
-                                <Pencil size={14} />
-                              </button>
-                              {isReservationSaved(order.id, "mop") || isReservationSaved(order.id, "mopOther") ? (
-                                <small className="reservation-saved-inline"><Check size={12} />Saved</small>
-                              ) : null}
-                            </div>
-                            {normalizedMop === "OTHER" && isReservationEditorOpen(order.id, "mop") ? (
-                              <>
-                                <input
-                                  className="reservation-other-input"
-                                  value={mopOtherDraft}
-                                  placeholder="Specify other MOP"
-                                  onChange={(e) => setMopOtherDrafts((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                                  onBlur={() => {
-                                    const trimmed = mopOtherDraft.trim();
-                                    if (!trimmed || trimmed === (order.mopOther || "")) {
-                                      return;
-                                    }
-                                    updateReservationStatus(
-                                      order.id,
-                                      { mop: "OTHER", mopOther: trimmed },
-                                      `Reservation #${order.id} MOP details updated.`,
-                                      "mopOther"
-                                    ).catch((err) => setMessage(err.message));
-                                  }}
-                                  disabled={updatingOrderId === order.id}
-                                />
-                                {hasUnsavedMopOther ? (
-                                  <button
-                                    type="button"
-                                    className="reservation-other-save-btn"
-                                    onClick={() => updateReservationStatus(
-                                      order.id,
-                                      { mop: "OTHER", mopOther: trimmedMopOtherDraft },
-                                      `Reservation #${order.id} MOP details updated.`,
-                                      "mopOther"
-                                    ).catch((err) => setMessage(err.message))}
-                                    disabled={updatingOrderId === order.id}
-                                  >
-                                    Save Other MOP
-                                  </button>
-                                ) : null}
-                              </>
-                            ) : normalizedMop === "OTHER" && order.mopOther ? (
-                              <small className="field-hint">Other: {order.mopOther}</small>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td>
-                          {order.promoCode ? (
-                            <div style={{ display: "grid", gap: 4 }}>
-                              <strong>{order.promoCode}</strong>
-                              {order.promoDiscountAmount ? (
-                                <small className="reservation-original-price">-{formatPriceLabel(order.promoDiscountAmount)}</small>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <span className="field-hint">-</span>
-                          )}
-                        </td>
-                        <td>
-                          <div className="reservation-field-cell">
-                            {isReservationEditorOpen(order.id, "price") ? (
-                              <div className="reservation-price-edit">
-                                <input
-                                  className="reservation-price-input"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={priceDraft}
-                                  placeholder="0.00"
-                                  disabled={updatingOrderId === order.id}
-                                  onChange={(e) => setPriceDrafts((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      saveReservationPrice(order.id, priceDraft);
-                                    }
-                                  }}
-                                  onBlur={() => {
-                                    if (isPriceDirty && trimmedPriceDraft) {
-                                      saveReservationPrice(order.id, priceDraft);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <span className={`order-status-chip reservation-final-chip reservation-price-chip ${hasOrderPrice ? "status-delivered" : "status-ordered"}`}>
-                                {formatPriceLabel(order.totalPrice)}
-                              </span>
-                            )}
-                            {order.promoCode ? (
-                              <small className="reservation-original-price">
-                                Promo {order.promoCode} · Discount {formatPriceLabel(order.promoDiscountAmount)}
-                              </small>
-                            ) : null}
-                            {order.promoCode && order.subtotalPrice ? (
-                              <small className="reservation-original-price">
-                                Subtotal: {formatPriceLabel(order.subtotalPrice)}
-                              </small>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="reservation-inline-icon-btn"
-                              aria-label={isReservationEditorOpen(order.id, "price") ? "Close price editor" : "Set price"}
-                              onClick={() => {
-                                if (isReservationEditorOpen(order.id, "price") && isPriceDirty && trimmedPriceDraft) {
-                                  saveReservationPrice(order.id, priceDraft);
-                                  return;
-                                }
-                                const nextOpen = !isReservationEditorOpen(order.id, "price");
-                                setReservationEditorOpen(order.id, "price", nextOpen);
-                                if (nextOpen) {
-                                  setPriceDrafts((prev) => ({ ...prev, [order.id]: normalizedOrderPrice }));
-                                }
-                              }}
-                              disabled={updatingOrderId === order.id}
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            {isReservationSaved(order.id, "price") ? (
-                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
-                            ) : null}
-                          </div>
-                          {hasOriginalPrice ? (
-                            <small className={`reservation-original-price ${hasCustomPrice ? "is-overridden" : ""}`}>
-                              Original: {formatPriceLabel(originalPriceTotal)}
-                            </small>
-                          ) : null}
-                        </td>
-                        <td>
-                          <div className="reservation-field-cell">
-                            {isReservationEditorOpen(order.id, "downpayment") ? (
-                              <div className="reservation-price-edit">
-                                <input
-                                  className="reservation-price-input"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={downpaymentDraft}
-                                  placeholder="0.00"
-                                  disabled={updatingOrderId === order.id}
-                                  onChange={(e) => setDownpaymentDrafts((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      saveReservationMonetary(order.id, "downpayment", downpaymentDraft, "Downpayment", setDownpaymentDrafts);
-                                    }
-                                  }}
-                                  onBlur={() => {
-                                    if (isDownpaymentDirty && trimmedDownpaymentDraft) {
-                                      saveReservationMonetary(order.id, "downpayment", downpaymentDraft, "Downpayment", setDownpaymentDrafts);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <span className={`order-status-chip reservation-final-chip reservation-price-chip ${hasDownpayment ? "status-delivered" : "status-ordered"}`}>
-                                {formatPriceLabel(order.downpayment)}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              className="reservation-inline-icon-btn"
-                              aria-label={isReservationEditorOpen(order.id, "downpayment") ? "Close downpayment editor" : "Set downpayment"}
-                              onClick={() => {
-                                if (isReservationEditorOpen(order.id, "downpayment") && isDownpaymentDirty && trimmedDownpaymentDraft) {
-                                  saveReservationMonetary(order.id, "downpayment", downpaymentDraft, "Downpayment", setDownpaymentDrafts);
-                                  return;
-                                }
-                                const nextOpen = !isReservationEditorOpen(order.id, "downpayment");
-                                setReservationEditorOpen(order.id, "downpayment", nextOpen);
-                                if (nextOpen) {
-                                  setDownpaymentDrafts((prev) => ({ ...prev, [order.id]: normalizedDownpayment }));
-                                }
-                              }}
-                              disabled={updatingOrderId === order.id}
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            {isReservationSaved(order.id, "downpayment") ? (
-                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="reservation-field-cell">
-                            {isReservationEditorOpen(order.id, "balance") ? (
-                              <div className="reservation-price-edit">
-                                <input
-                                  className="reservation-price-input"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={balanceDraft}
-                                  placeholder="0.00"
-                                  disabled={updatingOrderId === order.id}
-                                  onChange={(e) => setBalanceDrafts((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      saveReservationMonetary(order.id, "balance", balanceDraft, "Balance", setBalanceDrafts);
-                                    }
-                                  }}
-                                  onBlur={() => {
-                                    if (isBalanceDirty && trimmedBalanceDraft) {
-                                      saveReservationMonetary(order.id, "balance", balanceDraft, "Balance", setBalanceDrafts);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <span className={`order-status-chip reservation-final-chip reservation-price-chip ${balanceDisplayValue !== null ? "status-preparing" : "status-ordered"}`}>
-                                {formatPriceLabel(balanceDisplayValue)}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              className="reservation-inline-icon-btn"
-                              aria-label={isReservationEditorOpen(order.id, "balance") ? "Close balance editor" : "Set balance"}
-                              onClick={() => {
-                                if (isReservationEditorOpen(order.id, "balance") && isBalanceDirty && trimmedBalanceDraft) {
-                                  saveReservationMonetary(order.id, "balance", balanceDraft, "Balance", setBalanceDrafts);
-                                  return;
-                                }
-                                const nextOpen = !isReservationEditorOpen(order.id, "balance");
-                                setReservationEditorOpen(order.id, "balance", nextOpen);
-                                if (nextOpen) {
-                                  setBalanceDrafts((prev) => ({ ...prev, [order.id]: normalizedBalance }));
-                                }
-                              }}
-                              disabled={updatingOrderId === order.id}
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            {isReservationSaved(order.id, "balance") ? (
-                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
-                            ) : null}
-                          </div>
-                          {!hasBalance && computedBalance !== null ? (
-                            <small className="reservation-original-price">Auto: {formatPriceLabel(computedBalance)}</small>
-                          ) : null}
-                        </td>
-                        <td>
-                          <div className="reservation-status-cell">
-                            {isReservationEditorOpen(order.id, "status") ? (
-                              <select
-                                className="reservation-status-select"
-                                value={normalizedStatus}
-                                disabled={updatingOrderId === order.id}
-                                onChange={(e) => updateReservationStatus(
-                                  order.id,
-                                  { status: e.target.value },
-                                  `Reservation #${order.id} updated to ${formatEnumLabel(e.target.value)}.`,
-                                  "status"
-                                ).then(() => setReservationEditorOpen(order.id, "status", false)).catch((err) => setMessage(err.message))}
-                              >
-                                {RESERVATION_STATUS_OPTIONS.map((option) => (
-                                  <option key={`reservation-status-${order.id}-${option.value}`} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className={`order-status-chip ${statusChipClass(normalizedStatus)}`}>
-                                {formatEnumLabel(normalizedStatus)}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              className="reservation-inline-icon-btn"
-                              aria-label={isReservationEditorOpen(order.id, "status") ? "Close status selector" : "Set status"}
-                              onClick={() => setReservationEditorOpen(order.id, "status", !isReservationEditorOpen(order.id, "status"))}
-                              disabled={updatingOrderId === order.id}
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            {isReservationSaved(order.id, "status") ? (
-                              <small className="reservation-saved-inline"><Check size={12} />Saved</small>
-                            ) : null}
-                          </div>
-                        </td>
-                        {isSuperAdmin ? (
-                          <td>
-                            <button
-                              type="button"
-                              className="reservation-delete-btn"
-                              onClick={() => openReservationDeleteModal(order)}
-                              disabled={updatingOrderId === order.id}
-                            >
-                              <Trash2 size={14} />
-                              <span>Delete</span>
-                            </button>
-                          </td>
-                        ) : null}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <AdminReservationsTable
+            isAdminLoading={isAdminLoading}
+            reservationTableColumnCount={reservationTableColumnCount}
+            filteredReservations={filteredReservations}
+            isSuperAdmin={isSuperAdmin}
+            updatingOrderId={updatingOrderId}
+            productById={productById}
+            mopOtherDrafts={mopOtherDrafts}
+            setMopOtherDrafts={setMopOtherDrafts}
+            priceDrafts={priceDrafts}
+            setPriceDrafts={setPriceDrafts}
+            downpaymentDrafts={downpaymentDrafts}
+            setDownpaymentDrafts={setDownpaymentDrafts}
+            balanceDrafts={balanceDrafts}
+            setBalanceDrafts={setBalanceDrafts}
+            isReservationEditorOpen={isReservationEditorOpen}
+            setReservationEditorOpen={setReservationEditorOpen}
+            isReservationSaved={isReservationSaved}
+            updateReservationStatus={updateReservationStatus}
+            saveReservationPrice={saveReservationPrice}
+            saveReservationMonetary={saveReservationMonetary}
+            openReservationDeleteModal={openReservationDeleteModal}
+            onError={setMessage}
+          />
         </section>
       ) : null}
 
-      {activeAdminSection === "promotions" ? (
-        <PromotionsSection token={token} />
+      {isSuperAdmin && activeAdminSection === "promotions" ? (
+        <PromotionsSection token={token} isSuperAdmin={isSuperAdmin} brandOptions={brandOptions} />
       ) : null}
 
       {isSuperAdmin && activeAdminSection === "users" ? (
-        <section className="card products-card admin-section">
-          <div className="section-head">
-            <h2>Admin Users</h2>
-            <button
-              type="button"
-              onClick={() => {
-                setNewAdminForm({ username: "", password: "", role: "ADMIN" });
-                setNewAdminModal({ isOpen: true });
-              }}
-            >
-              Add Admin
-            </button>
-          </div>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adminUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td>{user.username}</td>
-                    <td>{user.role}</td>
-                    <td>{user.enabled ? "Active" : "Disabled"}</td>
-                    <td>
-                      {user.role === "ADMIN" ? (
-                        <div className="admin-user-action">
-                          {user.enabled ? (
-                            <button
-                              type="button"
-                              className="btn-delete admin-action-btn quick-tooltip"
-                              data-tooltip="Disable"
-                              aria-label="Disable admin"
-                              onClick={() => setAdminUserStatus(user.id, false).catch((err) => setMessage(err.message))}
-                            >
-                              <ShieldX size={15} />
-                              <span className="admin-action-label">Disable</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="admin-action-btn quick-tooltip"
-                              data-tooltip="Enable"
-                              aria-label="Enable admin"
-                              onClick={() => setAdminUserStatus(user.id, true).catch((err) => setMessage(err.message))}
-                            >
-                              <ShieldCheck size={15} />
-                              <span className="admin-action-label">Enable</span>
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        "-"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <AdminUsersSection
+          adminUsers={adminUsers}
+          onAddAdmin={() => {
+            setNewAdminForm({ username: "", password: "", role: "ADMIN" });
+            setNewAdminModal({ isOpen: true });
+          }}
+          onToggleUserStatus={setAdminUserStatus}
+          onError={setMessage}
+        />
       ) : null}
 
-      {productActionModal.type ? (
-        <div className="modal-backdrop" onClick={() => setProductActionModal({ type: null, productId: "" })}>
-          <section className="modal-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="breakdown-header stock-summary-header">
-              <h2>
-                {productActionModal.type === "create" ? "Add Product" : null}
-                {productActionModal.type === "edit"
-                  ? `Update Product${editProductForm.name ? ` - ${editProductForm.name}` : ""}${editImageColorway ? ` (${formatColorwayLabel(editImageColorway)})` : ""}`
-                  : null}
-                {productActionModal.type === "stock"
-                  ? `Manage Stock${stockModalProduct ? ` - ${(stockModalProduct.brand || "").trim()} ${(stockModalProduct.name || "").trim()}`.trim() : ""}${stockForm.colorway ? ` (${formatColorwayLabel(stockForm.colorway)})` : ""}`
-                  : null}
-              </h2>
-              <button type="button" className="modal-close-btn" onClick={() => setProductActionModal({ type: null, productId: "" })}>
-                ✕
-              </button>
-            </div>
+      <ProductActionModalShell
+        isOpen={Boolean(productActionModal.type)}
+        title={productActionModalTitle}
+        onClose={() => setProductActionModal({ type: null, productId: "" })}
+        message={message}
+      >
 
             {productActionModal.type === "create" ? (
               <>
@@ -3225,15 +2036,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
               </div>
             ) : null}
 
-            {productActionModal.type === "stock" ? (
-              <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                <p style={{ fontSize: "15px", color: "#64748b" }}>Loading stock summary...</p>
-              </div>
-            ) : null}
-            <p className="message">{message}</p>
-          </section>
-        </div>
-      ) : null}
+        {productActionModal.type === "stock" ? (
+          <div style={{ textAlign: "center", padding: "40px 20px" }}>
+            <p style={{ fontSize: "15px", color: "#64748b" }}>Loading stock summary...</p>
+          </div>
+        ) : null}
+      </ProductActionModalShell>
 
       <StockSummaryModal
         isOpen={isStockSummaryOpen && productActionModal.type === "stock"}
@@ -3269,46 +2077,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         formatPriceLabel={formatPriceLabel}
         customerMarkup={CUSTOMER_MARKUP}
         hasSizeGuide={Boolean(stockSizeGuide && stockGuideSection)}
-        onOpenSizeGuide={() => setIsStockGuideOpen(true)}
+        onOpenSizeGuide={openStockGuideModal}
         supplierSuggestions={stockSummarySupplierSuggestions}
       />
 
-      {isStockGuideOpen && stockSizeGuide && stockGuideSection ? (
-        <div className="modal-overlay" onClick={() => setIsStockGuideOpen(false)}>
-          <section className="modal-panel modal-panel-compact size-guide-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="breakdown-header">
-              <h2>{stockSizeGuide.brandLabel} Size Guide</h2>
-              <button type="button" className="modal-close-btn" aria-label="Close size guide" onClick={() => setIsStockGuideOpen(false)}>✕</button>
-            </div>
-            <div className="size-guide-table-wrap">
-              <table className="size-guide-table">
-                <thead>
-                  <tr>
-                    {stockGuideSection.columns.map((column) => (
-                      <th key={`stock-guide-head-modal-${column.key}`}>{column.label}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {stockGuideSection.rows.map((row, index) => (
-                    <tr key={`stock-guide-row-modal-${index}`}>
-                      {stockGuideSection.columns.map((column) => (
-                        <td key={`stock-guide-cell-modal-${column.key}-${index}`}>{row[column.key] || "-"}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <small className="field-hint" style={{ marginTop: 4 }}>
-              Reference from {stockSizeGuide.sourceLabel}. Actual fit may vary by model.
-            </small>
-            {stockSizeGuide.fitNote ? (
-              <small className="field-hint" style={{ marginTop: 0 }}>{stockSizeGuide.fitNote}</small>
-            ) : null}
-          </section>
-        </div>
-      ) : null}
+      <AdminSizeGuideModal
+        isOpen={isStockGuideOpen && Boolean(stockSizeGuide) && Boolean(stockGuideSection)}
+        onClose={closeStockGuideModal}
+        sizeGuide={stockSizeGuide}
+        guideSection={stockGuideSection}
+      />
 
       <DeleteModal
         deleteModal={deleteModal}
@@ -3363,22 +2141,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         savedProductNames={savedProductNames}
         deleteSavedProductName={deleteSavedProductName}
       />
-      {successModal.isOpen ? (
-        <div className="modal-overlay" onClick={() => setSuccessModal({ isOpen: false, message: "" })}>
-          <section className="modal-panel modal-panel-compact" onClick={(e) => e.stopPropagation()}>
-            <div className="breakdown-header">
-              <h2>Success</h2>
-              <button type="button" className="modal-close-btn" aria-label="Close success modal" onClick={() => setSuccessModal({ isOpen: false, message: "" })}>✕</button>
-            </div>
-            <div className="modal-success-content">
-              <p style={{ margin: "16px 0", textAlign: "center" }}>{successModal.message}</p>
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <button type="button" onClick={() => setSuccessModal({ isOpen: false, message: "" })} style={{ minWidth: "120px" }}>OK</button>
-              </div>
-            </div>
-          </section>
-        </div>
-      ) : null}
+      <AdminSuccessModal
+        isOpen={successModal.isOpen}
+        message={successModal.message}
+        onClose={() => setSuccessModal({ isOpen: false, message: "" })}
+      />
       {message || undoQueue.length > 0 ? (
         <div className="toast-banner">
           {message ? <span className="toast-message-text">{message}</span> : null}
