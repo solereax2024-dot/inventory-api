@@ -332,7 +332,7 @@ export default function StockSummaryModal({
             <table className="stock-summary-table">
               <thead>
                 <tr>
-                  <th style={{ width: "32px" }}>
+                  <th className="stock-select-col">
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
@@ -384,7 +384,7 @@ export default function StockSummaryModal({
 
                     return (
                       <tr key={`stock-summary-${activeStockSizeGroup}-${row.baseSize}`} className={isSelected ? "selected" : ""}>
-                        <td style={{ width: "32px", textAlign: "center" }}>
+                        <td className="stock-select-col">
                           <input
                             type="checkbox"
                             checked={isSelected}

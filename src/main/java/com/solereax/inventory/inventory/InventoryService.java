@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class InventoryService {
     private static final String MANUAL_STOCK_ADJUSTMENT_REASON = "Manual adjustment";
+    private static final String NO_SUPPLIER_REFERENCE = "__NO_SUPPLIER__";
 
     private final ProductRepository productRepository;
     private final ProductViewSessionRepository productViewSessionRepository;
@@ -555,7 +556,8 @@ public class InventoryService {
         String normalizedSize = UsSizeStandard.normalizeAndValidate(request.size());
         String normalizedColorway = ColorwayStandard.normalizeAndValidate(request.colorway());
         String normalizedSupplier = trimToNull(request.supplier());
-        String referenceSupplier = trimToNull(request.referenceSupplier());
+        boolean noSupplierReference = NO_SUPPLIER_REFERENCE.equals(request.referenceSupplier());
+        String referenceSupplier = noSupplierReference ? null : trimToNull(request.referenceSupplier());
         if (request.quantityChange() > 0 && normalizedSupplier == null) {
             throw new IllegalArgumentException("Supplier is required when adding stock.");
         }
@@ -596,6 +598,7 @@ public class InventoryService {
                 matchingStocks,
                 normalizedSupplier,
                 referenceSupplier,
+                noSupplierReference,
                 request.quantityChange()
         );
 
@@ -1281,6 +1284,7 @@ public class InventoryService {
             List<ProductStock> matchingStocks,
             String normalizedSupplier,
             String referenceSupplier,
+            boolean noSupplierReference,
             int quantityChange
     ) {
         if (quantityChange > 0) {
@@ -1291,6 +1295,19 @@ public class InventoryService {
                             .filter(stock -> stock.getSupplier() == null && stock.getQuantity() == 0)
                             .findFirst()
                             .orElseGet(() -> createStock(product, normalizedColorway, normalizedSize, sizeGroup, normalizedSupplier)));
+        }
+
+        if (noSupplierReference) {
+            List<ProductStock> noSupplierStocks = matchingStocks.stream()
+                    .filter(stock -> trimToNull(stock.getSupplier()) == null)
+                    .toList();
+            if (noSupplierStocks.size() == 1) {
+                return noSupplierStocks.getFirst();
+            }
+            if (noSupplierStocks.isEmpty()) {
+                throw new IllegalArgumentException("Selected supplier batch was not found for this size.");
+            }
+            throw new IllegalArgumentException("Multiple no-supplier batches found for this size. Please update one supplier batch first.");
         }
 
         if (referenceSupplier != null) {

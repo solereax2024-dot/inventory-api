@@ -1278,7 +1278,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
         try {
           const supplierEntries = row.supplierEntries?.length
-            ? row.supplierEntries
+            ? [...row.supplierEntries].sort((a, b) => {
+              const aNoSupplier = !String(a?.supplier || "").trim();
+              const bNoSupplier = !String(b?.supplier || "").trim();
+              if (aNoSupplier === bNoSupplier) return 0;
+              return aNoSupplier ? -1 : 1;
+            })
             : [{ supplier: row.supplier || "", quantity: Number(row.total || 0) }];
 
           for (const entry of supplierEntries) {
@@ -1291,7 +1296,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
                 sizeGroup: getStockStorageGroup(stockModalDepartment, activeStockSizeGroup),
                 quantityChange: Number(entry.quantity || 0) > 0 ? -Number(entry.quantity || 0) : 0,
                 price: null,
-                referenceSupplier: entry.supplier || null,
+                referenceSupplier: String(entry.supplier || "").trim() ? entry.supplier : "__NO_SUPPLIER__",
                 supplier: null,
                 clearPrice: true,
                 clearSupplier: true

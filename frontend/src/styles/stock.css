@@ -375,6 +375,21 @@ body.theme-dark .stock-size-guide-cta {
   padding: 4px 2px;
 }
 
+.stock-summary-table .stock-select-col {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  text-align: center;
+}
+
+.modal-table-wrap .stock-summary-table thead th.stock-select-col {
+  z-index: 4;
+}
+
+.modal-table-wrap .stock-summary-table tbody td.stock-select-col {
+  z-index: 1;
+}
+
 .stock-summary-table th:nth-child(2),
 .stock-summary-table td:nth-child(2) {
   width: 76px;
