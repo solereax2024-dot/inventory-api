@@ -8,7 +8,7 @@ import {
   ADMIN_PAGE_SIZE
 } from "../../constants";
 import { apiRequest, uploadImage } from "../../utils/api";
-import { formatEnumLabel, getProductTypeOptions } from "../../utils/format";
+import { formatColorwayLabel, formatEnumLabel, getProductTypeOptions } from "../../utils/format";
 import { sanitizeColorways, normalizeColorwayValue } from "../../utils/colorway";
 import { getAdminScopedColorway, getProductColorways, mapProductToForm } from "../../utils/productFormHelpers";
 import { getStockStorageGroup } from "../../utils/stock";

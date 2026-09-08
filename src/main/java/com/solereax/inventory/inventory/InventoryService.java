@@ -112,6 +112,7 @@ public class InventoryService {
             String sizeFilter,
             String stock,
             Boolean sale,
+            String view,
             String search,
             String sort,
             int page,
@@ -121,16 +122,42 @@ public class InventoryService {
         int safePage = Math.max(1, page);
         Pageable pageable = PageRequest.of(safePage - 1, safePageSize, resolveCatalogSort(sort));
         String searchPattern = buildSearchPattern(search);
+        boolean colorwayView = "COLORWAY".equalsIgnoreCase(trimToNull(view));
+
+        String normalizedBrand = normalizeLower(brand);
+        String normalizedDepartment = normalizeUpper(department);
+        String normalizedCategory = normalizeUpper(category);
+        String normalizedProductType = normalizeUpper(productType);
+        String normalizedColorway = normalizeUpper(colorway);
+        String normalizedSize = normalizeUpper(sizeFilter);
+        String normalizedStock = normalizeStockFilter(stock);
+
+        if (colorwayView) {
+            return listPublicCatalogColorwayView(
+                    normalizedBrand,
+                    normalizedDepartment,
+                    normalizedCategory,
+                    normalizedProductType,
+                    normalizedColorway,
+                    normalizedSize,
+                    normalizedStock,
+                    Boolean.TRUE.equals(sale),
+                    searchPattern,
+                    sort,
+                    safePage,
+                    safePageSize
+            );
+        }
 
         if (Boolean.TRUE.equals(sale)) {
             return listPublicCatalogSaleFiltered(
-                    normalizeLower(brand),
-                    normalizeUpper(department),
-                    normalizeUpper(category),
-                    normalizeUpper(productType),
-                    normalizeUpper(colorway),
-                    normalizeUpper(sizeFilter),
-                    normalizeStockFilter(stock),
+                    normalizedBrand,
+                    normalizedDepartment,
+                    normalizedCategory,
+                    normalizedProductType,
+                    normalizedColorway,
+                    normalizedSize,
+                    normalizedStock,
                     searchPattern,
                     sort,
                     safePage,
@@ -139,13 +166,13 @@ public class InventoryService {
         }
 
         Page<Long> idPage = productRepository.findCatalogProductIds(
-                normalizeLower(brand),
-                normalizeUpper(department),
-                normalizeUpper(category),
-                normalizeUpper(productType),
-                normalizeUpper(colorway),
-                normalizeUpper(sizeFilter),
-                normalizeStockFilter(stock),
+                normalizedBrand,
+                normalizedDepartment,
+                normalizedCategory,
+                normalizedProductType,
+                normalizedColorway,
+                normalizedSize,
+                normalizedStock,
                 searchPattern,
                 pageable
         );
@@ -175,6 +202,171 @@ public class InventoryService {
                 .toList();
 
         return new PublicCatalogPageResponse(items, idPage.getTotalElements(), safePage, safePageSize);
+    }
+
+    private PublicCatalogPageResponse listPublicCatalogColorwayView(
+            String brand,
+            String department,
+            String category,
+            String productType,
+            String colorway,
+            String sizeFilter,
+            String stockFilter,
+            boolean saleOnly,
+            String searchPattern,
+            String sort,
+            int page,
+            int pageSize
+    ) {
+        Pageable allCandidates = PageRequest.of(0, 2000, resolveCatalogSort(sort));
+        Page<Long> candidateIdPage = productRepository.findCatalogProductIds(
+                brand,
+                department,
+                category,
+                productType,
+                colorway,
+                sizeFilter,
+                stockFilter,
+                searchPattern,
+                allCandidates
+        );
+
+        List<Long> candidateIds = candidateIdPage.getContent();
+        if (candidateIds.isEmpty()) {
+            return new PublicCatalogPageResponse(Collections.emptyList(), 0, page, pageSize);
+        }
+
+        List<Product> hydrated = productRepository.findAllByIdInWithStocks(candidateIds);
+        Map<Long, Product> productById = new HashMap<>();
+        hydrated.forEach(product -> productById.put(product.getId(), product));
+        List<Product> orderedProducts = candidateIds.stream()
+                .map(productById::get)
+                .filter(product -> product != null)
+                .toList();
+
+        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
+        Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
+        List<PublicCatalogProductResponse> matchedItems = orderedProducts.stream()
+                .map(product -> toCatalogResponse(
+                        product,
+                        viewCountByProductId.getOrDefault(product.getId(), 0L),
+                        activeSalePromotions
+                ))
+                .filter(item -> !saleOnly || (item.salePromotions() != null && !item.salePromotions().isEmpty()))
+                .toList();
+
+        List<PublicCatalogProductResponse> colorwayItems = expandCatalogItemsToColorwayEntries(matchedItems, colorway);
+        int fromIndex = Math.min((page - 1) * pageSize, colorwayItems.size());
+        int toIndex = Math.min(fromIndex + pageSize, colorwayItems.size());
+        List<PublicCatalogProductResponse> pageItems = colorwayItems.subList(fromIndex, toIndex);
+
+        return new PublicCatalogPageResponse(pageItems, colorwayItems.size(), page, pageSize);
+    }
+
+    private List<PublicCatalogProductResponse> expandCatalogItemsToColorwayEntries(
+            List<PublicCatalogProductResponse> items,
+            String requestedColorway
+    ) {
+        List<PublicCatalogProductResponse> expanded = new ArrayList<>();
+        String normalizedRequestedColorway = trimToNull(requestedColorway);
+
+        for (PublicCatalogProductResponse item : items) {
+            LinkedHashSet<String> availableColorways = new LinkedHashSet<>();
+            if (item.colorways() != null) {
+                item.colorways().forEach(color -> availableColorways.add(normalizeColorway(color)));
+            }
+            availableColorways.add(normalizeColorway(item.primaryColorway()));
+
+            for (String normalizedColorway : availableColorways) {
+                if (normalizedRequestedColorway != null && !normalizedRequestedColorway.equals(normalizedColorway)) {
+                    continue;
+                }
+
+                ColorwayDetailsResponse details = findColorwayDetails(item.colorwayDetails(), normalizedColorway);
+                String imageUrl = findColorwayImage(item.colorwayImages(), normalizedColorway, item.imageUrl());
+
+                String description = details != null && trimToNull(details.description()) != null
+                        ? details.description()
+                        : item.description();
+                String department = details != null && trimToNull(details.department()) != null
+                        ? details.department()
+                        : item.department();
+                String category = details != null && trimToNull(details.category()) != null
+                        ? details.category()
+                        : item.category();
+                String productType = details != null && trimToNull(details.productType()) != null
+                        ? details.productType()
+                        : item.productType();
+                BigDecimal minPrice = details == null
+                        ? item.minPrice()
+                        : (details.minPrice() != null ? details.minPrice() : (details.price() != null ? details.price() : item.minPrice()));
+                BigDecimal maxPrice = details == null
+                        ? item.maxPrice()
+                        : (details.maxPrice() != null ? details.maxPrice() : (details.price() != null ? details.price() : item.maxPrice()));
+
+                Map<String, String> colorwayImages = imageUrl == null
+                        ? Collections.emptyMap()
+                        : Map.of(normalizedColorway, imageUrl);
+                Map<String, ColorwayDetailsResponse> colorwayDetails = details == null
+                        ? Collections.emptyMap()
+                        : Map.of(normalizedColorway, details);
+
+                expanded.add(new PublicCatalogProductResponse(
+                        item.id(),
+                        item.name(),
+                        item.brand(),
+                        description,
+                        item.mainColor(),
+                        department,
+                        category,
+                        productType,
+                        imageUrl,
+                        colorwayImages,
+                        colorwayDetails,
+                        List.of(normalizedColorway),
+                        normalizedColorway,
+                        minPrice,
+                        maxPrice,
+                        item.viewCount(),
+                        item.salePromotions()
+                ));
+            }
+        }
+
+        return expanded;
+    }
+
+    private ColorwayDetailsResponse findColorwayDetails(Map<String, ColorwayDetailsResponse> byColorway, String colorway) {
+        if (byColorway == null || byColorway.isEmpty()) {
+            return null;
+        }
+        String normalized = normalizeColorway(colorway);
+        for (Map.Entry<String, ColorwayDetailsResponse> entry : byColorway.entrySet()) {
+            if (normalized.equals(normalizeColorway(entry.getKey()))) {
+                return entry.getValue();
+            }
+        }
+        for (Map.Entry<String, ColorwayDetailsResponse> entry : byColorway.entrySet()) {
+            if ("DEFAULT".equals(normalizeColorway(entry.getKey()))) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private String findColorwayImage(Map<String, String> byColorway, String colorway, String fallbackImageUrl) {
+        if (byColorway != null && !byColorway.isEmpty()) {
+            String normalized = normalizeColorway(colorway);
+            for (Map.Entry<String, String> entry : byColorway.entrySet()) {
+                if (normalized.equals(normalizeColorway(entry.getKey()))) {
+                    String exact = trimToNull(entry.getValue());
+                    if (exact != null) {
+                        return exact;
+                    }
+                }
+            }
+        }
+        return trimToNull(fallbackImageUrl);
     }
 
     private PublicCatalogPageResponse listPublicCatalogSaleFiltered(

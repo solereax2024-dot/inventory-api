@@ -206,6 +206,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         if (sortBy !== "BRAND_ASC") params.set("sort", sortBy);
         params.set("page", String(currentPage));
         params.set("pageSize", String(catalogPageSize));
+        if (!isDesktopCatalog) params.set("view", "COLORWAY");
 
         const data = await apiRequest(`/api/public/catalog?${params.toString()}`);
         if (cancelled) return;
@@ -403,6 +404,25 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     setSizeFilter("ALL");
     setColorwayFilter("ALL");
     setSortBy("BRAND_ASC");
+  };
+
+  const resolveCardColorway = (product) => {
+    if (!product) {
+      return "DEFAULT";
+    }
+    if (colorwayFilter === "ALL") {
+      return product._popularColorway || product.primaryColorway || product.mainColor || "DEFAULT";
+    }
+
+    const requested = normalizeColorwayValue(colorwayFilter);
+    const availableColorways = [
+      ...(Array.isArray(product.colorways) ? product.colorways : []),
+      ...((product.stocks || []).map((stock) => stock?.colorway))
+    ];
+    const matched = availableColorways.find(
+      (value) => normalizeColorwayValue(value) === requested
+    );
+    return matched || colorwayFilter;
   };
 
 
@@ -623,7 +643,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                onReserveClick={openReservePage}
                 showSaleBadge={saleFilter}
                  metaLayout={saleFilter ? "line" : "legacy"}
-                initialColorway={product._popularColorway || product.primaryColorway}
+                initialColorway={resolveCardColorway(product)}
              />
            ))}
          {!isLoadingProducts && catalogTotalElements === 0 ? <p className="field-hint">No products match your filters.</p> : null}
