@@ -136,7 +136,7 @@ export default function ProductCard({
   const uniqueViewCount = Number(product?.viewCount || 0);
   const isLegacyMetaLayout = metaLayout === "legacy";
   const brandLabel = product?.brand || (colorwayDetails?.department ? formatEnumLabel(colorwayDetails.department) : "");
-  const priceLabel = formatPriceDisplay(colorwayDetails?.minPrice, colorwayDetails?.maxPrice, { minimumOnly: true });
+  const priceLabel = formatPriceDisplay(colorwayDetails?.minPrice, colorwayDetails?.maxPrice);
   const primarySalePromotion = Array.isArray(product?.salePromotions) && product.salePromotions.length > 0
     ? product.salePromotions[0]
     : null;
@@ -158,8 +158,7 @@ export default function ProductCard({
   const salePriceLabel = canPreviewSalePrice
     ? formatPriceDisplay(
       applySaleDiscount(colorwayDetails?.minPrice ?? colorwayDetails?.price),
-      applySaleDiscount(colorwayDetails?.maxPrice ?? colorwayDetails?.price),
-      { minimumOnly: true }
+      applySaleDiscount(colorwayDetails?.maxPrice ?? colorwayDetails?.price)
     )
     : "";
 
