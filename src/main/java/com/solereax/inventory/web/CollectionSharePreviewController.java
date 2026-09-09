@@ -59,14 +59,17 @@ public class CollectionSharePreviewController {
         updated = replaceMetaContent(updated, "name", "description", description);
         updated = replaceLinkHref(updated, "canonical", canonicalUrl);
 
-        updated = replaceMetaContent(updated, "property", "og:title", title);
-        updated = replaceMetaContent(updated, "property", "og:description", description);
-        updated = replaceMetaContent(updated, "property", "og:url", canonicalUrl);
-        updated = replaceMetaContent(updated, "property", "og:image", imageUrl);
+         updated = replaceMetaContent(updated, "property", "og:title", title);
+         updated = replaceMetaContent(updated, "property", "og:description", description);
+         updated = replaceMetaContent(updated, "property", "og:url", canonicalUrl);
+         updated = replaceMetaContent(updated, "property", "og:image", imageUrl);
+         updated = replaceMetaContent(updated, "property", "og:image:width", "1200");
+         updated = replaceMetaContent(updated, "property", "og:image:height", "630");
+         updated = replaceMetaContent(updated, "property", "og:image:type", "image/png");
 
-        updated = replaceMetaContent(updated, "name", "twitter:title", title);
-        updated = replaceMetaContent(updated, "name", "twitter:description", description);
-        updated = replaceMetaContent(updated, "name", "twitter:image", imageUrl);
+         updated = replaceMetaContent(updated, "name", "twitter:title", title);
+         updated = replaceMetaContent(updated, "name", "twitter:description", description);
+         updated = replaceMetaContent(updated, "name", "twitter:image", imageUrl);
 
         updated = replaceOrganizationJsonLd(updated, canonicalUrl, imageUrl);
 

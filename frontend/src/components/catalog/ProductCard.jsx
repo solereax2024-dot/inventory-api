@@ -200,6 +200,9 @@ export default function ProductCard({
           <Eye size={11} strokeWidth={2.2} />
           {uniqueViewCount.toLocaleString()}
         </small>
+        {isSelectedColorwayOutOfStock ? (
+          <span className="product-sold-out-badge">Sold Out</span>
+        ) : null}
         {(() => {
           const imgUrl = product?.colorwayImages
             ? getColorwayImageUrl(product, selectedColorway)

@@ -14,7 +14,7 @@ public final class PricingPolicy {
     }
 
     public static BigDecimal toCustomerPrice(BigDecimal supplierPrice, BigDecimal overrideMarkup) {
-        if (supplierPrice == null) {
+        if (supplierPrice == null || supplierPrice.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
         BigDecimal markup = overrideMarkup == null ? CUSTOMER_MARKUP : overrideMarkup;
