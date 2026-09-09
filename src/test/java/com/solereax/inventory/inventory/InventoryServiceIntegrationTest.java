@@ -77,6 +77,7 @@ class InventoryServiceIntegrationTest {
                 null,
                 "Supplier 1",
                 null,
+                null,
                 null
         ), "admin:test");
 
@@ -89,6 +90,7 @@ class InventoryServiceIntegrationTest {
                 null,
                 null,
                 "Supplier 2",
+                null,
                 null,
                 null
         ), "admin:test");

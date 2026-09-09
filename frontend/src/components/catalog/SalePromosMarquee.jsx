@@ -6,6 +6,10 @@ export default function SalePromosMarquee({ names = [], itemCount = 0, variant =
     return null;
   }
 
+  // Keep the track long enough for a seamless visual loop, even with few promo labels.
+  const repeatCount = cleanedNames.length < 6 ? 4 : 2;
+  const loopNames = Array.from({ length: repeatCount }, () => cleanedNames).flat();
+
   void itemCount;
 
   return (
@@ -14,7 +18,7 @@ export default function SalePromosMarquee({ names = [], itemCount = 0, variant =
         <div className="sale-promos-marquee-track">
           {[0, 1].map((copyIndex) => (
             <ul key={`promo-copy-${copyIndex}`} className="sale-promos-marquee-group" aria-hidden={copyIndex === 1 ? "true" : undefined}>
-              {cleanedNames.map((name, index) => (
+              {loopNames.map((name, index) => (
                 <li key={`${copyIndex}-${name}-${index}`} className="sale-promos-marquee-pill">
                   <span>{name}</span>
                 </li>

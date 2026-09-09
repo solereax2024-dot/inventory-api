@@ -18,6 +18,7 @@ public record AdminAdjustStockRequest(
         String referenceSupplier,
         String supplier,
         Boolean clearPrice,
-        Boolean clearSupplier
+        Boolean clearSupplier,
+        Boolean forceResetAll
 ) {
 }

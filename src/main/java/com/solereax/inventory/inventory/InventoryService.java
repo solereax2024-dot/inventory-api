@@ -587,6 +587,20 @@ public class InventoryService {
                 sizeGroup.name()
         );
 
+        if (Boolean.TRUE.equals(request.forceResetAll())) {
+            Instant now = Instant.now();
+            for (ProductStock stock : matchingStocks) {
+                stock.setQuantity(0);
+                stock.setPrice(null);
+                stock.setMarkup(null);
+                stock.setSupplier(null);
+                stock.setUpdatedAt(now);
+                productStockRepository.save(stock);
+            }
+            return toAdminResponse(productRepository.findById(productId)
+                    .orElseThrow(() -> new NotFoundException("Product not found: " + productId)));
+        }
+
         if (request.quantityChange() == 0
                 && request.price() != null
                 && referenceSupplier == null

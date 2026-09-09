@@ -25,7 +25,7 @@
   gap: 0;
   width: max-content;
   max-width: none;
-  animation: sale-promos-marquee-scroll 35s linear infinite;
+  animation: sale-promos-marquee-scroll 24s linear infinite;
   will-change: transform;
   white-space: nowrap;
 }
@@ -42,13 +42,6 @@
   flex: 0 0 auto;
 }
 
-.sale-promos-marquee-track-wrap:hover .sale-promos-marquee-track {
-  animation-play-state: paused;
-}
-
-.sale-promos-marquee--luxe .sale-promos-marquee-track-wrap:hover .sale-promos-marquee-track {
-  animation-play-state: running;
-}
 
 .sale-promos-marquee-pill {
   display: inline-flex;
