@@ -41,6 +41,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [popularRailScrollRatio, setPopularRailScrollRatio] = useState(0);
   const [canScrollPopularRail, setCanScrollPopularRail] = useState(false);
   const popularRailRef = useRef(null);
+  const catalogTopRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,7 +207,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         if (sortBy !== "BRAND_ASC") params.set("sort", sortBy);
         params.set("page", String(currentPage));
         params.set("pageSize", String(catalogPageSize));
-        if (!isDesktopCatalog) params.set("view", "COLORWAY");
 
         const data = await apiRequest(`/api/public/catalog?${params.toString()}`);
         if (cancelled) return;
@@ -379,6 +379,26 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     navigate(`/collections?brand=${encodeURIComponent(brandName)}`);
   };
 
+  const handleCatalogPageChange = (nextPageOrUpdater) => {
+    setCurrentPage((prevPage) => {
+      const resolvedPage = typeof nextPageOrUpdater === "function"
+        ? nextPageOrUpdater(prevPage)
+        : nextPageOrUpdater;
+      return resolvedPage;
+    });
+
+    window.requestAnimationFrame(() => {
+      const targetTop = catalogTopRef.current
+        ? window.scrollY + catalogTopRef.current.getBoundingClientRect().top - 16
+        : 0;
+      window.scrollTo({
+        top: Math.max(0, targetTop),
+        left: 0,
+        behavior: "auto"
+      });
+    });
+  };
+
   useEffect(() => {
     const payload = {
       content_type: "product_catalog",
@@ -449,7 +469,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
       ) : null}
 
 
-      <section className="filter-bar">
+      <section className="filter-bar" ref={catalogTopRef}>
         <div className="filter-bar-top">
           <div className="filter-results">
             <span className="filter-results-count">
@@ -642,8 +662,12 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                product={product}
                onReserveClick={openReservePage}
                 showSaleBadge={saleFilter}
-                 metaLayout={saleFilter ? "line" : "legacy"}
+                metaLayout={saleFilter ? "line" : "legacy"}
                 initialColorway={resolveCardColorway(product)}
+                autoCycleColorways={!isDesktopCatalog && colorwayFilter === "ALL"}
+                autoCycleOffsetMs={((product.id || 0) % 5) * 320}
+                autoCycleIntervalMs={2400 + (((product.id || 0) % 4) * 220)}
+                autoCycleJitterMs={380}
              />
            ))}
          {!isLoadingProducts && catalogTotalElements === 0 ? <p className="field-hint">No products match your filters.</p> : null}
@@ -657,7 +681,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 <button
                   type="button"
                   className="page-number-btn page-nav-btn"
-                  onClick={() => setCurrentPage(1)}
+                  onClick={() => handleCatalogPageChange(1)}
                   aria-label="First page"
                 >
                   «
@@ -667,7 +691,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 <button
                   type="button"
                   className="page-number-btn page-nav-btn"
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  onClick={() => handleCatalogPageChange((prev) => Math.max(1, prev - 1))}
                   aria-label="Previous page"
                 >
                   ‹
@@ -683,7 +707,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 <button
                   type="button"
                   className={`page-number-btn ${activePage === item.value ? "active" : ""}`}
-                  onClick={() => setCurrentPage(item.value)}
+                  onClick={() => handleCatalogPageChange(item.value)}
                   aria-current={activePage === item.value ? "page" : undefined}
                 >
                   {item.value}
@@ -697,7 +721,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 <button
                   type="button"
                   className="page-number-btn page-nav-btn"
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() => handleCatalogPageChange((prev) => Math.min(totalPages, prev + 1))}
                   aria-label="Next page"
                 >
                   ›
@@ -707,7 +731,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
                 <button
                   type="button"
                   className="page-number-btn page-nav-btn"
-                  onClick={() => setCurrentPage(totalPages)}
+                  onClick={() => handleCatalogPageChange(totalPages)}
                   aria-label="Last page"
                 >
                   »
