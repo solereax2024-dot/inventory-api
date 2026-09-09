@@ -106,19 +106,19 @@ export default function ReserveConfirmModal({
 
           <div className="reserve-confirm-promo-panel modal-card-soft">
             <div className="reserve-confirm-promo-head modal-flex-between-gap-12 modal-mb-10">
-              <div>
-                <strong>Promo Voucher</strong>
-                <p className="field-hint modal-m-0">Apply a code from the super admin promotion list to lower the reservation total.</p>
+              <div className="reserve-confirm-promo-copy">
+                <strong className="reserve-confirm-promo-title">Promo Voucher</strong>
+                <p className="field-hint modal-m-0 reserve-confirm-promo-description">Apply a code from the super admin promotion list to lower the reservation total.</p>
                 {hasAutoSale ? (
-                  <p className="field-hint modal-m-0">
+                  <p className="field-hint modal-m-0 reserve-confirm-promo-autosale">
                     Auto-applied sale: <strong>{autoSalePromotion?.name || "Sale Promo"}</strong>
                   </p>
                 ) : null}
               </div>
               {appliedPromotion ? (
-                <span className="order-status-chip status-paid">Applied</span>
+                <span className="order-status-chip status-paid reserve-confirm-promo-status">Applied</span>
               ) : hasAutoSale ? (
-                <span className="order-status-chip status-paid">Sale Auto Applied</span>
+                <span className="order-status-chip status-paid reserve-confirm-promo-status">Sale Auto Applied</span>
               ) : null}
             </div>
             <div className="modal-flex-gap-8-wrap">

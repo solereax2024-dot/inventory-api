@@ -7,7 +7,7 @@ const TARGET_MODES = {
   BRANDS: "BRANDS",
   CATEGORIES: "CATEGORIES",
   PRODUCT_TYPES: "PRODUCT_TYPES",
-  PRODUCT_IDS: "PRODUCT_IDS"
+  SPECIFIC_PRODUCTS: "SPECIFIC_PRODUCTS"
 };
 
 const PRODUCT_TYPE_TARGET_OPTIONS = [...new Set(Object.values(PRODUCT_TYPE_OPTIONS).flat())].sort();
@@ -25,6 +25,7 @@ function emptyTargetFields(targetMode) {
     targetBrands: "",
     targetCategories: "",
     targetProductTypes: "",
+    targetProductBrand: "",
     targetProductIds: ""
   };
 }
@@ -62,13 +63,36 @@ function renderMultiSelect({ label, field, options, value, setForm, hint }) {
   );
 }
 
-export default function PromotionForm({ form, setForm, onGenerateCode, brandOptions = [] }) {
+export default function PromotionForm({ form, setForm, onGenerateCode, brandOptions = [], productOptions = [] }) {
   const isSalePromo = form.promoType === "SALE";
   const targetMode = form.targetMode || TARGET_MODES.ALL;
   const isBrandTarget = targetMode === TARGET_MODES.BRANDS;
   const isCategoryTarget = targetMode === TARGET_MODES.CATEGORIES;
   const isProductTypeTarget = targetMode === TARGET_MODES.PRODUCT_TYPES;
-  const isProductIdTarget = targetMode === TARGET_MODES.PRODUCT_IDS;
+  const isSpecificProductTarget = targetMode === TARGET_MODES.SPECIFIC_PRODUCTS;
+  const selectedProductIds = parseCsvValues(form.targetProductIds);
+  const selectedProductIdSet = new Set(selectedProductIds);
+  const visibleProductOptionsMap = new Map();
+
+  (productOptions || []).forEach((product) => {
+    const productId = String(product?.id || "").trim();
+    const productBrand = String(product?.brand || "").trim();
+    if (!productId) {
+      return;
+    }
+    if (form.targetProductBrand && productBrand !== form.targetProductBrand && !selectedProductIdSet.has(productId)) {
+      return;
+    }
+    visibleProductOptionsMap.set(productId, product);
+  });
+
+  const visibleProductOptions = Array.from(visibleProductOptionsMap.values()).sort((a, b) => {
+    const brandCompare = String(a?.brand || "").localeCompare(String(b?.brand || ""));
+    if (brandCompare !== 0) {
+      return brandCompare;
+    }
+    return String(a?.name || "").localeCompare(String(b?.name || ""));
+  });
 
   const resetTargetMode = (nextMode) => {
     setForm((prev) => ({
@@ -210,7 +234,7 @@ export default function PromotionForm({ form, setForm, onGenerateCode, brandOpti
           <option value={TARGET_MODES.BRANDS}>Brands</option>
           <option value={TARGET_MODES.CATEGORIES}>Categories</option>
           <option value={TARGET_MODES.PRODUCT_TYPES}>Product Types</option>
-          <option value={TARGET_MODES.PRODUCT_IDS}>Product IDs</option>
+          <option value={TARGET_MODES.SPECIFIC_PRODUCTS}>Specific Products</option>
         </select>
         <small className="field-hint">Choose one scope only. Leave it on All Products if the promo should apply broadly.</small>
       </div>
@@ -238,16 +262,50 @@ export default function PromotionForm({ form, setForm, onGenerateCode, brandOpti
         setForm,
         hint: "Hold Command or Ctrl to pick multiple product types."
       }) : null}
-      {isProductIdTarget ? (
-        <div>
-          <label className="field-label">Product IDs</label>
-          <input
-            value={form.targetProductIds}
-            onChange={(e) => setForm((prev) => ({ ...prev, targetProductIds: e.target.value }))}
-            placeholder="101, 205"
-          />
-          <small className="field-hint">Use comma-separated product IDs when you need to target specific items.</small>
-        </div>
+      {isSpecificProductTarget ? (
+        <>
+          <div>
+            <label className="field-label">Brand</label>
+            <select
+              value={form.targetProductBrand || ""}
+              onChange={(e) => setForm((prev) => ({
+                ...prev,
+                targetProductBrand: e.target.value,
+                targetProductIds: ""
+              }))}
+            >
+              <option value="">Select brand</option>
+              {brandOptions.map((brand) => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
+            </select>
+            <small className="field-hint">Choose the brand first so the product list stays fast and focused.</small>
+          </div>
+          <div>
+            <label className="field-label">Product Name</label>
+            <select
+              multiple
+              className="promo-target-select"
+              size={Math.min(Math.max(visibleProductOptions.length || 4, 4), 8)}
+              value={selectedProductIds}
+              disabled={!form.targetProductBrand && selectedProductIds.length === 0}
+              onChange={(e) => updateCsvSelection(setForm, "targetProductIds", Array.from(e.target.selectedOptions).map((option) => option.value))}
+            >
+              {visibleProductOptions.length > 0 ? (
+                visibleProductOptions.map((product) => (
+                  <option key={product.id} value={String(product.id)}>
+                    {product.name}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>
+                  {form.targetProductBrand ? "No products available" : "Select a brand first"}
+                </option>
+              )}
+            </select>
+            <small className="field-hint">Selected products automatically include all their colorways.</small>
+          </div>
+        </>
       ) : null}
     </div>
   );

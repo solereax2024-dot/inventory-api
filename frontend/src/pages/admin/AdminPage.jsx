@@ -1641,7 +1641,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       ) : null}
 
       {isSuperAdmin && activeAdminSection === "promotions" ? (
-        <PromotionsSection token={token} isSuperAdmin={isSuperAdmin} brandOptions={brandOptions} />
+        <PromotionsSection token={token} isSuperAdmin={isSuperAdmin} brandOptions={brandOptions} products={products} />
       ) : null}
 
       {isSuperAdmin && activeAdminSection === "users" ? (

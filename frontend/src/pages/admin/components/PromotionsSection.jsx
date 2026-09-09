@@ -4,6 +4,7 @@ import { apiRequest } from "../../../utils/api";
 import { PHP_CURRENCY } from "../../../utils/price";
 import {
   ApplyPromotionScheduleModal,
+  ConfirmActionModal,
   CreatePromotionModal,
   EditPromotionModal
 } from "../../../components/modals/admin";
@@ -18,7 +19,7 @@ const TARGET_MODES = {
   BRANDS: "BRANDS",
   CATEGORIES: "CATEGORIES",
   PRODUCT_TYPES: "PRODUCT_TYPES",
-  PRODUCT_IDS: "PRODUCT_IDS"
+  SPECIFIC_PRODUCTS: "SPECIFIC_PRODUCTS"
 };
 
 const DEFAULT_FORM = {
@@ -38,10 +39,27 @@ const DEFAULT_FORM = {
   targetBrands: "",
   targetCategories: "",
   targetProductTypes: "",
+  targetProductBrand: "",
   targetProductIds: "",
   targetMode: TARGET_MODES.ALL,
   buyOneTakeOne: false
 };
+
+const DEFAULT_DELETE_MODAL = {
+  isOpen: false,
+  promotionId: null,
+  promotionCode: "",
+  promotionName: "",
+  promoType: PROMO_TYPES.VOUCHER,
+  deleting: false
+};
+
+function parseCsvValues(rawValue) {
+  return String(rawValue || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 function toDatetimeLocalValue(value) {
   if (!value) return "";
@@ -98,7 +116,7 @@ function getPromotionTargetMode(promo) {
   if (promo.targetBrands) return TARGET_MODES.BRANDS;
   if (promo.targetCategories) return TARGET_MODES.CATEGORIES;
   if (promo.targetProductTypes) return TARGET_MODES.PRODUCT_TYPES;
-  if (promo.targetProductIds) return TARGET_MODES.PRODUCT_IDS;
+  if (promo.targetProductIds) return TARGET_MODES.SPECIFIC_PRODUCTS;
   return TARGET_MODES.ALL;
 }
 
@@ -127,12 +145,22 @@ function buildPromoPayload(form, options = {}) {
     targetBrands: targetMode === TARGET_MODES.BRANDS ? (String(form.targetBrands || "").trim() || null) : null,
     targetCategories: targetMode === TARGET_MODES.CATEGORIES ? (String(form.targetCategories || "").trim() || null) : null,
     targetProductTypes: targetMode === TARGET_MODES.PRODUCT_TYPES ? (String(form.targetProductTypes || "").trim() || null) : null,
-    targetProductIds: targetMode === TARGET_MODES.PRODUCT_IDS ? (String(form.targetProductIds || "").trim() || null) : null,
+    targetProductIds: targetMode === TARGET_MODES.SPECIFIC_PRODUCTS ? (String(form.targetProductIds || "").trim() || null) : null,
     buyOneTakeOne: Boolean(form.buyOneTakeOne)
   };
 }
 
-function buildEditForm(promo) {
+function inferTargetProductBrand(rawProductIds, productOptions) {
+  const brands = new Set(
+    parseCsvValues(rawProductIds)
+      .map((id) => (productOptions || []).find((product) => String(product.id) === String(id)))
+      .map((product) => String(product?.brand || "").trim())
+      .filter(Boolean)
+  );
+  return brands.size === 1 ? Array.from(brands)[0] : "";
+}
+
+function buildEditForm(promo, productOptions = []) {
   return {
     promoType: promo.promoType || PROMO_TYPES.VOUCHER,
     code: promo.code || "",
@@ -150,19 +178,38 @@ function buildEditForm(promo) {
     targetBrands: promo.targetBrands || "",
     targetCategories: promo.targetCategories || "",
     targetProductTypes: promo.targetProductTypes || "",
+    targetProductBrand: inferTargetProductBrand(promo.targetProductIds, productOptions),
     targetProductIds: promo.targetProductIds || "",
     targetMode: getPromotionTargetMode(promo),
     buyOneTakeOne: Boolean(promo.buyOneTakeOne)
   };
 }
 
-function formatAppliesToSummary(promo) {
+function formatProductTargets(rawProductIds, productOptionsById) {
+  const ids = parseCsvValues(rawProductIds);
+  if (ids.length === 0) {
+    return "";
+  }
+  const labels = ids.map((id) => {
+    const product = productOptionsById.get(String(id));
+    if (!product) {
+      return `#${id}`;
+    }
+    return product.brand ? `${product.brand} ${product.name}` : product.name;
+  });
+  if (labels.length <= 2) {
+    return labels.join(", ");
+  }
+  return `${labels.slice(0, 2).join(", ")} +${labels.length - 2} more`;
+}
+
+function formatAppliesToSummary(promo, productOptionsById) {
   const tags = [];
   if (promo.lowStockOnly) tags.push("Low stock");
   if (promo.targetBrands) tags.push(`Brands: ${promo.targetBrands}`);
   if (promo.targetCategories) tags.push(`Categories: ${promo.targetCategories}`);
   if (promo.targetProductTypes) tags.push(`Product Types: ${promo.targetProductTypes}`);
-  if (promo.targetProductIds) tags.push(`Product IDs: ${promo.targetProductIds}`);
+  if (promo.targetProductIds) tags.push(`Products: ${formatProductTargets(promo.targetProductIds, productOptionsById)}`);
   if (promo.buyOneTakeOne) tags.push("Buy 1 Take 1");
   return tags.length > 0 ? tags.join(" · ") : "All products";
 }
@@ -192,7 +239,7 @@ function getPromotionStatus(promo) {
   return { label: "Active", className: "status-paid" };
 }
 
-export default function PromotionsSection({ token, isSuperAdmin, brandOptions = [] }) {
+export default function PromotionsSection({ token, isSuperAdmin, brandOptions = [], products = [] }) {
   const [promotions, setPromotions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -202,9 +249,29 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
   const [editModal, setEditModal] = useState({ isOpen: false, promotionId: null });
   const [editForm, setEditForm] = useState(DEFAULT_FORM);
   const [applyModal, setApplyModal] = useState({ isOpen: false, promotionId: null, startsAt: "", endsAt: "" });
+  const [deleteModal, setDeleteModal] = useState(DEFAULT_DELETE_MODAL);
 
   const activeCount = useMemo(() => promotions.filter((promo) => getPromotionStatus(promo).label === "Active").length, [promotions]);
   const totalUsage = useMemo(() => promotions.reduce((sum, promo) => sum + Number(promo.usedCount || 0), 0), [promotions]);
+  const productOptions = useMemo(
+    () => (products || [])
+      .map((product) => ({
+        id: product.id,
+        brand: String(product?.brand || "").trim(),
+        name: String(product?.name || "").trim()
+      }))
+      .filter((product) => product.id && product.name)
+      .sort((a, b) => {
+        const brandCompare = a.brand.localeCompare(b.brand);
+        if (brandCompare !== 0) return brandCompare;
+        return a.name.localeCompare(b.name);
+      }),
+    [products]
+  );
+  const productOptionsById = useMemo(
+    () => new Map(productOptions.map((product) => [String(product.id), product])),
+    [productOptions]
+  );
 
   const loadPromotions = async () => {
     if (!isSuperAdmin) {
@@ -237,7 +304,7 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
     setMessage("");
     setSuccessMessage("");
     setEditModal({ isOpen: true, promotionId: promotion.id });
-    setEditForm(buildEditForm(promotion));
+    setEditForm(buildEditForm(promotion, productOptions));
   };
 
   const closeEditPromotion = () => {
@@ -258,6 +325,23 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
 
   const closeApplyModal = () => {
     setApplyModal({ isOpen: false, promotionId: null, startsAt: "", endsAt: "" });
+  };
+
+  const openDeletePromotionModal = (promotion) => {
+    setMessage("");
+    setSuccessMessage("");
+    setDeleteModal({
+      isOpen: true,
+      promotionId: promotion.id,
+      promotionCode: promotion.code || "",
+      promotionName: promotion.name || "",
+      promoType: promotion.promoType || PROMO_TYPES.VOUCHER,
+      deleting: false
+    });
+  };
+
+  const closeDeletePromotionModal = () => {
+    setDeleteModal((prev) => (prev.deleting ? prev : DEFAULT_DELETE_MODAL));
   };
 
   const saveEditPromotion = async () => {
@@ -352,16 +436,22 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
     }
   };
 
-  const deletePromotion = async (promotion) => {
-    if (!window.confirm(`Delete promotion ${promotion.code}?`)) {
+  const confirmDeletePromotion = async () => {
+    if (!deleteModal.promotionId || deleteModal.deleting) {
       return;
     }
+    setDeleteModal((prev) => ({ ...prev, deleting: true }));
     try {
-      await apiRequest(`/api/admin/promotions/${promotion.id}`, "DELETE", undefined, token);
-      setSuccessMessage(`Promotion ${promotion.code} deleted.`);
+      await apiRequest(`/api/admin/promotions/${deleteModal.promotionId}`, "DELETE", undefined, token);
+      const promoLabel = deleteModal.promoType === PROMO_TYPES.SALE
+        ? (deleteModal.promotionName || "Sale promotion")
+        : (deleteModal.promotionCode || deleteModal.promotionName || "Promotion");
+      setSuccessMessage(`Promotion ${promoLabel} deleted.`);
+      setDeleteModal(DEFAULT_DELETE_MODAL);
       await loadPromotions();
     } catch (err) {
       setMessage(err.message || "Failed to delete promotion.");
+      setDeleteModal((prev) => ({ ...prev, deleting: false }));
     }
   };
 
@@ -421,6 +511,7 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
         form={form}
         setForm={setForm}
         brandOptions={brandOptions}
+        productOptions={productOptions}
         onGenerateCode={() => generateCode(setForm)}
         onSave={createPromotion}
         onClose={() => setIsCreateOpen(false)}
@@ -431,6 +522,7 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
         form={editForm}
         setForm={setEditForm}
         brandOptions={brandOptions}
+        productOptions={productOptions}
         onGenerateCode={() => generateCode(setEditForm)}
         onSave={saveEditPromotion}
         onClose={closeEditPromotion}
@@ -444,6 +536,20 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
         onEndsAtChange={(value) => setApplyModal((prev) => ({ ...prev, endsAt: value }))}
         onApply={applyPromotionSchedule}
         onClose={closeApplyModal}
+      />
+
+      <ConfirmActionModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Promotion"
+        description="This will permanently remove the selected promotion from the table and it can no longer be used by customers. This action cannot be undone."
+        targetLabel={deleteModal.promoType === PROMO_TYPES.SALE
+          ? (deleteModal.promotionName || "Sale promotion")
+          : (deleteModal.promotionCode
+            ? `${deleteModal.promotionCode}${deleteModal.promotionName ? ` · ${deleteModal.promotionName}` : ""}`
+            : (deleteModal.promotionName || "Promotion"))}
+        confirmLabel={deleteModal.deleting ? "Deleting..." : "Delete Promotion"}
+        onCancel={closeDeletePromotionModal}
+        onConfirm={confirmDeletePromotion}
       />
 
       {successMessage ? <div className="toast-banner" style={{ position: "relative", marginBottom: 12 }}>{successMessage}</div> : null}
@@ -499,7 +605,7 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
                       </span>
                     </td>
                     <td>{promo.usedCount}{promo.usageLimit ? ` / ${promo.usageLimit}` : ""}</td>
-                    <td>{formatAppliesToSummary(promo)}</td>
+                    <td>{formatAppliesToSummary(promo, productOptionsById)}</td>
                     <td>
                       <div className="actions-inline admin-actions-inline">
                         <button
@@ -566,7 +672,8 @@ export default function PromotionsSection({ token, isSuperAdmin, brandOptions = 
                           type="button"
                           className="btn-delete admin-action-btn quick-tooltip"
                           data-tooltip="Delete"
-                          onClick={() => deletePromotion(promo)}
+                          onClick={() => openDeletePromotionModal(promo)}
+                          disabled={deleteModal.deleting}
                         >
                           <Trash2 size={15} />
                           <span className="admin-action-label">Delete</span>

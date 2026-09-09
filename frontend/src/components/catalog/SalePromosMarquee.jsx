@@ -6,9 +6,9 @@ export default function SalePromosMarquee({ names = [], itemCount = 0, variant =
     return null;
   }
 
-  // Duplicate items so the marquee can loop seamlessly.
-  const repeatCount = cleanedNames.length < 3 ? 5 : cleanedNames.length < 5 ? 4 : 3;
-  const loopNames = Array.from({ length: repeatCount }, () => cleanedNames).flat();
+  // Render exactly two identical halves so translateX(-50%) lands on the start
+  // of the second copy without cutting a label mid-loop.
+  const loopNames = [...cleanedNames, ...cleanedNames];
 
   return (
     <section className={`sale-promos-marquee sale-promos-marquee--${variant}`} aria-label="Ongoing sale promotions">

@@ -207,6 +207,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         if (sortBy !== "BRAND_ASC") params.set("sort", sortBy);
         params.set("page", String(currentPage));
         params.set("pageSize", String(catalogPageSize));
+        if (!isDesktopCatalog) params.set("view", "COLORWAY");
 
         const data = await apiRequest(`/api/public/catalog?${params.toString()}`);
         if (cancelled) return;
@@ -658,16 +659,12 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
            ))
            : paginatedProducts.map((product) => (
              <ProductCard
-                key={product.id}
+                 key={`${product.id}-${product.primaryColorway || product.mainColor || "DEFAULT"}`}
                product={product}
                onReserveClick={openReservePage}
                 showSaleBadge={saleFilter}
                 metaLayout={saleFilter ? "line" : "legacy"}
                 initialColorway={resolveCardColorway(product)}
-                autoCycleColorways={!isDesktopCatalog && colorwayFilter === "ALL"}
-                autoCycleOffsetMs={((product.id || 0) % 5) * 320}
-                autoCycleIntervalMs={2400 + (((product.id || 0) % 4) * 220)}
-                autoCycleJitterMs={380}
              />
            ))}
          {!isLoadingProducts && catalogTotalElements === 0 ? <p className="field-hint">No products match your filters.</p> : null}

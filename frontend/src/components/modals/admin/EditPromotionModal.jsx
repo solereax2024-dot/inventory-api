@@ -6,6 +6,7 @@ export default function EditPromotionModal({
   form,
   setForm,
   brandOptions,
+  productOptions,
   onGenerateCode,
   onSave,
   onClose
@@ -23,6 +24,7 @@ export default function EditPromotionModal({
           form={form}
           setForm={setForm}
           brandOptions={brandOptions}
+          productOptions={productOptions}
           onGenerateCode={onGenerateCode}
         />
         <div className="confirm-action-footer promo-modal-footer promo-modal-footer-spaced modal-sticky-footer">

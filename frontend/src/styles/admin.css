@@ -208,6 +208,16 @@
   min-width: 0;
 }
 
+.reservation-field-cell > .reservation-original-price,
+.reservation-field-cell > .reservation-saved-inline {
+  grid-column: 1 / -1;
+}
+
+.reservation-field-cell > .reservation-inline-icon-btn {
+  grid-column: 3;
+  grid-row: 1;
+}
+
 .reservation-field-cell > .order-status-chip,
 .reservation-field-cell > .reservation-status-select,
 .reservation-status-cell > .order-status-chip,
@@ -638,11 +648,14 @@
 
 .reservations-table th:nth-child(8),
 .reservations-table td:nth-child(8),
-.reservations-table th:nth-child(9),
-.reservations-table td:nth-child(9),
 .reservations-table th:nth-child(10),
 .reservations-table td:nth-child(10) {
   min-width: 170px;
+}
+
+.reservations-table th:nth-child(9),
+.reservations-table td:nth-child(9) {
+  min-width: 220px;
 }
 
 .products-table {
@@ -1033,9 +1046,8 @@
      gap: 0;
    }
 
-    .reservation-status-cell,
     .reservation-field-cell {
-      grid-template-columns: minmax(0, 1fr) 32px auto;
+      grid-template-columns: minmax(0, 1fr) 32px;
       column-gap: 6px;
       min-width: 130px;
     }

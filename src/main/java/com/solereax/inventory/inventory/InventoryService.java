@@ -270,6 +270,7 @@ public class InventoryService {
     ) {
         List<PublicCatalogProductResponse> expanded = new ArrayList<>();
         String normalizedRequestedColorway = trimToNull(requestedColorway);
+        Set<String> seenEntries = new LinkedHashSet<>();
 
         for (PublicCatalogProductResponse item : items) {
             LinkedHashSet<String> availableColorways = new LinkedHashSet<>();
@@ -277,9 +278,16 @@ public class InventoryService {
                 item.colorways().forEach(color -> availableColorways.add(normalizeColorway(color)));
             }
             availableColorways.add(normalizeColorway(item.primaryColorway()));
+            if (availableColorways.size() > 1) {
+                availableColorways.remove("DEFAULT");
+            }
 
             for (String normalizedColorway : availableColorways) {
                 if (normalizedRequestedColorway != null && !normalizedRequestedColorway.equals(normalizedColorway)) {
+                    continue;
+                }
+                String dedupeKey = item.id() + "::" + normalizedColorway;
+                if (!seenEntries.add(dedupeKey)) {
                     continue;
                 }
 
