@@ -368,7 +368,7 @@ body.theme-dark .product-sale-badge {
 .product-sold-out-badge {
   position: absolute;
   top: 8px;
-  right: 8px;
+  left: 8px;
   z-index: 3;
   display: inline-flex;
   align-items: center;

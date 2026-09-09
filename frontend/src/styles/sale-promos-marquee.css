@@ -17,8 +17,6 @@
   background: #0b0b0b;
   padding: 6px 0;
   box-sizing: border-box;
-  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
 }
 
 .sale-promos-marquee-track {

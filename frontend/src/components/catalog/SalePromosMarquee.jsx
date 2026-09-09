@@ -6,8 +6,9 @@ export default function SalePromosMarquee({ names = [], itemCount = 0, variant =
     return null;
   }
 
-  // Keep the track long enough for a seamless visual loop, even with few promo labels.
-  const repeatCount = cleanedNames.length < 6 ? 4 : 2;
+  // Keep each loop copy dense enough so the banner never looks empty while scrolling.
+  const minimumVisibleLabels = 20;
+  const repeatCount = Math.max(2, Math.ceil(minimumVisibleLabels / cleanedNames.length));
   const loopNames = Array.from({ length: repeatCount }, () => cleanedNames).flat();
 
   void itemCount;
