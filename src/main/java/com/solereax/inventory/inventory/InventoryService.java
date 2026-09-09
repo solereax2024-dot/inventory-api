@@ -62,10 +62,15 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<PublicProductResponse> listPublicProducts() {
         List<Product> products = productRepository.findAllActiveWithStocks();
+        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(products);
         return products
                 .stream()
-                .map(product -> toPublicResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
+                .map(product -> toPublicResponse(
+                        product,
+                        viewCountByProductId.getOrDefault(product.getId(), 0L),
+                        activeSalePromotions
+                ))
                 .toList();
     }
 
@@ -97,9 +102,14 @@ public class InventoryService {
             return Collections.emptyList();
         }
 
+        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
         return orderedProducts.stream()
-                .map(product -> toPublicResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
+                .map(product -> toPublicResponse(
+                        product,
+                        viewCountByProductId.getOrDefault(product.getId(), 0L),
+                        activeSalePromotions
+                ))
                 .toList();
     }
 
@@ -452,7 +462,7 @@ public class InventoryService {
         Product product = productRepository.findActiveByIdWithStocks(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
         long viewCount = product.getId() == null ? 0L : productViewSessionRepository.countByProductId(product.getId());
-        return toPublicResponse(product, viewCount);
+        return toPublicResponse(product, viewCount, loadActiveSalePromotions());
     }
 
     @Transactional(readOnly = true)
@@ -923,17 +933,7 @@ public class InventoryService {
             }
         }
 
-        List<SalePromotionBadgeResponse> salePromotions = activeSalePromotions.stream()
-                .filter(promotion -> PromotionTargetingSupport.matchesProduct(promotion, product))
-                .map(promotion -> new SalePromotionBadgeResponse(
-                        promotion.getId(),
-                        promotion.getCode(),
-                        promotion.getName(),
-                        promotion.getDiscountType().name(),
-                        promotion.getDiscountValue(),
-                        promotion.isBuyOneTakeOne()
-                ))
-                .toList();
+        List<SalePromotionBadgeResponse> salePromotions = toSalePromotionBadges(product, activeSalePromotions);
 
         return new PublicCatalogProductResponse(
                 product.getId(),
@@ -984,7 +984,7 @@ public class InventoryService {
         return "DEFAULT";
     }
 
-    private PublicProductResponse toPublicResponse(Product product, Long viewCount) {
+    private PublicProductResponse toPublicResponse(Product product, Long viewCount, List<Promotion> activeSalePromotions) {
         List<SizeStockResponse> stocks = product.getStocks().stream()
                 .sorted(UsSizeStandard.stockComparator())
                 .map(stock -> new SizeStockResponse(
@@ -997,6 +997,7 @@ public class InventoryService {
                         trimToNull(stock.getSupplier())
                 ))
                 .toList();
+        List<SalePromotionBadgeResponse> salePromotions = toSalePromotionBadges(product, activeSalePromotions);
         return new PublicProductResponse(
                 product.getId(),
                 product.getName(),
@@ -1011,7 +1012,8 @@ public class InventoryService {
                 mapColorwayImages(product),
                 mapColorwayDetails(product, true),
                 stocks,
-                viewCount == null ? 0L : viewCount
+                viewCount == null ? 0L : viewCount,
+                salePromotions
         );
     }
 
@@ -1047,8 +1049,26 @@ public class InventoryService {
                 mapColorwayImages(product),
                 mapColorwayDetails(product, false),
                 stocks,
-                viewCount == null ? 0L : viewCount
+                viewCount == null ? 0L : viewCount,
+                Collections.emptyList()
         );
+    }
+
+    private List<SalePromotionBadgeResponse> toSalePromotionBadges(Product product, List<Promotion> activeSalePromotions) {
+        if (product == null || activeSalePromotions == null || activeSalePromotions.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return activeSalePromotions.stream()
+                .filter(promotion -> PromotionTargetingSupport.matchesProduct(promotion, product))
+                .map(promotion -> new SalePromotionBadgeResponse(
+                        promotion.getId(),
+                        promotion.getCode(),
+                        promotion.getName(),
+                        promotion.getDiscountType().name(),
+                        promotion.getDiscountValue(),
+                        promotion.isBuyOneTakeOne()
+                ))
+                .toList();
     }
 
     private Map<String, String> mapColorwayImages(Product product) {

@@ -18,6 +18,7 @@ public record PublicProductResponse(
         Map<String, String> colorwayImages,
         Map<String, ColorwayDetailsResponse> colorwayDetails,
         List<SizeStockResponse> stocks,
-        Long viewCount
+        Long viewCount,
+        List<SalePromotionBadgeResponse> salePromotions
 ) {
 }
