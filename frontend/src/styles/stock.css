@@ -382,13 +382,6 @@ body.theme-dark .stock-size-guide-cta {
   text-align: center;
 }
 
-.modal-table-wrap .stock-summary-table thead th.stock-select-col {
-  z-index: 4;
-}
-
-.modal-table-wrap .stock-summary-table tbody td.stock-select-col {
-  z-index: 1;
-}
 
 .stock-summary-table th:nth-child(2),
 .stock-summary-table td:nth-child(2) {

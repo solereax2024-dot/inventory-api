@@ -1335,6 +1335,13 @@ public class InventoryService {
             if (noSupplierStocks.isEmpty()) {
                 throw new IllegalArgumentException("Selected supplier batch was not found for this size.");
             }
+            // When resetting (quantityChange < 0) with multiple no-supplier batches,
+            // select the one with the highest quantity (most content to reset)
+            if (quantityChange < 0) {
+                return noSupplierStocks.stream()
+                        .max((a, b) -> Integer.compare(a.getQuantity(), b.getQuantity()))
+                        .orElseThrow(() -> new IllegalArgumentException("No stock batches found for this size."));
+            }
             throw new IllegalArgumentException("Multiple no-supplier batches found for this size. Please update one supplier batch first.");
         }
 

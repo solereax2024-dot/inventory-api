@@ -17,8 +17,6 @@
   background: #0b0b0b;
   padding: 6px 0;
   box-sizing: border-box;
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
 }
 
 .sale-promos-marquee-track {
@@ -27,7 +25,7 @@
   gap: 0;
   width: max-content;
   max-width: none;
-  animation: sale-promos-marquee-scroll 54s linear infinite;
+  animation: sale-promos-marquee-scroll 35s linear infinite;
   will-change: transform;
   white-space: nowrap;
 }
@@ -92,10 +90,6 @@
     overflow: hidden;
   }
 
-  .sale-promos-marquee-track {
-    animation-duration: 42s;
-  }
-
   .sale-promos-marquee-group {
     gap: 12px;
     padding-inline: 12px;
@@ -104,11 +98,6 @@
   .sale-promos-marquee-pill {
     font-size: 11.75px;
     letter-spacing: 0.015em;
-  }
-
-  .sale-promos-marquee-track-wrap {
-    -webkit-mask-image: none;
-    mask-image: none;
   }
 
 }
