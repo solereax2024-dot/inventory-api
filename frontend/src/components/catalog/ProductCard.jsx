@@ -128,11 +128,13 @@ export default function ProductCard({
         productType: product?.productType || "",
         price: product?.price ?? null,
         minPrice: product?.minPrice ?? product?.price ?? null,
-        maxPrice: product?.maxPrice ?? product?.price ?? null
+        maxPrice: product?.maxPrice ?? product?.price ?? null,
+        hasStock: Boolean(product?.hasStock ?? false)
       };
     },
     [product, selectedColorway]
   );
+  const isSelectedColorwayOutOfStock = !Boolean(colorwayDetails?.hasStock ?? product?.hasStock ?? false);
   const uniqueViewCount = Number(product?.viewCount || 0);
   const isLegacyMetaLayout = metaLayout === "legacy";
   const brandLabel = product?.brand || (colorwayDetails?.department ? formatEnumLabel(colorwayDetails.department) : "");
@@ -206,7 +208,7 @@ export default function ProductCard({
             return (
               <img
                 key={`${product.id}-${selectedColorway}`}
-                className={`product-image${autoCycleColorways ? " product-image-cycle" : ""}`}
+                  className={`product-image${autoCycleColorways ? " product-image-cycle" : ""}${isSelectedColorwayOutOfStock ? " product-image-out-of-stock" : ""}`}
                 src={imgUrl}
                 alt={product.name}
                 loading="lazy"

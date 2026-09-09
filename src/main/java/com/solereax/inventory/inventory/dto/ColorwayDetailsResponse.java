@@ -9,7 +9,8 @@ public record ColorwayDetailsResponse(
         String productType,
         BigDecimal price,
         BigDecimal minPrice,
-        BigDecimal maxPrice
+        BigDecimal maxPrice,
+        boolean hasStock
 ) {
 }
 

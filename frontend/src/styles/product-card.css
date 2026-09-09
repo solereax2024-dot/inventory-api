@@ -467,7 +467,12 @@ body.theme-dark .product-sale-caption {
   object-fit: contain;
   object-position: center;
   display: block;
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, opacity 0.22s ease, filter 0.22s ease;
+}
+
+.product-image-out-of-stock {
+  opacity: 0.52;
+  filter: grayscale(0.55) saturate(0.82);
 }
 
 .product-image-cycle {

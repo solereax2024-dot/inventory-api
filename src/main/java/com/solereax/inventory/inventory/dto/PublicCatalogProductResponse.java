@@ -20,6 +20,7 @@ public record PublicCatalogProductResponse(
         String primaryColorway,
         BigDecimal minPrice,
         BigDecimal maxPrice,
+        boolean hasStock,
         Long viewCount,
         List<SalePromotionBadgeResponse> salePromotions
 ) {

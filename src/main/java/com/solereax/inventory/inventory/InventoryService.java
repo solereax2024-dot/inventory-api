@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -322,6 +323,7 @@ public class InventoryService {
                 BigDecimal maxPrice = details == null
                         ? item.maxPrice()
                         : (details.maxPrice() != null ? details.maxPrice() : (details.price() != null ? details.price() : item.maxPrice()));
+                boolean hasStock = details != null ? details.hasStock() : item.hasStock();
 
                 Map<String, String> colorwayImages = imageUrl == null
                         ? Collections.emptyMap()
@@ -346,6 +348,7 @@ public class InventoryService {
                         normalizedColorway,
                         minPrice,
                         maxPrice,
+                        hasStock,
                         item.viewCount(),
                         item.salePromotions()
                 ));
@@ -930,6 +933,8 @@ public class InventoryService {
         }
 
         Map<String, PriceRange> ranges = buildPriceRangesByColorway(product, true);
+        Set<String> colorwaysWithAvailableStock = collectColorwaysWithAvailableStock(product);
+        boolean hasStock = !colorwaysWithAvailableStock.isEmpty();
         PriceRange primaryRange = ranges.get(primaryColorway);
         BigDecimal minPrice = primaryRange == null ? null : primaryRange.min();
         BigDecimal maxPrice = primaryRange == null ? null : primaryRange.max();
@@ -965,6 +970,7 @@ public class InventoryService {
                 primaryColorway,
                 minPrice,
                 maxPrice,
+                hasStock,
                 viewCount == null ? 0L : viewCount,
                 salePromotions
         );
@@ -1099,16 +1105,20 @@ public class InventoryService {
     private Map<String, ColorwayDetailsResponse> mapColorwayDetails(Product product, boolean forPublicView) {
         Map<String, ColorwayDetailsResponse> values = new LinkedHashMap<>();
         Map<String, PriceRange> priceRangesByColorway = buildPriceRangesByColorway(product, forPublicView);
+        Set<String> colorwaysWithAvailableStock = collectColorwaysWithAvailableStock(product);
         product.getStocks().forEach(stock -> values.putIfAbsent(
                 normalizeColorway(stock.getColorway()),
-                fallbackColorwayDetails(product, stock.getColorway(), priceRangesByColorway, forPublicView)
+                fallbackColorwayDetails(product, stock.getColorway(), priceRangesByColorway, colorwaysWithAvailableStock, forPublicView)
         ));
         product.getColorwayImages().forEach(entry -> values.putIfAbsent(
                 normalizeColorway(entry.getColorway()),
-                fallbackColorwayDetails(product, entry.getColorway(), priceRangesByColorway, forPublicView)
+                fallbackColorwayDetails(product, entry.getColorway(), priceRangesByColorway, colorwaysWithAvailableStock, forPublicView)
         ));
         String normalizedMainColor = normalizeColorway(product.getMainColor());
-        values.putIfAbsent(normalizedMainColor, fallbackColorwayDetails(product, normalizedMainColor, priceRangesByColorway, forPublicView));
+        values.putIfAbsent(
+                normalizedMainColor,
+                fallbackColorwayDetails(product, normalizedMainColor, priceRangesByColorway, colorwaysWithAvailableStock, forPublicView)
+        );
 
         product.getColorwayDetails().forEach(entry -> {
             if (entry.getColorway() == null) {
@@ -1129,7 +1139,8 @@ public class InventoryService {
                                     forPublicView
                             ),
                             range == null ? null : range.min(),
-                            range == null ? null : range.max()
+                            range == null ? null : range.max(),
+                            colorwaysWithAvailableStock.contains(normalizedColorway)
                     )
             );
         });
@@ -1140,6 +1151,7 @@ public class InventoryService {
             Product product,
             String colorway,
             Map<String, PriceRange> priceRangesByColorway,
+            Set<String> colorwaysWithAvailableStock,
             boolean forPublicView
     ) {
         String normalizedColorway = normalizeColorway(colorway);
@@ -1151,8 +1163,17 @@ public class InventoryService {
                 product.getProductType(),
                 toResponsePrice(resolveColorwayBasePrice(product, normalizedColorway), null, forPublicView),
                 range == null ? null : range.min(),
-                range == null ? null : range.max()
+                range == null ? null : range.max(),
+                colorwaysWithAvailableStock.contains(normalizedColorway)
         );
+    }
+
+    private Set<String> collectColorwaysWithAvailableStock(Product product) {
+        return product.getStocks().stream()
+                .filter(stock -> stock.getQuantity() > 0)
+                .map(ProductStock::getColorway)
+                .map(this::normalizeColorway)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private BigDecimal toResponsePrice(BigDecimal supplierPrice, BigDecimal markup, boolean forPublicView) {

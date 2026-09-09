@@ -80,7 +80,8 @@ export function getColorwayDetails(product, colorway) {
       productType: "",
       price: null,
       minPrice: null,
-      maxPrice: null
+      maxPrice: null,
+      hasStock: false
     };
   }
 
@@ -97,7 +98,8 @@ export function getColorwayDetails(product, colorway) {
     productType: matched.productType || product.productType || "",
     price: matched.price ?? product.price ?? null,
     minPrice: matched.minPrice ?? matched.price ?? product.price ?? null,
-    maxPrice: matched.maxPrice ?? matched.price ?? product.price ?? null
+    maxPrice: matched.maxPrice ?? matched.price ?? product.price ?? null,
+    hasStock: Boolean(matched.hasStock ?? product.hasStock ?? false)
   };
 }
 
