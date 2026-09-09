@@ -4,7 +4,7 @@
   max-width: 100vw;
   min-width: 0;
   margin-inline: calc(50% - 50vw);
-  overflow-x: clip;
+  overflow: hidden;
 }
 
 .sale-promos-marquee-track-wrap {
@@ -15,11 +15,24 @@
   border: 0;
   border-radius: 0;
   background: #0b0b0b;
-  padding: 6px clamp(16px, 2.4vw, 32px);
+  padding: 6px 0;
   box-sizing: border-box;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
 }
 
 .sale-promos-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: max-content;
+  max-width: none;
+  animation: sale-promos-marquee-scroll 54s linear infinite;
+  will-change: transform;
+  white-space: nowrap;
+}
+
+.sale-promos-marquee-group {
   list-style: none;
   display: flex;
   align-items: center;
@@ -27,10 +40,8 @@
   width: max-content;
   max-width: none;
   margin: 0;
-  padding: 0;
-  animation: sale-promos-marquee-scroll 60s linear infinite;
-  will-change: transform;
-  white-space: nowrap;
+  padding: 0 clamp(16px, 2.4vw, 32px);
+  flex: 0 0 auto;
 }
 
 .sale-promos-marquee-track-wrap:hover .sale-promos-marquee-track {
@@ -78,17 +89,26 @@
 
 @media (max-width: 720px) {
   .sale-promos-marquee {
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
   .sale-promos-marquee-track {
-    animation-duration: 48s;
+    animation-duration: 42s;
+  }
+
+  .sale-promos-marquee-group {
     gap: 12px;
+    padding-inline: 12px;
   }
 
   .sale-promos-marquee-pill {
     font-size: 11.75px;
     letter-spacing: 0.015em;
+  }
+
+  .sale-promos-marquee-track-wrap {
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
 }
@@ -117,12 +137,16 @@ body.theme-dark .sale-promos-marquee--bold .sale-promos-marquee-pill {
   color: #f8fafc;
 }
 
-.sale-promos-marquee--luxe .sale-promos-marquee-pill + .sale-promos-marquee-pill {
+.sale-promos-marquee--luxe .sale-promos-marquee-group {
+  gap: 0;
+}
+
+.sale-promos-marquee--luxe .sale-promos-marquee-group .sale-promos-marquee-pill + .sale-promos-marquee-pill {
   position: relative;
   padding-left: 28px;
 }
 
-.sale-promos-marquee--luxe .sale-promos-marquee-pill + .sale-promos-marquee-pill::before {
+.sale-promos-marquee--luxe .sale-promos-marquee-group .sale-promos-marquee-pill + .sale-promos-marquee-pill::before {
   content: "•";
   position: absolute;
   left: 14px;
@@ -133,9 +157,6 @@ body.theme-dark .sale-promos-marquee--bold .sale-promos-marquee-pill {
   color: rgba(248, 250, 252, 0.68);
 }
 
-.sale-promos-marquee--luxe .sale-promos-marquee-track {
-  gap: 0;
-}
 
 
 body.theme-dark .sale-promos-marquee--luxe .sale-promos-marquee-pill {
