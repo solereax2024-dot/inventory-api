@@ -207,7 +207,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         if (sortBy !== "BRAND_ASC") params.set("sort", sortBy);
         params.set("page", String(currentPage));
         params.set("pageSize", String(catalogPageSize));
-        if (!isDesktopCatalog) params.set("view", "COLORWAY");
+        params.set("view", "COLORWAY");
 
         const data = await apiRequest(`/api/public/catalog?${params.toString()}`);
         if (cancelled) return;
