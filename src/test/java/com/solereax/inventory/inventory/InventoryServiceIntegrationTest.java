@@ -182,5 +182,54 @@ class InventoryServiceIntegrationTest {
         assertThat(response.colorwayDetails().get("ORANGE").minPrice()).isEqualByComparingTo("9000.00");
         assertThat(response.colorwayDetails().get("ORANGE").maxPrice()).isEqualByComparingTo("9000.00");
     }
+
+    @Test
+    void getPublicProductIgnoresZeroQuantityPlaceholderPricesWhenAvailableStockExists() {
+        Product product = new Product();
+        product.setName("Public Price Range Availability Test");
+        product.setBrand("Test Brand");
+        product.setDescription("Availability-aware pricing");
+        product.setDepartment("WOMEN");
+        product.setCategory("FOOTWEAR");
+        product.setProductType("TENNIS_SHOES");
+        product.setMainColor("WHITE SABA BLUE");
+        product.setPrice(new BigDecimal("10500.00"));
+        product.setActive(true);
+
+        ProductColorwayDetail detail = new ProductColorwayDetail();
+        detail.setProduct(product);
+        detail.setColorway("WHITE SABA BLUE");
+        detail.setDepartment("WOMEN");
+        detail.setCategory("FOOTWEAR");
+        detail.setProductType("TENNIS_SHOES");
+        detail.setPrice(new BigDecimal("10500.00"));
+        product.getColorwayDetails().add(detail);
+
+        ProductStock placeholder = new ProductStock();
+        placeholder.setProduct(product);
+        placeholder.setColorway("WHITE SABA BLUE");
+        placeholder.setSizeLabel("8");
+        placeholder.setSizeGroup("STANDARD");
+        placeholder.setQuantity(0);
+        placeholder.setPrice(new BigDecimal("10500.00"));
+        product.getStocks().add(placeholder);
+
+        ProductStock available = new ProductStock();
+        available.setProduct(product);
+        available.setColorway("WHITE SABA BLUE");
+        available.setSizeLabel("6");
+        available.setSizeGroup("STANDARD");
+        available.setQuantity(1);
+        available.setPrice(new BigDecimal("7700.00"));
+        available.setMarkup(new BigDecimal("2000.00"));
+        product.getStocks().add(available);
+
+        Product savedProduct = productRepository.save(product);
+
+        PublicProductResponse response = inventoryService.getPublicProduct(savedProduct.getId());
+
+        assertThat(response.colorwayDetails().get("WHITE SABA BLUE").minPrice()).isEqualByComparingTo("9700.00");
+        assertThat(response.colorwayDetails().get("WHITE SABA BLUE").maxPrice()).isEqualByComparingTo("9700.00");
+    }
 }
 

@@ -1190,15 +1190,17 @@ public class InventoryService {
 
         product.getStocks().forEach(stock -> {
             String colorway = normalizeColorway(stock.getColorway());
-            if (hasPositivePrice(stock.getPrice())) {
+            boolean shouldUseStockPrice = hasPositivePrice(stock.getPrice())
+                    && (!forPublicView || stock.getQuantity() > 0);
+            if (shouldUseStockPrice) {
                 colorwaysWithStockPrice.add(colorway);
+                mergePriceRange(
+                        minByColorway,
+                        maxByColorway,
+                        colorway,
+                        toResponsePrice(stock.getPrice(), stock.getMarkup(), forPublicView)
+                );
             }
-            mergePriceRange(
-                    minByColorway,
-                    maxByColorway,
-                    colorway,
-                    toResponsePrice(stock.getPrice(), stock.getMarkup(), forPublicView)
-            );
         });
 
         product.getColorwayDetails().forEach(detail -> {
