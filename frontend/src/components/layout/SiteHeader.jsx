@@ -46,6 +46,7 @@ export default function SiteHeader({
     location.pathname.startsWith("/collections/") ||
     location.pathname === "/collection" ||
     location.pathname.startsWith("/collection/");
+  const isFeaturedPath = location.pathname === "/featured" || location.pathname.startsWith("/featured/");
   const activeDepartment = (new URLSearchParams(location.search).get("department") || "").toUpperCase();
   const activeStock = (new URLSearchParams(location.search).get("stock") || "").toUpperCase();
   const activeSale = (new URLSearchParams(location.search).get("sale") || "").toLowerCase();
@@ -57,7 +58,7 @@ export default function SiteHeader({
     { label: "Women",    to: "/collections?department=WOMEN", isActive: isCatalogPath && activeDepartment === "WOMEN" },
     { label: "Kids",     to: "/collections?q=kids",           isActive: isCatalogPath && activeKeyword === "kids" },
     { label: "Sale",     to: "/collections?sale=true",  isActive: isCatalogPath && activeSale === "true" },
-    { label: "Featured", to: "/collections?stock=IN_STOCK",   isActive: isCatalogPath && activeStock === "IN_STOCK" },
+    { label: "Featured", to: "/featured",                     isActive: isFeaturedPath || (isCatalogPath && activeStock === "IN_STOCK") },
   ];
   const quickBrandOptions = (catalogNav.brandOptions || []).filter((brand) => brand && brand !== "ALL").slice(0, 6);
 

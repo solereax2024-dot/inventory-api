@@ -4,6 +4,7 @@ import { apiRequest, uploadImage } from "./utils/api";
 import { SiteFooter, SiteHeader } from "./components/layout";
 import { ThemeColorPicker, WelcomeThemeModal } from "./components/theme";
 import CustomerPage from "./pages/customer/CustomerPage";
+import FeaturedPage from "./pages/customer/FeaturedPage";
 import BrandsPage from "./pages/customer/BrandsPage";
 import ReservePage from "./pages/customer/ReservePage";
 import AdminPage from "./pages/admin/AdminPage";
@@ -236,6 +237,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/collections" replace />} />
         <Route path="/collections" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} />} />
+        <Route path="/featured" element={<FeaturedPage onCatalogNavChange={setCatalogNav} />} />
+        <Route path="/feature" element={<Navigate to="/featured" replace />} />
         <Route path="/collection" element={<Navigate to="/collections" replace />} />
         <Route path="/brands" element={<BrandsPage onCatalogNavChange={setCatalogNav} />} />
         <Route path="/shop" element={<Navigate to="/collections" replace />} />
