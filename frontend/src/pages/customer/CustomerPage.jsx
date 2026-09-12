@@ -291,7 +291,6 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
               _popularUniqueViews: topItem.uniqueViews
             });
           }
-          if (result.length >= 6) break;
         }
         setPopularProducts(result);
       })

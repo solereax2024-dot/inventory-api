@@ -3,13 +3,12 @@ package com.solereax.inventory.inventory;
 import com.solereax.inventory.inventory.dto.PublicViewStatsResponse;
 import com.solereax.inventory.inventory.dto.ViewedProductStatResponse;
 import java.util.List;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PublicViewAnalyticsService {
-    private static final int TOP_VIEWED_LIMIT = 8;
     private static final String DEFAULT_COLORWAY_KEY = "DEFAULT";
 
     private final SiteViewSessionRepository siteViewSessionRepository;
@@ -62,7 +61,7 @@ public class PublicViewAnalyticsService {
     @Transactional(readOnly = true)
     public PublicViewStatsResponse getPublicStats() {
         List<ViewedProductStatResponse> topViewedProducts = productViewSessionRepository
-                .findTopViewedProducts(PageRequest.of(0, TOP_VIEWED_LIMIT))
+                .findTopViewedProducts(Pageable.unpaged())
                 .stream()
                 .map(row -> new ViewedProductStatResponse(
                         row.getProductId(),
