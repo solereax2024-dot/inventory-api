@@ -39,6 +39,8 @@ public class CollectionSharePreviewController {
     @GetMapping(value = {
             "/collections", "/collections/", "/collections/**",
             "/collection", "/collection/", "/collection/**",
+            "/featured", "/featured/", "/featured/**",
+            "/feature", "/feature/", "/feature/**",
             "/shop", "/shop/", "/shop/**",
             "/brands", "/brands/", "/brands/**"
     }, produces = MediaType.TEXT_HTML_VALUE)
