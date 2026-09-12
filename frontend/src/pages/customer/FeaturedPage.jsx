@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ProductCard } from "../../components/catalog";
 import { apiRequest } from "../../utils/api";
 import { getColorwayImageUrl, normalizeColorwayValue } from "../../utils/colorway";
 import { trackMetaEvent } from "../../utils/tracking";
 import "../../styles/featured-page.css";
+
+const FEATURED_PAGE_SIZE = 12;
 
 export default function FeaturedPage({ onCatalogNavChange = () => {} }) {
   const navigate = useNavigate();
@@ -14,6 +16,8 @@ export default function FeaturedPage({ onCatalogNavChange = () => {} }) {
   const [popularProducts, setPopularProducts] = useState([]);
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const featuredTopRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +167,58 @@ export default function FeaturedPage({ onCatalogNavChange = () => {} }) {
   };
 
   const totalPopular = popularProducts.length;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalPopular / FEATURED_PAGE_SIZE)), [totalPopular]);
+  const activePage = Math.min(currentPage, totalPages);
+  const paginatedPopularProducts = useMemo(() => {
+    const start = (activePage - 1) * FEATURED_PAGE_SIZE;
+    return popularProducts.slice(start, start + FEATURED_PAGE_SIZE);
+  }, [activePage, popularProducts]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [popularProducts.length]);
+
+  const paginationItems = useMemo(() => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => ({ type: "page", value: index + 1 }));
+    }
+    const items = [{ type: "page", value: 1 }];
+    const start = Math.max(2, Math.min(activePage - 1, totalPages - 3));
+    const end = Math.min(totalPages - 1, Math.max(activePage + 1, 4));
+    if (start > 2) {
+      items.push({ type: "ellipsis", value: "left" });
+    }
+    for (let page = start; page <= end; page += 1) {
+      items.push({ type: "page", value: page });
+    }
+    if (end < totalPages - 1) {
+      items.push({ type: "ellipsis", value: "right" });
+    }
+    items.push({ type: "page", value: totalPages });
+    return items;
+  }, [activePage, totalPages]);
+
+  const handleFeaturedPageChange = (nextPageOrUpdater) => {
+    setCurrentPage((prevPage) => {
+      const resolvedPage = typeof nextPageOrUpdater === "function"
+        ? nextPageOrUpdater(prevPage)
+        : nextPageOrUpdater;
+      return Math.max(1, Math.min(totalPages, resolvedPage));
+    });
+
+    window.requestAnimationFrame(() => {
+      const targetTop = featuredTopRef.current
+        ? window.scrollY + featuredTopRef.current.getBoundingClientRect().top - 16
+        : 0;
+      window.scrollTo({ top: Math.max(0, targetTop), left: 0, behavior: "auto" });
+    });
+  };
 
   return (
     <main className="container container-customer featured-page-shell">
@@ -175,43 +231,118 @@ export default function FeaturedPage({ onCatalogNavChange = () => {} }) {
         <span className="reserve-page-crumb-current">Featured</span>
       </nav>
 
-      <section className="card featured-page-hero">
-        <div className="featured-page-hero-copy">
-          <span className="eyebrow">Featured</span>
-          <h1>Popular products in ranked order</h1>
-          <p>These products are sorted by real customer view activity across the site.</p>
-        </div>
-        <div className="featured-page-hero-meta">
-          <p>{totalPopular} product{totalPopular === 1 ? "" : "s"}</p>
-          {siteUniqueViews !== null ? (
-            <p>{siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}</p>
-          ) : null}
+      <section className="catalog-section-head" aria-label="Featured heading">
+        <div className="catalog-section-head-copy">
+          <span className="catalog-section-label">Featured</span>
+          <p>Popular products ranked by real customer view activity.</p>
         </div>
       </section>
 
-      <section className="featured-page-grid">
+      <section className="filter-bar" ref={featuredTopRef}>
+        <div className="filter-bar-top">
+          <div className="filter-results">
+            <span className="filter-results-count">
+              {totalPopular} product{totalPopular === 1 ? "" : "s"}
+            </span>
+            {siteUniqueViews !== null ? (
+              <span className="featured-page-views-meta">
+                {siteUniqueViews.toLocaleString()} unique site visit{siteUniqueViews === 1 ? "" : "s"}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid featured-products-grid">
         {isLoading
-          ? Array.from({ length: 8 }, (_, index) => (
+          ? Array.from({ length: FEATURED_PAGE_SIZE }, (_, index) => (
             <article key={`featured-skeleton-${index}`} className="card product-card skeleton-card">
               <div className="skeleton-media" />
               <div className="skeleton-line" />
               <div className="skeleton-line short" />
             </article>
           ))
-          : popularProducts.map((product) => (
+          : paginatedPopularProducts.map((product) => (
             <ProductCard
               key={`featured-${product.id}-${product._popularColorway || product._colorwayVariant || "DEFAULT"}`}
               product={product}
               onReserveClick={openReservePage}
               metaLayout="legacy"
               initialColorway={product._popularColorway || product._colorwayVariant}
-              autoCycleColorways
-              autoCycleOffsetMs={((product.id || 0) % 5) * 360}
-              autoCycleIntervalMs={2450 + (((product.id || 0) % 6) * 180)}
-              autoCycleJitterMs={520}
             />
           ))}
       </section>
+
+      {!isLoading && totalPopular > 0 ? (
+        <nav className="pagination-inline" aria-label="Featured pages">
+          <ul className="pagination-numbers pages-items">
+            {activePage > 1 ? (
+              <>
+                <li className="pages-item pages-item-first">
+                  <button
+                    type="button"
+                    className="page-number-btn page-nav-btn"
+                    onClick={() => handleFeaturedPageChange(1)}
+                    aria-label="First page"
+                  >
+                    {"<<"}
+                  </button>
+                </li>
+                <li className="pages-item pages-item-prev">
+                  <button
+                    type="button"
+                    className="page-number-btn page-nav-btn"
+                    onClick={() => handleFeaturedPageChange((prev) => Math.max(1, prev - 1))}
+                    aria-label="Previous page"
+                  >
+                    {"<"}
+                  </button>
+                </li>
+              </>
+            ) : null}
+            {paginationItems.map((item) =>
+              item.type === "ellipsis" ? (
+                <li key={item.value} className="pages-item page-ellipsis" aria-hidden="true">...</li>
+              ) : (
+                <li key={item.value} className={`pages-item ${activePage === item.value ? "current" : ""}`}>
+                  <button
+                    type="button"
+                    className={`page-number-btn ${activePage === item.value ? "active" : ""}`}
+                    onClick={() => handleFeaturedPageChange(item.value)}
+                    aria-current={activePage === item.value ? "page" : undefined}
+                  >
+                    {item.value}
+                  </button>
+                </li>
+              )
+            )}
+            {activePage < totalPages ? (
+              <>
+                <li className="pages-item pages-item-next">
+                  <button
+                    type="button"
+                    className="page-number-btn page-nav-btn"
+                    onClick={() => handleFeaturedPageChange((prev) => Math.min(totalPages, prev + 1))}
+                    aria-label="Next page"
+                  >
+                    {">"}
+                  </button>
+                </li>
+                <li className="pages-item pages-item-last">
+                  <button
+                    type="button"
+                    className="page-number-btn page-nav-btn"
+                    onClick={() => handleFeaturedPageChange(totalPages)}
+                    aria-label="Last page"
+                  >
+                    {">>"}
+                  </button>
+                </li>
+              </>
+            ) : null}
+          </ul>
+        </nav>
+      ) : null}
 
       {!isLoading && popularProducts.length === 0 ? (
         <p className="field-hint">No featured products yet. Views will appear here once customers browse products.</p>
