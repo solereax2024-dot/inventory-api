@@ -1,6 +1,7 @@
 package com.solereax.inventory.inventory.dto;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 public record SalePromotionBadgeResponse(
         Long id,
@@ -8,7 +9,10 @@ public record SalePromotionBadgeResponse(
         String name,
         String discountType,
         BigDecimal discountValue,
-        boolean buyOneTakeOne
+        boolean buyOneTakeOne,
+        Instant startsAt,
+        Instant endsAt,
+        boolean activeNow
 ) {
 }
 

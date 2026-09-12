@@ -150,6 +150,114 @@
   font-size: 11px;
 }
 
+.reserve-upcoming-sale-price-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.reserve-upcoming-sale-price-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+.reserve-upcoming-sale-price-value {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #b45309;
+  font-variant-numeric: tabular-nums;
+}
+
+.reserve-sale-indicator {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, #cbd5e1);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-soft-2) 64%, #ffffff), #ffffff);
+}
+
+.reserve-sale-indicator-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.reserve-sale-indicator-chip-pending {
+  background: linear-gradient(135deg, #b45309 0%, #ea580c 100%);
+  color: #fff7ed;
+}
+
+.reserve-sale-indicator-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #334155;
+}
+
+.reserve-sale-countdown {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ea580c 12%, #fff7ed);
+  color: #c2410c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-dark .reserve-sale-indicator {
+  border-color: color-mix(in srgb, var(--primary) 22%, #334155);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-dark) 30%, #111827), #0f172a);
+}
+
+body.theme-dark .reserve-upcoming-sale-price-label {
+  color: #fdba74;
+}
+
+body.theme-dark .reserve-upcoming-sale-price-value {
+  color: #fb923c;
+}
+
+body.theme-dark .reserve-sale-indicator-chip {
+  background: #ef4444;
+  color: #fff1f2;
+}
+
+body.theme-dark .reserve-sale-indicator-chip-pending {
+  background: linear-gradient(135deg, #c2410c 0%, #fb923c 100%);
+  color: #fff7ed;
+}
+
+body.theme-dark .reserve-sale-indicator-text {
+  color: #cbd5e1;
+}
+
+body.theme-dark .reserve-sale-countdown {
+  background: color-mix(in srgb, #fb923c 16%, #1f2937);
+  color: #fdba74;
+}
+
 .reserve-page-form-column .size-grid {
   grid-template-columns: repeat(auto-fit, minmax(66px, 1fr));
   gap: 7px;

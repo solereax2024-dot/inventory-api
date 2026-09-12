@@ -4,12 +4,12 @@ import { Eye, Minus, Plus } from "lucide-react";
 import { CUSTOMER_MOP_OPTIONS } from "../../constants";
 import { apiRequest } from "../../utils/api";
 import { getColorwayDetails, getColorwayImageUrl, normalizeColorwayValue } from "../../utils/colorway";
-import { formatColorwayLabel, formatEnumLabel } from "../../utils/format";
+import { formatColorwayLabel, formatCountdownLabel, formatEnumLabel, formatSaleStartLabel } from "../../utils/format";
 import { getSortedColorwaysFromStocks } from "../../utils/stock";
 import { buildSizeSections, formatSelectedSizeLabel, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { getBrandSizeGuide, getGuideSectionForContext } from "../../utils/sizeGuide";
 import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/tracking";
-import { PHP_CURRENCY, formatPriceDisplay } from "../../utils/price";
+import { applyPromotionPreviewPrice, formatMaskedPriceDisplay, PHP_CURRENCY, formatPriceDisplay } from "../../utils/price";
 import { trackMetaEvent } from "../../utils/tracking";
 import { stripColorwayFromDescription } from "../../utils/productDescription";
 import { ProductCard } from "../../components/catalog";
@@ -18,7 +18,7 @@ import {
   ReserveSizeGuideModal,
   ReserveSuccessModal
 } from "../../components/modals/customer";
-import { useModalState, useToggleState } from "../../hooks";
+import { useCountdown, useModalState, useToggleState } from "../../hooks";
 
 const ZOOM_LEVELS = [1, 2, 3];
 const ZOOM_LABELS = ["Click to zoom", "2x · click for 3x", "3x · click to reset"];
@@ -26,6 +26,7 @@ const DESKTOP_BREAKPOINT = 901;
 const DESKTOP_BASE_IMAGE_SCALE = 1;
 const MOBILE_BASE_IMAGE_SCALE = 1;
 const ENABLE_ONLINE_PAYMENT = String(import.meta.env.VITE_ENABLE_PAYMONGO_CHECKOUT || "").toLowerCase() === "true";
+
 export default function ReservePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -302,15 +303,30 @@ export default function ReservePage() {
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
   }, [appliedPromotion, autoSalePromotion]);
   const hasAutoSaleApplied = !appliedPromotion && Boolean(autoSalePromotion?.valid);
-  const hasSalePromoAvailable = Array.isArray(product?.salePromotions) && product.salePromotions.length > 0;
-  const visibleSalePromoName = autoSalePromotion?.name || product?.salePromotions?.[0]?.name || "Sale Promo";
-  const primarySalePromotion = hasSalePromoAvailable ? product.salePromotions[0] : null;
+  const primarySalePromotion = Array.isArray(product?.salePromotions) && product.salePromotions.length > 0
+    ? product.salePromotions[0]
+    : null;
+  const hasSalePromoAvailable = Boolean(primarySalePromotion);
+  const isUpcomingSalePromotion = hasSalePromoAvailable && !primarySalePromotion.activeNow;
+  const saleCountdown = useCountdown(primarySalePromotion?.startsAt, isUpcomingSalePromotion);
+  const visibleSalePromoName = autoSalePromotion?.name || primarySalePromotion?.name || "Sale Promo";
+  const upcomingCountdownLabel = isUpcomingSalePromotion
+    ? (saleCountdown.label || formatCountdownLabel((new Date(primarySalePromotion?.startsAt || 0)).getTime() - Date.now()))
+    : "";
+  const teaserSalePriceLabel = isUpcomingSalePromotion && primarySalePromotion && !primarySalePromotion.buyOneTakeOne
+    ? formatMaskedPriceDisplay(
+      applyPromotionPreviewPrice(selectedColorwayDetails?.minPrice ?? selectedColorwayDetails?.price, primarySalePromotion),
+      applyPromotionPreviewPrice(selectedColorwayDetails?.maxPrice ?? selectedColorwayDetails?.price, primarySalePromotion)
+    )
+    : "";
   const pendingSalePreviewLabel = primarySalePromotion
-    ? (primarySalePromotion.buyOneTakeOne
+    ? (isUpcomingSalePromotion
+      ? `${visibleSalePromoName} is scheduled. ${formatSaleStartLabel(primarySalePromotion.startsAt)}.`
+      : (primarySalePromotion.buyOneTakeOne
       ? "Buy 1 Take 1 promo available for this product."
       : (primarySalePromotion.discountType === "PERCENT"
         ? `${Number(primarySalePromotion.discountValue || 0)}% off promo available.`
-        : "Fixed-amount sale promo available."))
+        : "Fixed-amount sale promo available.")))
     : "Sale promo available.";
   const autoSaleDiscountPreview = hasAutoSaleApplied && promoAppliedDiscount > 0
     ? `- ${PHP_CURRENCY.format(promoAppliedDiscount)} off`
@@ -347,6 +363,10 @@ export default function ReservePage() {
       setAutoSalePromotion(null);
       return null;
     }
+    if (isUpcomingSalePromotion) {
+      setAutoSalePromotion(null);
+      return null;
+    }
     try {
       const response = await apiRequest("/api/public/promotions/auto-sale", "POST", {
         subtotal: estimatedReservationValue,
@@ -380,6 +400,7 @@ export default function ReservePage() {
     estimatedReservationValue,
     hasValidConfirmedQuantity,
     hasValidSelectedSize,
+    isUpcomingSalePromotion,
     product?.id,
     reserve.colorway,
     reserve.size,
@@ -1117,6 +1138,12 @@ export default function ReservePage() {
               {selectedColorwayPriceLabel ? (
                 <div className="reserve-product-price-display">{selectedColorwayPriceLabel}</div>
               ) : null}
+              {teaserSalePriceLabel ? (
+                <div className="reserve-upcoming-sale-price-row">
+                  <span className="reserve-upcoming-sale-price-label">Teaser sale price</span>
+                  <span className="reserve-upcoming-sale-price-value">{teaserSalePriceLabel}</span>
+                </div>
+              ) : null}
               {hasAutoSaleApplied ? (
                 <div className="reserve-sale-indicator" role="status" aria-live="polite">
                   <span className="reserve-sale-indicator-chip">Sale Auto Applied</span>
@@ -1126,8 +1153,16 @@ export default function ReservePage() {
                 </div>
               ) : hasSalePromoAvailable ? (
                 <div className="reserve-sale-indicator">
-                  <span className="reserve-sale-indicator-chip reserve-sale-indicator-chip-pending">Sale Promo Available</span>
-                  <span className="reserve-sale-indicator-text">{pendingSalePreviewLabel} Select size and quantity to preview exact discount.</span>
+                  <span className="reserve-sale-indicator-chip reserve-sale-indicator-chip-pending">{isUpcomingSalePromotion ? "Sale Coming Soon" : "Sale Promo Available"}</span>
+                  <span className="reserve-sale-indicator-text">
+                    {pendingSalePreviewLabel}
+                    {!isUpcomingSalePromotion ? " Select size and quantity to preview exact discount." : " The discount will apply automatically once the sale goes live."}
+                  </span>
+                  {isUpcomingSalePromotion ? (
+                    <span className="reserve-sale-countdown" aria-live="polite">
+                      Countdown: {upcomingCountdownLabel}
+                    </span>
+                  ) : null}
                 </div>
               ) : null}
             </div>

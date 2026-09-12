@@ -192,6 +192,10 @@ body.theme-dark .product-price {
   flex-wrap: nowrap;
 }
 
+.product-price-row--upcoming {
+  gap: 6px;
+}
+
 .product-price-row .product-price {
   margin: 0;
 }
@@ -214,6 +218,10 @@ body.theme-dark .product-price {
   letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
   color: #b91c1c;
+}
+
+.product-price-sale-teaser {
+  letter-spacing: 0.04em;
 }
 
 body.theme-dark .product-price-original {
@@ -359,10 +367,21 @@ body.theme-dark .product-price-sale {
   pointer-events: none;
 }
 
+.is-sale-coming-soon-product-card .product-sale-badge {
+  background: linear-gradient(135deg, #b45309 0%, #ea580c 100%);
+  box-shadow: 0 2px 8px rgba(194, 65, 12, 0.22);
+}
+
 body.theme-dark .product-sale-badge {
   color: #fff1f2;
   background: #ef4444;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.22);
+}
+
+body.theme-dark .is-sale-coming-soon-product-card .product-sale-badge {
+  color: #fff7ed;
+  background: linear-gradient(135deg, #c2410c 0%, #fb923c 100%);
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.22);
 }
 
 .product-sold-out-badge {
@@ -390,6 +409,10 @@ body.theme-dark .product-sale-badge {
   pointer-events: none;
 }
 
+.is-sale-product-card .product-sold-out-badge {
+  top: 32px;
+}
+
 body.theme-dark .product-sold-out-badge {
   color: #f3f4f6;
   background: #111827;
@@ -411,6 +434,10 @@ body.theme-dark .product-sold-out-badge {
   font-size: 10px;
   color: #b91c1c;
   font-weight: 600;
+}
+
+.is-sale-coming-soon-product-card .product-sale-caption {
+  color: #c2410c;
 }
 
 body.theme-dark .product-sale-caption {

@@ -231,10 +231,10 @@ function getPromotionStatus(promo) {
   const start = promo.startsAt ? new Date(promo.startsAt).getTime() : null;
   const end = promo.endsAt ? new Date(promo.endsAt).getTime() : null;
   if (start && now < start) {
-    return { label: "Inactive", className: "status-preparing" };
+    return { label: "Scheduled", className: "status-preparing" };
   }
   if (end && now > end) {
-    return { label: "Inactive", className: "status-preparing" };
+    return { label: "Ended", className: "status-preparing" };
   }
   return { label: "Active", className: "status-paid" };
 }

@@ -1,10 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye } from "lucide-react";
 import { getColorwayDetails, getColorwayImageUrl, sanitizeColorways, sortColorways } from "../../utils/colorway";
-import { formatEnumLabel } from "../../utils/format";
-import { formatPriceDisplay } from "../../utils/price";
+import { useCountdown } from "../../hooks";
+import { formatEnumLabel, formatSaleStartLabel } from "../../utils/format";
+import { applyPromotionPreviewPrice, formatMaskedPriceDisplay, formatPriceDisplay } from "../../utils/price";
 import "../../styles/product-card.css";
 
+function toCompactSaleCampaignLabel(name) {
+  const value = String(name || "").trim();
+  if (!value) {
+    return "Sale";
+  }
+  if (value.length <= 12) {
+    return value;
+  }
+  const matched = value.match(/\b\d{1,2}\.\d{1,2}\b/);
+  if (matched?.[0]) {
+    return matched[0];
+  }
+  return `${value.slice(0, 10).trim()}…`;
+}
 
 export default function ProductCard({
   product,
@@ -142,30 +157,29 @@ export default function ProductCard({
   const primarySalePromotion = Array.isArray(product?.salePromotions) && product.salePromotions.length > 0
     ? product.salePromotions[0]
     : null;
-  const canPreviewSalePrice = showSaleBadge && Boolean(primarySalePromotion) && !primarySalePromotion.buyOneTakeOne;
-  const applySaleDiscount = (rawPrice) => {
-    const price = Number(rawPrice);
-    if (!Number.isFinite(price) || price <= 0 || !primarySalePromotion) {
-      return null;
-    }
-    const discountValue = Number(primarySalePromotion.discountValue || 0);
-    if (!Number.isFinite(discountValue) || discountValue <= 0) {
-      return price;
-    }
-    if (primarySalePromotion.discountType === "PERCENT") {
-      return Math.max(0, Number((price * (1 - (discountValue / 100))).toFixed(2)));
-    }
-    return Math.max(0, Number((price - discountValue).toFixed(2)));
-  };
+  const saleCampaignName = String(primarySalePromotion?.name || "").trim();
+  const compactSaleCampaignLabel = toCompactSaleCampaignLabel(saleCampaignName);
+  const isUpcomingSale = showSaleBadge && Boolean(primarySalePromotion) && !primarySalePromotion.activeNow;
+  const upcomingCountdown = useCountdown(primarySalePromotion?.startsAt, isUpcomingSale);
+  const canPreviewSalePrice = showSaleBadge && Boolean(primarySalePromotion) && !primarySalePromotion.buyOneTakeOne && primarySalePromotion.activeNow;
   const salePriceLabel = canPreviewSalePrice
     ? formatPriceDisplay(
-      applySaleDiscount(colorwayDetails?.minPrice ?? colorwayDetails?.price),
-      applySaleDiscount(colorwayDetails?.maxPrice ?? colorwayDetails?.price)
+      applyPromotionPreviewPrice(colorwayDetails?.minPrice ?? colorwayDetails?.price, primarySalePromotion),
+      applyPromotionPreviewPrice(colorwayDetails?.maxPrice ?? colorwayDetails?.price, primarySalePromotion)
     )
+    : "";
+  const upcomingSalePriceLabel = isUpcomingSale && !primarySalePromotion?.buyOneTakeOne
+    ? formatMaskedPriceDisplay(
+      applyPromotionPreviewPrice(colorwayDetails?.minPrice ?? colorwayDetails?.price, primarySalePromotion),
+      applyPromotionPreviewPrice(colorwayDetails?.maxPrice ?? colorwayDetails?.price, primarySalePromotion)
+    )
+    : "";
+  const saleStartLabel = isUpcomingSale
+    ? `${saleCampaignName || "Upcoming sale"} · ${formatSaleStartLabel(primarySalePromotion?.startsAt)} · ${upcomingCountdown.label || "Coming soon"}`
     : "";
 
   return (
-    <article className={`card product-card${showSaleBadge && primarySalePromotion ? " is-sale-product-card" : ""}`}>
+    <article className={`card product-card${showSaleBadge && primarySalePromotion ? " is-sale-product-card" : ""}${isUpcomingSale ? " is-sale-coming-soon-product-card" : ""}`}>
       <button
         type="button"
         className="product-image-wrap product-image-button"
@@ -203,6 +217,13 @@ export default function ProductCard({
         {isSelectedColorwayOutOfStock ? (
           <span className="product-sold-out-badge">Sold Out</span>
         ) : null}
+        {showSaleBadge && primarySalePromotion ? (
+          <span className="product-sale-badge">
+            {isUpcomingSale
+              ? `${compactSaleCampaignLabel} Soon · ${upcomingCountdown.label || "Soon"}`
+              : (primarySalePromotion.buyOneTakeOne ? "B1T1" : "Sale")}
+          </span>
+        ) : null}
         {(() => {
           const imgUrl = product?.colorwayImages
             ? getColorwayImageUrl(product, selectedColorway)
@@ -233,11 +254,16 @@ export default function ProductCard({
               <small className="brand">{product.brand || ""}</small>
             </div>
             <h3>{product.name}</h3>
-            <div className={`product-price-row${priceLabel ? "" : " empty"}${priceLabel && salePriceLabel ? " product-price-row--sale" : ""}`}>
+            <div className={`product-price-row${priceLabel ? "" : " empty"}${priceLabel && salePriceLabel ? " product-price-row--sale" : ""}${priceLabel && upcomingSalePriceLabel ? " product-price-row--upcoming" : ""}`}>
               {priceLabel && salePriceLabel ? (
                 <>
                   <p className="product-price-sale">{salePriceLabel}</p>
                   <p className="product-price product-price-original">{priceLabel}</p>
+                </>
+              ) : priceLabel && upcomingSalePriceLabel ? (
+                <>
+                  <p className="product-price-sale product-price-sale-teaser">{upcomingSalePriceLabel}</p>
+                  <p className="product-price">{priceLabel}</p>
                 </>
               ) : priceLabel ? (
                 <p className="product-price">{priceLabel}</p>
@@ -245,6 +271,7 @@ export default function ProductCard({
                 <span className="product-price-placeholder" aria-hidden="true">&nbsp;</span>
               )}
             </div>
+            {saleStartLabel ? <small className="product-sale-caption">{saleStartLabel}</small> : null}
           </>
         ) : (
           <div className="product-card-corner-row">
@@ -258,6 +285,11 @@ export default function ProductCard({
                   <p className="product-price-sale">{salePriceLabel}</p>
                   <p className="product-price product-price-original">{priceLabel}</p>
                 </>
+              ) : priceLabel && upcomingSalePriceLabel ? (
+                <>
+                  <p className="product-price-sale product-price-sale-teaser">{upcomingSalePriceLabel}</p>
+                  <p className="product-price">{priceLabel}</p>
+                </>
               ) : priceLabel ? (
                 <p className="product-price">{priceLabel}</p>
               ) : (
@@ -266,6 +298,9 @@ export default function ProductCard({
             </div>
           </div>
         )}
+        {!isLegacyMetaLayout && saleStartLabel ? (
+          <small className="product-sale-caption">{saleStartLabel}</small>
+        ) : null}
       </div>
     </article>
   );

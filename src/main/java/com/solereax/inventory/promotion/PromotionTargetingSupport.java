@@ -64,6 +64,16 @@ public final class PromotionTargetingSupport {
         return promotion.getUsageLimit() == null || promotion.getUsedCount() < promotion.getUsageLimit();
     }
 
+    public static boolean isVisibleOnSalePage(Promotion promotion, Instant now) {
+        if (promotion == null || !promotion.isActive()) {
+            return false;
+        }
+        if (promotion.getEndsAt() != null && now.isAfter(promotion.getEndsAt())) {
+            return false;
+        }
+        return promotion.getUsageLimit() == null || promotion.getUsedCount() < promotion.getUsageLimit();
+    }
+
     public static Set<String> parseUpperTokenSet(String raw) {
         String value = trimToNull(raw);
         if (value == null) {

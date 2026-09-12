@@ -14,7 +14,7 @@ export default function SalePromosMarquee({ names = [], itemCount = 0, variant =
   void itemCount;
 
   return (
-    <section className={`sale-promos-marquee sale-promos-marquee--${variant}`} aria-label="Ongoing sale promotions">
+    <section className={`sale-promos-marquee sale-promos-marquee--${variant}`} aria-label="Sale promotions">
       <div className="sale-promos-marquee-track-wrap">
         <div className="sale-promos-marquee-track">
           {[0, 1].map((copyIndex) => (

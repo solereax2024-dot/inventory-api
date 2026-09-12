@@ -20,6 +20,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
@@ -63,14 +64,14 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<PublicProductResponse> listPublicProducts() {
         List<Product> products = productRepository.findAllActiveWithStocks();
-        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
+        List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(products);
         return products
                 .stream()
                 .map(product -> toPublicResponse(
                         product,
                         viewCountByProductId.getOrDefault(product.getId(), 0L),
-                        activeSalePromotions
+                        visibleSalePromotions
                 ))
                 .toList();
     }
@@ -103,13 +104,13 @@ public class InventoryService {
             return Collections.emptyList();
         }
 
-        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
+        List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
         return orderedProducts.stream()
                 .map(product -> toPublicResponse(
                         product,
                         viewCountByProductId.getOrDefault(product.getId(), 0L),
-                        activeSalePromotions
+                        visibleSalePromotions
                 ))
                 .toList();
     }
@@ -202,14 +203,14 @@ public class InventoryService {
                 .filter(product -> product != null)
                 .toList();
 
-        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
+        List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
 
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
         List<PublicCatalogProductResponse> items = orderedProducts.stream()
                 .map(product -> toCatalogResponse(
                         product,
                         viewCountByProductId.getOrDefault(product.getId(), 0L),
-                        activeSalePromotions
+                        visibleSalePromotions
                 ))
                 .toList();
 
@@ -256,13 +257,13 @@ public class InventoryService {
                 .filter(product -> product != null)
                 .toList();
 
-        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
+        List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
         List<PublicCatalogProductResponse> matchedItems = orderedProducts.stream()
                 .map(product -> toCatalogResponse(
                         product,
                         viewCountByProductId.getOrDefault(product.getId(), 0L),
-                        activeSalePromotions
+                        visibleSalePromotions
                 ))
                 .filter(item -> !saleOnly || (item.salePromotions() != null && !item.salePromotions().isEmpty()))
                 .toList();
@@ -430,14 +431,14 @@ public class InventoryService {
                 .filter(product -> product != null)
                 .toList();
 
-        List<Promotion> activeSalePromotions = loadActiveSalePromotions();
+        List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
 
         List<PublicCatalogProductResponse> matchedItems = orderedProducts.stream()
                 .map(product -> toCatalogResponse(
                         product,
                         viewCountByProductId.getOrDefault(product.getId(), 0L),
-                        activeSalePromotions
+                        visibleSalePromotions
                 ))
                 .filter(item -> item.salePromotions() != null && !item.salePromotions().isEmpty())
                 .toList();
@@ -465,7 +466,7 @@ public class InventoryService {
         Product product = productRepository.findActiveByIdWithStocks(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
         long viewCount = product.getId() == null ? 0L : productViewSessionRepository.countByProductId(product.getId());
-        return toPublicResponse(product, viewCount, loadActiveSalePromotions());
+        return toPublicResponse(product, viewCount, loadVisibleSalePromotions());
     }
 
     @Transactional(readOnly = true)
@@ -906,11 +907,11 @@ public class InventoryService {
         return byProductId;
     }
 
-    private List<Promotion> loadActiveSalePromotions() {
+    private List<Promotion> loadVisibleSalePromotions() {
         Instant now = Instant.now();
         return promotionRepository.findAllByActiveTrue().stream()
                 .filter(PromotionTargetingSupport::isSalePromotion)
-                .filter(promotion -> PromotionTargetingSupport.isActiveNow(promotion, now))
+                .filter(promotion -> PromotionTargetingSupport.isVisibleOnSalePage(promotion, now))
                 .toList();
     }
 
@@ -1074,19 +1075,27 @@ public class InventoryService {
         );
     }
 
-    private List<SalePromotionBadgeResponse> toSalePromotionBadges(Product product, List<Promotion> activeSalePromotions) {
-        if (product == null || activeSalePromotions == null || activeSalePromotions.isEmpty()) {
+    private List<SalePromotionBadgeResponse> toSalePromotionBadges(Product product, List<Promotion> visibleSalePromotions) {
+        if (product == null || visibleSalePromotions == null || visibleSalePromotions.isEmpty()) {
             return Collections.emptyList();
         }
-        return activeSalePromotions.stream()
+        Instant now = Instant.now();
+        return visibleSalePromotions.stream()
                 .filter(promotion -> PromotionTargetingSupport.matchesProduct(promotion, product))
+                .sorted(Comparator
+                        .comparing((Promotion promotion) -> !PromotionTargetingSupport.isActiveNow(promotion, now))
+                        .thenComparing(promotion -> promotion.getStartsAt() == null ? Instant.MIN : promotion.getStartsAt())
+                        .thenComparing(promotion -> promotion.getCreatedAt() == null ? Instant.MIN : promotion.getCreatedAt()))
                 .map(promotion -> new SalePromotionBadgeResponse(
                         promotion.getId(),
                         promotion.getCode(),
                         promotion.getName(),
                         promotion.getDiscountType().name(),
                         promotion.getDiscountValue(),
-                        promotion.isBuyOneTakeOne()
+                        promotion.isBuyOneTakeOne(),
+                        promotion.getStartsAt(),
+                        promotion.getEndsAt(),
+                        PromotionTargetingSupport.isActiveNow(promotion, now)
                 ))
                 .toList();
     }
