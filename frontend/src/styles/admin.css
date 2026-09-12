@@ -1030,10 +1030,48 @@
       grid-template-columns: 1fr;
     }
 
+    .manual-reservation-modal-shell {
+      gap: 10px;
+    }
+
+    .manual-reservation-item-card {
+      padding: 10px;
+      gap: 8px;
+    }
+
     .manual-reservation-section-head,
     .manual-reservation-item-card-head {
       flex-direction: column;
       align-items: stretch;
+    }
+
+    .manual-reservation-section-head .button-secondary {
+      width: 100%;
+      justify-content: center;
+      min-height: 42px;
+    }
+
+    .manual-reservation-notes {
+      min-height: 110px;
+    }
+
+    .manual-reservation-item-meta {
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .manual-reservation-modal-shell .create-product-actions-row {
+      position: sticky;
+      bottom: 0;
+      padding-top: 8px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 72%, transparent), var(--surface-raised));
+      z-index: 2;
+    }
+
+    .manual-reservation-modal-shell .create-product-actions-row .button-secondary,
+    .manual-reservation-modal-shell .create-product-actions-row .create-product-save-btn {
+      width: 100%;
+      min-width: 0;
     }
 
     .admin-subnav-tabs {
@@ -1235,6 +1273,18 @@
      }
 
 
+}
+
+@media (max-width: 420px) {
+  .manual-reservation-item-card {
+    padding: 9px;
+  }
+
+  .manual-reservation-meta-chip {
+    min-height: 24px;
+    padding: 3px 8px;
+    font-size: 10.5px;
+  }
 }
 
 @media (max-width: 480px) {

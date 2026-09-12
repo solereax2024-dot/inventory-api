@@ -57,7 +57,7 @@ export default function SiteHeader({
     { label: "Women",    to: "/collections?department=WOMEN", isActive: isCatalogPath && activeDepartment === "WOMEN" },
     { label: "Kids",     to: "/collections?q=kids",           isActive: isCatalogPath && activeKeyword === "kids" },
     { label: "Sale",     to: "/collections?sale=true",  isActive: isCatalogPath && activeSale === "true" },
-    { label: "Featured", to: "/collections?stock=IN_STOCK",   isActive: isCatalogPath && activeStock === "IN_STOCK",   soon: true },
+    { label: "Featured", to: "/collections?stock=IN_STOCK",   isActive: isCatalogPath && activeStock === "IN_STOCK" },
   ];
   const quickBrandOptions = (catalogNav.brandOptions || []).filter((brand) => brand && brand !== "ALL").slice(0, 6);
 
@@ -310,15 +310,8 @@ export default function SiteHeader({
 
         <div className="site-header-center">
           <nav className="site-center-nav" aria-label="Primary catalog links">
-            {navLinks.map(({ label, to, isActive, soon }) =>
-              soon ? (
-                <span key={label} className="site-center-nav-link site-center-nav-link-soon" aria-disabled="true">
-                  {label}
-                  <span className="nav-soon-badge">Soon</span>
-                </span>
-              ) : (
-                <Link key={label} className={`site-center-nav-link${isActive ? " active" : ""}`} to={to}>{label}</Link>
-              )
+            {navLinks.map(({ label, to, isActive }) =>
+              <Link key={label} className={`site-center-nav-link${isActive ? " active" : ""}`} to={to}>{label}</Link>
             )}
           </nav>
         </div>
@@ -522,22 +515,15 @@ export default function SiteHeader({
               </button>
             </div>
           <div className="site-menu-nav-links" role="group" aria-label="Page navigation">
-            {navLinks.map(({ label, to, isActive, soon }) =>
-              soon ? (
-                <span key={label} className="site-menu-action site-menu-action-soon" aria-disabled="true">
-                  <span>{label}</span>
-                  <span className="nav-soon-badge">Soon</span>
-                </span>
-              ) : (
-                <Link
-                  key={label}
-                  className={`site-menu-action${isActive ? " site-menu-action-open" : ""}`}
-                  to={to}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <span>{label}</span>
-                </Link>
-              )
+            {navLinks.map(({ label, to, isActive }) =>
+              <Link
+                key={label}
+                className={`site-menu-action${isActive ? " site-menu-action-open" : ""}`}
+                to={to}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span>{label}</span>
+              </Link>
             )}
           </div>
 
