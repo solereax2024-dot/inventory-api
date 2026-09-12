@@ -808,6 +808,80 @@
   filter: brightness(1.03);
 }
 
+.admin-section-heading-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.manual-reservation-modal-shell {
+  gap: 12px;
+}
+
+.manual-reservation-grid,
+.manual-reservation-item-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manual-reservation-notes {
+  margin-top: 0;
+  min-height: 90px;
+  resize: vertical;
+}
+
+.manual-reservation-section-head,
+.manual-reservation-item-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.manual-reservation-section-head h3,
+.manual-reservation-item-card-head strong {
+  margin: 0;
+}
+
+.manual-reservation-item-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.manual-reservation-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.manual-reservation-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, #cbd5e1);
+  background: color-mix(in srgb, var(--primary-soft-2) 72%, #ffffff);
+  color: color-mix(in srgb, var(--primary-dark) 78%, #1e293b);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.manual-reservation-meta-copy {
+  font-size: 12px;
+  color: #475569;
+}
+
+.manual-reservation-save-btn {
+  min-width: 190px;
+}
+
 .stock-size-picker {
   display: grid;
   gap: 10px;
@@ -949,6 +1023,17 @@
 @media (max-width: 720px) {
     .products-card {
       padding: 14px;
+    }
+
+    .manual-reservation-grid,
+    .manual-reservation-item-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .manual-reservation-section-head,
+    .manual-reservation-item-card-head {
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .admin-subnav-tabs {
@@ -1197,6 +1282,21 @@ body.theme-dark .edit-modal-section {
 
 body.theme-dark .edit-modal-section h3 {
   color: #e2e8f0;
+}
+
+body.theme-dark .manual-reservation-item-card {
+  background: linear-gradient(180deg, var(--dark-surface), var(--dark-bg-mid));
+  border-color: var(--dark-border);
+}
+
+body.theme-dark .manual-reservation-meta-chip {
+  border-color: color-mix(in srgb, var(--primary-soft) 28%, var(--dark-border));
+  background: color-mix(in srgb, var(--primary) 16%, var(--dark-surface));
+  color: #dbeafe;
+}
+
+body.theme-dark .manual-reservation-meta-copy {
+  color: #94a3b8;
 }
 
  body.theme-dark .stock-controls-card {

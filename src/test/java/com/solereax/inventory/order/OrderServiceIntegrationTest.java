@@ -76,6 +76,33 @@ class OrderServiceIntegrationTest {
     }
 
     @Test
+    void reserveOrderAsAdminTracksAdminActorAndAllocatesStock() {
+        Product product = createProduct("MEN", "STANDARD", 2, new BigDecimal("4500.00"));
+
+        OrderResponse response = orderService.reserveOrderAsAdmin(new ReserveOrderRequest(
+                "Nina",
+                "09175557777",
+                "Walk-in reservation",
+                "GCASH",
+                "",
+                "",
+                List.of(new ReserveOrderItemRequest(product.getId(), "WHITE", "9", "MEN", 1))
+        ), "admin:frontdesk");
+
+        ProductStock savedStock = productStockRepository.findByProductIdAndColorwayAndSizeLabelAndSizeGroup(
+                        product.getId(),
+                        "WHITE",
+                        "9",
+                        "STANDARD"
+                )
+                .orElseThrow();
+
+        assertThat(response.statusUpdatedBy()).isEqualTo("admin:frontdesk");
+        assertThat(response.items()).hasSize(1);
+        assertThat(savedStock.getQuantity()).isEqualTo(1);
+    }
+
+    @Test
     void deleteOrderRestoresReservedStockAndRemovesReservation() {
         Product product = createProduct("MEN", "STANDARD", 5, new BigDecimal("4299.00"));
 

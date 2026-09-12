@@ -62,6 +62,15 @@ public class OrderService {
 
     @Transactional
     public OrderResponse reserveOrder(ReserveOrderRequest request) {
+        return reserveOrder(request, "customer:" + request.customerName().trim());
+    }
+
+    @Transactional
+    public OrderResponse reserveOrderAsAdmin(ReserveOrderRequest request, String createdBy) {
+        return reserveOrder(request, createdBy);
+    }
+
+    private OrderResponse reserveOrder(ReserveOrderRequest request, String createdBy) {
         CustomerOrder order = new CustomerOrder();
         order.setCustomerName(request.customerName().trim());
         order.setCustomerContact(request.customerContact().trim());
@@ -81,7 +90,7 @@ public class OrderService {
             order.setMopOther(null);
         }
         order.setStatus(OrderStatus.ORDERED);
-        order.setStatusUpdatedBy("customer:" + order.getCustomerName());
+        order.setStatusUpdatedBy(trimToNull(createdBy) != null ? createdBy.trim() : "customer:" + order.getCustomerName());
         BigDecimal computedSubtotalPrice = BigDecimal.ZERO;
 
         for (ReserveOrderItemRequest itemRequest : request.items()) {

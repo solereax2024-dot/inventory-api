@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ImagePlus, RotateCcw, Trash2 } from "lucide-react";
+import { ImagePlus, PlusCircle, RotateCcw, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   US_SIZES,
@@ -31,6 +31,7 @@ import {
   AdminSuccessModal,
   ConfirmActionModal,
   DeleteModal,
+  ManualReservationModal,
   NewBrandModal,
   NewAdminModal,
   NewProductNameModal,
@@ -63,6 +64,16 @@ const DEFAULT_STOCK_SUMMARY_RESET_MODAL = {
   colorway: "DEFAULT",
   productName: ""
 };
+
+const createManualReservationForm = () => ({
+  customerName: "",
+  customerContact: "",
+  notes: "",
+  mop: "GCASH",
+  mopOther: "",
+  promoCode: "",
+  items: [{ productId: "", colorway: "DEFAULT", size: "", sizeGroup: "MEN", quantity: "1" }]
+});
 
 export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const UNDO_WINDOW_MS = 5000;
@@ -156,6 +167,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     customerName: "",
     itemCount: 0
   });
+  const [manualReservationModal, setManualReservationModal] = useState({ isOpen: false });
+  const [manualReservationForm, setManualReservationForm] = useState(() => createManualReservationForm());
+  const [isCreatingReservation, setIsCreatingReservation] = useState(false);
   const [colorwayDeleteModal, setColorwayDeleteModal] = useState({ isOpen: false, productId: null, colorway: "" });
   const [newBrandModal, setNewBrandModal] = useState({ isOpen: false, brandName: "" });
   const [newAdminModal, setNewAdminModal] = useState({ isOpen: false });
@@ -946,6 +960,35 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setReservationDeleteModal({ isOpen: false, orderId: null, customerName: "", itemCount: 0 });
   };
 
+  const openManualReservationModal = () => {
+    setManualReservationForm(createManualReservationForm());
+    setManualReservationModal({ isOpen: true });
+  };
+
+  const closeManualReservationModal = () => {
+    if (isCreatingReservation) {
+      return;
+    }
+    setManualReservationModal({ isOpen: false });
+    setManualReservationForm(createManualReservationForm());
+  };
+
+  const createManualReservation = async (payload) => {
+    setIsCreatingReservation(true);
+    try {
+      const createdOrder = await apiRequest("/api/admin/orders", "POST", payload, token);
+      setManualReservationModal({ isOpen: false });
+      setManualReservationForm(createManualReservationForm());
+      setSuccessModal({
+        isOpen: true,
+        message: `Reservation${createdOrder?.id ? ` #${createdOrder.id}` : ""} added successfully.`
+      });
+      await loadAdminData(token, adminRole);
+    } finally {
+      setIsCreatingReservation(false);
+    }
+  };
+
   const confirmDeleteReservation = async () => {
     if (!isSuperAdmin || !reservationDeleteModal.orderId) {
       return;
@@ -1586,10 +1629,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       {activeAdminSection === "reservations" ? (
         <section className="card products-card admin-section">
           <div className="section-head">
-            <h2>Reservations</h2>
-            <p className="field-hint" style={{ margin: 0 }}>
-              Review customer reservations and update fulfillment status.
-            </p>
+            <div className="admin-section-heading-copy">
+              <h2>Reservations</h2>
+              <p className="field-hint" style={{ margin: 0 }}>
+                Review customer reservations and update fulfillment status.
+              </p>
+            </div>
+            <button type="button" className="btn-primary" onClick={openManualReservationModal}>
+              <PlusCircle size={16} />
+              <span>Add Reservation</span>
+            </button>
           </div>
 
           <ReservationDashboardCards
@@ -2074,6 +2123,18 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         hasSizeGuide={Boolean(stockSizeGuide && stockGuideSection)}
         onOpenSizeGuide={openStockGuideModal}
         supplierSuggestions={stockSummarySupplierSuggestions}
+      />
+
+      <ManualReservationModal
+        isOpen={manualReservationModal.isOpen}
+        onClose={closeManualReservationModal}
+        message={message}
+        products={products}
+        form={manualReservationForm}
+        setForm={setManualReservationForm}
+        isSubmitting={isCreatingReservation}
+        onSubmit={createManualReservation}
+        onError={setMessage}
       />
 
       <AdminSizeGuideModal

@@ -1,6 +1,7 @@
 package com.solereax.inventory.order;
 
 import com.solereax.inventory.order.dto.OrderResponse;
+import com.solereax.inventory.order.dto.ReserveOrderRequest;
 import com.solereax.inventory.order.dto.UpdateOrderStatusRequest;
 import jakarta.validation.Valid;
 import java.security.Principal;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -27,6 +29,11 @@ public class AdminOrderController {
     @GetMapping
     public List<OrderResponse> listOrders() {
         return orderService.listOrders();
+    }
+
+    @PostMapping
+    public OrderResponse createOrder(@Valid @RequestBody ReserveOrderRequest request, Principal principal) {
+        return orderService.reserveOrderAsAdmin(request, "admin:" + principal.getName());
     }
 
     @PatchMapping("/{orderId}/status")
