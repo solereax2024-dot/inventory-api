@@ -42,6 +42,11 @@ class MediaUploadControllerTest {
         assertNotNull(response.getBody());
         assertInstanceOf(org.springframework.core.io.Resource.class, response.getBody());
         assertEquals(MediaType.IMAGE_PNG, response.getHeaders().getContentType());
+        String cacheControl = response.getHeaders().getCacheControl();
+        assertTrue(cacheControl.contains("max-age=31536000"));
+        assertTrue(cacheControl.contains("public"));
+        assertTrue(cacheControl.contains("immutable"));
+        assertTrue(response.getHeaders().getLastModified() > 0);
         assertArrayEquals(SAMPLE_PNG, ((org.springframework.core.io.Resource) response.getBody()).getInputStream().readAllBytes());
     }
 
@@ -54,6 +59,7 @@ class MediaUploadControllerTest {
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals(MediaType.IMAGE_PNG, response.getHeaders().getContentType());
+        assertEquals("no-store", response.getHeaders().getCacheControl());
         ByteArrayResource body = assertInstanceOf(ByteArrayResource.class, response.getBody());
         assertNotNull(body);
         assertTrue(body.contentLength() > 0);

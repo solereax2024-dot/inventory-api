@@ -3,6 +3,7 @@ package com.solereax.inventory.config;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Base64;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class MediaUploadController {
+    private static final Duration UPLOAD_CACHE_MAX_AGE = Duration.ofDays(365);
     private static final byte[] TRANSPARENT_PIXEL_PNG = Base64.getDecoder().decode(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAA" +
             "AAC0lEQVR42mP8/x8AAwMCAO+/XGQAAAAASUVORK5CYII="
@@ -59,8 +61,10 @@ public class MediaUploadController {
             Resource resource = new UrlResource(resolved.toUri());
             String contentType = Files.probeContentType(resolved);
             MediaType mediaType = contentType != null ? MediaType.parseMediaType(contentType) : MediaType.APPLICATION_OCTET_STREAM;
+            long lastModified = Files.getLastModifiedTime(resolved).toMillis();
             return ResponseEntity.ok()
-                    .cacheControl(CacheControl.noCache())
+                    .cacheControl(CacheControl.maxAge(UPLOAD_CACHE_MAX_AGE).cachePublic().immutable())
+                    .lastModified(lastModified)
                     .contentType(mediaType)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
                     .body(resource);
