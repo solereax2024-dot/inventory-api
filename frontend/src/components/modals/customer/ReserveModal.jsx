@@ -27,6 +27,17 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
     ? (reserve.sizeGroup === "WOMEN" ? "WOMEN" : "MEN")
     : getDefaultSizeGroup(selectedDepartment);
   const activeSizeSection = sizeSections.find((section) => section.key === activeSizeGroup) || sizeSections[0] || null;
+  const metaSoldCount = (() => {
+    const rows = activeSizeSection?.rows || [];
+    if (rows.length === 0) {
+      return 0;
+    }
+    if (reserve.size) {
+      const selectedRow = rows.find((row) => row.baseSize === reserve.size);
+      return Number(selectedRow?.soldRecently || 0);
+    }
+    return rows.reduce((sum, row) => sum + Number(row?.soldRecently || 0), 0);
+  })();
   const zoomLevel = ZOOM_LEVELS[zoomIdx];
 
   const selectReserveSize = (baseSize, sizeGroup) => {
@@ -121,6 +132,7 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
                     {Number(product.viewCount).toLocaleString()} views
                   </span>
                 ) : null}
+                <span className="reserve-sold-badge">{metaSoldCount.toLocaleString()} sold</span>
               </div>
               {selectedProductDescription ? <p className="reserve-product-desc">{selectedProductDescription}</p> : null}
             </div>

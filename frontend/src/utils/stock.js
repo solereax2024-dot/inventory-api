@@ -60,6 +60,7 @@ export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup
     return !storageGroup || normalizeStockSizeGroup(stock.sizeGroup) === storageGroup;
   });
   const quantityBySize = new Map();
+  const soldRecentlyBySize = new Map();
   const priceBySize = new Map();
   const markupBySize = new Map();
   const supplierBySize = new Map();
@@ -68,7 +69,9 @@ export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup
     const key = String(stock.size);
     const quantity = Number(stock.quantity || 0);
     const supplier = String(stock.supplier || "").trim();
+    const soldRecently = Number(stock.soldRecently || 0);
     quantityBySize.set(key, Number(quantityBySize.get(key) || 0) + Number(stock.quantity || 0));
+    soldRecentlyBySize.set(key, Number(soldRecentlyBySize.get(key) || 0) + (Number.isFinite(soldRecently) ? soldRecently : 0));
     const parsedPrice = Number(stock.price);
     const parsedMarkup = Number(stock.markup);
     if (!priceBySize.has(key) && Number.isFinite(parsedPrice) && parsedPrice >= 0) {
@@ -108,6 +111,7 @@ export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup
     .filter(Boolean);
   return [...new Set(sizeList)].map((size) => {
     const total = Number(quantityBySize.get(size) || 0);
+    const soldRecently = Number(soldRecentlyBySize.get(size) || 0);
     const supplierEntries = [...(supplierEntriesBySize.get(size)?.values() || [])]
       .sort((a, b) => {
         if (!a.supplier && b.supplier) return 1;
@@ -120,6 +124,7 @@ export function buildSizeStateRows(product, selectedColorway, requestedSizeGroup
       inTransit: 0,
       preOrder: 0,
       total,
+      soldRecently,
       price: priceBySize.get(size) ?? null,
       markup: markupBySize.get(size) ?? null,
       supplier: supplierBySize.get(size) || supplierEntries[0]?.supplier || "",

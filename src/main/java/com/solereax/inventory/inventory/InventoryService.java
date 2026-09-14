@@ -18,6 +18,7 @@ import com.solereax.inventory.shared.NotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -41,6 +42,7 @@ public class InventoryService {
     private static final String MANUAL_STOCK_ADJUSTMENT_REASON = "Manual adjustment";
     private static final String NO_SUPPLIER_REFERENCE = "__NO_SUPPLIER__";
     private static final int MAX_PUBLIC_PRODUCTS_BY_IDS = 120;
+    private static final long RECENT_RESERVATION_WINDOW_DAYS = 7;
 
     private final ProductRepository productRepository;
     private final ProductViewSessionRepository productViewSessionRepository;
@@ -67,12 +69,14 @@ public class InventoryService {
         List<Product> products = productRepository.findAllActiveWithStocks();
         List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(products);
+        Map<Long, Integer> recentSoldByStockId = mapRecentReservationSoldByStockId(products);
         return products
                 .stream()
                 .map(product -> toPublicResponse(
                         product,
                         viewCountByProductId.getOrDefault(product.getId(), 0L),
-                        visibleSalePromotions
+                        visibleSalePromotions,
+                        recentSoldByStockId
                 ))
                 .toList();
     }
@@ -108,11 +112,13 @@ public class InventoryService {
 
         List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
+        Map<Long, Integer> recentSoldByStockId = mapRecentReservationSoldByStockId(orderedProducts);
         return orderedProducts.stream()
                 .map(product -> toPublicResponse(
                         product,
                         viewCountByProductId.getOrDefault(product.getId(), 0L),
-                        visibleSalePromotions
+                        visibleSalePromotions,
+                        recentSoldByStockId
                 ))
                 .toList();
     }
@@ -468,7 +474,8 @@ public class InventoryService {
         Product product = productRepository.findActiveByIdWithStocks(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
         long viewCount = product.getId() == null ? 0L : productViewSessionRepository.countByProductId(product.getId());
-        return toPublicResponse(product, viewCount, loadVisibleSalePromotions());
+        Map<Long, Integer> recentSoldByStockId = mapRecentReservationSoldByStockId(List.of(product));
+        return toPublicResponse(product, viewCount, loadVisibleSalePromotions(), recentSoldByStockId);
     }
 
     @Transactional(readOnly = true)
@@ -909,6 +916,30 @@ public class InventoryService {
         return byProductId;
     }
 
+    private Map<Long, Integer> mapRecentReservationSoldByStockId(List<Product> products) {
+        List<Long> stockIds = new ArrayList<>();
+        products.forEach(product -> product.getStocks().forEach(stock -> {
+            if (stock.getId() != null) {
+                stockIds.add(stock.getId());
+            }
+        }));
+        if (stockIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Instant cutoff = Instant.now().minus(RECENT_RESERVATION_WINDOW_DAYS, ChronoUnit.DAYS);
+        Map<Long, Integer> byStockId = new HashMap<>();
+        stockMovementRepository.findRecentReservationSoldByStockIds(stockIds, cutoff).forEach(row -> {
+            Long stockId = row.getProductStockId();
+            if (stockId == null) {
+                return;
+            }
+            long soldQuantity = row.getSoldQuantity() == null ? 0L : row.getSoldQuantity();
+            byStockId.put(stockId, (int) Math.max(0L, soldQuantity));
+        });
+        return byStockId;
+    }
+
     private List<Promotion> loadVisibleSalePromotions() {
         Instant now = Instant.now();
         return promotionRepository.findAllByActiveTrue().stream()
@@ -1007,7 +1038,12 @@ public class InventoryService {
         return "DEFAULT";
     }
 
-    private PublicProductResponse toPublicResponse(Product product, Long viewCount, List<Promotion> activeSalePromotions) {
+    private PublicProductResponse toPublicResponse(
+            Product product,
+            Long viewCount,
+            List<Promotion> activeSalePromotions,
+            Map<Long, Integer> recentSoldByStockId
+    ) {
         List<SizeStockResponse> stocks = product.getStocks().stream()
                 .sorted(UsSizeStandard.stockComparator())
                 .map(stock -> new SizeStockResponse(
@@ -1015,6 +1051,7 @@ public class InventoryService {
                         stock.getSizeLabel(),
                         stock.getSizeGroup(),
                         stock.getQuantity(),
+                        recentSoldByStockId.getOrDefault(stock.getId(), 0),
                         toResponsePrice(stock.getPrice(), stock.getMarkup(), true),
                         stock.getMarkup(),
                         trimToNull(stock.getSupplier())
@@ -1053,6 +1090,7 @@ public class InventoryService {
                         stock.getSizeLabel(),
                         stock.getSizeGroup(),
                         stock.getQuantity(),
+                        0,
                         stock.getPrice(),
                         stock.getMarkup(),
                         trimToNull(stock.getSupplier())

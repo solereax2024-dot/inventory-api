@@ -7,6 +7,7 @@ public record SizeStockResponse(
         String size,
         String sizeGroup,
         int quantity,
+        int soldRecently,
         BigDecimal price,
         BigDecimal markup,
         String supplier

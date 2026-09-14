@@ -221,6 +221,21 @@ export default function ReservePage() {
     const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
     return Number(selectedRow?.total || 0);
   }, [activeSizeSection, reserve.size]);
+  const selectedSizeSoldRecently = useMemo(() => {
+    const selectedRow = (activeSizeSection?.rows || []).find((row) => row.baseSize === reserve.size);
+    return Number(selectedRow?.soldRecently || 0);
+  }, [activeSizeSection, reserve.size]);
+  const metaSoldCount = useMemo(() => {
+    const rows = activeSizeSection?.rows || [];
+    if (rows.length === 0) {
+      return 0;
+    }
+    if (reserve.size) {
+      const selectedRow = rows.find((row) => row.baseSize === reserve.size);
+      return Number(selectedRow?.soldRecently || 0);
+    }
+    return rows.reduce((sum, row) => sum + Number(row?.soldRecently || 0), 0);
+  }, [activeSizeSection, reserve.size]);
   const hasValidSelectedSize = useMemo(() => {
     if (!reserve.size) {
       return false;
@@ -1131,6 +1146,7 @@ export default function ReservePage() {
                     {Number(product.viewCount).toLocaleString()} views
                   </span>
                 ) : null}
+                <span className="reserve-sold-badge">{metaSoldCount.toLocaleString()} sold</span>
               </div>
               {selectedProductDescription ? (
                 <p className="reserve-product-desc">{selectedProductDescription}</p>
@@ -1230,6 +1246,7 @@ export default function ReservePage() {
                           <span className="size-label">US {row.displaySize}</span>
                           <span className="size-stock">
                             {row.total > 0 ? `${row.total} available` : "Out of stock"}
+                            {Number(row.soldRecently || 0) > 0 ? ` - ${row.soldRecently} sold recently` : ""}
                           </span>
                         </button>
                       );
@@ -1302,7 +1319,7 @@ export default function ReservePage() {
               <small className="qty-helper field-hint">
                 {isSelectedSizePreOrder
                   ? "Pre-order mode: quantity will be requested from supplier."
-                  : `Available now: ${selectedSizeAvailableQuantity}`}
+                  : `Available: ${selectedSizeAvailableQuantity}${selectedSizeSoldRecently > 0 ? ` · Sold: ${selectedSizeSoldRecently}` : ""}`}
               </small>
               </div>
             </div>

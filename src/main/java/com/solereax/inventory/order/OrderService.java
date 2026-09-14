@@ -71,6 +71,7 @@ public class OrderService {
     }
 
     private OrderResponse reserveOrder(ReserveOrderRequest request, String createdBy) {
+        String reservationActor = trimToNull(createdBy) != null ? createdBy.trim() : "customer:" + request.customerName().trim();
         CustomerOrder order = new CustomerOrder();
         order.setCustomerName(request.customerName().trim());
         order.setCustomerContact(request.customerContact().trim());
@@ -90,7 +91,7 @@ public class OrderService {
             order.setMopOther(null);
         }
         order.setStatus(OrderStatus.ORDERED);
-        order.setStatusUpdatedBy(trimToNull(createdBy) != null ? createdBy.trim() : "customer:" + order.getCustomerName());
+        order.setStatusUpdatedBy(reservationActor);
         BigDecimal computedSubtotalPrice = BigDecimal.ZERO;
 
         for (ReserveOrderItemRequest itemRequest : request.items()) {
@@ -166,7 +167,7 @@ public class OrderService {
                 movement.setProductStock(stock);
                 movement.setQuantityChange(-allocated);
                 movement.setReason("Reservation");
-                movement.setChangedBy("customer:" + order.getCustomerName());
+                movement.setChangedBy(reservationActor);
                 stockMovementRepository.save(movement);
 
                 remaining -= allocated;

@@ -2476,6 +2476,14 @@ body.theme-dark .reserve-size-price-badge {
   color: #64748b;
 }
 
+.reserve-sold-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 7.75px;
+  font-weight: 500;
+  color: #64748b;
+}
+
 .reserve-product-title {
   margin: 0;
   font-size: clamp(24px, 2.7vw, 30px);
@@ -2613,6 +2621,10 @@ body.theme-dark .reserve-dept-chip {
 }
 
 body.theme-dark .reserve-view-badge {
+  color: #94a3b8;
+}
+
+body.theme-dark .reserve-sold-badge {
   color: #94a3b8;
 }
 

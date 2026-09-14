@@ -100,6 +100,10 @@ class OrderServiceIntegrationTest {
         assertThat(response.statusUpdatedBy()).isEqualTo("admin:frontdesk");
         assertThat(response.items()).hasSize(1);
         assertThat(savedStock.getQuantity()).isEqualTo(1);
+        assertThat(stockMovementRepository.findAll())
+                .hasSize(1)
+                .extracting(movement -> movement.getChangedBy())
+                .containsExactly("admin:frontdesk");
     }
 
     @Test

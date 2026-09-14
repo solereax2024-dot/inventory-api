@@ -249,6 +249,60 @@ class InventoryServiceIntegrationTest {
     }
 
     @Test
+    void getPublicProductIncludesRecentReservationSoldCountsPerSize() {
+        Product product = new Product();
+        product.setName("Recent Sold Counter Test");
+        product.setBrand("Test Brand");
+        product.setDepartment("MEN");
+        product.setMainColor("BLACK");
+        product.setPrice(new BigDecimal("6500.00"));
+        product.setActive(true);
+
+        ProductStock stock = new ProductStock();
+        stock.setProduct(product);
+        stock.setColorway("BLACK");
+        stock.setSizeLabel("9");
+        stock.setSizeGroup("STANDARD");
+        stock.setQuantity(4);
+        stock.setPrice(new BigDecimal("6500.00"));
+        product.getStocks().add(stock);
+
+        Product savedProduct = productRepository.save(product);
+        ProductStock savedStock = productStockRepository.findAllByProductIdAndColorwayAndSizeLabelAndSizeGroup(
+                        savedProduct.getId(),
+                        "BLACK",
+                        "9",
+                        "STANDARD"
+                )
+                .stream()
+                .findFirst()
+                .orElseThrow();
+
+        StockMovement recentReservation = new StockMovement();
+        recentReservation.setProductStock(savedStock);
+        recentReservation.setQuantityChange(-3);
+        recentReservation.setReason("Reservation");
+        recentReservation.setChangedBy("admin:frontdesk");
+        recentReservation.setCreatedAt(Instant.now().minus(1, ChronoUnit.DAYS));
+        stockMovementRepository.save(recentReservation);
+
+        StockMovement oldReservation = new StockMovement();
+        oldReservation.setProductStock(savedStock);
+        oldReservation.setQuantityChange(-5);
+        oldReservation.setReason("Reservation");
+        oldReservation.setChangedBy("admin:frontdesk");
+        oldReservation.setCreatedAt(Instant.now().minus(15, ChronoUnit.DAYS));
+        stockMovementRepository.save(oldReservation);
+
+        PublicProductResponse response = inventoryService.getPublicProduct(savedProduct.getId());
+
+        assertThat(response.stocks())
+                .filteredOn(entry -> "BLACK".equals(entry.colorway()) && "9".equals(entry.size()))
+                .extracting(entry -> entry.soldRecently())
+                .containsExactly(3);
+    }
+
+    @Test
     void listPublicCatalogSaleIncludesScheduledSalePromotions() {
         Product product = new Product();
         product.setName("Scheduled Sale Test");
