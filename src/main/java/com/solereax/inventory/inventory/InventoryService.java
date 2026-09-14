@@ -40,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InventoryService {
     private static final String MANUAL_STOCK_ADJUSTMENT_REASON = "Manual adjustment";
     private static final String NO_SUPPLIER_REFERENCE = "__NO_SUPPLIER__";
+    private static final int MAX_PUBLIC_PRODUCTS_BY_IDS = 120;
 
     private final ProductRepository productRepository;
     private final ProductViewSessionRepository productViewSessionRepository;
@@ -85,6 +86,7 @@ public class InventoryService {
         List<Long> orderedIds = productIds.stream()
                 .filter(id -> id != null && id > 0)
                 .distinct()
+                .limit(MAX_PUBLIC_PRODUCTS_BY_IDS)
                 .toList();
         if (orderedIds.isEmpty()) {
             return Collections.emptyList();
