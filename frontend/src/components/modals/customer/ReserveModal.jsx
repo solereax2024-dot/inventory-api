@@ -32,10 +32,6 @@ export default function ReserveModal({ reserveModal, setReserveModal, products, 
     if (rows.length === 0) {
       return 0;
     }
-    if (reserve.size) {
-      const selectedRow = rows.find((row) => row.baseSize === reserve.size);
-      return Number(selectedRow?.soldRecently || 0);
-    }
     return rows.reduce((sum, row) => sum + Number(row?.soldRecently || 0), 0);
   })();
   const zoomLevel = ZOOM_LEVELS[zoomIdx];

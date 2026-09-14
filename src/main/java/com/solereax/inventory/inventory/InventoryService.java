@@ -18,7 +18,6 @@ import com.solereax.inventory.shared.NotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -42,7 +41,6 @@ public class InventoryService {
     private static final String MANUAL_STOCK_ADJUSTMENT_REASON = "Manual adjustment";
     private static final String NO_SUPPLIER_REFERENCE = "__NO_SUPPLIER__";
     private static final int MAX_PUBLIC_PRODUCTS_BY_IDS = 120;
-    private static final long RECENT_RESERVATION_WINDOW_DAYS = 7;
 
     private final ProductRepository productRepository;
     private final ProductViewSessionRepository productViewSessionRepository;
@@ -927,9 +925,8 @@ public class InventoryService {
             return Collections.emptyMap();
         }
 
-        Instant cutoff = Instant.now().minus(RECENT_RESERVATION_WINDOW_DAYS, ChronoUnit.DAYS);
         Map<Long, Integer> byStockId = new HashMap<>();
-        stockMovementRepository.findRecentReservationSoldByStockIds(stockIds, cutoff).forEach(row -> {
+        stockMovementRepository.findRecentReservationSoldByStockIds(stockIds).forEach(row -> {
             Long stockId = row.getProductStockId();
             if (stockId == null) {
                 return;

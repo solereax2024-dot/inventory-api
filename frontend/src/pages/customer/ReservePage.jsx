@@ -230,12 +230,8 @@ export default function ReservePage() {
     if (rows.length === 0) {
       return 0;
     }
-    if (reserve.size) {
-      const selectedRow = rows.find((row) => row.baseSize === reserve.size);
-      return Number(selectedRow?.soldRecently || 0);
-    }
     return rows.reduce((sum, row) => sum + Number(row?.soldRecently || 0), 0);
-  }, [activeSizeSection, reserve.size]);
+  }, [activeSizeSection]);
   const hasValidSelectedSize = useMemo(() => {
     if (!reserve.size) {
       return false;

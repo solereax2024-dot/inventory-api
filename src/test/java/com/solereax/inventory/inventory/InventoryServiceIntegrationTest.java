@@ -249,7 +249,7 @@ class InventoryServiceIntegrationTest {
     }
 
     @Test
-    void getPublicProductIncludesRecentReservationSoldCountsPerSize() {
+    void getPublicProductIncludesNetReservationSoldCountsPerSize() {
         Product product = new Product();
         product.setName("Recent Sold Counter Test");
         product.setBrand("Test Brand");
@@ -294,12 +294,20 @@ class InventoryServiceIntegrationTest {
         oldReservation.setCreatedAt(Instant.now().minus(15, ChronoUnit.DAYS));
         stockMovementRepository.save(oldReservation);
 
+        StockMovement deletedReservationRollback = new StockMovement();
+        deletedReservationRollback.setProductStock(savedStock);
+        deletedReservationRollback.setQuantityChange(2);
+        deletedReservationRollback.setReason("Reservation deleted #88");
+        deletedReservationRollback.setChangedBy("admin:frontdesk");
+        deletedReservationRollback.setCreatedAt(Instant.now().minus(14, ChronoUnit.DAYS));
+        stockMovementRepository.save(deletedReservationRollback);
+
         PublicProductResponse response = inventoryService.getPublicProduct(savedProduct.getId());
 
         assertThat(response.stocks())
                 .filteredOn(entry -> "BLACK".equals(entry.colorway()) && "9".equals(entry.size()))
                 .extracting(entry -> entry.soldRecently())
-                .containsExactly(3);
+                .containsExactly(6);
     }
 
     @Test
