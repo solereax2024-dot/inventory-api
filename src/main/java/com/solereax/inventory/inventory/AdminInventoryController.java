@@ -2,6 +2,7 @@ package com.solereax.inventory.inventory;
 
 import com.solereax.inventory.inventory.dto.AdminAdjustStockRequest;
 import com.solereax.inventory.inventory.dto.AdminCreateProductRequest;
+import com.solereax.inventory.inventory.dto.AdminQuickEditProductRequest;
 import com.solereax.inventory.inventory.dto.AdminUpdateColorwayDetailsRequest;
 import com.solereax.inventory.inventory.dto.AdminUpdateColorwayImageRequest;
 import com.solereax.inventory.inventory.dto.PublicProductResponse;
@@ -10,6 +11,7 @@ import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -80,5 +82,13 @@ public class AdminInventoryController {
     @DeleteMapping("/{productId}")
     public void deleteProduct(@PathVariable Long productId) {
         inventoryService.deleteProduct(productId);
+    }
+
+    @PatchMapping("/{productId}/quick-edit")
+    public PublicProductResponse quickEditProduct(
+            @PathVariable Long productId,
+            @Valid @RequestBody AdminQuickEditProductRequest request
+    ) {
+        return inventoryService.quickEditProduct(productId, request);
     }
 }

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, BookOpen } from "lucide-react";
 import { RESERVATION_MOP_OPTIONS, US_SIZES } from "../../../constants";
 import { normalizeColorwayValue } from "../../../utils/colorway";
 import { formatColorwayLabel, formatEnumLabel } from "../../../utils/format";
@@ -11,6 +11,7 @@ import {
   getDepartmentForColorway,
   isUnisexDepartment
 } from "../../../utils/sizePresentation";
+import { getBrandSizeGuide, getGuideSectionForContext } from "../../../utils/sizeGuide";
 import ProductActionModalShell from "./ProductActionModalShell";
 
 function sortProducts(products = []) {
@@ -131,7 +132,11 @@ export default function ManualReservationModal({
   setForm,
   isSubmitting,
   onSubmit,
-  onError
+  onError,
+  hasSizeGuide,
+  onOpenSizeGuide,
+  guideItemIndex,
+  onGuideItemIndexChange
 }) {
   const availableProducts = useMemo(() => getAvailableProducts(products), [products]);
   const normalizedItems = useMemo(() => {
@@ -277,15 +282,29 @@ export default function ManualReservationModal({
               <h3>Reserved Items</h3>
               <p className="field-hint">You can add multiple sizes or products in one reservation.</p>
             </div>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={addItem}
-              disabled={availableProducts.length === 0 || isSubmitting}
-            >
-              <PlusCircle size={16} />
-              <span>Add Item</span>
-            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {hasSizeGuide ? (
+                <button
+                  type="button"
+                  className="size-guide-pill-btn"
+                  onClick={onOpenSizeGuide}
+                  disabled={isSubmitting}
+                  title="View size guide for current item"
+                >
+                  <BookOpen size={16} />
+                  <span>Size Guide</span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={addItem}
+                disabled={availableProducts.length === 0 || isSubmitting}
+              >
+                <PlusCircle size={16} />
+                <span>Add Item</span>
+              </button>
+            </div>
           </div>
 
           {availableProducts.length === 0 ? (
