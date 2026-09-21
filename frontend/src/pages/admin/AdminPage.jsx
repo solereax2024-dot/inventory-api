@@ -36,7 +36,8 @@ import {
   NewAdminModal,
   NewProductNameModal,
   ProductActionModalShell,
-  StockSummaryModal
+  StockSummaryModal,
+  QuickEditProductModal
 } from "../../components/modals/admin";
 import AdminLoginSection from "./components/AdminLoginSection.jsx";
 import AdminProductsSection from "./components/AdminProductsSection.jsx";
@@ -170,10 +171,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [manualReservationModal, setManualReservationModal] = useState({ isOpen: false });
   const [manualReservationForm, setManualReservationForm] = useState(() => createManualReservationForm());
   const [isCreatingReservation, setIsCreatingReservation] = useState(false);
+  const [manualReservationGuideItemIndex, setManualReservationGuideItemIndex] = useState(0);
   const [colorwayDeleteModal, setColorwayDeleteModal] = useState({ isOpen: false, productId: null, colorway: "" });
-  const [newBrandModal, setNewBrandModal] = useState({ isOpen: false, brandName: "" });
-  const [newAdminModal, setNewAdminModal] = useState({ isOpen: false });
-  const [newProductNameModal, setNewProductNameModal] = useState({ isOpen: false, productName: "" });
+  const [quickEditModal, setQuickEditModal] = useState({ isOpen: false, product: null });
+  const [quickEditForm, setQuickEditForm] = useState({ name: "", brand: "", oldColorway: "", newColorway: "" });
+  const [isQuickEditSubmitting, setIsQuickEditSubmitting] = useState(false);
   const [savedBrands, setSavedBrands] = useState([]);
   const [savedProductNames, setSavedProductNames] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
@@ -185,6 +187,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     open: openStockGuideModal,
     close: closeStockGuideModal,
     setIsOpen: setStockGuideModalOpen
+  } = useModalState(false);
+  const {
+    isOpen: isManualReservationGuideOpen,
+    open: openManualReservationGuideModal,
+    close: closeManualReservationGuideModal
   } = useModalState(false);
   const {
     isOpen: isStockSummaryOpen,
@@ -331,6 +338,52 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
     const confirmCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     setDeleteModal({ isOpen: true, productId, confirmCode, userInput: "" });
+  };
+
+  const openQuickEditModal = (productId, product) => {
+    if (!product) return;
+    setQuickEditModal({ isOpen: true, product });
+    setQuickEditForm({
+      name: product.name || "",
+      brand: product.brand || "",
+      oldColorway: "",
+      newColorway: ""
+    });
+  };
+
+  const closeQuickEditModal = () => {
+    setQuickEditModal({ isOpen: false, product: null });
+    setQuickEditForm({ name: "", brand: "", oldColorway: "", newColorway: "" });
+  };
+
+  const submitQuickEdit = async () => {
+    if (!quickEditModal.product || !quickEditForm.name.trim()) {
+      setMessage("Product name cannot be empty.");
+      return;
+    }
+    setIsQuickEditSubmitting(true);
+    try {
+      const payload = {
+        name: quickEditForm.name.trim(),
+        brand: quickEditForm.brand || null,
+        oldColorway: quickEditForm.oldColorway || null,
+        newColorway: quickEditForm.newColorway || null
+      };
+      const updated = await apiRequest(
+        `/api/admin/products/${quickEditModal.product.id}/quick-edit`,
+        "PATCH",
+        payload,
+        token
+      );
+      mergeUpdatedProduct(updated);
+      closeQuickEditModal();
+      setSuccessModal({ isOpen: true, message: "Product updated successfully." });
+      await loadAdminData(token, adminRole);
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setIsQuickEditSubmitting(false);
+    }
   };
 
   const confirmDelete = async () => {
@@ -1420,11 +1473,40 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
      }
    }, [productActionModal.type]);
 
-   const stockGuideSection = useMemo(
-    () => getGuideSectionForContext(stockSizeGuide, { sizeGroup: activeStockSizeGroup, department: stockModalDepartment }),
-    [stockSizeGuide, activeStockSizeGroup, stockModalDepartment]
-  );
-  const activeStockRows = useMemo(() => {
+    const stockGuideSection = useMemo(
+     () => getGuideSectionForContext(stockSizeGuide, { sizeGroup: activeStockSizeGroup, department: stockModalDepartment }),
+     [stockSizeGuide, activeStockSizeGroup, stockModalDepartment]
+   );
+
+   // Manual Reservation Size Guide
+   const manualReservationItems = useMemo(() => {
+     const sourceItems = Array.isArray(manualReservationForm?.items) && manualReservationForm.items.length > 0 
+       ? manualReservationForm.items 
+       : [{}];
+     return sourceItems;
+   }, [manualReservationForm?.items]);
+
+   const manualReservationGuideProduct = useMemo(() => {
+     const item = manualReservationItems[manualReservationGuideItemIndex] || {};
+     return products.find((p) => String(p.id) === String(item.productId || "")) || null;
+   }, [manualReservationItems, manualReservationGuideItemIndex, products]);
+
+   const manualReservationSizeGuide = useMemo(
+     () => getBrandSizeGuide(manualReservationGuideProduct?.brand),
+     [manualReservationGuideProduct?.brand]
+   );
+
+   const manualReservationGuideDepartment = useMemo(() => {
+     const item = manualReservationItems[manualReservationGuideItemIndex] || {};
+     return manualReservationGuideProduct ? getDepartmentForColorway(manualReservationGuideProduct, item.colorway) : "";
+   }, [manualReservationGuideProduct, manualReservationItems, manualReservationGuideItemIndex]);
+
+   const manualReservationGuideSection = useMemo(
+     () => getGuideSectionForContext(manualReservationSizeGuide, { sizeGroup: "MEN", department: manualReservationGuideDepartment }),
+     [manualReservationSizeGuide, manualReservationGuideDepartment]
+   );
+
+   const activeStockRows = useMemo(() => {
     if (!activeStockSizeSection?.rows) return [];
     return activeStockSizeSection.rows;
   }, [activeStockSizeSection]);
@@ -1622,6 +1704,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
           onEditProduct={openEditModal}
           onManageStock={openStockModal}
           onDeleteProduct={deleteProduct}
+          onQuickEdit={openQuickEditModal}
           onPageChange={setAdminPage}
         />
       ) : null}
@@ -2135,6 +2218,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         isSubmitting={isCreatingReservation}
         onSubmit={createManualReservation}
         onError={setMessage}
+        hasSizeGuide={Boolean(manualReservationSizeGuide && manualReservationGuideSection)}
+        onOpenSizeGuide={openManualReservationGuideModal}
+        guideItemIndex={manualReservationGuideItemIndex}
+        onGuideItemIndexChange={setManualReservationGuideItemIndex}
       />
 
       <AdminSizeGuideModal
@@ -2142,6 +2229,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         onClose={closeStockGuideModal}
         sizeGuide={stockSizeGuide}
         guideSection={stockGuideSection}
+      />
+
+      <AdminSizeGuideModal
+        isOpen={isManualReservationGuideOpen && Boolean(manualReservationSizeGuide) && Boolean(manualReservationGuideSection)}
+        onClose={closeManualReservationGuideModal}
+        sizeGuide={manualReservationSizeGuide}
+        guideSection={manualReservationGuideSection}
       />
 
       <DeleteModal
@@ -2201,6 +2295,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         isOpen={successModal.isOpen}
         message={successModal.message}
         onClose={() => setSuccessModal({ isOpen: false, message: "" })}
+      />
+      <QuickEditProductModal
+        isOpen={quickEditModal.isOpen}
+        onClose={closeQuickEditModal}
+        product={quickEditModal.product}
+        form={quickEditForm}
+        setForm={setQuickEditForm}
+        brandOptions={brandOptions}
+        colorwayOptions={quickEditModal.product ? getProductColorways(quickEditModal.product) : []}
+        onSubmit={submitQuickEdit}
+        isSubmitting={isQuickEditSubmitting}
+        onError={setMessage}
+        message={message}
       />
       {message || undoQueue.length > 0 ? (
         <div className="toast-banner">

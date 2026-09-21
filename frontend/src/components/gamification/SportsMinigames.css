@@ -1,0 +1,335 @@
+.sports-game-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.theme-dark .sports-game-card {
+  background: var(--dark-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.game-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.game-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: var(--primary);
+}
+
+.game-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.theme-dark .game-subtitle {
+  color: #aaa;
+}
+
+.error-message {
+  text-align: center;
+  padding: 20px;
+  background: #fadbd8;
+  border: 2px solid #e74c3c;
+  border-radius: 8px;
+  color: #c0392b;
+  font-weight: 600;
+  margin: 0;
+}
+
+.theme-dark .error-message {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  color: #ff6b6b;
+}
+
+/* Game Menu */
+.game-menu {
+  text-align: center;
+}
+
+.game-info {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.theme-dark .game-info {
+  background: var(--dark-surface-2);
+  border-color: var(--dark-border);
+}
+
+.game-info p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.theme-dark .game-info p {
+  color: #eee;
+}
+
+/* Buttons */
+.play-btn,
+.shoot-btn {
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 100%;
+}
+
+.play-btn:hover,
+.shoot-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.play-btn:active,
+.shoot-btn:active {
+  transform: translateY(0);
+}
+
+/* Game Container */
+.game-container {
+  margin-bottom: 20px;
+}
+
+.game-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.game-stats .stat {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.theme-dark .game-stats .stat {
+  background: var(--dark-surface-2);
+  border-color: var(--dark-border);
+}
+
+.stat .label {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.theme-dark .stat .label {
+  color: #aaa;
+}
+
+.stat .value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Basketball Court */
+.basketball-court {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  background: linear-gradient(135deg, #d4a373, #a87d3a);
+  border: 3px solid #8b6f47;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.basketball-court::before {
+  content: "";
+  position: absolute;
+  width: 2px;
+  height: 100%;
+  left: 50%;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.basketball-court::after {
+  content: "";
+  position: absolute;
+  width: 40%;
+  height: 2px;
+  top: 50%;
+  left: 30%;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Basket */
+.basket {
+  position: absolute;
+  font-size: 32px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  animation: basketBounce 2s infinite;
+}
+
+@keyframes basketBounce {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -60%) scale(1.1); }
+}
+
+/* Basketball */
+.basketball {
+  position: absolute;
+  font-size: 40px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.basketball:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.basketball:active {
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+.court-text {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 700;
+  font-size: 12px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.shoot-btn {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 14px;
+}
+
+/* Game Result */
+.game-result {
+  text-align: center;
+}
+
+.result-header {
+  background: linear-gradient(135deg, var(--primary-soft), var(--primary-soft-2));
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 2px solid var(--primary);
+}
+
+.result-header h3 {
+  margin: 0 0 12px 0;
+  font-size: 28px;
+  color: var(--primary);
+}
+
+.score-text {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+}
+
+.theme-dark .score-text {
+  color: #eee;
+}
+
+.points-awarded {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.theme-dark .points-awarded {
+  background: var(--dark-surface-2);
+  border-color: var(--dark-border);
+}
+
+.points-awarded .label {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #666;
+  font-weight: 600;
+}
+
+.theme-dark .points-awarded .label {
+  color: #aaa;
+}
+
+.points-awarded .value {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .sports-game-card {
+    padding: 16px;
+  }
+
+  .game-header h3 {
+    font-size: 20px;
+  }
+
+  .basketball-court {
+    height: 250px;
+  }
+
+  .basket {
+    font-size: 28px;
+  }
+
+  .basketball {
+    font-size: 32px;
+  }
+
+  .play-btn,
+  .shoot-btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+

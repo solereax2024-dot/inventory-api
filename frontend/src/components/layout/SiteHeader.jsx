@@ -4,6 +4,9 @@ import { createPortal } from "react-dom";
 import { LayoutDashboard, LogOut, Menu, Palette, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import { apiRequest } from "../../utils/api";
 import { getColorwayImageUrl } from "../../utils/colorway";
+import { GamificationBar } from "../gamification/GamificationBar";
+import { CheckPointsWidget } from "../gamification/CheckPointsWidget";
+import { MyPointsDisplay } from "../gamification/MyPointsDisplay";
 import "../../styles/header.css";
 
 const TRENDING_SEARCHES = ["Jordan", "Nike", "Samba", "Dunk", "Yeezy", "New Balance"];
@@ -332,6 +335,9 @@ export default function SiteHeader({
               </button>
             </div>
           )}
+          <MyPointsDisplay />
+          <CheckPointsWidget />
+          <GamificationBar />
           <button
             type="button"
             className={`menu-trigger quick-tooltip${isMenuOpen ? " active" : ""}`}

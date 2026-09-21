@@ -19,6 +19,7 @@ export default function AdminProductsSection({
   onEditProduct,
   onManageStock,
   onDeleteProduct,
+  onQuickEdit,
   onPageChange
 }) {
   const rows = isLoading
@@ -50,6 +51,7 @@ export default function AdminProductsSection({
             onEditProduct={onEditProduct}
             onManageStock={onManageStock}
             onDeleteProduct={onDeleteProduct}
+            onQuickEdit={onQuickEdit}
           />
         </table>
       </div>

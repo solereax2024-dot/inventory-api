@@ -1,0 +1,287 @@
+.gamification-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, var(--primary-soft), var(--primary-soft-2));
+  border-radius: 8px;
+  position: relative;
+}
+
+.username-setup-btn,
+.gamification-toggle {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gamification-toggle:hover,
+.username-setup-btn:hover {
+  background: var(--primary-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.badge-count {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.gamification-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  min-width: 350px;
+  max-height: 600px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+}
+
+.theme-dark .gamification-panel {
+  background: var(--dark-surface);
+  border-color: var(--dark-border);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.theme-dark .panel-header {
+  border-color: var(--dark-border);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.panel-header button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  color: var(--primary);
+}
+
+.panel-content {
+  padding: 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat {
+  background: var(--surface);
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.theme-dark .stat {
+  background: var(--dark-surface-2);
+  border-color: var(--dark-border);
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.theme-dark .stat-label {
+  color: #aaa;
+}
+
+.badges-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.badges-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.badge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface);
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  text-align: center;
+  position: relative;
+  transition: all 0.2s ease;
+  opacity: 1;
+}
+
+.theme-dark .badge-item {
+  background: var(--dark-surface-2);
+  border-color: var(--dark-border);
+}
+
+.badge-item.locked {
+  opacity: 0.5;
+  filter: grayscale(100%);
+}
+
+.badge-item.earned {
+  border-color: var(--primary);
+  background: rgba(var(--primary), 0.1);
+}
+
+.badge-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+.badge-name {
+  font-size: 11px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.earned-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--primary);
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.username-modal {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  z-index: 1001;
+}
+
+.theme-dark .username-modal {
+  background: var(--dark-surface);
+}
+
+.username-modal input {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 14px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.theme-dark .username-modal input {
+  background: var(--dark-bg-mid);
+  border-color: var(--dark-border);
+  color: #fff;
+}
+
+.username-modal button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.username-modal button:hover:not(:disabled) {
+  background: var(--primary-strong);
+  transform: translateY(-1px);
+}
+
+.username-modal button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.username-error {
+  margin-top: 8px;
+  padding: 8px;
+  background: #fadbd8;
+  border: 1px solid #e74c3c;
+  border-radius: 4px;
+  color: #c0392b;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.theme-dark .username-error {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  color: #ff6b6b;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .gamification-panel {
+    min-width: calc(100vw - 24px);
+    right: 50%;
+    transform: translateX(50%);
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .badges-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

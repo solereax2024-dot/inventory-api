@@ -1,0 +1,64 @@
+.my-points-display {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.points-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.points-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.points-icon {
+  font-size: 14px;
+}
+
+.points-value {
+  min-width: 30px;
+  text-align: center;
+}
+
+/* Dark Mode */
+.theme-dark .points-badge {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .points-badge:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .my-points-display {
+    margin-right: 8px;
+  }
+
+  .points-badge {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .points-icon {
+    font-size: 12px;
+  }
+
+  .points-value {
+    min-width: 25px;
+  }
+}
+

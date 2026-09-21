@@ -493,6 +493,112 @@ const BRAND_SIZE_GUIDES = {
         ]
       }
     }
+  },
+  ASICS: {
+    brandLabel: "ASICS",
+    sourceLabel: "ASICS official size conversion chart",
+    sections: {
+      MEN: {
+        label: "Men's conversion",
+        columns: [
+          { key: "us", label: "US" },
+          { key: "euro", label: "EURO" },
+          { key: "cm", label: "CM" },
+          { key: "uk", label: "UK" }
+        ],
+        rows: [
+          { us: "4", euro: "36", cm: "22.5", uk: "3", matchMen: "4" },
+          { us: "4.5", euro: "37", cm: "23", uk: "3.5", matchMen: "4.5" },
+          { us: "5", euro: "37.5", cm: "23.5", uk: "4", matchMen: "5" },
+          { us: "5.5", euro: "38", cm: "24", uk: "4.5", matchMen: "5.5" },
+          { us: "6", euro: "39", cm: "24.5", uk: "5", matchMen: "6" },
+          { us: "6.5", euro: "39.5", cm: "25", uk: "5.5", matchMen: "6.5" },
+          { us: "7", euro: "40", cm: "25.25", uk: "6", matchMen: "7" },
+          { us: "7.5", euro: "40.5", cm: "25.5", uk: "6.5", matchMen: "7.5" },
+          { us: "8", euro: "41.5", cm: "26", uk: "7", matchMen: "8" },
+          { us: "8.5", euro: "42", cm: "26.5", uk: "7.5", matchMen: "8.5" },
+          { us: "9", euro: "42.5", cm: "27", uk: "8", matchMen: "9" },
+          { us: "9.5", euro: "43.5", cm: "27.5", uk: "8.5", matchMen: "9.5" },
+          { us: "10", euro: "44", cm: "28", uk: "9", matchMen: "10" },
+          { us: "10.5", euro: "44.5", cm: "28.25", uk: "9.5", matchMen: "10.5" },
+          { us: "11", euro: "45", cm: "28.5", uk: "10", matchMen: "11" },
+          { us: "11.5", euro: "46", cm: "29", uk: "10.5", matchMen: "11.5" },
+          { us: "12", euro: "46.5", cm: "29.5", uk: "11", matchMen: "12" },
+          { us: "12.5", euro: "47", cm: "30", uk: "11.5", matchMen: "12.5" },
+          { us: "13", euro: "48", cm: "30.5", uk: "12", matchMen: "13" }
+        ]
+      },
+      WOMEN: {
+        label: "Women's conversion",
+        columns: [
+          { key: "us", label: "US" },
+          { key: "euro", label: "EURO" },
+          { key: "cm", label: "CM" },
+          { key: "uk", label: "UK" }
+        ],
+        rows: [
+          { us: "5", euro: "35.5", cm: "22.5", uk: "3", matchWomen: "5" },
+          { us: "5.5", euro: "36", cm: "22.75", uk: "3.5", matchWomen: "5.5" },
+          { us: "6", euro: "37", cm: "23", uk: "4", matchWomen: "6" },
+          { us: "6.5", euro: "37.5", cm: "23.5", uk: "4.5", matchWomen: "6.5" },
+          { us: "7", euro: "38", cm: "24", uk: "5", matchWomen: "7" },
+          { us: "7.5", euro: "39", cm: "24.5", uk: "5.5", matchWomen: "7.5" },
+          { us: "8", euro: "39.5", cm: "25", uk: "6", matchWomen: "8" },
+          { us: "8.5", euro: "40", cm: "25.5", uk: "6.5", matchWomen: "8.5" },
+          { us: "9", euro: "40.5", cm: "25.75", uk: "7", matchWomen: "9" },
+          { us: "9.5", euro: "41.5", cm: "26", uk: "7.5", matchWomen: "9.5" },
+          { us: "10", euro: "42", cm: "26.5", uk: "8", matchWomen: "10" },
+          { us: "10.5", euro: "42.5", cm: "27", uk: "8.5", matchWomen: "10.5" },
+          { us: "11", euro: "43.5", cm: "27.5", uk: "9", matchWomen: "11" },
+          { us: "11.5", euro: "44", cm: "28", uk: "9.5", matchWomen: "11.5" },
+          { us: "12", euro: "44.5", cm: "28.5", uk: "10", matchWomen: "12" }
+        ]
+      },
+      KIDS: {
+        label: "Kids conversion",
+        columns: [
+          { key: "cm", label: "CM" },
+          { key: "us", label: "US" },
+          { key: "uk", label: "UK" },
+          { key: "euro", label: "EURO" }
+        ],
+        rows: [
+          { cm: "12", us: "K4", uk: "K3", euro: "19.5" },
+          { cm: "12.5", us: "K4.5", uk: "K3.5", euro: "20.5" },
+          { cm: "13", us: "K5", uk: "K4", euro: "21" },
+          { cm: "13.25", us: "K5.5", uk: "K4.5", euro: "21.5" },
+          { cm: "13.5", us: "K6", uk: "K5", euro: "22.5" },
+          { cm: "14", us: "K6.5", uk: "K5.5", euro: "23" },
+          { cm: "14.5", us: "K7", uk: "K6", euro: "23.5" },
+          { cm: "14.75", us: "K7.5", uk: "K6.5", euro: "24" },
+          { cm: "15", us: "K8", uk: "K7", euro: "25" },
+          { cm: "15.5", us: "K8.5", uk: "K7.5", euro: "25.5" },
+          { cm: "16", us: "K9", uk: "K8", euro: "26" },
+          { cm: "16.5", us: "K9.5", uk: "K8.5", euro: "26.5" },
+          { cm: "17", us: "K10", uk: "K9", euro: "27" },
+          { cm: "17.25", us: "K10.5", uk: "K9.5", euro: "28" },
+          { cm: "17.5", us: "K11", uk: "K10", euro: "28.5" },
+          { cm: "18", us: "K11.5", uk: "K10.5", euro: "" },
+          { cm: "18.5", us: "K12", uk: "K11", euro: "" },
+          { cm: "19", us: "K12.5", uk: "K11.5", euro: "" },
+          { cm: "19.5", us: "K13", uk: "K12", euro: "" },
+          { cm: "19.75", us: "K13.5", uk: "K12.5", euro: "" },
+          { cm: "20", us: "1", uk: "K13", euro: "" },
+          { cm: "20.5", us: "1.5", uk: "K13.5", euro: "" },
+          { cm: "21", us: "2", uk: "1", euro: "" },
+          { cm: "21.5", us: "2.5", uk: "1.5", euro: "" },
+          { cm: "22", us: "3", uk: "2", euro: "" },
+          { cm: "22.25", us: "3.5", uk: "2.5", euro: "" },
+          { cm: "22.5", us: "4", uk: "3", euro: "" },
+          { cm: "23", us: "4.5", uk: "3.5", euro: "" },
+          { cm: "23.5", us: "5", uk: "4", euro: "" },
+          { cm: "24", us: "5.5", uk: "4.5", euro: "" },
+          { cm: "24.5", us: "6", uk: "5", euro: "" },
+          { cm: "25", us: "6.5", uk: "5.5", euro: "" },
+          { cm: "25.5", us: "7", uk: "6", euro: "" }
+        ]
+      }
+    }
   }
 };
 
@@ -505,6 +611,7 @@ function normalizeBrandKey(brand = "") {
   if (value.includes("NIKE")) return "NIKE";
   if (value.includes("ADIDAS")) return "ADIDAS";
   if (value.includes("PUMA")) return "PUMA";
+  if (value.includes("ASICS")) return "ASICS";
   if (value.includes("ON RUNNING") || /\bON\b/.test(value)) return "ON";
   return "";
 }

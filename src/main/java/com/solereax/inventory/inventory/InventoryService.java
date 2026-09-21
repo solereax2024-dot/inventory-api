@@ -1505,6 +1505,69 @@ public class InventoryService {
         }
     }
 
+    @Transactional
+    public PublicProductResponse quickEditProduct(Long productId, com.solereax.inventory.inventory.dto.AdminQuickEditProductRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
+        
+        // Update name and brand
+        if (request.name() != null) {
+            product.setName(request.name().trim());
+        }
+        if (request.brand() != null) {
+            product.setBrand(trimToNull(request.brand()));
+        }
+        product.setUpdatedAt(Instant.now());
+        
+        // Handle colorway rename if requested
+        String oldColorway = trimToNull(request.oldColorway());
+        String newColorway = trimToNull(request.newColorway());
+        if (oldColorway != null && newColorway != null && !oldColorway.equals(newColorway)) {
+            renameProductColorway(product, oldColorway, newColorway);
+        }
+        
+        Product saved = productRepository.save(product);
+        return toAdminResponse(saved);
+    }
+
+    private void renameProductColorway(Product product, String oldColorway, String newColorway) {
+        String normalizedOld = normalizeColorway(oldColorway);
+        String normalizedNew = normalizeColorway(newColorway);
+        
+        if (normalizedOld.equals(normalizedNew)) {
+            return;
+        }
+        
+        // Rename stocks
+        for (ProductStock stock : product.getStocks()) {
+            if (normalizedOld.equals(stock.getColorway())) {
+                stock.setColorway(normalizedNew);
+                stock.setUpdatedAt(Instant.now());
+            }
+        }
+        
+        // Rename colorway images
+        for (ProductColorwayImage image : product.getColorwayImages()) {
+            if (normalizedOld.equals(image.getColorway())) {
+                image.setColorway(normalizedNew);
+                image.setUpdatedAt(Instant.now());
+            }
+        }
+        
+        // Rename colorway details
+        for (ProductColorwayDetail detail : product.getColorwayDetails()) {
+            if (normalizedOld.equals(normalizeColorway(detail.getColorway()))) {
+                detail.setColorway(normalizedNew);
+                detail.setUpdatedAt(Instant.now());
+            }
+        }
+        
+        // If main color was the old colorway, update it
+        if (normalizedOld.equals(normalizeColorway(product.getMainColor()))) {
+            product.setMainColor(normalizedNew);
+        }
+    }
+
     private record PriceRange(BigDecimal min, BigDecimal max) {
     }
 }
