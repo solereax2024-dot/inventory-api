@@ -16,10 +16,29 @@ remote() {
   ssh -o BatchMode=yes -o ConnectTimeout=10 "$HOST" "$@"
 }
 
+require_service_env() {
+  local name="$1"
+  local expected="$2"
+  if ! remote "systemctl cat '$SERVICE_NAME' | grep -Fq '$expected'"; then
+    echo "[deploy] missing required service setting: $name ($expected)"
+    exit 1
+  fi
+}
+
 echo "[deploy] host=$HOST app_dir=$APP_DIR"
 
 # Preflight: confirm key-based SSH is working.
 remote "echo '[deploy] ssh-ok: ' \"\$(hostname)\""
+
+if remote "systemctl list-unit-files '$SERVICE_NAME' >/dev/null 2>&1"; then
+  echo "[deploy] validating production service environment"
+  require_service_env "spring profile" 'Environment="SPRING_PROFILES_ACTIVE=prod"'
+  require_service_env "database url" 'Environment="DB_URL='
+  require_service_env "database username" 'Environment="DB_USERNAME='
+  require_service_env "database password" 'Environment="DB_PASSWORD='
+  require_service_env "production safety mode" 'Environment="APP_PRODUCTION_MODE=true"'
+  require_service_env "allowed production databases" 'Environment="APP_ALLOWED_PROD_DATABASES='
+fi
 
 # Ensure repository is at latest origin/main.
 remote "cd '$APP_DIR' && git fetch origin main && git reset --hard origin/main"
