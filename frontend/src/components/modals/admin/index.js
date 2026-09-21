@@ -12,4 +12,4 @@ export { default as ProductActionModalShell } from "./ProductActionModalShell";
 export { default as AdminSizeGuideModal } from "./AdminSizeGuideModal";
 export { default as AdminSuccessModal } from "./AdminSuccessModal";
 export { default as ManualReservationModal } from "./ManualReservationModal";
-export { default as QuickEditProductModal } from "./QuickEditProductModal";
+

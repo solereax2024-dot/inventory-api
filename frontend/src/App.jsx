@@ -7,7 +7,6 @@ import CustomerPage from "./pages/customer/CustomerPage";
 import FeaturedPage from "./pages/customer/FeaturedPage";
 import BrandsPage from "./pages/customer/BrandsPage";
 import ReservePage from "./pages/customer/ReservePage";
-import GamificationPage from "./pages/customer/GamificationPage";
 import AdminPage from "./pages/admin/AdminPage";
 import { DEFAULT_THEME, THEMES } from "./constants/themes";
 import { trackMetaEvent } from "./utils/tracking";
@@ -243,7 +242,6 @@ export default function App() {
         <Route path="/collection" element={<Navigate to="/collections" replace />} />
         <Route path="/brands" element={<BrandsPage onCatalogNavChange={setCatalogNav} />} />
         <Route path="/shop" element={<Navigate to="/collections" replace />} />
-        <Route path="/gamification" element={<GamificationPage />} />
         <Route path="/reserve" element={<Navigate to="/collections" replace />} />
         <Route path="/reserve/:productId" element={<ReservePage />} />
         <Route
