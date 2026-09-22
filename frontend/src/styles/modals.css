@@ -1566,6 +1566,8 @@ body.theme-dark .modal-sticky-footer {
 
 .logo-upload-copy {
   min-width: 0;
+  gap: 8px;
+  line-height: 1.35;
 }
 
 .logo-upload-copy .image-upload-name,
