@@ -35,7 +35,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 72px;
+  min-height: 0;
 }
 
 .site-header-center {
@@ -414,11 +414,12 @@
 }
 
 .site-logo {
-  width: clamp(72px, 5.2vw, 88px);
-  height: clamp(72px, 5.2vw, 88px);
+  width: 48px;
+  height: 48px;
   border-radius: 0;
   object-fit: contain;
-  transform: none;
+  transform: scale(1.18);
+  transform-origin: center;
   background: transparent;
   box-shadow: none;
   display: block;
@@ -972,9 +973,9 @@
   }
 
   .site-logo {
-    transform: none;
-    width: clamp(60px, 11vw, 72px);
-    height: clamp(60px, 11vw, 72px);
+    width: 44px;
+    height: 44px;
+    transform: scale(1.14);
   }
 
   .site-header-right {
@@ -1112,8 +1113,9 @@
   }
 
   .site-logo {
-    width: clamp(56px, 14vw, 64px);
-    height: clamp(56px, 14vw, 64px);
+    width: 40px;
+    height: 40px;
+    transform: scale(1.12);
   }
 
   .site-header-inner {
