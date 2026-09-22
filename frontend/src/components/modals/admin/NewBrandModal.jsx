@@ -65,38 +65,29 @@ export default function NewBrandModal({
               {savedBrands.map((brand) => (
                 <div className="saved-entry-item brand-entry-item" key={brand.id ?? brand.name}>
                   <div className="brand-entry-logo-col">
-                    <div className="product-image-upload-tile-wrap brand-logo-upload-tile-wrap">
-                      <label
-                        htmlFor={`brand-logo-upload-${brand.id ?? brand.name}`}
-                        className="product-image-upload-tile brand-entry-logo"
-                        title="Click to upload logo"
-                      >
-                        {brand.logoUrl ? (
-                          <img src={brand.logoUrl} alt={brand.name} className="product-image-upload-tile-img brand-logo-img" />
-                        ) : (
-                          <span className="product-image-upload-placeholder brand-logo-placeholder">
-                            <ImagePlus size={18} />
-                          </span>
-                        )}
-                        {uploadingId === brand.id ? (
-                          <span className="product-image-uploading brand-logo-uploading">•••</span>
-                        ) : null}
-                      </label>
-                      <div className="product-image-upload-copy brand-logo-upload-copy">
-                        <small className="field-hint image-upload-name">
-                          {brand.logoUrl ? "Logo uploaded" : "No logo uploaded"}
-                        </small>
-                        <small className="field-hint image-upload-note">
-                          {uploadingId === brand.id ? "Uploading logo..." : "Click the tile to upload or replace."}
-                        </small>
-                      </div>
+                    <div
+                      className="brand-entry-logo"
+                      title="Click to upload logo"
+                      onClick={() => fileInputRefs.current[brand.id]?.click()}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {brand.logoUrl ? (
+                        <img src={brand.logoUrl} alt={brand.name} className="brand-logo-img" />
+                      ) : (
+                        <span className="brand-logo-placeholder">
+                          <ImagePlus size={16} />
+                        </span>
+                      )}
+                      {uploadingId === brand.id && (
+                        <span className="brand-logo-uploading">•••</span>
+                      )}
                     </div>
                     <input
                       id={`brand-logo-upload-${brand.id ?? brand.name}`}
                       ref={(el) => { fileInputRefs.current[brand.id] = el; }}
                       type="file"
                       accept="image/*"
-                      className="sr-only-file-input"
+                      style={{ display: "none" }}
                       onChange={(e) => handleLogoChange(brand, e.target.files?.[0])}
                     />
                   </div>

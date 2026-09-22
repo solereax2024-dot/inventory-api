@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { ImagePlus } from "lucide-react";
 import { apiRequest, uploadImage } from "./utils/api";
 import { SiteFooter, SiteHeader } from "./components/layout";
 import { ThemeColorPicker, WelcomeThemeModal } from "./components/theme";
@@ -277,16 +278,31 @@ export default function App() {
               {/* Day Logo */}
               <div className="logo-upload-section">
                 <p className="logo-upload-label">☀️ Day Theme</p>
-                {branding.logoUrl
-                  ? <img src={branding.logoUrl} alt="Day logo" className="logo-preview" />
-                  : <div className="logo-preview-empty">No logo</div>}
                 <input
+                  id="branding-logo-day-file"
+                  className="sr-only-file-input"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                   onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
                 />
+                <div className="product-image-upload-tile-wrap logo-upload-tile-wrap">
+                  <label htmlFor="branding-logo-day-file" className="product-image-upload-tile logo-upload-tile" title="Click to upload day logo">
+                    {branding.logoUrl
+                      ? <img src={branding.logoUrl} alt="Day logo" className="product-image-upload-tile-img logo-preview" />
+                      : <span className="product-image-upload-placeholder logo-preview-empty"><ImagePlus size={20} /></span>}
+                  </label>
+                  <div className="product-image-upload-copy logo-upload-copy">
+                    <small className="field-hint image-upload-name">
+                      {logoFile ? `${logoFile.name}` : (branding.logoUrl ? "Logo uploaded" : "No file selected")}
+                    </small>
+                    <small className="field-hint image-upload-note">
+                      {logoFile ? "Ready to upload." : "Click the tile to choose a file."}
+                    </small>
+                  </div>
+                </div>
                 <button
                   type="button"
+                  className="image-upload-submit-btn"
                   onClick={() => uploadLogoDay().catch((err) => setLogoModalMessage(err.message))}
                 >
                   Upload Day Logo
@@ -296,16 +312,31 @@ export default function App() {
               {/* Night Logo */}
               <div className="logo-upload-section">
                 <p className="logo-upload-label">🌙 Night Theme</p>
-                {branding.logoDarkUrl
-                  ? <img src={branding.logoDarkUrl} alt="Night logo" className="logo-preview" />
-                  : <div className="logo-preview-empty">No logo</div>}
                 <input
+                  id="branding-logo-night-file"
+                  className="sr-only-file-input"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                   onChange={(e) => setLogoDarkFile(e.target.files?.[0] || null)}
                 />
+                <div className="product-image-upload-tile-wrap logo-upload-tile-wrap">
+                  <label htmlFor="branding-logo-night-file" className="product-image-upload-tile logo-upload-tile" title="Click to upload night logo">
+                    {branding.logoDarkUrl
+                      ? <img src={branding.logoDarkUrl} alt="Night logo" className="product-image-upload-tile-img logo-preview" />
+                      : <span className="product-image-upload-placeholder logo-preview-empty"><ImagePlus size={20} /></span>}
+                  </label>
+                  <div className="product-image-upload-copy logo-upload-copy">
+                    <small className="field-hint image-upload-name">
+                      {logoDarkFile ? `${logoDarkFile.name}` : (branding.logoDarkUrl ? "Logo uploaded" : "No file selected")}
+                    </small>
+                    <small className="field-hint image-upload-note">
+                      {logoDarkFile ? "Ready to upload." : "Click the tile to choose a file."}
+                    </small>
+                  </div>
+                </div>
                 <button
                   type="button"
+                  className="image-upload-submit-btn"
                   onClick={() => uploadLogoDark().catch((err) => setLogoModalMessage(err.message))}
                 >
                   Upload Night Logo
