@@ -179,6 +179,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [savedBrands, setSavedBrands] = useState([]);
   const [savedProductNames, setSavedProductNames] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
+  const [newBrandModal, setNewBrandModal] = useState({ isOpen: false, brandName: "" });
+  const [newAdminModal, setNewAdminModal] = useState({ isOpen: false });
+  const [newProductNameModal, setNewProductNameModal] = useState({ isOpen: false, productName: "" });
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
    const [activeAdminSection, setActiveAdminSection] = useState("products");
    const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
