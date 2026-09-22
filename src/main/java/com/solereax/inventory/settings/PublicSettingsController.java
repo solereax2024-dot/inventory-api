@@ -2,7 +2,6 @@ package com.solereax.inventory.settings;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +23,7 @@ public class PublicSettingsController {
         response.put("logoUrl", brandingService.getLogoUrl());
         response.put("logoDarkUrl", brandingService.getLogoDarkUrl());
         return ResponseEntity.ok()
-                .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic())
+                .cacheControl(CacheControl.noStore())
                 .body(response);
     }
 }

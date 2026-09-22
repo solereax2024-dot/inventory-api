@@ -197,24 +197,52 @@ export default function App() {
     setShowWelcome(false);
   };
 
-  const uploadLogoDay = async () => {
-    if (!logoFile) { setLogoModalMessage("Please choose a day logo file."); return; }
+  const uploadLogoDay = async (file) => {
+    if (!file) { setLogoModalMessage("Please choose a day logo file."); return; }
     const token = localStorage.getItem("adminToken") || "";
     if (!token) { setLogoModalMessage("Please login as admin first."); return; }
-    const data = await uploadImage("/api/admin/media/logo", logoFile, token);
+    const data = await uploadImage("/api/admin/media/logo", file, token);
     setBranding((prev) => ({ ...prev, logoUrl: data.url }));
-    setLogoFile(null);
     setLogoModalMessage("Day logo updated.");
   };
 
-  const uploadLogoDark = async () => {
-    if (!logoDarkFile) { setLogoModalMessage("Please choose a night logo file."); return; }
+  const uploadLogoDark = async (file) => {
+    if (!file) { setLogoModalMessage("Please choose a night logo file."); return; }
     const token = localStorage.getItem("adminToken") || "";
     if (!token) { setLogoModalMessage("Please login as admin first."); return; }
-    const data = await uploadImage("/api/admin/media/logo-dark", logoDarkFile, token);
+    const data = await uploadImage("/api/admin/media/logo-dark", file, token);
     setBranding((prev) => ({ ...prev, logoDarkUrl: data.url }));
-    setLogoDarkFile(null);
     setLogoModalMessage("Night logo updated.");
+  };
+
+  const handleLogoDayChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    event.target.value = "";
+    setLogoModalMessage("");
+    setLogoFile(file);
+
+    if (!file) {
+      return;
+    }
+
+    uploadLogoDay(file)
+      .then(() => setLogoFile(null))
+      .catch((err) => setLogoModalMessage(err.message));
+  };
+
+  const handleLogoDarkChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    event.target.value = "";
+    setLogoModalMessage("");
+    setLogoDarkFile(file);
+
+    if (!file) {
+      return;
+    }
+
+    uploadLogoDark(file)
+      .then(() => setLogoDarkFile(null))
+      .catch((err) => setLogoModalMessage(err.message));
   };
 
   return (
@@ -283,7 +311,7 @@ export default function App() {
                   className="sr-only-file-input"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                  onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                  onChange={handleLogoDayChange}
                 />
                 <div className="product-image-upload-tile-wrap logo-upload-tile-wrap">
                   <label htmlFor="branding-logo-day-file" className="product-image-upload-tile logo-upload-tile" title="Click to upload day logo">
@@ -296,17 +324,10 @@ export default function App() {
                       {logoFile ? `${logoFile.name}` : (branding.logoUrl ? "Logo uploaded" : "No file selected")}
                     </small>
                     <small className="field-hint image-upload-note">
-                      {logoFile ? "Ready to upload." : "Click the tile to choose a file."}
+                      {logoFile ? "Uploading automatically..." : "Click the tile to choose a file."}
                     </small>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="image-upload-submit-btn"
-                  onClick={() => uploadLogoDay().catch((err) => setLogoModalMessage(err.message))}
-                >
-                  Upload Day Logo
-                </button>
               </div>
 
               {/* Night Logo */}
@@ -317,7 +338,7 @@ export default function App() {
                   className="sr-only-file-input"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                  onChange={(e) => setLogoDarkFile(e.target.files?.[0] || null)}
+                  onChange={handleLogoDarkChange}
                 />
                 <div className="product-image-upload-tile-wrap logo-upload-tile-wrap">
                   <label htmlFor="branding-logo-night-file" className="product-image-upload-tile logo-upload-tile" title="Click to upload night logo">
@@ -330,17 +351,10 @@ export default function App() {
                       {logoDarkFile ? `${logoDarkFile.name}` : (branding.logoDarkUrl ? "Logo uploaded" : "No file selected")}
                     </small>
                     <small className="field-hint image-upload-note">
-                      {logoDarkFile ? "Ready to upload." : "Click the tile to choose a file."}
+                      {logoDarkFile ? "Uploading automatically..." : "Click the tile to choose a file."}
                     </small>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="image-upload-submit-btn"
-                  onClick={() => uploadLogoDark().catch((err) => setLogoModalMessage(err.message))}
-                >
-                  Upload Night Logo
-                </button>
               </div>
             </div>
 
