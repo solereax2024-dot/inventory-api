@@ -415,10 +415,12 @@
 .site-logo {
   width: 47px;
   height: 47px;
-  border-radius: 999px;
-  object-fit: cover;
-  transform: scale(1.04);
+  border-radius: 0;
+  object-fit: contain;
+  transform: none;
   background: transparent;
+  box-shadow: none;
+  display: block;
 }
 
 .site-logo-button {
@@ -435,7 +437,7 @@
 }
 
 .site-logo-button:hover {
-  transform: scale(1.05);
+  transform: none;
 }
 
 .site-subtitle {
