@@ -3,7 +3,7 @@ services:
     image: postgres:17
     container_name: sole-reax-postgres
     environment:
-      POSTGRES_DB: sole_reax
+      POSTGRES_DB: inventory
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:

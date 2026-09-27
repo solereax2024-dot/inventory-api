@@ -12,17 +12,20 @@ class PublicSettingsControllerTest {
     @Test
     void brandingResponseIsNotCachedSoLatestLogoIsAlwaysFetched() {
         BrandingService brandingService = mock(BrandingService.class);
+        GamingService gamingService = mock(GamingService.class);
         when(brandingService.getLogoUrl()).thenReturn("/uploads/branding/day-logo.png");
         when(brandingService.getLogoDarkUrl()).thenReturn("/uploads/branding/night-logo.png");
+        when(gamingService.isGamingSectionVisible()).thenReturn(false);
 
-        PublicSettingsController controller = new PublicSettingsController(brandingService);
+        PublicSettingsController controller = new PublicSettingsController(brandingService, gamingService);
 
         var response = controller.branding();
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals(Map.of(
                 "logoUrl", "/uploads/branding/day-logo.png",
-                "logoDarkUrl", "/uploads/branding/night-logo.png"
+                "logoDarkUrl", "/uploads/branding/night-logo.png",
+                "gamingSectionVisible", false
         ), response.getBody());
         assertEquals("no-store", response.getHeaders().getCacheControl());
     }

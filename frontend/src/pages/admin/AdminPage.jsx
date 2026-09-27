@@ -41,6 +41,7 @@ import {
 } from "../../components/modals/admin";
 import AdminLoginSection from "./components/AdminLoginSection.jsx";
 import AdminProductsSection from "./components/AdminProductsSection.jsx";
+import GamingSettingsSection from "./components/GamingSettingsSection.jsx";
 import AdminSectionTabs from "./components/AdminSectionTabs.jsx";
 import AdminUsersSection from "./components/AdminUsersSection.jsx";
 import PromotionsSection from "./components/PromotionsSection.jsx";
@@ -185,6 +186,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
    const [activeAdminSection, setActiveAdminSection] = useState("products");
    const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
+  const [gamingSettings, setGamingSettings] = useState({ gamingSectionVisible: false });
+  const [isGamingSettingsSaving, setIsGamingSettingsSaving] = useState(false);
   const {
     isOpen: isStockGuideOpen,
     open: openStockGuideModal,
@@ -243,6 +246,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       () => [
         { key: "products", label: "Products" },
         { key: "reservations", label: "Reservations" },
+        { key: "gaming", label: "Gaming" },
         ...(isSuperAdmin ? [{ key: "promotions", label: "Promotions" }, { key: "users", label: "Admin Users" }] : [])
       ],
       [isSuperAdmin]
@@ -299,16 +303,18 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const loadAdminData = async (authToken, role = adminRole) => {
     setIsAdminLoading(true);
     try {
-      const [productData, orderData, brandData, productNameData] = await Promise.all([
+      const [productData, orderData, brandData, productNameData, gamingSettingData] = await Promise.all([
         apiRequest("/api/admin/products", "GET", undefined, authToken),
         apiRequest("/api/admin/orders", "GET", undefined, authToken),
         apiRequest("/api/admin/brands", "GET", undefined, authToken),
-        apiRequest("/api/admin/product-names", "GET", undefined, authToken)
+        apiRequest("/api/admin/product-names", "GET", undefined, authToken),
+        apiRequest("/api/admin/settings/gaming", "GET", undefined, authToken)
       ]);
       setProducts(productData);
       setOrders(orderData);
       setSavedBrands(brandData);
       setSavedProductNames(productNameData);
+      setGamingSettings({ gamingSectionVisible: Boolean(gamingSettingData?.gamingSectionVisible ?? false) });
       setEditProductId((prev) => prev || (productData[0]?.id?.toString() ?? ""));
       setStockForm((prev) => ({ ...prev, productId: prev.productId || (productData[0]?.id?.toString() ?? "") }));
       if (role === "SUPER_ADMIN") {
@@ -1483,10 +1489,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
    // Manual Reservation Size Guide
    const manualReservationItems = useMemo(() => {
-     const sourceItems = Array.isArray(manualReservationForm?.items) && manualReservationForm.items.length > 0 
-       ? manualReservationForm.items 
+     return Array.isArray(manualReservationForm?.items) && manualReservationForm.items.length > 0
+       ? manualReservationForm.items
        : [{}];
-     return sourceItems;
    }, [manualReservationForm?.items]);
 
    const manualReservationGuideProduct = useMemo(() => {
@@ -1682,6 +1687,33 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setTableFilters((prev) => ({ ...prev, [field]: value }));
   };
 
+  const toggleGamingSectionVisibility = async () => {
+    const nextVisible = !gamingSettings.gamingSectionVisible;
+    setIsGamingSettingsSaving(true);
+
+    try {
+      const updated = await apiRequest(
+        "/api/admin/settings/gaming",
+        "PUT",
+        { gamingSectionVisible: nextVisible },
+        token
+      );
+      const resolvedVisible = Boolean(updated?.gamingSectionVisible ?? nextVisible);
+      setGamingSettings({ gamingSectionVisible: resolvedVisible });
+      window.dispatchEvent(new CustomEvent("site-settings-changed", { detail: { gamingSectionVisible: resolvedVisible } }));
+      setSuccessModal({
+        isOpen: true,
+        message: resolvedVisible
+          ? "Gaming section is now visible to customers."
+          : "Gaming section is now hidden from customers."
+      });
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setIsGamingSettingsSaving(false);
+    }
+  };
+
   return (
     <main className="container container-wide">
       <AdminSectionTabs
@@ -1763,6 +1795,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
             onError={setMessage}
           />
         </section>
+      ) : null}
+
+      {activeAdminSection === "gaming" ? (
+        <GamingSettingsSection
+          gamingSectionVisible={gamingSettings.gamingSectionVisible !== false}
+          isSaving={isGamingSettingsSaving}
+          onToggleVisibility={toggleGamingSectionVisibility}
+        />
       ) : null}
 
       {isSuperAdmin && activeAdminSection === "promotions" ? (

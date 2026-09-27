@@ -12,16 +12,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/public/settings")
 public class PublicSettingsController {
     private final BrandingService brandingService;
+    private final GamingService gamingService;
 
-    public PublicSettingsController(BrandingService brandingService) {
+    public PublicSettingsController(BrandingService brandingService, GamingService gamingService) {
         this.brandingService = brandingService;
+        this.gamingService = gamingService;
     }
 
     @GetMapping("/branding")
-    public ResponseEntity<Map<String, String>> branding() {
-        Map<String, String> response = new HashMap<>();
+    public ResponseEntity<Map<String, Object>> branding() {
+        Map<String, Object> response = new HashMap<>();
         response.put("logoUrl", brandingService.getLogoUrl());
         response.put("logoDarkUrl", brandingService.getLogoDarkUrl());
+        response.put("gamingSectionVisible", gamingService.isGamingSectionVisible());
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(response);

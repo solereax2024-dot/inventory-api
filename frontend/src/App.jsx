@@ -8,6 +8,8 @@ import CustomerPage from "./pages/customer/CustomerPage";
 import FeaturedPage from "./pages/customer/FeaturedPage";
 import BrandsPage from "./pages/customer/BrandsPage";
 import ReservePage from "./pages/customer/ReservePage";
+import TetrisGamePage from "./pages/customer/TetrisGamePage";
+import TetrisLeaderboardPage from "./pages/customer/TetrisLeaderboardPage";
 import AdminPage from "./pages/admin/AdminPage";
 import { DEFAULT_THEME, THEMES } from "./constants/themes";
 import { trackMetaEvent } from "./utils/tracking";
@@ -47,7 +49,7 @@ const THEME_DEFAULT_MIGRATION_KEY = "themeDefaultMigrationV1";
 export default function App() {
   const location = useLocation();
   const isThemeCustomizationEnabled = false;
-  const [branding, setBranding] = useState({ logoUrl: null, logoDarkUrl: null });
+  const [branding, setBranding] = useState({ logoUrl: null, logoDarkUrl: null, gamingSectionVisible: false });
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
@@ -81,8 +83,22 @@ export default function App() {
 
   useEffect(() => {
     apiRequest("/api/public/settings/branding")
-      .then((data) => setBranding({ logoUrl: data.logoUrl || null, logoDarkUrl: data.logoDarkUrl || null }))
-      .catch(() => setBranding({ logoUrl: null, logoDarkUrl: null }));
+      .then((data) => setBranding({
+        logoUrl: data.logoUrl || null,
+        logoDarkUrl: data.logoDarkUrl || null,
+        gamingSectionVisible: data.gamingSectionVisible === true,
+      }))
+      .catch(() => setBranding({ logoUrl: null, logoDarkUrl: null, gamingSectionVisible: false }));
+  }, []);
+
+  useEffect(() => {
+    const syncGamingVisibility = (event) => {
+      const nextVisible = Boolean(event?.detail?.gamingSectionVisible);
+      setBranding((prev) => ({ ...prev, gamingSectionVisible: nextVisible }));
+    };
+
+    window.addEventListener("site-settings-changed", syncGamingVisibility);
+    return () => window.removeEventListener("site-settings-changed", syncGamingVisibility);
   }, []);
 
   useEffect(() => {
@@ -250,6 +266,7 @@ export default function App() {
       <SiteHeader
         logoUrl={activeLogoUrl}
         isAdminLoggedIn={Boolean(adminToken)}
+        isGamingSectionVisible={branding.gamingSectionVisible !== false}
         catalogNav={catalogNav}
         onLogoClick={() => {
           setLogoFile(null);
@@ -265,14 +282,22 @@ export default function App() {
       />
       <Routes>
         <Route path="/" element={<Navigate to="/collections" replace />} />
-        <Route path="/collections" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} />} />
+        <Route path="/collections" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} isGamingSectionVisible={branding.gamingSectionVisible !== false} />} />
         <Route path="/featured" element={<FeaturedPage onCatalogNavChange={setCatalogNav} />} />
         <Route path="/feature" element={<Navigate to="/featured" replace />} />
         <Route path="/collection" element={<Navigate to="/collections" replace />} />
         <Route path="/brands" element={<BrandsPage onCatalogNavChange={setCatalogNav} />} />
         <Route path="/shop" element={<Navigate to="/collections" replace />} />
-        <Route path="/reserve" element={<Navigate to="/collections" replace />} />
-        <Route path="/reserve/:productId" element={<ReservePage />} />
+         <Route path="/reserve" element={<Navigate to="/collections" replace />} />
+         <Route path="/reserve/:productId" element={<ReservePage />} />
+         <Route
+           path="/tetris-game"
+           element={branding.gamingSectionVisible !== false || Boolean(adminToken) ? <TetrisGamePage /> : <Navigate to="/collections" replace />}
+         />
+         <Route
+           path="/tetris-leaderboard"
+           element={branding.gamingSectionVisible !== false || Boolean(adminToken) ? <TetrisLeaderboardPage /> : <Navigate to="/collections" replace />}
+         />
         <Route
           path="/admin/*"
           element={

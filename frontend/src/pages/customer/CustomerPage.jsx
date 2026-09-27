@@ -12,7 +12,7 @@ import "../../styles/popular-rail.css";
 
 const SALE_BANNER_VARIANT = "luxe";
 
-export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
+export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {}, isGamingSectionVisible = true }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [catalogProducts, setCatalogProducts] = useState([]);
@@ -380,12 +380,9 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   };
 
   const handleCatalogPageChange = (nextPageOrUpdater) => {
-    setCurrentPage((prevPage) => {
-      const resolvedPage = typeof nextPageOrUpdater === "function"
-        ? nextPageOrUpdater(prevPage)
-        : nextPageOrUpdater;
-      return resolvedPage;
-    });
+    setCurrentPage((prevPage) => (typeof nextPageOrUpdater === "function"
+      ? nextPageOrUpdater(prevPage)
+      : nextPageOrUpdater));
 
     window.requestAnimationFrame(() => {
       const targetTop = catalogTopRef.current

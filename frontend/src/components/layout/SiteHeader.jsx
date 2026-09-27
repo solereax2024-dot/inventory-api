@@ -21,6 +21,7 @@ export default function SiteHeader({
   searchValue,
   onSearchChange,
   isAdminLoggedIn,
+  isGamingSectionVisible = true,
   onAdminSignOut,
   onThemeColorClick,
   catalogNav = { brandOptions: ["ALL"], brandFilter: "ALL", onBrandChange: () => {} }
@@ -53,12 +54,12 @@ export default function SiteHeader({
   const activeKeyword = (new URLSearchParams(location.search).get("q") || "").trim().toLowerCase();
 
   const navLinks = [
-    { label: "Brands",   to: "/brands",                       isActive: location.pathname.startsWith("/brands") },
-    { label: "Men",      to: "/collections?department=MEN",   isActive: isCatalogPath && activeDepartment === "MEN" },
-    { label: "Women",    to: "/collections?department=WOMEN", isActive: isCatalogPath && activeDepartment === "WOMEN" },
-    { label: "Kids",     to: "/collections?q=kids",           isActive: isCatalogPath && activeKeyword === "kids" },
-    { label: "Sale",     to: "/collections?sale=true",  isActive: isCatalogPath && activeSale === "true" },
-    { label: "Featured", to: "/featured",                     isActive: isFeaturedPath || (isCatalogPath && activeStock === "IN_STOCK") },
+    { label: "Brands", to: "/brands", isActive: location.pathname.startsWith("/brands") },
+    { label: "Men", to: "/collections?department=MEN", isActive: isCatalogPath && activeDepartment === "MEN" },
+    { label: "Women", to: "/collections?department=WOMEN", isActive: isCatalogPath && activeDepartment === "WOMEN" },
+    { label: "Kids", to: "/collections?q=kids", isActive: isCatalogPath && activeKeyword === "kids" },
+    { label: "Sale", to: "/collections?sale=true", isActive: isCatalogPath && activeSale === "true" },
+    { label: "Featured", to: "/featured", isActive: isFeaturedPath || (isCatalogPath && activeStock === "IN_STOCK") },
   ];
   const quickBrandOptions = (catalogNav.brandOptions || []).filter((brand) => brand && brand !== "ALL").slice(0, 6);
 
