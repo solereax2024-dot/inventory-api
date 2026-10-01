@@ -1,0 +1,76 @@
+/* ========================================
+   TETRIS GAME - DESIGN SYSTEM & VARIABLES
+   ======================================== */
+
+:root {
+    /* Color Palette */
+    --tetris-bg-dark: #171d3d;
+    --tetris-bg-darker: #1f2550;
+    --tetris-bg-darkest: #11162d;
+
+    --tetris-surface-primary: rgba(15, 23, 42, 0.6);
+    --tetris-surface-secondary: rgba(15, 23, 42, 0.94);
+    --tetris-surface-tertiary: rgba(30, 41, 59, 0.88);
+
+    --tetris-border-light: rgba(255, 255, 255, 0.12);
+    --tetris-border-lighter: rgba(148, 163, 184, 0.2);
+    --tetris-text-primary: #f8fafc;
+    --tetris-text-secondary: rgba(226, 232, 240, 0.78);
+    --tetris-text-tertiary: rgba(226, 232, 240, 0.66);
+
+    --tetris-accent-gold: #fbbf24;
+    --tetris-accent-purple: #6366f1;
+    --tetris-accent-pink: #fb7185;
+
+    /* Enhanced Colors for Polish */
+    --tetris-accent-cyan: #06b6d4;
+    --tetris-accent-green: #10b981;
+    --tetris-accent-orange: #f97316;
+
+    /* Spacing (8px system) */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 20px;
+    --space-2xl: 24px;
+
+    /* Sizing */
+    --tetris-mini-block-size: 28px;
+    --tetris-mini-gap: 2px;
+    --tetris-sidebar-width: 240px;
+    --tetris-border-radius-sm: 12px;
+    --tetris-border-radius-md: 16px;
+    --tetris-border-radius-lg: 20px;
+    --tetris-border-radius-xl: 24px;
+    --tetris-border-radius-pill: 999px;
+
+    /* Typography Scale */
+    --font-size-display: 2.4rem;
+    --font-size-heading: 0.95rem;
+    --font-size-body: 0.9rem;
+    --font-size-small: 0.8rem;
+    --font-size-tiny: 0.7rem;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 600;
+    --font-weight-bold: 700;
+    --font-weight-black: 800;
+
+    /* Shadows & Depth */
+    --shadow-sm: 0 8px 16px rgba(99, 102, 241, 0.2);
+    --shadow-md: 0 12px 28px rgba(2, 6, 23, 0.24);
+    --shadow-lg: 0 18px 36px rgba(0, 0, 0, 0.32);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --tetris-glow-soft: 0 0 22px rgba(251, 191, 36, 0.16);
+    --tetris-glow-strong: 0 0 36px rgba(251, 191, 36, 0.26);
+    --tetris-focus-ring: 0 0 0 2px rgba(251, 191, 36, 0.36);
+    --tetris-card-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+    --transition-spring: 0.24s cubic-bezier(0.32, 0, 0.67, 1);
+}
+

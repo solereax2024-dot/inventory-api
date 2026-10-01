@@ -210,9 +210,9 @@ body {
 }
 
 .container {
-  max-width: 1680px;
+  max-width: 1920px;
   margin: 24px auto;
-  padding: 0 clamp(12px, 2.2vw, 24px) 32px;
+  padding: 0 clamp(10px, 1.6vw, 20px) 32px;
   display: grid;
   gap: 20px;
 }
@@ -226,7 +226,7 @@ body {
   max-width: none;
   width: 100%;
   margin: 0 auto;
-  padding-inline: clamp(12px, 3vw, 32px);
+  padding-inline: clamp(10px, 1.8vw, 20px);
 }
 
 .hero {
@@ -458,7 +458,7 @@ body {
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 input,
@@ -2059,12 +2059,12 @@ body.theme-dark .reserve-form-actions {
 
   .container-customer {
     margin: 0 auto;
-    padding-inline: 16px;
+    padding-inline: 12px;
   }
 
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
   }
 
 

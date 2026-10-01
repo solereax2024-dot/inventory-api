@@ -1,0 +1,204 @@
+/* ========================================
+   TETRIS - LEADERBOARD & STATS
+   ======================================== */
+
+.tetris-leaderboard-embed {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tetris-leaderboard-overview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+
+.tetris-leaderboard-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tetris-leaderboard-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tetris-leaderboard-filter {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--tetris-text-secondary);
+    font-size: var(--font-size-tiny);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.tetris-leaderboard-filter.active {
+    color: #fff7ed;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(251, 191, 36, 0.18));
+    border-color: rgba(251, 191, 36, 0.34);
+    box-shadow: 0 8px 18px rgba(99, 102, 241, 0.16);
+}
+
+.tetris-leaderboard-filter:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--tetris-text-primary);
+}
+
+.tetris-leaderboard-panel {
+    min-height: 100%;
+    padding: 6px;
+    background:
+            radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 36%),
+            linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.94));
+    border-color: rgba(251, 191, 36, 0.24);
+    box-shadow:
+            0 0 0 1px rgba(251, 191, 36, 0.06),
+            0 18px 36px rgba(2, 6, 23, 0.24),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.tetris-leaderboard-panel .tetris-panel-heading {
+    margin-bottom: 6px;
+}
+
+.tetris-leaderboard-panel .tetris-panel-title {
+    letter-spacing: 0.03em;
+}
+
+
+.tetris-leaderboard-panel .tetris-next-brand-name {
+    color: #fde68a;
+    font-weight: var(--font-weight-bold);
+}
+
+.tetris-mini-leaderboard {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tetris-mini-leaderboard-row {
+    appearance: none;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: 9px 10px;
+    border-radius: var(--tetris-border-radius-sm);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+    box-shadow: var(--tetris-card-sheen);
+}
+
+.tetris-mini-leaderboard-row.is-medal {
+    background: linear-gradient(90deg, rgba(251, 191, 36, 0.16), rgba(255, 255, 255, 0.05));
+    border-color: rgba(251, 191, 36, 0.18);
+    box-shadow: 0 4px 16px rgba(251, 191, 36, 0.12);
+}
+
+.tetris-mini-leaderboard-row.is-medal:hover {
+    transform: translateX(3px) scale(1.01);
+    background: linear-gradient(90deg, rgba(251, 191, 36, 0.24), rgba(255, 255, 255, 0.08));
+    box-shadow: 0 6px 20px rgba(251, 191, 36, 0.18);
+}
+
+.tetris-mini-leaderboard-row:hover {
+    transform: translateX(2px);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: var(--tetris-card-sheen), 0 8px 20px rgba(2, 6, 23, 0.18);
+    filter: saturate(1.02);
+}
+
+.tetris-mini-leaderboard-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    border-radius: var(--tetris-border-radius-pill);
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--tetris-text-primary);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-black);
+    box-shadow: var(--tetris-card-sheen);
+}
+
+.tetris-mini-leaderboard-row.is-medal .tetris-mini-leaderboard-rank {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(251, 113, 133, 0.14));
+    color: #fff7ed;
+    border: 1px solid rgba(251, 191, 36, 0.18);
+}
+
+.tetris-mini-leaderboard-player {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--tetris-text-primary);
+    font-size: 0.82rem;
+    font-weight: var(--font-weight-bold);
+}
+
+.tetris-mini-leaderboard-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+}
+
+.tetris-mini-leaderboard-subline {
+    color: var(--tetris-text-tertiary);
+    font-size: 0.66rem;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tetris-mini-leaderboard-score-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.tetris-mini-leaderboard-score {
+    color: var(--tetris-accent-gold);
+    font-size: 0.86rem;
+    font-weight: var(--font-weight-black);
+    text-align: right;
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.24);
+}
+
+.tetris-mini-leaderboard-level {
+    color: var(--tetris-accent-cyan);
+    font-size: 0.68rem;
+    font-weight: var(--font-weight-bold);
+}
+
+.tetris-shell.is-fullscreen-focus .tetris-leaderboard-column {
+    display: none;
+}
+
+.tetris-shell.is-fullscreen-focus .tetris-main {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    align-items: start;
+}
+

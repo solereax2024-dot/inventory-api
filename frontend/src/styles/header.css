@@ -21,13 +21,13 @@
 }
 
 .site-header-inner {
-  max-width: 1680px;
+  max-width: 1920px;
   margin: 0 auto;
-  padding: 14px 28px;
+  padding: 14px clamp(16px, 2vw, 24px);
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
 }
 
 .site-header-left {
@@ -418,7 +418,7 @@
   height: 48px;
   border-radius: 0;
   object-fit: contain;
-  transform: scale(1.18);
+  transform: none;
   transform-origin: center;
   background: transparent;
   box-shadow: none;
@@ -951,7 +951,7 @@
     align-items: center;
     width: 100%;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 12px 12px;
     justify-items: stretch;
   }
 
@@ -975,7 +975,7 @@
   .site-logo {
     width: 44px;
     height: 44px;
-    transform: scale(1.14);
+    transform: none;
   }
 
   .site-header-right {
@@ -1108,14 +1108,14 @@
 
 @media (max-width: 420px) {
   .site-header-inner {
-    padding: 10px 12px;
+    padding: 10px 10px;
     gap: 8px;
   }
 
   .site-logo {
     width: 40px;
     height: 40px;
-    transform: scale(1.12);
+    transform: none;
   }
 
   .site-header-inner {

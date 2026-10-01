@@ -1,5 +1,9 @@
 export { default as useModalState } from "./useModalState";
+export { default as useLocalStorage } from "./useLocalStorage";
+export { default as useLayoutDimensions } from "./useLayoutDimensions";
+export { default as useTetrisKeyboardControls } from "./useTetrisKeyboardControls";
+export { default as useTetrisLockEffects } from "./useTetrisLockEffects";
+export { default as useTetrisTouchGestures } from "./useTetrisTouchGestures";
 export { default as useToggleState } from "./useToggleState";
 export { default as useReservationEditorState } from "./useReservationEditorState";
 export { default as useCountdown } from "./useCountdown";
-

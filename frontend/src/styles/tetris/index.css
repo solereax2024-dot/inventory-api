@@ -1,0 +1,33 @@
+/* ========================================
+   TETRIS GAME - MODULAR CSS INDEX
+   ========================================
+
+   This file imports all modular CSS components.
+   Each file focuses on a specific aspect of the UI:
+
+   - tetris-variables.css: Design tokens & CSS variables
+   - tetris-layout.css: Main container & shell layout
+   - tetris-header.css: Header & top navigation
+   - tetris-board.css: Board shell & animations
+   - tetris-grid.css: Game grid & block rendering
+   - tetris-panels.css: HUD panels, cards, previews
+   - tetris-buttons.css: Buttons, forms, controls
+   - tetris-mobile.css: Mobile/touch-specific UI
+   - tetris-leaderboard.css: Leaderboard display
+   - tetris-modals.css: Modals, dialogs, overlays
+   - tetris-responsive.css: Media queries & breakpoints
+
+   ======================================== */
+
+@import url("./tetris-variables.css");
+@import url("./tetris-layout.css");
+@import url("./tetris-header.css");
+@import url("./tetris-board.css");
+@import url("./tetris-grid.css");
+@import url("./tetris-panels.css");
+@import url("./tetris-buttons.css");
+@import url("./tetris-mobile.css");
+@import url("./tetris-leaderboard.css");
+@import url("./tetris-modals.css");
+@import url("./tetris-responsive.css");
+
