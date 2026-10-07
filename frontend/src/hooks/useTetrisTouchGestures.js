@@ -18,6 +18,8 @@ export default function useTetrisTouchGestures({
 }) {
   const LONG_PRESS_HOLD_MS = 420;
   const LONG_PRESS_MOVE_CANCEL_PX = 16;
+  const UPWARD_HOLD_MIN_DISTANCE_PX = 42;
+  const UPWARD_HOLD_VERTICAL_RATIO = 1.5;
   const touchGestureRef = useRef({
     activeTouchId: null,
     startX: 0,
@@ -124,12 +126,20 @@ export default function useTetrisTouchGestures({
       if (absX >= TOUCH_SWIPE_THRESHOLD_PX) {
         movePieceHorizontal(deltaX > 0 ? 1 : -1);
       }
-    } else if (absY >= TOUCH_SWIPE_THRESHOLD_PX && deltaY > 0) {
-      const isHardDropFlick = absY >= TOUCH_HARD_DROP_FLICK_PX && elapsedMs <= TOUCH_HARD_DROP_FLICK_DURATION_MS;
-      if (isHardDropFlick) {
-        hardDropCurrentPiece();
+    } else if (absY >= TOUCH_SWIPE_THRESHOLD_PX) {
+      const isStrictUpwardSwipe = deltaY < 0
+        && absY >= UPWARD_HOLD_MIN_DISTANCE_PX
+        && absY >= absX * UPWARD_HOLD_VERTICAL_RATIO;
+
+      if (isStrictUpwardSwipe) {
+        holdCurrentPiece();
       } else {
-        softDropCurrentPiece();
+        const isHardDropFlick = absY >= TOUCH_HARD_DROP_FLICK_PX && elapsedMs <= TOUCH_HARD_DROP_FLICK_DURATION_MS;
+        if (isHardDropFlick) {
+          hardDropCurrentPiece();
+        } else {
+          softDropCurrentPiece();
+        }
       }
     }
 

@@ -1,13 +1,6 @@
 import {
-  ArrowLeft,
-  ArrowRight,
-  ChevronDown,
-  ChevronsDown,
-  Hand,
   Play,
   RotateCcw,
-  RotateCw,
-  HelpCircle,
 } from "lucide-react";
 
 export default function TetrisTouchControls({
@@ -19,16 +12,7 @@ export default function TetrisTouchControls({
   playerNameInputRef,
   onStartGame,
   onResetGame,
-  isPaused,
-  togglePauseGame,
-  onMoveLeft,
-  onMoveRight,
-  onRotateCw,
-  onSoftDrop,
-  onHardDrop,
-  onHoldPiece,
   canResetGame,
-  onOpenHowToPlay,
 }) {
   const isLiveGame = gameStarted && !gameOver;
   const startButtonLabel = gameOver ? "Play Again" : "Start Game";
@@ -101,18 +85,6 @@ export default function TetrisTouchControls({
              )}
            </div>
 
-           <div className="tetris-start-tertiary-row">
-             <button
-               type="button"
-               onClick={onOpenHowToPlay}
-               className="tetris-button tetris-button-outline"
-               aria-label="Open how to play guide"
-               title="How to Play"
-             >
-               <HelpCircle size={16} />
-               How to Play
-             </button>
-           </div>
         </section>
       </div>
     </aside>

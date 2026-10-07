@@ -1452,7 +1452,6 @@ export default function TetrisGamePage() {
                   isPaused={isPaused}
                   togglePauseGame={togglePauseGame}
                   canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
-                  onOpenHowToPlay={openHowToPlay}
                 />
               )}
            </section>
