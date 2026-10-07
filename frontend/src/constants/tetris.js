@@ -4,7 +4,7 @@ export const LARGE_DESKTOP_BLOCK_SIZE = 36;
 export const DESKTOP_BLOCK_SIZE = 32;
 export const COMPACT_DESKTOP_BLOCK_SIZE = 30;
 export const SMALL_HEIGHT_BLOCK_SIZE = 30;
-export const MOBILE_BLOCK_SIZE = 16;
+export const MOBILE_BLOCK_SIZE = 24;
 export const MOBILE_BREAKPOINT = 640;
 export const TABLET_BREAKPOINT = 768;
 export const DESKTOP_BREAKPOINT = 1024;
@@ -27,7 +27,7 @@ export const BEST_RUN_PREFERENCE_KEY = "brand-tetris-best-run";
 export const MOBILE_CONTROLS_PREFERENCE_KEY = "brand-tetris-mobile-controls-enabled";
 export const LEADERBOARD_TIME_FILTER = "all";
 export const LEADERBOARD_SORT_BY = "score";
-export const GRID_INSET_PX = 4;
+export const GRID_INSET_PX = 8;
 
 export const SOUND_PROFILES = {
   tap: { frequencies: [520], duration: 0.045, type: "triangle", gain: 0.024 },
