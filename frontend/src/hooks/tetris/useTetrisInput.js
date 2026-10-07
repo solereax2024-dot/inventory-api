@@ -1,4 +1,11 @@
 import { useCallback, useRef, useEffect } from "react";
+import {
+  TOUCH_HARD_DROP_FLICK_DURATION_MS,
+  TOUCH_HARD_DROP_FLICK_PX,
+  TOUCH_SWIPE_THRESHOLD_PX,
+  TOUCH_TAP_MAX_DURATION_MS,
+  TOUCH_TAP_MAX_MOVE_PX,
+} from "../../constants/tetris";
 
 /**
  * useTetrisInput Hook
@@ -133,6 +140,8 @@ export function useTetrisInput({
   const handleBoardTouchStart = useCallback((event) => {
     if (!gameStarted || gameOver) return;
 
+    event.preventDefault();
+
     const touch = event.touches?.[0];
     if (!touch) return;
 
@@ -143,44 +152,51 @@ export function useTetrisInput({
     };
   }, [gameStarted, gameOver]);
 
-  const handleBoardTouchMove = useCallback((event) => {
-    if (!gameStarted || gameOver || touchStartRef.current.time === 0) return;
+   const handleBoardTouchMove = useCallback((event) => {
+     if (!gameStarted || gameOver || touchStartRef.current.time === 0) return;
 
-    const touch = event.touches?.[0];
-    if (!touch) return;
+     event.preventDefault();
 
-    const deltaX = touch.clientX - touchStartRef.current.x;
-    const deltaY = touch.clientY - touchStartRef.current.y;
+     const touch = event.touches?.[0];
+     if (!touch) return;
 
-    // Swipe threshold: 15 pixels
-    const threshold = 15;
+     const deltaX = touch.clientX - touchStartRef.current.x;
+     const deltaY = touch.clientY - touchStartRef.current.y;
 
-    if (Math.abs(deltaX) > threshold) {
-      if (deltaX < 0) {
-        // Swipe left: move piece right
-        onMovePieceRight();
-        emitSound("tap");
-        touchStartRef.current.x = touch.clientX; // Update to prevent multiple moves
-      } else {
-        // Swipe right: move piece left
-        onMovePieceLeft();
-        emitSound("tap");
-        touchStartRef.current.x = touch.clientX;
-      }
-    }
+     // Apply separate thresholds for X and Y movement (not uniform)
+     const horizontalThreshold = TOUCH_SWIPE_THRESHOLD_PX;
+     const verticalThreshold = Math.max(TOUCH_SWIPE_THRESHOLD_PX, 20); // Vertical needs more movement
 
-    if (Math.abs(deltaY) > threshold) {
-      if (deltaY > 0) {
-        // Swipe down: soft drop
-        onSoftDrop();
-        emitSound("tap");
-        touchStartRef.current.y = touch.clientY;
-      }
-    }
-  }, [gameStarted, gameOver, onMovePieceLeft, onMovePieceRight, onSoftDrop, emitSound]);
+     // Horizontal movement detection with debounce (prevent multiple moves)
+     if (Math.abs(deltaX) > horizontalThreshold && Math.abs(deltaY) < verticalThreshold) {
+       if (deltaX < 0) {
+         // Swipe left: move piece right
+         onMovePieceRight();
+         emitSound("tap");
+         touchStartRef.current.x = touch.clientX; // Reset to prevent repeated moves
+       } else {
+         // Swipe right: move piece left
+         onMovePieceLeft();
+         emitSound("tap");
+         touchStartRef.current.x = touch.clientX;
+       }
+     }
+
+     // Vertical movement detection
+     if (Math.abs(deltaY) > verticalThreshold && Math.abs(deltaX) < horizontalThreshold) {
+       if (deltaY > 0) {
+         // Swipe down: soft drop
+         onSoftDrop();
+         emitSound("tap");
+         touchStartRef.current.y = touch.clientY;
+       }
+     }
+   }, [gameStarted, gameOver, onMovePieceLeft, onMovePieceRight, onSoftDrop, emitSound]);
 
   const handleBoardTouchEnd = useCallback((event) => {
     if (!gameStarted || gameOver) return;
+
+    event.preventDefault();
 
     const touch = event.changedTouches?.[0];
     if (!touch || touchStartRef.current.time === 0) return;
@@ -190,14 +206,13 @@ export function useTetrisInput({
     const deltaTime = Date.now() - touchStartRef.current.time;
 
     // Flick detection: fast movement (< 300ms)
-    const isFlick = deltaTime < 300;
-    const flickThreshold = 40;
+    const isFlick = deltaTime < TOUCH_HARD_DROP_FLICK_DURATION_MS;
 
-    if (isFlick && deltaY > flickThreshold) {
+    if (isFlick && deltaY > TOUCH_HARD_DROP_FLICK_PX) {
       // Fast downward flick: hard drop
       onHardDrop();
       emitSound("lock");
-    } else if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10 && deltaTime < 200) {
+    } else if (Math.abs(deltaX) < TOUCH_TAP_MAX_MOVE_PX && Math.abs(deltaY) < TOUCH_TAP_MAX_MOVE_PX && deltaTime < TOUCH_TAP_MAX_DURATION_MS) {
       // Tap: rotate clockwise
       onRotateCw();
       emitSound("tap");

@@ -244,8 +244,10 @@ export function calculateBlockSize(
 
     const horizontalReserve = 18;
     const verticalReserve = mobileLayoutMode === "gameplay"
-      ? (isVeryShortMobileViewport ? 300 : isShortMobileViewport ? 320 : 338)
-      : (isVeryShortMobileViewport ? 238 : isShortMobileViewport ? 262 : 286);
+      ? (isVeryShortMobileViewport ? 390 : isShortMobileViewport ? 430 : 460)
+      : mobileLayoutMode === "expanded"
+        ? (isVeryShortMobileViewport ? 182 : isShortMobileViewport ? 202 : 222)
+        : (isVeryShortMobileViewport ? 238 : isShortMobileViewport ? 262 : 286);
 
     const widthFit = Math.floor(Math.max(120, viewportWidth - horizontalReserve) / GRID_WIDTH);
     const heightFit = Math.floor(Math.max(200, viewportHeight - verticalReserve) / GRID_HEIGHT);

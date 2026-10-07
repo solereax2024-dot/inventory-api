@@ -1,8 +1,9 @@
 export default function TetrisBoardStage({
+  isMobileViewport,
   boardFrameRef,
-  boardShellClassName,
   boardShellStyle,
   isBoardFocused,
+  boardTopStatsBar,
   holdPiece,
   holdPiecePreview,
   holdTileId,
@@ -14,93 +15,106 @@ export default function TetrisBoardStage({
   afterGridContent,
   children,
 }) {
+  const renderPreviewPiece = (matrix, tileId, title, emptyLabel = "Empty") => {
+    // Helper: Detect and rotate I piece (and S/Z) horizontally to fit in narrow panels
+    const rotateForPreview = (m) => {
+      // Check if it's a horizontal I piece: 1 row, 4 columns
+      if (m.length === 1 && m[0].length === 4) {
+        // Rotate to vertical: [[1], [1], [1], [1]]
+        return m[0].map(cell => [cell]);
+      }
+      // Check if it's a horizontal S or Z (2 rows, 3 columns)
+      if (m.length === 2 && m[0].length === 3) {
+        // These can stay as-is, they fit fine
+        return m;
+      }
+      return m;
+    };
+
+    const displayMatrix = rotateForPreview(matrix);
+    const rowCount = matrix.length || 1;
+    const rowCount2 = displayMatrix.length || 1;
+    const columnCount = Math.max(1, ...displayMatrix.map((row) => row.length || 0));
+    const hasActiveCells = matrix.some((row) => row.some(Boolean));
+
+    if (!hasActiveCells) {
+      return <p className="text-muted">{emptyLabel}</p>;
+    }
+
+    return (
+      <div
+        className="tetris-mini-preview-board"
+        style={{
+          width: `calc(${columnCount} * var(--tetris-mini-block-size))`,
+          height: `calc(${rowCount2} * var(--tetris-mini-block-size))`,
+        }}
+      >
+        {displayMatrix.map((row, rowIndex) =>
+          row.map((cell, colIndex) => (
+            cell ? (
+              <div
+                key={`${title || "preview"}-${rowIndex}-${colIndex}`}
+                className="tetris-block tetris-mini-block-preview"
+                style={{
+                  left: `calc(${colIndex} * var(--tetris-mini-block-size))`,
+                  top: `calc(${rowIndex} * var(--tetris-mini-block-size))`,
+                  width: "var(--tetris-mini-block-size)",
+                  height: "var(--tetris-mini-block-size)",
+                  backgroundColor: getBrandColor(tileId),
+                }}
+                title={title}
+              >
+                {renderTileFace(tileId, true)}
+              </div>
+            ) : null
+          ))
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="tetris-playfield">
-      <div className="tetris-playfield-layout">
-        <div className="tetris-playfield-board" ref={boardFrameRef}>
-          <div className={boardShellClassName} style={boardShellStyle}>
-            <div className="tetris-board-chrome">
-              <div>
-                <p className="tetris-board-kicker">Main playfield</p>
-                <h2 className="tetris-board-title">Game Board</h2>
-              </div>
-              <div className="tetris-board-meta" aria-label="Board details">
-                <span className="tetris-board-chip">10 × 20 grid</span>
-                <span className={`tetris-board-chip ${isBoardFocused ? "is-active" : ""}`}>
-                  {isBoardFocused ? "Keyboard ready" : "Touch ready"}
-                </span>
-              </div>
-            </div>
-
-            <div className="tetris-grid-stage">
-              <section className="tetris-board-side-panel tetris-board-side-panel-hold tetris-detail-panel tetris-panel tetris-panel-compact tetris-panel-subtle tetris-hud-card" aria-label="Held piece preview">
-                <div className="tetris-panel-heading tetris-panel-heading-compact">
-                  <h3 className="tetris-panel-title">Hold</h3>
-                </div>
-                <div className="tetris-next-preview tetris-next-preview-compact tetris-hud-preview is-updated">
-                  {holdPiece ? (
-                    <div className="tetris-mini-grid tetris-mini-grid-compact-view" style={getPreviewGridStyle(holdPiecePreview)}>
-                      {holdPiecePreview.map((row, rowIndex) =>
-                        row.map((cell, colIndex) => (
-                          <div
-                            key={`inline-hold-${rowIndex}-${colIndex}`}
-                            className={cell ? "tetris-mini-block active" : "tetris-mini-block"}
-                            style={{ backgroundColor: cell ? getBrandColor(holdTileId) : "transparent" }}
-                            title={cell ? holdBrandTile?.name || "Held brand block" : undefined}
-                          >
-                            {cell ? renderTileFace(holdTileId, true) : null}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ) : <p className="text-muted">Empty</p>}
-                </div>
-              </section>
-
-              <div className="tetris-grid-core">
-                {children}
-              </div>
-
-              {afterGridContent}
-
-              <section className="tetris-board-side-panel tetris-board-side-panel-next tetris-detail-panel tetris-panel tetris-panel-compact tetris-panel-priority tetris-panel-featured tetris-hud-card" aria-label="Next piece preview queue">
-                <div className="tetris-panel-heading tetris-panel-heading-compact">
-                  <h3 className="tetris-panel-title">Next</h3>
-                </div>
-                <div className="tetris-next-queue" role="list" aria-label="Next three pieces">
-                  {nextQueuePreviewEntries.map((entry) => (
-                    <div key={entry.id} className="tetris-next-queue-slot" role="listitem">
-                      <div className="tetris-next-queue-slot-meta">
-                        <span className="tetris-next-queue-slot-label">#{entry.slot}</span>
-                      </div>
-                      <div className="tetris-next-preview tetris-next-preview-compact tetris-hud-preview is-updated">
-                        {entry.piece ? (
-                          <div className="tetris-mini-grid tetris-mini-grid-compact-view" style={getPreviewGridStyle(entry.preview)}>
-                            {entry.preview.map((row, rowIndex) =>
-                              row.map((cell, colIndex) => (
-                                <div
-                                  key={`inline-next-${entry.slot}-${rowIndex}-${colIndex}`}
-                                  className={cell ? "tetris-mini-block active" : "tetris-mini-block"}
-                                  style={{ backgroundColor: cell ? getBrandColor(entry.tileId) : "transparent" }}
-                                  title={cell ? entry.brandTile?.name || "Next brand block" : undefined}
-                                >
-                                  {cell ? renderTileFace(entry.tileId, true) : null}
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-muted">Next</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
+    <div ref={boardFrameRef} className="tetris-board-shell tetris-board-shell-unified" style={boardShellStyle}>
+      {/* HOLD PANEL - Left Side */}
+      <section className="tetris-board-side-panel tetris-board-side-panel-hold tetris-detail-panel tetris-panel tetris-panel-compact tetris-panel-priority tetris-panel-featured tetris-hud-card" aria-label="Held piece preview">
+        <div className="tetris-panel-heading tetris-panel-heading-compact">
+          <h3 className="tetris-panel-title">Hold</h3>
+        </div>
+        <div className="tetris-board-side-panel-body tetris-board-side-panel-body-single">
+          <div className="tetris-board-side-panel-slot">
+             <div className="tetris-next-preview tetris-next-preview-compact tetris-hud-preview is-updated">
+               {holdPiece
+                 ? renderPreviewPiece(holdPiecePreview, holdTileId, holdBrandTile?.name || "Held brand block")
+                 : null}
+             </div>
           </div>
         </div>
+      </section>
+
+      {/* BOARD - Center */}
+      <div className="tetris-board-center">
+        {boardTopStatsBar}
+        {children}
+        {afterGridContent}
       </div>
+
+      {/* NEXT PANEL - Right Side */}
+      <section className="tetris-board-side-panel tetris-board-side-panel-next tetris-detail-panel tetris-panel tetris-panel-compact tetris-panel-priority tetris-panel-featured tetris-hud-card" aria-label="Next piece preview queue">
+        <div className="tetris-panel-heading tetris-panel-heading-compact">
+          <h3 className="tetris-panel-title">Next</h3>
+        </div>
+        <div className="tetris-next-queue tetris-board-side-panel-body" role="list" aria-label="Next three pieces">
+          {nextQueuePreviewEntries.map((entry) => (
+            <div key={entry.id} className="tetris-next-queue-slot tetris-board-side-panel-slot" role="listitem">
+              <div className="tetris-next-preview tetris-next-preview-compact tetris-hud-preview is-updated">
+                {entry.piece
+                  ? renderPreviewPiece(entry.preview, entry.tileId, entry.brandTile?.name || "Next brand block", "Next")
+                  : <p className="text-muted">Next</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

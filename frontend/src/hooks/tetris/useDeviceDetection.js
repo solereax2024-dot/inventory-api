@@ -1,5 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import TETRIS_RESPONSIVE_CONFIG from "../../config/tetris-responsive";
+import { TABLET_BREAKPOINT } from "../../constants/tetris";
+import {
+  generateCacheKey,
+  getCachedDeviceProfile,
+  setCachedDeviceProfile,
+} from "../../utils/deviceDetectionCache";
 
 /**
  * useDeviceDetection Hook
@@ -77,11 +83,24 @@ export function useDeviceDetection() {
     };
   }, []);
 
-  // Detect high DPI displays
-  const dpi = useMemo(() => {
-    if (typeof window === "undefined") return 1;
-    return window.devicePixelRatio || 1;
-  }, []);
+   // Detect high DPI displays
+   const dpi = useMemo(() => {
+     if (typeof window === "undefined") return 1;
+     return window.devicePixelRatio || 1;
+   }, []);
+
+   // Generate cache key based on viewport and device properties
+   const cacheKey = useMemo(() => {
+     if (typeof window === "undefined" || typeof navigator === "undefined") {
+       return "ssr_default";
+     }
+     return generateCacheKey(
+       viewportSize.width,
+       viewportSize.height,
+       navigator.userAgent,
+       dpi
+     );
+   }, [viewportSize.width, viewportSize.height, dpi]);
 
   // Detect if device has a notch (common on modern phones)
   const hasNotch = useCallback(() => {
@@ -90,14 +109,21 @@ export function useDeviceDetection() {
     return /iPhone|iPad|Mac OS/i.test(ua) && window.devicePixelRatio > 2;
   }, []);
 
-  // Detect home indicator (bottom safe area on modern mobile devices)
-  const hasHomeIndicator = useCallback(() => {
-    if (typeof window === "undefined" || !("screen" in window)) return false;
-    const screen = window.screen;
-    // Home indicator on iPhone typically results in ~34px safe area
-    const bottomInset = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)')) || 0;
-    return bottomInset > 10;
-  }, []);
+   // Detect home indicator (bottom safe area on modern mobile devices)
+   const hasHomeIndicator = useCallback(() => {
+     if (typeof window === "undefined" || !("screen" in window)) return false;
+     // Home indicator on iPhone typically results in ~34px safe area
+     try {
+       const bottomInset = parseInt(
+         getComputedStyle(document.documentElement)
+           .getPropertyValue('--tetris-safe-bottom')
+           .trim() || '0'
+       ) || 0;
+       return bottomInset > 10;
+     } catch (e) {
+       return false;
+     }
+   }, []);
 
   // Check if device supports hover (keyboard/mouse vs touch)
   const supportsHover = useCallback(() => {
@@ -105,39 +131,69 @@ export function useDeviceDetection() {
     return window.matchMedia("(hover: hover)").matches;
   }, []);
 
-  // Determine if layout should be compact
-  const shouldCompactLayout = useMemo(() => {
-    return viewportSize.width < 768 || viewportSize.height < 800;
-  }, [viewportSize]);
+   // Determine if layout should be compact
+   const shouldCompactLayout = useMemo(() => {
+      return viewportSize.width < TABLET_BREAKPOINT || viewportSize.height < 800;
+   }, [viewportSize]);
 
-  const deviceType = TETRIS_RESPONSIVE_CONFIG.getDeviceProfile(viewportSize.width, viewportSize.height);
+   // Calculate device profile with caching
+   const cachedDeviceProfile = useMemo(() => {
+     // Check cache first
+     const cached = getCachedDeviceProfile(cacheKey);
+     if (cached) {
+       return cached;
+     }
 
-  return {
-    // Device type
-    deviceType,
-    isMobile: deviceType === 'mobile',
-    isTablet: deviceType === 'tablet',
-    isDesktop: deviceType === 'desktop' || deviceType === 'largeDesktop',
+     // Calculate device profile if not cached
+     const deviceType = TETRIS_RESPONSIVE_CONFIG.getDeviceProfile(
+       viewportSize.width,
+       viewportSize.height
+     );
 
-    // Touch capabilities
-    isTouchDevice: touchDevice,
-    supportsHover: supportsHover(),
+     const profile = {
+       // Device type
+       deviceType,
+       isMobile: deviceType === 'mobile',
+       isTablet: deviceType === 'tablet',
+       isDesktop: deviceType === 'desktop' || deviceType === 'largeDesktop',
 
-    // Orientation
-    orientation,
-    isPortrait: orientation === 'portrait',
-    isLandscape: orientation === 'landscape',
+       // Touch capabilities
+       isTouchDevice: touchDevice,
+       supportsHover: supportsHover(),
 
-    // Device features
-    hasNotch: hasNotch(),
-    hasHomeIndicator: hasHomeIndicator(),
-    dpi,
-    isHighDpi: dpi >= 2,
+       // Orientation
+       orientation,
+       isPortrait: orientation === 'portrait',
+       isLandscape: orientation === 'landscape',
 
-    // Layout decisions
-    shouldCompactLayout,
-    viewportSize,
-  };
+       // Device features
+       hasNotch: hasNotch(),
+       hasHomeIndicator: hasHomeIndicator(),
+       dpi,
+       isHighDpi: dpi >= 2,
+
+       // Layout decisions
+       shouldCompactLayout,
+       viewportSize,
+     };
+
+     // Store in cache for future renders
+     setCachedDeviceProfile(cacheKey, profile);
+
+     return profile;
+   }, [
+     cacheKey,
+     viewportSize,
+     orientation,
+     touchDevice,
+     shouldCompactLayout,
+     dpi,
+     supportsHover,
+     hasNotch,
+     hasHomeIndicator,
+   ]);
+
+   return cachedDeviceProfile;
 }
 
 /**

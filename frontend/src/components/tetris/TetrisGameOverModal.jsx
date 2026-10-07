@@ -1,4 +1,4 @@
-import { RotateCcw, Trophy } from "lucide-react";
+import { RotateCcw, Trophy, X } from "lucide-react";
 
 /**
  * TetrisGameOverModal Component
@@ -15,6 +15,7 @@ import { RotateCcw, Trophy } from "lucide-react";
  * - playerRank (number): Player's rank (if available)
  * - onPlayAgain (function): Callback to play again
  * - onOpenLeaderboard (function): Callback to open leaderboard
+ * - onClose (function): Callback to close modal
  */
 export default function TetrisGameOverModal({
   isVisible,
@@ -26,6 +27,7 @@ export default function TetrisGameOverModal({
   playerRank,
   onPlayAgain,
   onOpenLeaderboard,
+  onClose,
 }) {
   if (!isVisible) return null;
 
@@ -36,6 +38,17 @@ export default function TetrisGameOverModal({
   return (
     <div className="tetris-game-over-overlay" role="dialog" aria-modal="true" aria-labelledby="tetris-game-over-title">
       <div className="tetris-game-over-layout">
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="tetris-game-over-close-btn"
+            aria-label="Close game over modal"
+            title="Close"
+          >
+            <X size={20} />
+          </button>
+        )}
         <div className="tetris-game-over-content">
           <p className="tetris-game-over-kicker">Run complete</p>
           <h2 id="tetris-game-over-title">Game Over</h2>

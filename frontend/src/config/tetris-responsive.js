@@ -5,35 +5,62 @@
  * Eliminates hardcoded values scattered throughout the codebase
  */
 
+import {
+  GRID_HEIGHT,
+  GRID_INSET_PX,
+  GRID_WIDTH,
+  TABLET_BREAKPOINT,
+  DESKTOP_BREAKPOINT,
+  LARGE_DESKTOP_BREAKPOINT,
+  LARGE_DESKTOP_BLOCK_SIZE,
+  DESKTOP_BLOCK_SIZE,
+  COMPACT_DESKTOP_BLOCK_SIZE,
+  SMALL_HEIGHT_BLOCK_SIZE,
+  MOBILE_BLOCK_SIZE,
+  MOBILE_BREAKPOINT,
+} from "../constants/tetris";
+import { calculateBlockSize } from "../utils/tetrisGame";
+
+export function getOptimalBlockSize(width, height, type = null) {
+  const deviceType = type || TETRIS_RESPONSIVE_CONFIG.getDeviceProfile(width, height);
+  return calculateBlockSize(width, height, {
+    MOBILE_BREAKPOINT,
+    MOBILE_BLOCK_SIZE: TETRIS_RESPONSIVE_CONFIG.blockSizes.MOBILE,
+    SMALL_HEIGHT_BLOCK_SIZE: TETRIS_RESPONSIVE_CONFIG.blockSizes.SMALL_HEIGHT,
+    LARGE_DESKTOP_BLOCK_SIZE: TETRIS_RESPONSIVE_CONFIG.blockSizes.LARGE_DESKTOP,
+    DESKTOP_BLOCK_SIZE: TETRIS_RESPONSIVE_CONFIG.blockSizes.DESKTOP,
+    COMPACT_DESKTOP_BLOCK_SIZE: TETRIS_RESPONSIVE_CONFIG.blockSizes.COMPACT_DESKTOP,
+    mobileLayoutMode: deviceType === "mobile" ? "expanded" : "prestart",
+    compactMobileHeight: height <= 760,
+    veryShortMobileHeight: height <= 680,
+  });
+}
+
 export const TETRIS_RESPONSIVE_CONFIG = {
   // Grid dimensions (game logic)
-  GRID_WIDTH: 10,
-  GRID_HEIGHT: 20,
-  GRID_INSET_PX: 8,
+  GRID_WIDTH,
+  GRID_HEIGHT,
+  GRID_INSET_PX,
 
   // Breakpoints (all responsive thresholds in one place)
   breakpoints: {
     mobile: 640,      // < 640px = mobile
-    tablet: 768,      // 640-768px = mobile/tablet
+    tablet: 768,      // 640-768px = tablet
     desktop: 1024,    // >= 1024px = desktop
     large: 1280,      // >= 1280px = large desktop
   },
 
   // Device profiles with optimized settings
   devices: {
-    // Mobile phones
     mobile: {
       name: "Mobile Phone",
       widthRange: [320, 640],
-      heightRange: [480, 812],
-      blockSizeRange: [13, 24],
-      horizontalReserve: 34,      // Insets + safe areas
-      verticalReserveSmall: 206,  // < 650px height
-      verticalReserveMedium: 218, // 650-740px height
-      verticalReserveLarge: 226,  // >= 740px height
-      touchControlsHeight: 120,   // Bottom control area
-      hudHeight: 80,              // Top game info
-      previewPanelHeight: 100,    // Next/Hold preview
+      heightRange: [480, 932],
+      blockSizeRange: [12, 24],
+      horizontalReserve: 18,
+      verticalReserveSmall: 292,
+      verticalReserveMedium: 312,
+      verticalReserveLarge: 330,
       orientation: "portrait",
     },
 
@@ -54,13 +81,13 @@ export const TETRIS_RESPONSIVE_CONFIG = {
       name: "Desktop",
       widthRange: [1024, 1440],
       heightRange: [768, 1080],
-      blockSizeRange: [24, 28],
+      blockSizeRange: [25, 31],
       horizontalReserve: 80,
       verticalReserve: 300,
-      desktopBlockSize: 25,
-      largeDesktopBlockSize: 29,
-      compactDesktopBlockSize: 24,
-      smallHeightBlockSize: 25,
+      desktopBlockSize: 26,
+      largeDesktopBlockSize: 31,
+      compactDesktopBlockSize: 25,
+      smallHeightBlockSize: 26,
       orientation: "landscape",
     },
 
@@ -69,22 +96,22 @@ export const TETRIS_RESPONSIVE_CONFIG = {
       name: "Large Desktop / 4K",
       widthRange: [1440, Infinity],
       heightRange: [1080, Infinity],
-      blockSizeRange: [28, 29],
+      blockSizeRange: [29, 31],
       horizontalReserve: 100,
       verticalReserve: 350,
-      largeDesktopBlockSize: 29,
+      largeDesktopBlockSize: 31,
       orientation: "landscape",
     },
   },
 
   // Block size presets by device type
   blockSizes: {
-    LARGE_DESKTOP: 29,
-    DESKTOP: 25,
-    COMPACT_DESKTOP: 24,
-    SMALL_HEIGHT: 25,
-    MOBILE: 22,
-    TABLET: 20,
+    LARGE_DESKTOP: LARGE_DESKTOP_BLOCK_SIZE,
+    DESKTOP: DESKTOP_BLOCK_SIZE,
+    COMPACT_DESKTOP: COMPACT_DESKTOP_BLOCK_SIZE,
+    SMALL_HEIGHT: SMALL_HEIGHT_BLOCK_SIZE,
+    MOBILE: MOBILE_BLOCK_SIZE,
+    TABLET: COMPACT_DESKTOP_BLOCK_SIZE,
   },
 
   // Animation/timing constants
@@ -102,36 +129,24 @@ export const TETRIS_RESPONSIVE_CONFIG = {
     IMPACT_PULSE_DURATION_MS: 140,
   },
 
-  // Safe area insets (for notch/home indicator)
-  safeAreaInsets: {
-    top: 'env(safe-area-inset-top)',
-    right: 'env(safe-area-inset-right)',
-    bottom: 'env(safe-area-inset-bottom)',
-    left: 'env(safe-area-inset-left)',
-  },
-
-  // Touch input thresholds
-  touchInput: {
-    SWIPE_THRESHOLD_PX: 15,
-    FLICK_SPEED_MS: 300,
-    FLICK_DISTANCE_PX: 40,
-    TAP_DURATION_MS: 200,
-    TAP_DISTANCE_PX: 10,
-    DOUBLE_TAP_INTERVAL_MS: 300,
+  getDeviceProfile: (width, height) => {
+    if (width < MOBILE_BREAKPOINT) return "mobile";
+    if (width < DESKTOP_BREAKPOINT) return "tablet";
+    if (width < LARGE_DESKTOP_BREAKPOINT) return "desktop";
+    return "largeDesktop";
   },
 
   // Media query helpers
   mediaQueries: {
-    mobile: '(max-width: 640px)',
-    tablet: '(min-width: 640px) and (max-width: 1024px)',
-    desktop: '(min-width: 1024px)',
-    largeDesktop: '(min-width: 1440px)',
+    mobile: `(max-width: ${MOBILE_BREAKPOINT}px)`,
+    tablet: `(min-width: ${MOBILE_BREAKPOINT}px) and (max-width: ${DESKTOP_BREAKPOINT}px)`,
+    desktop: `(min-width: ${DESKTOP_BREAKPOINT}px)`,
+    largeDesktop: `(min-width: ${LARGE_DESKTOP_BREAKPOINT}px)`,
     shortScreen: '(max-height: 980px)',
     tallScreen: '(min-height: 1000px)',
     portrait: '(orientation: portrait)',
+    landscape: '(orientation: landscape)',
     highDpi: '(min-device-pixel-ratio: 2)',
-    touchSupport: '(hover: none) and (pointer: coarse)',
-    noTouchSupport: '(hover: hover) and (pointer: fine)',
   },
 
   // CSS class mappings
@@ -139,7 +154,6 @@ export const TETRIS_RESPONSIVE_CONFIG = {
     mobile: 'is-mobile',
     tablet: 'is-tablet',
     desktop: 'is-desktop',
-    touchDevice: 'is-touch-device',
     portrait: 'is-portrait',
     highDpi: 'is-high-dpi',
     fullscreen: 'is-fullscreen-focus',
@@ -148,46 +162,8 @@ export const TETRIS_RESPONSIVE_CONFIG = {
     live: 'is-live',
   },
 
-  // Height calculation helpers
-  calculateHeightReserve: (height) => {
-    if (height < 650) return 206;
-    if (height < 740) return 218;
-    return 226;
-  },
-
-  // Get device profile for current viewport
-  getDeviceProfile: (width) => {
-    if (width < 640) return 'mobile';
-    if (width < 1024) return 'tablet';
-    if (width < 1440) return 'desktop';
-    return 'largeDesktop';
-  },
-
   // Get optimal block size for viewport
-  getOptimalBlockSize: (width, height, type = null) => {
-    const deviceType = type || exports.TETRIS_RESPONSIVE_CONFIG.getDeviceProfile(width, height);
-
-    if (deviceType === 'mobile') {
-      const horizontalReserve = 34;
-      const verticalReserve = exports.TETRIS_RESPONSIVE_CONFIG.calculateHeightReserve(height);
-      const usableWidth = Math.max(150, width - horizontalReserve - 16);
-      const usableHeight = Math.max(280, height - verticalReserve - 16);
-      const widthFit = Math.floor(usableWidth / 10);
-      const heightFit = Math.floor(usableHeight / 20);
-      return Math.max(13, Math.min(24, widthFit, heightFit));
-    }
-
-    if (deviceType === 'tablet') {
-      return Math.floor(Math.min(width / 12, (height - 200) / 24));
-    }
-
-    // Desktop
-    if (height < 980) {
-      return Math.max(24, Math.min(25, width / 12, (height - 300) / 22));
-    }
-
-    return Math.max(25, Math.min(29, width / 12, (height - 300) / 22));
-  },
+  getOptimalBlockSize,
 };
 
 export default TETRIS_RESPONSIVE_CONFIG;

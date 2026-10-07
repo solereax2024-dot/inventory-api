@@ -1,0 +1,144 @@
+/* ========================================
+   TETRIS - MODERN UI POLISH & ENHANCEMENTS
+   Refinements for modern gaming aesthetics
+   ======================================== */
+
+/* ========================================
+   INPUT FIELDS - MODERN STYLE
+   ======================================== */
+
+input[type="text"].tetris-start-modal-input {
+   background: linear-gradient(
+     135deg,
+     rgba(21, 29, 59, 0.4) 0%,
+     rgba(15, 23, 42, 0.6) 100%
+   );
+   border: 2px solid rgba(0, 255, 153, 0.2);
+   border-radius: 8px;
+   color: #ffffff;
+   font-family: inherit;
+   padding: 12px 16px;
+   font-size: 1rem;
+   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+ }
+
+ input[type="text"].tetris-start-modal-input::placeholder {
+   color: rgba(255, 255, 255, 0.4);
+ }
+
+ input[type="text"].tetris-start-modal-input:focus {
+   outline: none;
+   border-color: rgba(0, 255, 153, 0.6);
+   box-shadow:
+     0 0 20px rgba(0, 255, 153, 0.3),
+     inset 0 0 10px rgba(0, 255, 153, 0.05);
+   background: linear-gradient(
+     135deg,
+     rgba(21, 29, 59, 0.6) 0%,
+     rgba(15, 23, 42, 0.8) 100%
+   );
+ }
+
+/* ========================================
+   LEADERBOARD STYLING - MODERN
+   ======================================== */
+
+.tetris-leaderboard-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(21, 29, 59, 0.5) 0%,
+    rgba(15, 23, 42, 0.7) 100%
+  );
+  border: 1px solid rgba(0, 255, 153, 0.15);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+
+/* Medal indicators */
+.tetris-medal-icon {
+  font-size: 1.2rem;
+  margin-right: 4px;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5));
+}
+
+/* ========================================
+   MODAL REFINEMENTS - MODERN GLASS
+   ======================================== */
+
+.tetris-start-modal,
+.tetris-game-over-content {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.tetris-start-modal h2 {
+  background: linear-gradient(135deg, #00ff99 0%, #00ccff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
+}
+
+.tetris-game-over-content h2 {
+  background: linear-gradient(135deg, #ffd700 0%, #ff006e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: clamp(1.3rem, 5vw, 1.8rem);
+}
+
+.tetris-game-over-stat {
+  background: rgba(0, 255, 153, 0.05);
+  border: 1px solid rgba(0, 255, 153, 0.15);
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.3s ease;
+}
+
+.tetris-game-over-stat:hover {
+  background: rgba(0, 255, 153, 0.1);
+  border-color: rgba(0, 255, 153, 0.3);
+  transform: translateY(-2px);
+}
+
+.tetris-game-over-stat strong {
+  color: var(--tetris-primary);
+  text-shadow: 0 0 8px rgba(0, 255, 153, 0.5);
+}
+
+/* ========================================
+    MESSAGE & STATUS TEXT
+    ======================================== */
+
+.tetris-status-note {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 153, 0.1) 0%,
+    rgba(0, 204, 255, 0.05) 100%
+  );
+  border: 1px solid rgba(0, 255, 153, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  text-align: center;
+  animation: subtle-glow 2s ease-in-out infinite;
+}
+
+.tetris-status-note.is-success {
+  border-color: rgba(0, 255, 153, 0.4);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 153, 0.15) 0%,
+    rgba(0, 255, 153, 0.05) 100%
+  );
+  color: var(--tetris-primary);
+  text-shadow: 0 0 8px rgba(0, 255, 153, 0.4);
+}
+
+/* ========================================
+    DESKTOP LAYOUT ENHANCEMENTS
+    ======================================== */
+
+
+

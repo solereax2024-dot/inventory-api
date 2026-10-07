@@ -8,13 +8,28 @@ export default defineConfig({
     host: true,
     proxy: {
       "/api": {
-        target: "http://localhost:9090",
+        target: "http://localhost:8081",
         changeOrigin: true
       }
     }
   },
   build: {
     outDir: "../src/main/resources/static",
-    emptyOutDir: true
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 650, // Increased from 500kB default
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Only separate React into its own chunk to avoid circular deps
+          if (id.includes('node_modules/react/')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/react-dom/')) {
+            return 'vendor-react';
+          }
+          // Let everything else stay in main bundle or be auto-split
+        }
+      }
+    }
   }
 });

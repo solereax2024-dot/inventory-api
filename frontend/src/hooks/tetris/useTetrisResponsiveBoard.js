@@ -1,13 +1,9 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+// DEPRECATED: Legacy responsive-board hook retained only as a reference.
+// The active layout now uses `useLayoutDimensions` and shared sizing constants.
 
-const GRID_WIDTH = 10;
-const GRID_HEIGHT = 20;
-const LARGE_DESKTOP_BLOCK_SIZE = 29;
-const DESKTOP_BLOCK_SIZE = 25;
-const COMPACT_DESKTOP_BLOCK_SIZE = 24;
-const SMALL_HEIGHT_BLOCK_SIZE = 25;
-const MOBILE_BLOCK_SIZE = 22;
-const MOBILE_BREAKPOINT = 640;
+import { useState, useEffect, useRef, useMemo } from "react";
+import TETRIS_RESPONSIVE_CONFIG from "../../config/tetris-responsive";
+import { GRID_WIDTH } from "../../constants/tetris";
 
 /**
  * useTetrisResponsiveBoard Hook
@@ -37,42 +33,18 @@ export function useTetrisResponsiveBoard() {
     const width = viewportSize.width;
     const height = viewportSize.height;
 
-    // MOBILE: fit the full 10x20 board between the HUD/previews and control dock.
-    // The board may shrink below the old minimum on short phones so it never gets clipped.
-    if (width < MOBILE_BREAKPOINT) {
-      const horizontalReserve = 34;
-      const verticalReserve = height < 650 ? 206 : height < 740 ? 218 : 226;
-
-      const usableWidth = Math.max(150, width - horizontalReserve - 16);
-      const usableHeight = Math.max(280, height - verticalReserve - 16);
-
-      const widthFit = Math.floor(usableWidth / GRID_WIDTH);
-      const heightFit = Math.floor(usableHeight / GRID_HEIGHT);
-
-      return Math.max(13, Math.min(24, widthFit, heightFit));
+    if (width < TETRIS_RESPONSIVE_CONFIG.breakpoints.mobile) {
+      return TETRIS_RESPONSIVE_CONFIG.getOptimalBlockSize(width, height, "mobile");
     }
 
-    // DESKTOP
-    const minBlockSize = COMPACT_DESKTOP_BLOCK_SIZE - 4;
-    const horizontalBoardInset = 30;
-    const availableBoardWidth = boardFrameWidth > 0
-      ? Math.max(boardFrameWidth - horizontalBoardInset, GRID_WIDTH * minBlockSize)
-      : Math.max(width - horizontalBoardInset, GRID_WIDTH * minBlockSize);
-
-    const maxBlockSizeFromWidth = Math.floor(availableBoardWidth / GRID_WIDTH);
-    const maxBlockSizeFromHeight = Math.floor((height - 300) / GRID_HEIGHT);
-
-    if (height < 980) {
-      return Math.max(minBlockSize, Math.min(SMALL_HEIGHT_BLOCK_SIZE, maxBlockSizeFromWidth, maxBlockSizeFromHeight));
+    if (width < TETRIS_RESPONSIVE_CONFIG.breakpoints.desktop) {
+      return TETRIS_RESPONSIVE_CONFIG.getOptimalBlockSize(width, height, "tablet");
     }
 
-    return Math.max(
-      COMPACT_DESKTOP_BLOCK_SIZE,
-      Math.min(LARGE_DESKTOP_BLOCK_SIZE, maxBlockSizeFromWidth, maxBlockSizeFromHeight)
-    );
+    return TETRIS_RESPONSIVE_CONFIG.getOptimalBlockSize(width, height, "desktop");
   }, [viewportSize, boardFrameWidth]);
 
-  const boardShellWidth = blockSize * GRID_WIDTH + 60; // 30px inset on each side
+   const boardShellWidth = blockSize * GRID_WIDTH + TETRIS_RESPONSIVE_CONFIG.GRID_INSET_PX * 2;
 
   // Handle viewport resize
   useEffect(() => {

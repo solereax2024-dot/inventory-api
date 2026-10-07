@@ -17,7 +17,7 @@ export function TetrisLeaderboardList({
       {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length === 0 && <p className="text-muted">Play a round to create the first score.</p>}
 
       {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length > 0 && (
-        <div className="tetris-mini-leaderboard tetris-leaderboard-panel" role="table" aria-label={`Top Tetris scores - ${leaderboardTimeFilter} - sorted by ${leaderboardSortBy}`}>
+        <div className="tetris-mini-leaderboard" role="table" aria-label={`Top Tetris scores - ${leaderboardTimeFilter} - sorted by ${leaderboardSortBy}`}>
           {filteredLeaderboard.map((entry, index) => (
             <button
               key={entry.id || `${entry.playerName}-${index}`}

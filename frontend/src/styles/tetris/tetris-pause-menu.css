@@ -1,0 +1,312 @@
+/* ========================================
+   TETRIS - PAUSE MENU MODAL
+   Game menu with options
+   ======================================== */
+
+.tetris-pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.7);
+  backdrop-filter: blur(8px);
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tetris-pause-modal {
+  background: linear-gradient(
+    135deg,
+    rgba(21, 29, 59, 0.95) 0%,
+    rgba(15, 23, 42, 0.95) 100%
+  );
+  border: 2px solid rgba(0, 255, 153, 0.3);
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow:
+    0 0 40px rgba(0, 255, 153, 0.2),
+    inset 0 0 20px rgba(0, 255, 153, 0.05);
+  animation: modal-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+@keyframes modal-pop-in {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.tetris-pause-modal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 255, 153, 0.6) 50%,
+    transparent 100%
+  );
+  border-radius: 16px 16px 0 0;
+}
+
+/* ========================================
+   PAUSE MENU HEADER
+   ======================================== */
+
+.tetris-pause-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 255, 153, 0.15);
+}
+
+.tetris-pause-modal-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(0, 255, 153, 0.4);
+}
+
+.tetris-pause-close-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 255, 153, 0.1);
+  border: 1px solid rgba(0, 255, 153, 0.2);
+  border-radius: 10px;
+  color: rgba(0, 255, 153, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tetris-pause-close-btn:hover {
+  background: rgba(0, 255, 153, 0.2);
+  border-color: rgba(0, 255, 153, 0.4);
+  color: rgba(0, 255, 153, 1);
+}
+
+/* ========================================
+   MENU OPTIONS
+   ======================================== */
+
+.tetris-pause-menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tetris-menu-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 153, 0.08) 0%,
+    rgba(0, 204, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(0, 255, 153, 0.15);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-transform: uppercase;
+  text-align: left;
+  font-family: inherit;
+}
+
+.tetris-menu-option:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 153, 0.15) 0%,
+    rgba(0, 204, 255, 0.08) 100%
+  );
+  border-color: rgba(0, 255, 153, 0.3);
+  transform: translateX(4px);
+  box-shadow: 0 0 15px rgba(0, 255, 153, 0.2);
+}
+
+.tetris-menu-option:active {
+  transform: translateX(2px);
+}
+
+.tetris-menu-option svg {
+  flex-shrink: 0;
+  color: rgba(0, 255, 153, 0.8);
+}
+
+/* Resume button - primary style */
+.tetris-menu-option-resume {
+  background: linear-gradient(135deg, rgba(0, 255, 153, 0.15) 0%, rgba(0, 204, 255, 0.08) 100%);
+  border-color: rgba(0, 255, 153, 0.25);
+}
+
+.tetris-menu-option-resume:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 153, 0.25) 0%, rgba(0, 204, 255, 0.15) 100%);
+  box-shadow: 0 0 20px rgba(0, 255, 153, 0.3);
+}
+
+/* Help button */
+.tetris-menu-option-help svg {
+  color: rgba(100, 200, 255, 0.8);
+}
+
+.tetris-menu-option-help:hover {
+  border-color: rgba(100, 200, 255, 0.3);
+}
+
+/* Settings button */
+.tetris-menu-option-settings svg {
+  color: rgba(200, 150, 255, 0.8);
+}
+
+.tetris-menu-option-settings:hover {
+  border-color: rgba(200, 150, 255, 0.3);
+}
+
+/* Quit button - danger style */
+.tetris-menu-option-quit {
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.1) 0%, rgba(255, 100, 150, 0.05) 100%);
+  border-color: rgba(255, 0, 110, 0.15);
+}
+
+.tetris-menu-option-quit svg {
+  color: rgba(255, 100, 150, 0.8);
+}
+
+.tetris-menu-option-quit:hover {
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.2) 0%, rgba(255, 100, 150, 0.1) 100%);
+  border-color: rgba(255, 0, 110, 0.3);
+  box-shadow: 0 0 15px rgba(255, 0, 110, 0.2);
+}
+
+/* ========================================
+   PAUSE MENU FOOTER
+   ======================================== */
+
+.tetris-pause-modal-footer {
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 255, 153, 0.1);
+}
+
+.tetris-pause-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.3px;
+}
+
+.tetris-pause-hint kbd {
+  background: rgba(0, 255, 153, 0.1);
+  border: 1px solid rgba(0, 255, 153, 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: rgba(0, 255, 153, 0.8);
+  margin: 0 4px;
+  display: inline-block;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 640px) {
+  .tetris-pause-overlay {
+    padding: 16px;
+  }
+
+  .tetris-pause-modal {
+    max-width: 100%;
+    padding: 20px;
+  }
+
+  .tetris-pause-modal-header {
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+
+  .tetris-pause-modal-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .tetris-pause-close-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .tetris-menu-option {
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    gap: 12px;
+  }
+
+  .tetris-menu-option svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .tetris-pause-hint {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .tetris-pause-modal {
+    padding: 16px;
+  }
+
+  .tetris-pause-modal-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .tetris-menu-option {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .tetris-pause-close-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+

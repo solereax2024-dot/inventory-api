@@ -1,0 +1,332 @@
+/* ========================================
+   TETRIS - MODERN ANIMATIONS & EFFECTS
+   ======================================== */
+
+/* ========================================
+   PIECE ANIMATIONS
+   ======================================== */
+
+@keyframes piece-spawn-glow {
+  0% {
+    filter: blur(0px);
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    filter: blur(2px);
+  }
+  100% {
+    filter: blur(0px);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes piece-rotate-spin {
+  0% {
+    transform: rotateZ(0deg) scale(1);
+  }
+  50% {
+    transform: rotateZ(180deg) scale(1.02);
+  }
+  100% {
+    transform: rotateZ(360deg) scale(1);
+  }
+}
+
+@keyframes piece-drop-trail {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hard-drop-impact {
+  0% {
+    transform: scale(0.95);
+    filter: brightness(1.2);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* ========================================
+   LINE CLEAR ANIMATIONS
+   ======================================== */
+
+@keyframes line-clear-shimmer {
+  0% {
+    background: rgba(0, 255, 153, 0);
+    box-shadow: inset 0 0 0 rgba(0, 255, 153, 0);
+  }
+  50% {
+    background: rgba(0, 255, 153, 0.4);
+    box-shadow: inset 0 0 20px rgba(0, 255, 153, 0.8);
+  }
+  100% {
+    background: rgba(0, 255, 153, 0);
+    box-shadow: inset 0 0 0 rgba(0, 255, 153, 0);
+  }
+}
+
+@keyframes line-clear-collapse {
+  0% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scaleY(0.8);
+  }
+  100% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+}
+
+@keyframes tetris-celebration {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.05);
+    filter: brightness(1.3) hue-rotate(10deg);
+  }
+  50% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  75% {
+    transform: scale(1.03);
+    filter: brightness(1.2);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes score-popup {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* ========================================
+   UI ELEMENT ANIMATIONS
+   ======================================== */
+
+@keyframes button-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 255, 153, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 153, 0.8);
+  }
+}
+
+@keyframes stat-update-pulse {
+  0% {
+    transform: scale(1);
+    color: var(--tetris-primary);
+  }
+  50% {
+    transform: scale(1.1);
+    color: var(--tetris-accent-gold);
+  }
+  100% {
+    transform: scale(1);
+    color: var(--tetris-primary);
+  }
+}
+
+@keyframes panel-highlight {
+  0% {
+    border-color: rgba(0, 255, 153, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 153, 0.1);
+  }
+  50% {
+    border-color: rgba(0, 255, 153, 0.6);
+    box-shadow: 0 0 20px rgba(0, 255, 153, 0.4);
+  }
+  100% {
+    border-color: rgba(0, 255, 153, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 153, 0.1);
+  }
+}
+
+/* ========================================
+   GAME STATE ANIMATIONS
+   ======================================== */
+
+@keyframes game-over-fade {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes level-up-burst {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes pause-dim {
+  0% {
+    filter: brightness(1);
+  }
+  100% {
+    filter: brightness(0.6);
+  }
+}
+
+/* ========================================
+   GLOW & LIGHT EFFECTS
+   ======================================== */
+
+@keyframes subtle-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(0, 255, 153, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(0, 255, 153, 0.5));
+  }
+}
+
+@keyframes neon-flicker {
+  0%, 18%, 22%, 25%, 54%, 56%, 100% {
+    opacity: 1;
+  }
+  20%, 24%, 55% {
+    opacity: 0.8;
+  }
+}
+
+/* ========================================
+   CLASS APPLICATIONS
+   ======================================== */
+
+.tetris-board-shell.is-tetris-clear {
+  animation: tetris-celebration 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tetris-cleared-row-flash {
+  animation: line-clear-shimmer 0.6s ease-out;
+}
+
+.tetris-block.tetris-block-row-shift {
+  animation: line-clear-collapse 0.4s ease-in;
+}
+
+.tetris-hard-drop-flash {
+  animation: hard-drop-impact 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tetris-point-popup {
+  animation: score-popup 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  font-weight: 900;
+  color: var(--tetris-accent-gold);
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+  font-size: 1.5rem;
+  pointer-events: none;
+}
+
+.stat-item-compact.is-pulsed {
+  animation: stat-update-pulse 0.6s ease-out;
+}
+
+.tetris-control-btn:focus-visible {
+  animation: button-glow-pulse 1s ease-in-out infinite;
+}
+
+.tetris-panel:hover {
+  animation: panel-highlight 0.8s ease-in-out;
+}
+
+.tetris-shell.is-game-over {
+  animation: game-over-fade 0.4s ease-out;
+}
+
+.tetris-level-up-indicator {
+  animation: level-up-burst 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tetris-game-container.is-paused {
+  animation: pause-dim 0.3s ease-out forwards;
+}
+
+/* ========================================
+   HOVER & INTERACTION EFFECTS
+   ======================================== */
+
+.tetris-panel {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tetris-panel:hover {
+  border-color: rgba(0, 255, 153, 0.5);
+  box-shadow: 0 0 20px rgba(0, 255, 153, 0.3);
+  transform: translateY(-2px);
+}
+
+.tetris-control-btn {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tetris-control-btn:active:not(:disabled) {
+  animation: none;
+}
+
+/* ========================================
+   RESPONSIVE ANIMATIONS
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .tetris-point-popup {
+    font-size: 1.2rem;
+  }
+}
+

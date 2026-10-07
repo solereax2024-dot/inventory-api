@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trophy } from "lucide-react";
 import { apiRequest } from "../../utils/api";
+import { triggerHapticFeedback } from "../../utils/hapticFeedback";
+import { getHapticIntensityMultiplier } from "../../utils/gestureCustomization";
 import TetrisGameOverModal from "../../components/tetris/TetrisGameOverModal";
 import TetrisStartModal from "../../components/tetris/TetrisStartModal";
 import TetrisBoardStage from "../../components/tetris/TetrisBoardStage";
 import TetrisGridContent from "../../components/tetris/TetrisGridContent";
-import TetrisMobileControls from "../../components/tetris/TetrisMobileControls";
-import TetrisMobileLeaderboardModal from "../../components/tetris/TetrisMobileLeaderboardModal";
+import TetrisTouchControls from "../../components/tetris/TetrisTouchControls";
 import TetrisPlayerDetailsModal from "../../components/tetris/TetrisPlayerDetailsModal";
+import TetrisSettingsModal from "../../components/tetris/TetrisSettingsModal";
 import TetrisSideDetailsPanel from "../../components/tetris/TetrisSideDetailsPanel";
 import { TetrisLeaderboardList } from "../../components/tetris/TetrisLeaderboardPanel";
 import {
@@ -19,6 +21,7 @@ import {
   GRID_INSET_PX,
   GRID_WIDTH,
   HARD_DROP_TRAIL_DURATION_MS,
+  HAPTIC_PREFERENCE_KEY,
   LARGE_DESKTOP_BLOCK_SIZE,
   LEADERBOARD_SORT_BY,
   LEADERBOARD_TIME_FILTER,
@@ -138,9 +141,13 @@ export default function TetrisGamePage() {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState(null);
   const [isBoardFocused, setIsBoardFocused] = useState(false);
-  const [isMobileLeaderboardOpen, setIsMobileLeaderboardOpen] = useState(false);
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useLocalStorage(SOUND_PREFERENCE_KEY, true, {
+    parse: parseSoundEnabledPreference,
+    serialize: String,
+  });
+  const [hapticEnabled, setHapticEnabled] = useLocalStorage(HAPTIC_PREFERENCE_KEY, true, {
     parse: parseSoundEnabledPreference,
     serialize: String,
   });
@@ -160,26 +167,23 @@ export default function TetrisGamePage() {
   const isUltraCompactDesktopHeight = !isMobileViewport && viewportSize.height <= 820;
   const isMobileGameplayActive = gameStarted && !gameOver && isMobileViewport;
   const lastMoveWasRotateRef = useRef(false);
-  const previousScoreRef = useRef(0);
-  const previousLevelRef = useRef(1);
-  const previousLinesRef = useRef(0);
   const comboChainRef = useRef(0);
   const previousClearWasTetrisRef = useRef(false);
   const nextQueueEntryIdRef = useRef(0);
 
-  const blockSize = useMemo(() => {
-    return calculateBlockSize(viewportSize.width, viewportSize.height, {
-      MOBILE_BREAKPOINT,
-      MOBILE_BLOCK_SIZE,
-      SMALL_HEIGHT_BLOCK_SIZE,
-      LARGE_DESKTOP_BLOCK_SIZE,
-      DESKTOP_BLOCK_SIZE,
-      COMPACT_DESKTOP_BLOCK_SIZE,
-      mobileLayoutMode: isMobileGameplayActive ? "gameplay" : "prestart",
-      compactMobileHeight: isShortMobileViewport,
-      veryShortMobileHeight: isVeryShortMobileViewport,
-    });
-  }, [isMobileGameplayActive, isShortMobileViewport, isVeryShortMobileViewport, viewportSize.height, viewportSize.width]);
+   const blockSize = useMemo(() => {
+     return calculateBlockSize(viewportSize.width, viewportSize.height, {
+       MOBILE_BREAKPOINT,
+       MOBILE_BLOCK_SIZE,
+       SMALL_HEIGHT_BLOCK_SIZE,
+       LARGE_DESKTOP_BLOCK_SIZE,
+       DESKTOP_BLOCK_SIZE,
+       COMPACT_DESKTOP_BLOCK_SIZE,
+       mobileLayoutMode: isMobileViewport ? "expanded" : "prestart",
+       compactMobileHeight: isShortMobileViewport,
+       veryShortMobileHeight: isVeryShortMobileViewport,
+     });
+   }, [isMobileViewport, isShortMobileViewport, isVeryShortMobileViewport, viewportSize.height, viewportSize.width]);
 
   const {
     boardPixelWidth,
@@ -187,6 +191,8 @@ export default function TetrisGamePage() {
     stageGap,
     stageSidePanelWidth,
     stageSidePanelMinWidth,
+    holdStagePanelWidth,
+    nextStagePanelWidth,
     sidePreviewBlockSize,
   } = useLayoutDimensions(viewportSize, blockSize, {
     GRID_WIDTH,
@@ -398,11 +404,16 @@ export default function TetrisGamePage() {
     });
   }, [soundEnabled]);
 
-  const triggerHaptic = useCallback((duration = 14) => {
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(duration);
-    }
-  }, []);
+    const triggerHaptic = useCallback((patternName = 'tap', intensity = 1) => {
+      if (!hapticEnabled || typeof navigator === "undefined" || !navigator.vibrate) {
+        return;
+      }
+
+      const multiplier = getHapticIntensityMultiplier(intensity);
+      if (multiplier === 0) return;
+
+      triggerHapticFeedback(patternName, true);
+    }, [hapticEnabled]);
 
   const focusBoard = useCallback((shouldEmitSound = true) => {
     gameSurfaceRef.current?.focus();
@@ -444,39 +455,45 @@ export default function TetrisGamePage() {
     setPlayerStatsError("");
   }, []);
 
-  const openMobileLeaderboard = useCallback(() => {
-    // Auto-pause game when opening leaderboard on mobile (as per spec section 35)
+  const openSettings = useCallback(() => {
     if (gameStarted && !gameOver && !isPaused) {
       setIsPaused(true);
-      setMessage("Game paused - Leaderboard open");
+      setMessage("Game paused - Settings open");
     }
-    setIsMobileLeaderboardOpen(true);
-  }, [gameStarted, gameOver, isPaused]);
+    setIsSettingsOpen(true);
+    emitSound("modal");
+    triggerHaptic("modal");
+  }, [emitSound, gameOver, gameStarted, isPaused, triggerHaptic]);
 
-  const closeMobileLeaderboard = useCallback(() => {
-    setIsMobileLeaderboardOpen(false);
+  const closeSettings = useCallback(() => {
+    setIsSettingsOpen(false);
   }, []);
 
-  const openPlayerModal = useCallback(async (entry) => {
-    if (!entry) return;
+  const toggleHaptics = useCallback(() => {
+    setHapticEnabled((previousState) => !previousState);
+  }, [setHapticEnabled]);
 
-    setSelectedLeaderboardEntry(entry);
-    setSelectedPlayerStats(entry);
-    setPlayerStatsLoading(true);
-    setPlayerStatsError("");
-    emitSound("modal");
-    triggerHaptic(10);
 
-    try {
-      const playerStats = await apiRequest(`/api/public/games/tetris/player/${encodeURIComponent(entry.playerName || "")}`, "GET");
-      setSelectedPlayerStats(playerStats || entry);
-    } catch (error) {
-      setPlayerStatsError("Unable to load player details right now.");
-      setSelectedPlayerStats(entry);
-    } finally {
-      setPlayerStatsLoading(false);
-    }
-  }, [emitSound, triggerHaptic]);
+   const openPlayerModal = useCallback(async (entry) => {
+     if (!entry) return;
+
+     setSelectedLeaderboardEntry(entry);
+     setSelectedPlayerStats(entry);
+     setPlayerStatsLoading(true);
+     setPlayerStatsError("");
+     emitSound("modal");
+     triggerHaptic('modal');
+
+     try {
+       const playerStats = await apiRequest(`/api/public/games/tetris/player/${encodeURIComponent(entry.playerName || "")}`, "GET");
+       setSelectedPlayerStats(playerStats || entry);
+     } catch (error) {
+       setPlayerStatsError("Unable to load player details right now.");
+       setSelectedPlayerStats(entry);
+     } finally {
+       setPlayerStatsLoading(false);
+     }
+   }, [emitSound, triggerHaptic]);
 
   const scheduleUiTimeout = useCallback((callback, delayMs) => {
     const timeoutId = window.setTimeout(() => {
@@ -596,58 +613,60 @@ export default function TetrisGamePage() {
     }
   }, [playerName]);
 
-  const startGame = useCallback(() => {
-    if (!playerName.trim()) {
-      setMessage("Please enter a name first!");
-      emitSound("tap");
-      return false;
-    }
+   const startGame = useCallback(() => {
+     if (!playerName.trim()) {
+       setMessage("Please enter a name first!");
+       emitSound("tap");
+       triggerHaptic('tap');
+       return false;
+     }
 
-    const openingEntry = createUpcomingEntry();
-    const queuedEntries = ensureUpcomingQueue([
-      createUpcomingEntry(),
-      createUpcomingEntry(),
-      createUpcomingEntry(),
-    ]);
+     const openingEntry = createUpcomingEntry();
+     const queuedEntries = ensureUpcomingQueue([
+       createUpcomingEntry(),
+       createUpcomingEntry(),
+       createUpcomingEntry(),
+     ]);
 
-    clearScheduledTimeouts();
-    clearTransientEffects();
-    scoreSubmittedRef.current = false;
+     clearScheduledTimeouts();
+     clearTransientEffects();
+     scoreSubmittedRef.current = false;
 
-    setGameStarted(true);
-    setGameOver(false);
-    setIsPaused(false);
-    setScore(0);
-    setLevel(1);
-    setLinesCleared(0);
-    setGrid(createEmptyGrid());
-    setMessage("Game Started! Use arrows on desktop or swipe/tap on mobile.");
-    setCurrentPiece(openingEntry.piece);
-    setCurrentPieceKey(openingEntry.pieceKey);
-    setCurrentTileId(openingEntry.tileId);
-    setCurrentPieceRow(0);
-    setCurrentPieceCol(getSpawnColumn(openingEntry.piece));
-    syncUpcomingQueue(queuedEntries);
-    setCanHoldPiece(true);
-    setHoldPiece(null);
-    setHoldPieceKey(null);
-    setHoldTileId(null);
-    triggerPulseEffect(setRestartPulse, 240);
-    triggerPulseEffect(setPieceSpawnPulse, 180);
-    emitSound("start");
-    triggerHaptic(18);
+     setGameStarted(true);
+     setGameOver(false);
+     setIsPaused(false);
+     setScore(0);
+     setLevel(1);
+     setLinesCleared(0);
+     setGrid(createEmptyGrid());
+     setMessage("Game Started! Use arrows on desktop or swipe/tap on mobile.");
+     setCurrentPiece(openingEntry.piece);
+     setCurrentPieceKey(openingEntry.pieceKey);
+     setCurrentTileId(openingEntry.tileId);
+     setCurrentPieceRow(0);
+     setCurrentPieceCol(getSpawnColumn(openingEntry.piece));
+     syncUpcomingQueue(queuedEntries);
+     setCanHoldPiece(true);
+     setHoldPiece(null);
+     setHoldPieceKey(null);
+     setHoldTileId(null);
+     triggerPulseEffect(setRestartPulse, 240);
+     triggerPulseEffect(setPieceSpawnPulse, 180);
+     emitSound("start");
+     triggerHaptic('focus');
 
-    if (gameSurfaceRef.current) {
-      gameSurfaceRef.current.focus();
-    }
-    return true;
-  }, [playerName, clearScheduledTimeouts, clearTransientEffects, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic]);
+     if (gameSurfaceRef.current) {
+       gameSurfaceRef.current.focus();
+     }
+     return true;
+   }, [playerName, clearScheduledTimeouts, clearTransientEffects, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic]);
 
-  const openStartModal = useCallback(() => {
-    setIsStartModalOpen(true);
-    setMessage("Enter your username to start playing.");
-    emitSound("modal");
-  }, [emitSound]);
+   const openStartModal = useCallback(() => {
+     setIsStartModalOpen(true);
+     setMessage("Enter your username to start playing.");
+     emitSound("modal");
+     triggerHaptic('modal');
+   }, [emitSound, triggerHaptic]);
 
   const closeStartModal = useCallback(() => {
     setIsStartModalOpen(false);
@@ -659,72 +678,77 @@ export default function TetrisGamePage() {
     }
   }, [startGame]);
 
-  const resetGame = useCallback(() => {
-    clearScheduledTimeouts();
-    clearTransientEffects();
-    scoreSubmittedRef.current = false;
-    setIsStartModalOpen(false);
-    setGameStarted(false);
-    setGameOver(false);
-    setIsPaused(false);
-    setGrid(createEmptyGrid());
-    setScore(0);
-    setLevel(1);
-    setLinesCleared(0);
-    setCurrentPiece(null);
-    setCurrentPieceKey(null);
-    setCurrentPieceRow(0);
-    setCurrentPieceCol(0);
-    setCurrentTileId(0);
-    setNextPiece(null);
-    setNextPieceKey(null);
-    setNextTileId(0);
-    setHoldPiece(null);
-    setHoldPieceKey(null);
-    setHoldTileId(null);
-    setCanHoldPiece(true);
-    setMessage("Game reset. Ready to play?");
-    triggerPulseEffect(setRestartPulse, 240);
-    emitSound("reset");
-  }, [clearScheduledTimeouts, clearTransientEffects, emitSound, scheduleUiTimeout]);
+    const resetGame = useCallback(() => {
+      clearScheduledTimeouts();
+      clearTransientEffects();
+      scoreSubmittedRef.current = false;
+      setIsStartModalOpen(false);
+      setGameStarted(false);
+      setGameOver(false);
+      setIsPaused(false);
+      setGrid(createEmptyGrid());
+      setScore(0);
+      setLevel(1);
+      setLinesCleared(0);
+      setCurrentPiece(null);
+      setCurrentPieceKey(null);
+      setCurrentPieceRow(0);
+      setCurrentPieceCol(0);
+      setCurrentTileId(0);
+      setNextPiece(null);
+      setNextPieceKey(null);
+      setNextTileId(0);
+      setNextQueue([]);
+      setHoldPiece(null);
+      setHoldPieceKey(null);
+      setHoldTileId(null);
+      setCanHoldPiece(true);
+      setMessage("Game reset. Ready to play?");
+      triggerPulseEffect(setRestartPulse, 240);
+      emitSound("reset");
+      triggerHaptic('tap');
+    }, [clearScheduledTimeouts, clearTransientEffects, emitSound, scheduleUiTimeout, triggerHaptic]);
 
-  const togglePauseGame = useCallback(() => {
-    if (gameStarted && !gameOver) {
-      setIsPaused(!isPaused);
-      setMessage(isPaused ? "Resumed!" : "Paused");
-      emitSound(isPaused ? "resume" : "pause");
-    }
-  }, [gameStarted, gameOver, isPaused, emitSound]);
+   const togglePauseGame = useCallback(() => {
+     if (gameStarted && !gameOver) {
+       setIsPaused(!isPaused);
+       setMessage(isPaused ? "Resumed!" : "Paused");
+       emitSound(isPaused ? "resume" : "pause");
+       triggerHaptic('pause');
+     }
+   }, [gameStarted, gameOver, isPaused, emitSound, triggerHaptic]);
 
-  const movePieceHorizontal = useCallback(
-    (direction) => {
-      if (isActivePieceActionBlocked({ gameStarted, gameOver, isPaused, currentPiece })) return;
+   const movePieceHorizontal = useCallback(
+     (direction) => {
+       if (isActivePieceActionBlocked({ gameStarted, gameOver, isPaused, currentPiece })) return;
 
-      const newCol = currentPieceCol + direction;
-      if (canPlacePiece(grid, currentPiece, currentPieceRow, newCol)) {
-        setCurrentPieceCol(newCol);
-        lastMoveWasRotateRef.current = false;
-        emitSound("move");
-      }
-    },
-    [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, emitSound]
-  );
+       const newCol = currentPieceCol + direction;
+       if (canPlacePiece(grid, currentPiece, currentPieceRow, newCol)) {
+         setCurrentPieceCol(newCol);
+         lastMoveWasRotateRef.current = false;
+         emitSound("move");
+         triggerHaptic('move');
+       }
+     },
+     [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, emitSound, triggerHaptic]
+   );
 
-  const softDropCurrentPiece = useCallback(() => {
-    if (isActivePieceActionBlocked({ gameStarted, gameOver, isPaused, currentPiece })) return;
+   const softDropCurrentPiece = useCallback(() => {
+     if (isActivePieceActionBlocked({ gameStarted, gameOver, isPaused, currentPiece })) return;
 
-    const newRow = currentPieceRow + 1;
-    if (canPlacePiece(grid, currentPiece, newRow, currentPieceCol)) {
-      setCurrentPieceRow(newRow);
-      setScore((prev) => prev + 1);
-      triggerPulseEffect(setSoftDropPulse, 90);
-      emitSound("softDrop");
-      lastMoveWasRotateRef.current = false;
-      return;
-    }
+     const newRow = currentPieceRow + 1;
+     if (canPlacePiece(grid, currentPiece, newRow, currentPieceCol)) {
+       setCurrentPieceRow(newRow);
+       setScore((prev) => prev + 1);
+       triggerPulseEffect(setSoftDropPulse, 90);
+       emitSound("softDrop");
+       triggerHaptic('softDrop');
+       lastMoveWasRotateRef.current = false;
+       return;
+     }
 
-    lockCurrentPiece(currentPieceRow, { source: "lock" });
-  }, [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, emitSound, lockCurrentPiece, triggerPulseEffect]);
+     lockCurrentPiece(currentPieceRow, { source: "lock" });
+   }, [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, emitSound, lockCurrentPiece, triggerHaptic, triggerPulseEffect]);
 
   const hardDropCurrentPiece = useCallback(() => {
     if (isActivePieceActionBlocked({ gameStarted, gameOver, isPaused, currentPiece })) return;
@@ -750,14 +774,14 @@ export default function TetrisGamePage() {
         });
       });
     }
-    setHardDropTrail(trailCells);
-    triggerPulseEffect(setHardDropPulse, HARD_DROP_TRAIL_DURATION_MS);
-    scheduleUiTimeout(() => setHardDropTrail([]), HARD_DROP_TRAIL_DURATION_MS);
-    emitSound("hardDrop");
-    triggerHaptic(16);
-    lastMoveWasRotateRef.current = false;
-    lockCurrentPiece(dropRow, { source: "hard-drop", dropDistance });
-  }, [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, currentTileId, emitSound, lockCurrentPiece, scheduleUiTimeout, triggerHaptic, triggerPulseEffect]);
+     setHardDropTrail(trailCells);
+     triggerPulseEffect(setHardDropPulse, HARD_DROP_TRAIL_DURATION_MS);
+     scheduleUiTimeout(() => setHardDropTrail([]), HARD_DROP_TRAIL_DURATION_MS);
+     emitSound("hardDrop");
+     triggerHaptic('hardDrop');
+     lastMoveWasRotateRef.current = false;
+     lockCurrentPiece(dropRow, { source: "hard-drop", dropDistance });
+   }, [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, currentTileId, emitSound, lockCurrentPiece, scheduleUiTimeout, triggerHaptic, triggerPulseEffect]);
 
   const applyRotationWithKick = useCallback((rotatedPiece) => {
     const kickOffsets = [
@@ -772,23 +796,24 @@ export default function TetrisGamePage() {
       { row: 1, col: 0 },
     ];
 
-    for (const offset of kickOffsets) {
-      const nextRow = currentPieceRow + offset.row;
-      const nextCol = currentPieceCol + offset.col;
+     for (const offset of kickOffsets) {
+       const nextRow = currentPieceRow + offset.row;
+       const nextCol = currentPieceCol + offset.col;
 
-      if (!canPlacePiece(grid, rotatedPiece, nextRow, nextCol)) continue;
+       if (!canPlacePiece(grid, rotatedPiece, nextRow, nextCol)) continue;
 
-      setCurrentPiece(rotatedPiece);
-      setCurrentPieceRow(nextRow);
-      setCurrentPieceCol(nextCol);
-      emitSound(offset.row === 0 && offset.col === 0 ? "rotate" : "wallKick");
-      triggerPulseEffect(setRotatePulse, 110);
-      lastMoveWasRotateRef.current = true;
-      return true;
-    }
+       setCurrentPiece(rotatedPiece);
+       setCurrentPieceRow(nextRow);
+       setCurrentPieceCol(nextCol);
+       emitSound(offset.row === 0 && offset.col === 0 ? "rotate" : "wallKick");
+       triggerHaptic(offset.row === 0 && offset.col === 0 ? 'rotate' : 'move');
+       triggerPulseEffect(setRotatePulse, 110);
+       lastMoveWasRotateRef.current = true;
+       return true;
+     }
 
-    return false;
-  }, [currentPieceCol, currentPieceRow, emitSound, grid, triggerPulseEffect]);
+     return false;
+   }, [currentPieceCol, currentPieceRow, emitSound, grid, triggerHaptic, triggerPulseEffect]);
 
   const rotateCurrentPiece = useCallback(() => {
     if (isActivePieceActionBlocked({ gameStarted, gameOver, isPaused, currentPiece })) return;
@@ -838,16 +863,17 @@ export default function TetrisGamePage() {
     setHoldPiece(newHold);
     setHoldPieceKey(newHoldKey);
     setHoldTileId(newHoldTileId);
-    setCanHoldPiece(false);
-    triggerPulseEffect(setPieceSpawnPulse, 180);
-    lastMoveWasRotateRef.current = false;
+     setCanHoldPiece(false);
+     triggerPulseEffect(setPieceSpawnPulse, 180);
+     lastMoveWasRotateRef.current = false;
 
-    if (!holdPiece) {
-      syncUpcomingQueue(updatedQueueEntries);
-    }
+     if (!holdPiece) {
+       syncUpcomingQueue(updatedQueueEntries);
+     }
 
-    emitSound("hold");
-  }, [gameStarted, gameOver, isPaused, currentPiece, currentPieceKey, holdPiece, holdPieceKey, nextPiece, nextPieceKey, currentTileId, holdTileId, nextQueue, nextTileId, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, triggerPulseEffect, syncUpcomingQueue]);
+     emitSound("hold");
+     triggerHaptic('hold');
+   }, [gameStarted, gameOver, isPaused, currentPiece, currentPieceKey, holdPiece, holdPieceKey, nextPiece, nextPieceKey, currentTileId, holdTileId, nextQueue, nextTileId, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, triggerHaptic, triggerPulseEffect, syncUpcomingQueue]);
   const applyLockEffects = useTetrisLockEffects({
     comboChainRef,
     previousClearWasTetrisRef,
@@ -892,6 +918,7 @@ export default function TetrisGamePage() {
     movePieceHorizontal,
     softDropCurrentPiece,
     hardDropCurrentPiece,
+    holdCurrentPiece,
   });
 
   function lockCurrentPiece(lockedRow = currentPieceRow, options = {}) {
@@ -995,7 +1022,7 @@ export default function TetrisGamePage() {
   }, [currentPiece, gameOver, gameStarted, isPaused, level, stepActivePieceDown]);
 
   useTetrisKeyboardControls({
-    isBlocked: Boolean(selectedLeaderboardEntry || isMobileLeaderboardOpen),
+    isBlocked: Boolean(selectedLeaderboardEntry),
     gameStarted,
     gameOver,
     startGame,
@@ -1065,9 +1092,11 @@ export default function TetrisGamePage() {
     "--tetris-board-pixel-width": `${boardPixelWidth}px`,
     "--tetris-stage-gap": `${stageGap}px`,
     "--tetris-side-panel-width": `${stageSidePanelWidth}px`,
+    "--tetris-side-panel-hold-width": `${holdStagePanelWidth}px`,
+    "--tetris-side-panel-next-width": `${nextStagePanelWidth}px`,
     "--tetris-side-panel-min-width": `${stageSidePanelMinWidth}px`,
     "--tetris-side-preview-block-size": `${sidePreviewBlockSize}px`,
-  }), [boardPixelWidth, boardShellWidth, clearIntensity, sidePreviewBlockSize, stageGap, stageSidePanelMinWidth, stageSidePanelWidth]);
+  }), [boardPixelWidth, boardShellWidth, clearIntensity, holdStagePanelWidth, nextStagePanelWidth, sidePreviewBlockSize, stageGap, stageSidePanelMinWidth, stageSidePanelWidth]);
 
   const leaderboardListContent = useMemo(() => (
     <TetrisLeaderboardList
@@ -1082,24 +1111,6 @@ export default function TetrisGamePage() {
     />
   ), [filteredLeaderboard, getMedalIcon, leaderboardError, leaderboardLoading, openPlayerModal]);
 
-  useEffect(() => {
-    if (viewportSize.width >= 768 && isMobileLeaderboardOpen) {
-      setIsMobileLeaderboardOpen(false);
-    }
-  }, [isMobileLeaderboardOpen, viewportSize.width]);
-
-  useEffect(() => {
-    if (!isMobileLeaderboardOpen) return undefined;
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        closeMobileLeaderboard();
-      }
-    };
-
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [closeMobileLeaderboard, isMobileLeaderboardOpen]);
 
   const renderTileFace = useCallback((tileId, compact = false) => {
     const tile = getBrandTile(tileId);
@@ -1152,170 +1163,155 @@ export default function TetrisGamePage() {
           isUltraCompactDesktopHeight ? "is-ultra-compact-height" : "",
         ].filter(Boolean).join(" ")}
       >
-        <header className={gameStarted && !gameOver ? "tetris-header is-live" : "tetris-header"}>
-          <div className="tetris-header-copy">
-            <p className="tetris-header-kicker">Arcade brand challenge</p>
-            <h1>Brand Tetris</h1>
-            <p className="tetris-header-subtitle">Stack sneaker brands, clear lines, and chase the top spot on the leaderboard.</p>
-          </div>
-        </header>
 
         <div className={[
           "tetris-main",
           isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
         ].filter(Boolean).join(" ")}>
-           {/* COLUMN 1: LEADERBOARD (LEFT) */}
-           <aside className="tetris-layout-column tetris-leaderboard-column" aria-label="Leaderboard column">
-            <section className="tetris-panel tetris-panel-compact tetris-panel-featured tetris-hud-card tetris-leaderboard-embed tetris-leaderboard-panel" aria-label="Embedded Tetris leaderboard">
-              <div className="tetris-panel-heading tetris-panel-heading-compact">
-                <h2 className="tetris-panel-title"><Trophy size={16} /> Leaderboard</h2>
-              </div>
+            {/* COLUMN 1: LEADERBOARD (LEFT) */}
+            <aside className="tetris-layout-column tetris-leaderboard-column" aria-label="Leaderboard column">
+             <section className="tetris-panel tetris-panel-compact tetris-panel-featured tetris-hud-card tetris-leaderboard-embed tetris-leaderboard-panel" aria-label="Embedded Tetris leaderboard">
+               <div className="tetris-panel-heading tetris-panel-heading-compact">
+                 <h2 className="tetris-panel-title"><Trophy size={16} /> Leaderboard</h2>
+               </div>
 
-              {leaderboardLoading && <p className="text-muted">Loading leaderboard...</p>}
-              {!leaderboardLoading && leaderboardError && <p className="text-muted">{leaderboardError}</p>}
-              {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length === 0 && <p className="text-muted">Play a round to create the first score.</p>}
-              {leaderboardListContent}
-            </section>
-          </aside>
+               {leaderboardLoading && <p className="text-muted">Loading leaderboard...</p>}
+               {!leaderboardLoading && leaderboardError && <p className="text-muted">{leaderboardError}</p>}
+               {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length === 0 && <p className="text-muted">Play a round to create the first score.</p>}
+               {leaderboardListContent}
+             </section>
+            </aside>
 
-          {/* COLUMN 2: GAME BOARD (CENTER) */}
-          <section className={[
-            "tetris-layout-column",
-            "tetris-board-column",
-            isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
-          ].filter(Boolean).join(" ")}>
-            {isMobileViewport && (gameStarted || gameOver) && renderCompactStatsBar(
-              "tetris-stats-bar tetris-stats-bar-compact tetris-mobile-board-stats",
-              "Mobile game stats"
-            )}
-            <TetrisBoardStage
-              boardFrameRef={boardFrameRef}
-              boardShellClassName={[
-                "tetris-board-shell",
-                rowClearFlashRows.length > 0 ? "is-clear-shaking" : "",
-                isTetrisClearActive ? "is-tetris-clear" : "",
-                levelUpPulse ? "is-level-up" : "",
-                restartPulse ? "is-restarting" : "",
-                tSpinActive ? "is-tspin-active" : "",
-              ].filter(Boolean).join(" ")}
-              boardShellStyle={boardShellStyle}
-              isBoardFocused={isBoardFocused}
-              holdPiece={holdPiece}
-              holdPiecePreview={holdPiecePreview}
-              holdTileId={holdTileId}
-              holdBrandTile={holdBrandTile}
-              getPreviewGridStyle={getPreviewGridStyle}
-              getBrandColor={getBrandColor}
-              renderTileFace={renderTileFace}
-              nextQueuePreviewEntries={nextQueuePreviewEntries}
-              afterGridContent={shouldShowBoardFocusHint ? (
-                <div className="tetris-grid-focus-indicator" aria-hidden="true">
-                  Click board to enable keyboard controls
-                </div>
-              ) : null}
-            >
-              {isTetrisClearActive && <div className="tetris-clear-burst" aria-hidden="true" />}
-              {hardDropPulse && <div className="tetris-hard-drop-flash" aria-hidden="true" />}
-              <TetrisGridContent
-                gameSurfaceRef={gameSurfaceRef}
-                blockSize={blockSize}
-                isBoardFocused={isBoardFocused}
-                isPaused={isPaused}
-                gameOver={gameOver}
-                pieceSpawnPulse={pieceSpawnPulse}
-                rotatePulse={rotatePulse}
-                softDropPulse={softDropPulse}
-                hardDropPulse={hardDropPulse}
-                restartPulse={restartPulse}
-                focusBoard={focusBoard}
-                handleBoardTouchStart={handleBoardTouchStart}
-                handleBoardTouchMove={handleBoardTouchMove}
-                handleBoardTouchEnd={handleBoardTouchEnd}
-                handleBoardTouchCancel={handleBoardTouchCancel}
-                onBoardFocusChange={setIsBoardFocused}
-                grid={grid}
-                getBrandColor={getBrandColor}
-                getBrandTile={getBrandTile}
-                renderTileFace={renderTileFace}
-                rowClearFlashRows={rowClearFlashRows}
-                clearEffectVariant={clearEffectVariant}
-                clearIntensity={clearIntensity}
-                shimmerSweepRows={shimmerSweepRows}
-                rowShiftBlocks={rowShiftBlocks}
-                hardDropTrail={hardDropTrail}
-                impactPulse={impactPulse}
-                lockPulseCells={lockPulseCells}
-                currentPiece={currentPiece}
-                ghostPieceRow={ghostPieceRow}
-                currentPieceRow={currentPieceRow}
-                currentPieceCol={currentPieceCol}
-                currentTileId={currentTileId}
-                pointPopups={pointPopups}
+            {/* COLUMN 2: GAME BOARD (CENTER) */}
+            <section className={[
+              "tetris-layout-column",
+              "tetris-board-column",
+              isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
+            ].filter(Boolean).join(" ")} style={{ "--tetris-board-pixel-width": `${boardPixelWidth}px` }}>
+               <TetrisBoardStage
+                  isMobileViewport={isMobileViewport}
+                 boardFrameRef={boardFrameRef}
+                 boardShellStyle={boardShellStyle}
+                 isBoardFocused={isBoardFocused}
+                  boardTopStatsBar={renderCompactStatsBar("tetris-stats-bar tetris-stats-bar-board-top")}
+                 holdPiece={holdPiece}
+                 holdPiecePreview={holdPiecePreview}
+                 holdTileId={holdTileId}
+                 holdBrandTile={holdBrandTile}
+                 getPreviewGridStyle={getPreviewGridStyle}
+                 getBrandColor={getBrandColor}
+                 renderTileFace={renderTileFace}
+                 nextQueuePreviewEntries={nextQueuePreviewEntries}
+                afterGridContent={shouldShowBoardFocusHint ? (
+                  <div className="tetris-grid-focus-indicator" aria-hidden="true">
+                    Click board to enable keyboard controls
+                  </div>
+                ) : null}
+              >
+                {isTetrisClearActive && <div className="tetris-clear-burst" aria-hidden="true" />}
+                {hardDropPulse && <div className="tetris-hard-drop-flash" aria-hidden="true" />}
+                <TetrisGridContent
+                  gameSurfaceRef={gameSurfaceRef}
+                  blockSize={blockSize}
+                  isBoardFocused={isBoardFocused}
+                  isPaused={isPaused}
+                  gameOver={gameOver}
+                  pieceSpawnPulse={pieceSpawnPulse}
+                  rotatePulse={rotatePulse}
+                  softDropPulse={softDropPulse}
+                  hardDropPulse={hardDropPulse}
+                  restartPulse={restartPulse}
+                  focusBoard={focusBoard}
+                  handleBoardTouchStart={handleBoardTouchStart}
+                  handleBoardTouchMove={handleBoardTouchMove}
+                  handleBoardTouchEnd={handleBoardTouchEnd}
+                  handleBoardTouchCancel={handleBoardTouchCancel}
+                  onBoardFocusChange={setIsBoardFocused}
+                  grid={grid}
+                  getBrandColor={getBrandColor}
+                  getBrandTile={getBrandTile}
+                  renderTileFace={renderTileFace}
+                  rowClearFlashRows={rowClearFlashRows}
+                  clearEffectVariant={clearEffectVariant}
+                  clearIntensity={clearIntensity}
+                  shimmerSweepRows={shimmerSweepRows}
+                  rowShiftBlocks={rowShiftBlocks}
+                  hardDropTrail={hardDropTrail}
+                  impactPulse={impactPulse}
+                  lockPulseCells={lockPulseCells}
+                  currentPiece={currentPiece}
+                  ghostPieceRow={ghostPieceRow}
+                  currentPieceRow={currentPieceRow}
+                  currentPieceCol={currentPieceCol}
+                  currentTileId={currentTileId}
+                  pointPopups={pointPopups}
+                />
+              </TetrisBoardStage>
+
+             <TetrisGameOverModal
+                isVisible={gameOver}
+                playerName={playerName}
+                finalScore={score}
+                bestScore={bestRun.score}
+                finalLevel={level}
+                linesCleared={linesCleared}
+                playerRank={currentPlayerRank}
+                onPlayAgain={resetGame}
+                onOpenLeaderboard={undefined}
+                onClose={resetGame}
               />
-            </TetrisBoardStage>
 
-            <TetrisGameOverModal
-              isVisible={gameOver}
-              playerName={playerName}
-              finalScore={score}
-              bestScore={bestRun.score}
-              finalLevel={level}
-              linesCleared={linesCleared}
-              playerRank={currentPlayerRank}
-              onPlayAgain={resetGame}
-              onOpenLeaderboard={viewportSize.width < 768 ? openMobileLeaderboard : undefined}
-            />
-          </section>
+             {isMobileViewport && (
+               <TetrisTouchControls
+                 gameStarted={gameStarted}
+                 gameOver={gameOver}
+                 loading={loading}
+                 playerName={playerName}
+                 onPlayerNameChange={setPlayerName}
+                 playerNameInputRef={playerNameInputRef}
+                 onStartGame={startGame}
+                 onResetGame={resetGame}
+                 isPaused={isPaused}
+                 togglePauseGame={togglePauseGame}
+                 onMoveLeft={() => movePieceHorizontal(-1)}
+                 onMoveRight={() => movePieceHorizontal(1)}
+                 onRotateCw={rotateCurrentPiece}
+                 onSoftDrop={softDropCurrentPiece}
+                 onHardDrop={hardDropCurrentPiece}
+                 onHoldPiece={holdCurrentPiece}
+                 canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
+               />
+             )}
+           </section>
 
-          {/* COLUMN 3: DETAILS (RIGHT) */}
-          {!isMobileViewport && (
-
-            <TetrisSideDetailsPanel
-              gameStarted={gameStarted}
-              gameOver={gameOver}
-              loading={loading}
-              message={message}
-              playerName={playerName}
-              score={score}
-              linesCleared={linesCleared}
-              onPlayerNameChange={setPlayerName}
-              onStartGame={startGame}
-              onResetGame={resetGame}
-              isPaused={isPaused}
-              comboCount={comboCount}
-              backToBackActive={backToBackActive}
-              soundEnabled={soundEnabled}
-              isFullscreen={isFullscreen}
-              namedPlayerBestEntry={namedPlayerBestEntry}
-              globalBestEntry={globalBestEntry}
-              togglePauseGame={togglePauseGame}
-              toggleSound={toggleSound}
-              toggleFullscreen={toggleFullscreen}
-              playerNameInputRef={playerNameInputRef}
-              renderCompactStatsBar={renderCompactStatsBar}
-            />
-          )}
+           {/* COLUMN 3: DETAILS (RIGHT) */}
+           <TetrisSideDetailsPanel
+             gameStarted={gameStarted}
+             gameOver={gameOver}
+             loading={loading}
+             message={message}
+             playerName={playerName}
+             score={score}
+             linesCleared={linesCleared}
+             onPlayerNameChange={setPlayerName}
+             onStartGame={startGame}
+             onResetGame={resetGame}
+             isPaused={isPaused}
+             comboCount={comboCount}
+             backToBackActive={backToBackActive}
+             soundEnabled={soundEnabled}
+             isFullscreen={isFullscreen}
+             namedPlayerBestEntry={namedPlayerBestEntry}
+             globalBestEntry={globalBestEntry}
+             togglePauseGame={togglePauseGame}
+             toggleSound={toggleSound}
+             toggleFullscreen={toggleFullscreen}
+             playerNameInputRef={playerNameInputRef}
+             renderCompactStatsBar={renderCompactStatsBar}
+              hapticEnabled={hapticEnabled}
+              onHapticToggle={toggleHaptics}
+           />
         </div>
-
-        <TetrisMobileControls
-          className={[
-            "tetris-touch-controls",
-            isMobileGameplayActive ? "is-gameplay" : "",
-          ].filter(Boolean).join(" ")}
-          isMobileGameplayActive={isMobileGameplayActive}
-          gameStarted={gameStarted}
-          gameOver={gameOver}
-          isPaused={isPaused}
-          canHoldPiece={canHoldPiece}
-          openStartModal={openStartModal}
-          movePieceHorizontal={movePieceHorizontal}
-          rotateCurrentPiece={rotateCurrentPiece}
-          softDropCurrentPiece={softDropCurrentPiece}
-          hardDropCurrentPiece={hardDropCurrentPiece}
-          holdCurrentPiece={holdCurrentPiece}
-          togglePauseGame={togglePauseGame}
-          resetGame={resetGame}
-        />
 
         <TetrisStartModal
           isVisible={isStartModalOpen}
@@ -1326,10 +1322,13 @@ export default function TetrisGamePage() {
           onCancel={closeStartModal}
         />
 
-        <TetrisMobileLeaderboardModal
-          isVisible={isMobileLeaderboardOpen}
-          onClose={closeMobileLeaderboard}
-          leaderboardListContent={leaderboardListContent}
+        <TetrisSettingsModal
+          isVisible={isSettingsOpen}
+          onClose={closeSettings}
+          soundEnabled={soundEnabled}
+          onSoundToggle={toggleSound}
+          hapticEnabled={hapticEnabled}
+          onHapticToggle={toggleHaptics}
         />
 
         <TetrisPlayerDetailsModal

@@ -49,4 +49,4 @@ app:
     checkout-cancel-url: ${PAYMONGO_CHECKOUT_CANCEL_URL:https://solereax.com/collections?payment=cancel}
     payment-method-types: ${PAYMONGO_PAYMENT_METHOD_TYPES:gcash,paymaya,card}
 server:
-  port: ${SERVER_PORT:9090}
+  port: ${SERVER_PORT:8080}

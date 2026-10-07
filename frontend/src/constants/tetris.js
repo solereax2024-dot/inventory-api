@@ -1,11 +1,14 @@
 export const GRID_WIDTH = 10;
 export const GRID_HEIGHT = 20;
-export const LARGE_DESKTOP_BLOCK_SIZE = 31;
-export const DESKTOP_BLOCK_SIZE = 26;
-export const COMPACT_DESKTOP_BLOCK_SIZE = 25;
-export const SMALL_HEIGHT_BLOCK_SIZE = 26;
-export const MOBILE_BLOCK_SIZE = 22;
+export const LARGE_DESKTOP_BLOCK_SIZE = 36;
+export const DESKTOP_BLOCK_SIZE = 32;
+export const COMPACT_DESKTOP_BLOCK_SIZE = 30;
+export const SMALL_HEIGHT_BLOCK_SIZE = 30;
+export const MOBILE_BLOCK_SIZE = 24;
 export const MOBILE_BREAKPOINT = 640;
+export const TABLET_BREAKPOINT = 768;
+export const DESKTOP_BREAKPOINT = 1024;
+export const LARGE_DESKTOP_BREAKPOINT = 1440;
 export const LINE_CLEAR_FLASH_DURATION_MS = 190;
 export const LINE_SHIFT_DURATION_BASE_MS = 200;
 export const LINE_SHIFT_DURATION_PER_ROW_MS = 36;
@@ -19,10 +22,12 @@ export const TOUCH_TAP_MAX_DURATION_MS = 240;
 export const TOUCH_HARD_DROP_FLICK_PX = 72;
 export const TOUCH_HARD_DROP_FLICK_DURATION_MS = 150;
 export const SOUND_PREFERENCE_KEY = "brand-tetris-sound-enabled";
+export const HAPTIC_PREFERENCE_KEY = "brand-tetris-haptics-enabled";
 export const BEST_RUN_PREFERENCE_KEY = "brand-tetris-best-run";
+export const MOBILE_CONTROLS_PREFERENCE_KEY = "brand-tetris-mobile-controls-enabled";
 export const LEADERBOARD_TIME_FILTER = "all";
 export const LEADERBOARD_SORT_BY = "score";
-export const GRID_INSET_PX = 10;
+export const GRID_INSET_PX = 8;
 
 export const SOUND_PROFILES = {
   tap: { frequencies: [520], duration: 0.045, type: "triangle", gain: 0.024 },

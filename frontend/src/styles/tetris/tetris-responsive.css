@@ -52,10 +52,6 @@
         gap: 6px;
     }
 
-    .tetris-detail-panel .tetris-hud-preview,
-    .tetris-next-preview-compact {
-        min-height: 72px;
-    }
 }
 
 @media (max-height: 920px) and (min-width: 641px) {
@@ -139,10 +135,6 @@
         gap: 6px;
     }
 
-    .tetris-playfield-layout {
-        grid-template-columns: minmax(0, auto) minmax(248px, 280px);
-        gap: var(--space-sm);
-    }
 
     .tetris-panel,
     .tetris-panel-secondary {
@@ -160,8 +152,8 @@
     }
 
     .tetris-main {
-        grid-template-columns: minmax(188px, 228px) minmax(0, 1fr) minmax(210px, 252px);
-        gap: 8px;
+        grid-template-columns: minmax(156px, 196px) minmax(0, 1fr) minmax(174px, 220px);
+        gap: 7px;
     }
 
     .tetris-header h1,
@@ -169,18 +161,6 @@
         font-size: clamp(1.2rem, 1.8vw, 1.45rem);
     }
 
-    .tetris-mini-leaderboard-row {
-        padding: 7px 8px;
-    }
-
-    .tetris-mini-leaderboard-player {
-        font-size: 0.76rem;
-    }
-
-    .tetris-mini-leaderboard-subline,
-    .tetris-mini-leaderboard-level {
-        font-size: 0.62rem;
-    }
 
     .tetris-shell.is-live-gameplay.is-ultra-compact-height .tetris-header {
         display: none;
@@ -198,8 +178,8 @@
 /* Tablet/Medium Width */
 @media (max-width: 1120px) and (min-width: 769px) {
     .tetris-main {
-        grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) minmax(216px, 272px);
-        gap: 10px;
+        grid-template-columns: minmax(166px, 208px) minmax(0, 1fr) minmax(182px, 232px);
+        gap: 8px;
     }
 
     .tetris-start-primary-row,
@@ -211,7 +191,7 @@
 
 @media (min-width: 1680px) {
     .tetris-main {
-        grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(260px, 340px);
+        grid-template-columns: minmax(232px, 292px) minmax(0, 1fr) minmax(260px, 348px);
     }
 }
 
@@ -223,11 +203,34 @@
         padding: clamp(6px, 2vw, 10px);
     }
 
+    /* CRITICAL FIX: Change grid to single column on mobile */
     .tetris-main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
         gap: 2px;
     }
 
+    /* Hide leaderboard and side panels on mobile - focus on board */
+    .tetris-leaderboard-column,
+    .tetris-side-details {
+        display: none;
+    }
 
+    /* Hide the compact live summary on mobile; keep action buttons visible */
+    .tetris-touch-controls .tetris-live-summary {
+        display: none !important;
+    }
+
+    .tetris-board-column {
+        flex: 1;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
 
     .tetris-main.is-mobile-gameplay {
         flex: 1;
@@ -260,9 +263,6 @@
         border-radius: 12px;
     }
 
-    .tetris-playfield-board {
-        width: 100%;
-    }
 
     .tetris-grid {
         border-radius: 0;
@@ -276,132 +276,493 @@
 
 
 
-    /* Mobile: Compact stats bar */
-    .tetris-stats-bar-compact {
-        width: 100%;
-        margin: 0;
-        padding: 4px 8px;
-        gap: 4px;
+     /* Compact stats bar */
+     .tetris-stats-bar-compact {
+         width: 100%;
+         margin: 0;
+         padding: 4px 8px;
+         gap: 4px;
+         display: grid !important;
+         grid-template-columns: repeat(3, minmax(0, 1fr));
+     }
+
+     /* LIVE STATS DURING GAMEPLAY ON MOBILE */
+     .tetris-board-column.is-mobile-gameplay .tetris-stats-bar-compact {
+         display: grid !important;
+         grid-template-columns: repeat(3, minmax(0, 1fr));
+         gap: 6px;
+         padding: 6px 4px;
+         margin-bottom: 4px;
+         background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(15, 23, 42, 0.72) 100%);
+         border: 1px solid rgba(99, 102, 241, 0.22);
+         border-radius: 10px;
+         box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+         backdrop-filter: blur(10px);
+         flex-shrink: 0;
+     }
+
+     /* Stats bar also visible when not in gameplay - same styling */
+     .tetris-board-column:not(.is-mobile-gameplay) .tetris-stats-bar-compact {
+         display: grid !important;
+         grid-template-columns: repeat(3, minmax(0, 1fr));
+         gap: 6px;
+         padding: 6px 4px;
+         margin-bottom: 4px;
+         background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(15, 23, 42, 0.72) 100%);
+         border: 1px solid rgba(99, 102, 241, 0.22);
+         border-radius: 10px;
+         box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+         backdrop-filter: blur(10px);
+         flex-shrink: 0;
+     }
+
+     .tetris-board-column .stat-item-compact {
+         background: rgba(15, 23, 42, 0.6);
+         border: 1px solid rgba(99, 102, 241, 0.18);
+         border-radius: 8px;
+         padding: 6px 8px;
+         text-align: center;
+         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+     }
+
+     .tetris-board-column .stat-item-compact .stat-label {
+         font-size: 0.6rem;
+         color: rgba(226, 232, 240, 0.68);
+         margin-bottom: 2px;
+     }
+
+     .tetris-board-column .stat-item-compact .stat-value {
+         font-size: 1.2rem;
+         font-weight: 900;
+         color: #fff;
+         text-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+         letter-spacing: 0.05em;
+     }
+
+     .tetris-board-column .stat-item-compact.is-pulsed {
+         animation: tetris-stat-pulse-mobile 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+         background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(15, 23, 42, 0.8));
+         border-color: rgba(99, 102, 241, 0.34);
+         box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.16), 0 4px 12px rgba(99, 102, 241, 0.12);
+     }
+
+    @keyframes tetris-stat-pulse-mobile {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        50% {
+            transform: scale(1.08);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
     }
 
-    .stat-item-compact {
-        flex: 1;
-        padding: 4px 6px;
-        min-width: auto;
-    }
-
-    /* Mobile: Touch controls positioning */
-    .tetris-touch-controls {
-        width: 100%;
-        max-width: 100%;
-        margin: 0;
-        padding: clamp(2px, 1vw, 4px);
-        gap: 2px;
-        align-items: stretch;
-        justify-content: flex-start;
-    }
 }
 
-@media (max-width: 640px) and (max-height: 760px) {
-    .tetris-shell {
-        gap: 1px;
-        padding:
-            max(2px, var(--tetris-safe-top))
-            max(6px, var(--tetris-mobile-inline-gutter), var(--tetris-safe-right))
-            max(2px, var(--tetris-safe-bottom))
-            max(6px, var(--tetris-mobile-inline-gutter), var(--tetris-safe-left));
-    }
+/* ===== STANDARDIZED MOBILE HEIGHT BREAKPOINTS ===== */
 
-    .tetris-main {
-        gap: 1px;
-    }
+/* SMALL MOBILE: Very compact screens (< 650px height) */
+@media (max-width: 640px) and (max-height: 650px) {
+     :root {
+         /* Reverted: mobile Hold/Next blocks now match desktop board blocks */
+     }
 
-    .tetris-header {
-        padding: 0 2px;
-        min-height: 30px;
-        height: 30px;
-        max-height: 30px;
-        background: transparent;
-        border-bottom: none;
-    }
+     .tetris-shell {
+         gap: 1px;
+         padding:
+             max(2px, var(--tetris-safe-top))
+             max(6px, var(--tetris-mobile-inline-gutter), var(--tetris-safe-right))
+             max(2px, var(--tetris-safe-bottom))
+             max(6px, var(--tetris-mobile-inline-gutter), var(--tetris-safe-left));
+     }
 
-    .tetris-header h1,
-    .tetris-header.is-live h1 {
-        font-size: 0.82rem;
-        line-height: 1;
-    }
+     .tetris-main {
+         gap: 1px;
+     }
 
-    .tetris-shell.is-mobile-live-gameplay .tetris-header {
-        min-height: 24px;
-        height: 24px;
-        max-height: 24px;
-    }
+     /* Increased from 26px to 32px for better readability */
+     .tetris-header {
+         padding: 2px 2px 0;
+         min-height: 32px;
+         height: 32px;
+         max-height: 32px;
+         background: transparent;
+         border-bottom: none;
+     }
 
-    .tetris-board-column.is-mobile-gameplay {
-        gap: 2px;
-    }
+     .tetris-header h1,
+     .tetris-header.is-live h1 {
+         font-size: 0.8rem;
+         line-height: 1.2;
+     }
 
-    .tetris-mobile-board-stats {
-        margin: 0 0 2px;
-        padding: 2px;
-        gap: 2px;
-    }
+     .tetris-board-column.is-mobile-gameplay {
+         gap: 2px;
+     }
 
-    .tetris-mobile-board-stats .stat-item-compact {
-        padding: 3px 2px;
-    }
+     .tetris-mobile-board-stats {
+         margin: 0 0 2px;
+         padding: 2px;
+         gap: 2px;
+     }
 
-    .tetris-mobile-board-stats .stat-item-compact .stat-label {
-        font-size: 0.54rem;
-    }
+     .tetris-mobile-board-stats .stat-item-compact {
+         padding: 3px 2px;
+     }
 
-    .tetris-mobile-board-stats .stat-item-compact .stat-value {
-        font-size: 0.8rem;
-    }
+     .tetris-mobile-board-stats .stat-item-compact .stat-label {
+         font-size: 0.50rem;
+     }
+
+     .tetris-mobile-board-stats .stat-item-compact .stat-value {
+         font-size: 0.74rem;
+     }
+
+      .tetris-touch-controls.is-gameplay {
+          display: flex !important;
+          padding: 2px 0 0;
+          gap: 2px;
+          background: transparent;
+          border: none;
+          box-shadow: none;
+      }
+
+     .tetris-touch-controls.is-gameplay .tetris-mobile-controls-grid {
+         gap: 4px;
+     }
+
+     .tetris-touch-controls.is-gameplay .tetris-mobile-control-cluster {
+         padding: 4px;
+         gap: 3px;
+         border-radius: 10px;
+     }
+
+     .tetris-touch-controls.is-gameplay .tetris-mobile-control-cluster-header {
+         display: none;
+     }
 }
 
-@media (max-width: 640px) and (max-height: 680px) {
-    .tetris-header {
-        min-height: 26px;
-        height: 26px;
-        max-height: 26px;
-    }
+/* MEDIUM MOBILE: Standard compact screens (650px - 760px height) */
+@media (max-width: 640px) and (min-height: 650px) and (max-height: 760px) {
+     :root {
+         /* Reverted: mobile Hold/Next blocks now match desktop board blocks */
+     }
 
-    .tetris-header h1,
-    .tetris-header.is-live h1 {
-        font-size: 0.76rem;
-    }
+     .tetris-shell {
+         gap: 1px;
+         padding:
+             max(2px, var(--tetris-safe-top))
+             max(6px, var(--tetris-mobile-inline-gutter), var(--tetris-safe-right))
+             max(2px, var(--tetris-safe-bottom))
+             max(6px, var(--tetris-mobile-inline-gutter), var(--tetris-safe-left));
+     }
 
-    .tetris-mobile-board-stats {
-        margin-bottom: 2px;
-        padding: 2px;
-    }
+     .tetris-main {
+         gap: 1px;
+     }
 
-    .tetris-mobile-board-stats .stat-item-compact {
-        padding: 4px 3px;
-    }
+     .tetris-header {
+         padding: 0 2px;
+         min-height: 30px;
+         height: 30px;
+         max-height: 30px;
+         background: transparent;
+         border-bottom: none;
+     }
 
-    .tetris-mobile-board-stats .stat-item-compact .stat-label {
-        font-size: 0.52rem;
-    }
+     .tetris-header h1,
+     .tetris-header.is-live h1 {
+         font-size: 0.82rem;
+         line-height: 1;
+     }
 
-    .tetris-mobile-board-stats .stat-item-compact .stat-value {
-        font-size: 0.76rem;
-    }
+     .tetris-shell.is-mobile-live-gameplay .tetris-header {
+         min-height: 24px;
+         height: 24px;
+         max-height: 24px;
+     }
+
+     .tetris-board-column.is-mobile-gameplay {
+         gap: 2px;
+     }
+
+     .tetris-mobile-board-stats {
+         margin: 0 0 2px;
+         padding: 2px;
+         gap: 2px;
+     }
+
+     .tetris-mobile-board-stats .stat-item-compact {
+         padding: 3px 2px;
+     }
+
+     /* Minimum font size for readability - no smaller than 0.68rem */
+     .tetris-mobile-board-stats .stat-item-compact .stat-label {
+         font-size: max(0.68rem, 0.54rem);
+     }
+
+     .tetris-mobile-board-stats .stat-item-compact .stat-value {
+         font-size: max(0.85rem, 0.8rem);
+     }
+
+     .tetris-touch-controls {
+         display: flex !important;
+     }
 }
 
+/* TALL MOBILE: Larger mobile devices (> 760px height) */
+@media (max-width: 640px) and (min-height: 760px) {
+     :root {
+         /* Reverted: mobile Hold/Next blocks now match desktop board blocks */
+     }
 
+     .tetris-header {
+         padding: 2px 2px 0;
+         height: 38px;
+         max-height: 38px;
+         min-height: 38px;
+         align-items: center;
+         overflow: hidden;
+     }
+
+     .tetris-touch-controls {
+         display: flex !important;
+     }
+}
+
+/* SMALLEST PHONES: 320px and smaller (iPhone SE) */
+@media (max-width: 320px) {
+     :root {
+         /* Reverted: mobile Hold/Next blocks now match desktop board blocks */
+     }
+
+     .tetris-header {
+         min-height: 36px;
+         padding: 2px 0;
+     }
+
+     .tetris-header h1 {
+         font-size: 0.85rem;
+         line-height: 1.1;
+     }
+
+     .tetris-touch-controls {
+         display: flex !important;
+         padding: 4px;
+         gap: 3px;
+     }
+
+     .tetris-dpad-container {
+         grid-template-columns: repeat(3, 36px);
+         grid-template-rows: repeat(2, 36px);
+     }
+
+     .tetris-action-btn {
+         min-height: 36px;
+         padding: 2px 4px;
+         font-size: 0.6rem;
+     }
+
+     .tetris-stats-bar-compact {
+         gap: 3px;
+         padding: 2px 4px;
+     }
+
+     .stat-item-compact .stat-label {
+         font-size: 0.6rem;
+     }
+
+     .stat-item-compact .stat-value {
+         font-size: 0.8rem;
+     }
+}
+
+/* SMALL PHONES: 360px max (Galaxy J2, Moto E) */
+@media (max-width: 360px) and (min-width: 321px) {
+     :root {
+         /* Reverted: mobile Hold/Next blocks now match desktop board blocks */
+     }
+
+     .tetris-header {
+         min-height: 38px;
+     }
+
+     .tetris-header h1 {
+         font-size: 0.88rem;
+     }
+
+     .tetris-touch-controls {
+         display: flex !important;
+     }
+
+     .tetris-dpad-container {
+         grid-template-columns: repeat(3, 38px);
+         grid-template-rows: repeat(2, 38px);
+         gap: 3px;
+     }
+
+     .tetris-action-btn {
+         min-height: 38px;
+         font-size: 0.65rem;
+     }
+}
+
+/* VERY SMALL SCREEN: Extra compact (380px) */
 @media (max-width: 380px) {
-    .tetris-header {
-        min-height: 42px;
-    }
+     /* Reverted: mobile Hold/Next blocks now match desktop board blocks */
+     :root {
+     }
 
-    .tetris-header h1 {
-        font-size: 0.95rem;
-    }
+     .tetris-header {
+         min-height: 42px;
+     }
 
-    .tetris-touch-controls {
-        padding: 6px;
-        gap: 6px;
-    }
+     .tetris-header h1 {
+         font-size: 0.95rem;
+     }
+
+     .tetris-touch-controls {
+         display: flex !important;
+         padding: 6px;
+         gap: 6px;
+     }
+}
+
+/* ===== LANDSCAPE MODE SUPPORT ===== */
+
+/* Mobile Landscape: Full horizontal controls */
+@media (max-width: 1024px) and (orientation: landscape) {
+     .tetris-shell {
+         padding: 6px;
+         gap: 4px;
+         flex-direction: row;
+         align-items: center;
+     }
+
+     .tetris-header {
+         display: none;
+     }
+
+     .tetris-main {
+         flex: 1;
+         gap: 4px;
+         flex-direction: row;
+     }
+
+     .tetris-board-column {
+         flex: 1;
+     }
+
+     /* Show horizontal control bar on landscape */
+     .tetris-touch-controls {
+         flex-direction: row;
+         width: auto;
+         padding: 4px 6px;
+         gap: 4px;
+         position: static;
+     }
+
+     .tetris-mobile-controls-grid {
+         display: flex;
+         flex-direction: row;
+         gap: 8px;
+         width: 100%;
+     }
+
+     .tetris-mobile-control-cluster {
+         flex: 0 0 auto;
+         padding: 4px 6px;
+     }
+
+     .tetris-control-row {
+         display: flex;
+         flex-direction: row;
+         gap: 4px;
+     }
+
+     .tetris-mobile-control-cluster-header {
+         display: none;
+     }
+
+     .tetris-control-btn {
+         min-height: 36px;
+         padding: 4px 8px;
+         font-size: 0.75rem;
+     }
+
+     /* Stats bar horizontal layout */
+     .tetris-stats-bar-compact {
+         flex-direction: row;
+         gap: 6px;
+     }
+
+     .stat-item-compact {
+         min-width: auto;
+         padding: 4px 8px;
+     }
+
+     .stat-item-compact .stat-label {
+         font-size: 0.65rem;
+     }
+
+     .stat-item-compact .stat-value {
+         font-size: 0.9rem;
+     }
+}
+
+/* Tablet Landscape: Optimize wider layout */
+@media (min-width: 641px) and (max-width: 1024px) and (orientation: landscape) {
+     .tetris-touch-controls {
+         flex-direction: row;
+         gap: 8px;
+         padding: 8px;
+     }
+
+     .tetris-mobile-controls-grid {
+         gap: 12px;
+     }
+
+     .tetris-mobile-control-cluster {
+         padding: 8px;
+     }
+
+     .tetris-control-btn {
+         min-height: 40px;
+         padding: 6px 12px;
+     }
+}
+
+/* Legacy combined media query support for existing height-specific layouts */
+@media (max-width: 640px) and (max-height: 680px) {
+     .tetris-header {
+         min-height: 26px;
+         height: 26px;
+         max-height: 26px;
+     }
+
+     .tetris-header h1,
+     .tetris-header.is-live h1 {
+         font-size: 0.76rem;
+     }
+
+     .tetris-mobile-board-stats {
+         margin-bottom: 2px;
+         padding: 2px;
+     }
+
+     .tetris-mobile-board-stats .stat-item-compact {
+         padding: 4px 3px;
+     }
+
+     .tetris-mobile-board-stats .stat-item-compact .stat-label {
+         font-size: 0.52rem;
+     }
+
+     .tetris-mobile-board-stats .stat-item-compact .stat-value {
+         font-size: 0.76rem;
+     }
 }

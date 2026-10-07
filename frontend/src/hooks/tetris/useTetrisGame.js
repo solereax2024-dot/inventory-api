@@ -1,9 +1,5 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-
-const GRID_WIDTH = 10;
-const GRID_HEIGHT = 20;
-const SOUND_PREFERENCE_KEY = "tetris-sound-enabled";
-const BEST_RUN_PREFERENCE_KEY = "tetris-best-run";
+import { useState, useCallback, useRef } from "react";
+import { GRID_WIDTH, GRID_HEIGHT } from "../../constants/tetris";
 
 // Game pieces (Tetris standard)
 const TETRIS_PIECES = {
@@ -100,7 +96,6 @@ export function useTetrisGame() {
 
   // Refs for tracking state
   const scheduledTimeoutsRef = useRef([]);
-  const ghostPieceRowRef = useRef(null);
 
   // Utility: Create empty grid
   const createEmptyGrid = () => {
