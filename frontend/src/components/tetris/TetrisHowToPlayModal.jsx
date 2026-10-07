@@ -76,32 +76,32 @@ export default function TetrisHowToPlayModal({
             </div>
           </section>
 
-          {/* Mobile Controls */}
-          <section className="tetris-howtoplay-section">
-            <h3>Mobile Controls</h3>
-            <div className="tetris-controls-list">
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">D-Pad</span>
-                <span>Move & rotate piece</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">Swipe Left/Right</span>
-                <span>Move piece</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">Swipe Down</span>
-                <span>Soft drop</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">Flick Down</span>
-                <span>Hard drop</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">Tap Piece</span>
-                <span>Rotate clockwise</span>
-              </div>
-            </div>
-          </section>
+           {/* Mobile Gestures */}
+           <section className="tetris-howtoplay-section">
+             <h3>Mobile Gestures Only</h3>
+             <div className="tetris-controls-list">
+               <div className="tetris-control-item">
+                 <span className="tetris-control-key">Swipe Left/Right</span>
+                 <span>Move piece</span>
+               </div>
+               <div className="tetris-control-item">
+                 <span className="tetris-control-key">Swipe Down</span>
+                 <span>Soft drop</span>
+               </div>
+               <div className="tetris-control-item">
+                 <span className="tetris-control-key">Flick Down</span>
+                 <span>Hard drop</span>
+               </div>
+               <div className="tetris-control-item">
+                 <span className="tetris-control-key">Tap Piece</span>
+                 <span>Rotate clockwise</span>
+               </div>
+               <div className="tetris-control-item">
+                 <span className="tetris-control-key">Double Tap</span>
+                 <span>Hold piece</span>
+               </div>
+             </div>
+           </section>
 
           {/* Scoring */}
           <section className="tetris-howtoplay-section">

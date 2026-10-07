@@ -7,6 +7,7 @@ import {
   Play,
   RotateCcw,
   RotateCw,
+  HelpCircle,
 } from "lucide-react";
 
 export default function TetrisTouchControls({
@@ -27,6 +28,7 @@ export default function TetrisTouchControls({
   onHardDrop,
   onHoldPiece,
   canResetGame,
+  onOpenHowToPlay,
 }) {
   const isLiveGame = gameStarted && !gameOver;
   const startButtonLabel = gameOver ? "Play Again" : "Start Game";
@@ -42,7 +44,7 @@ export default function TetrisTouchControls({
       <div className="tetris-mobile-controls-grid">
         <section className="tetris-mobile-control-cluster" aria-label="Player setup and session controls">
           <div className="tetris-mobile-control-cluster-header">
-            <span className="tetris-mobile-control-cluster-title">Player</span>
+            <span className="tetris-mobile-control-cluster-title">Brand Tetris</span>
             <span className="tetris-session-chip is-highlighted">
               {gameOver ? "Game over" : isLiveGame ? "Live" : "Ready"}
             </span>
@@ -98,87 +100,20 @@ export default function TetrisTouchControls({
                </button>
              )}
            </div>
+
+           <div className="tetris-start-tertiary-row">
+             <button
+               type="button"
+               onClick={onOpenHowToPlay}
+               className="tetris-button tetris-button-outline"
+               aria-label="Open how to play guide"
+               title="How to Play"
+             >
+               <HelpCircle size={16} />
+               How to Play
+             </button>
+           </div>
         </section>
-
-        {isLiveGame && (
-          <section className="tetris-mobile-control-cluster" aria-label="Game controls">
-            <div className="tetris-control-row tetris-control-row-main-1">
-              <button
-                type="button"
-                className="tetris-control-btn tetris-control-btn-move"
-                onClick={onMoveLeft}
-                disabled={!isLiveGame}
-                aria-label="Move piece left"
-                title="Move left"
-              >
-                <ArrowLeft size={16} />
-                <span className="tetris-control-label">Left</span>
-              </button>
-              <button
-                type="button"
-                className="tetris-control-btn tetris-control-btn-rotate"
-                onClick={onRotateCw}
-                disabled={!isLiveGame}
-                aria-label="Rotate piece clockwise"
-                title="Rotate clockwise"
-              >
-                <RotateCw size={16} />
-                <span className="tetris-control-label">CW</span>
-              </button>
-              <button
-                type="button"
-                className="tetris-control-btn tetris-control-btn-move"
-                onClick={onMoveRight}
-                disabled={!isLiveGame}
-                aria-label="Move piece right"
-                title="Move right"
-              >
-                <ArrowRight size={16} />
-                <span className="tetris-control-label">Right</span>
-              </button>
-            </div>
-
-            <div className="tetris-control-row tetris-control-row-main-2">
-              <button
-                type="button"
-                className="tetris-control-btn tetris-control-btn-hold"
-                onClick={onHoldPiece}
-                disabled={!isLiveGame}
-                aria-label="Hold current piece"
-                title="Hold"
-              >
-                <Hand size={16} />
-                <span className="tetris-control-label">Hold</span>
-              </button>
-              <button
-                type="button"
-                className="tetris-control-btn tetris-control-btn-drop"
-                onClick={onSoftDrop}
-                disabled={!isLiveGame}
-                aria-label="Soft drop piece"
-                title="Soft drop"
-              >
-                <ChevronDown size={16} />
-                <span className="tetris-control-label">Drop</span>
-              </button>
-              <button
-                type="button"
-                className="tetris-control-btn tetris-control-btn-hard-drop"
-                onClick={onHardDrop}
-                disabled={!isLiveGame}
-                aria-label="Hard drop piece"
-                title="Hard drop"
-              >
-                <ChevronsDown size={16} />
-                <span className="tetris-control-label">Hard Drop</span>
-              </button>
-            </div>
-
-             <div className="tetris-control-row tetris-control-row-main-3">
-               {/* Pause button hidden on mobile */}
-             </div>
-          </section>
-        )}
       </div>
     </aside>
   );

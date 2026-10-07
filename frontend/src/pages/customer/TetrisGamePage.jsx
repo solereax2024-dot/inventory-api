@@ -10,6 +10,7 @@ import TetrisGridContent from "../../components/tetris/TetrisGridContent";
 import TetrisTouchControls from "../../components/tetris/TetrisTouchControls";
 import TetrisPlayerDetailsModal from "../../components/tetris/TetrisPlayerDetailsModal";
 import TetrisSettingsModal from "../../components/tetris/TetrisSettingsModal";
+import TetrisHowToPlayModal from "../../components/tetris/TetrisHowToPlayModal";
 import TetrisSideDetailsPanel from "../../components/tetris/TetrisSideDetailsPanel";
 import { TetrisLeaderboardList } from "../../components/tetris/TetrisLeaderboardPanel";
 import {
@@ -140,9 +141,10 @@ export default function TetrisGamePage() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState(null);
-  const [isBoardFocused, setIsBoardFocused] = useState(false);
-  const [isStartModalOpen, setIsStartModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+   const [isBoardFocused, setIsBoardFocused] = useState(false);
+   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
+   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useLocalStorage(SOUND_PREFERENCE_KEY, true, {
     parse: parseSoundEnabledPreference,
     serialize: String,
@@ -465,13 +467,23 @@ export default function TetrisGamePage() {
     triggerHaptic("modal");
   }, [emitSound, gameOver, gameStarted, isPaused, triggerHaptic]);
 
-  const closeSettings = useCallback(() => {
-    setIsSettingsOpen(false);
-  }, []);
+   const closeSettings = useCallback(() => {
+     setIsSettingsOpen(false);
+   }, []);
 
-  const toggleHaptics = useCallback(() => {
-    setHapticEnabled((previousState) => !previousState);
-  }, [setHapticEnabled]);
+   const openHowToPlay = useCallback(() => {
+     setIsHowToPlayOpen(true);
+     emitSound("modal");
+     triggerHaptic("modal");
+   }, [emitSound, triggerHaptic]);
+
+   const closeHowToPlay = useCallback(() => {
+     setIsHowToPlayOpen(false);
+   }, []);
+
+   const toggleHaptics = useCallback(() => {
+     setHapticEnabled((previousState) => !previousState);
+   }, [setHapticEnabled]);
 
 
    const openPlayerModal = useCallback(async (entry) => {
@@ -1261,27 +1273,22 @@ export default function TetrisGamePage() {
                 onClose={resetGame}
               />
 
-             {isMobileViewport && (
-               <TetrisTouchControls
-                 gameStarted={gameStarted}
-                 gameOver={gameOver}
-                 loading={loading}
-                 playerName={playerName}
-                 onPlayerNameChange={setPlayerName}
-                 playerNameInputRef={playerNameInputRef}
-                 onStartGame={startGame}
-                 onResetGame={resetGame}
-                 isPaused={isPaused}
-                 togglePauseGame={togglePauseGame}
-                 onMoveLeft={() => movePieceHorizontal(-1)}
-                 onMoveRight={() => movePieceHorizontal(1)}
-                 onRotateCw={rotateCurrentPiece}
-                 onSoftDrop={softDropCurrentPiece}
-                 onHardDrop={hardDropCurrentPiece}
-                 onHoldPiece={holdCurrentPiece}
-                 canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
-               />
-             )}
+              {isMobileViewport && (
+                <TetrisTouchControls
+                  gameStarted={gameStarted}
+                  gameOver={gameOver}
+                  loading={loading}
+                  playerName={playerName}
+                  onPlayerNameChange={setPlayerName}
+                  playerNameInputRef={playerNameInputRef}
+                  onStartGame={startGame}
+                  onResetGame={resetGame}
+                  isPaused={isPaused}
+                  togglePauseGame={togglePauseGame}
+                  canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
+                  onOpenHowToPlay={openHowToPlay}
+                />
+              )}
            </section>
 
            {/* COLUMN 3: DETAILS (RIGHT) */}
@@ -1322,16 +1329,21 @@ export default function TetrisGamePage() {
           onCancel={closeStartModal}
         />
 
-        <TetrisSettingsModal
-          isVisible={isSettingsOpen}
-          onClose={closeSettings}
-          soundEnabled={soundEnabled}
-          onSoundToggle={toggleSound}
-          hapticEnabled={hapticEnabled}
-          onHapticToggle={toggleHaptics}
-        />
+         <TetrisSettingsModal
+           isVisible={isSettingsOpen}
+           onClose={closeSettings}
+           soundEnabled={soundEnabled}
+           onSoundToggle={toggleSound}
+           hapticEnabled={hapticEnabled}
+           onHapticToggle={toggleHaptics}
+         />
 
-        <TetrisPlayerDetailsModal
+         <TetrisHowToPlayModal
+           isVisible={isHowToPlayOpen}
+           onClose={closeHowToPlay}
+         />
+
+         <TetrisPlayerDetailsModal
           selectedLeaderboardEntry={selectedLeaderboardEntry}
           activePlayerStats={activePlayerStats}
           formatRelativeTime={formatRelativeTime}
