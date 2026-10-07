@@ -204,6 +204,39 @@
         padding-top: max(54px, calc(var(--tetris-safe-top, 0px) + 50px));
     }
 
+    .tetris-shell.is-fullscreen-focus .tetris-board-shell {
+        width: 100%;
+        max-width: 100%;
+        padding: 2px;
+        gap: 1px;
+        border-radius: 14px;
+    }
+
+    .tetris-shell.is-fullscreen-focus .tetris-board-shell-unified {
+        grid-template-columns: minmax(30px, 0.18fr) minmax(0, 1fr) minmax(30px, 0.18fr);
+        gap: 2px;
+        padding: 1px;
+    }
+
+    .tetris-shell.is-fullscreen-focus .tetris-board-side-panel {
+        min-width: 0;
+        padding: 2px 1px;
+    }
+
+    .tetris-shell.is-fullscreen-focus .tetris-board-side-panel .tetris-panel-title {
+        font-size: 0.58rem;
+    }
+
+    .tetris-shell.is-fullscreen-focus .tetris-board-side-panel .tetris-next-brand-name {
+        font-size: 0.46rem;
+        -webkit-line-clamp: 1;
+    }
+
+    .tetris-shell.is-fullscreen-focus .tetris-board-side-panel .tetris-mini-grid,
+    .tetris-shell.is-fullscreen-focus .tetris-board-side-panel .tetris-mini-grid-compact-view {
+        --tetris-mini-block-size: clamp(8px, calc((100% - 2px) / 4), 14px);
+    }
+
     /* CRITICAL FIX: Change grid to single column on mobile */
     .tetris-main {
         grid-template-columns: 1fr;

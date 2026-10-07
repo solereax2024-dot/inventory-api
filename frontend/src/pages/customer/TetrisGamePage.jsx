@@ -175,19 +175,21 @@ export default function TetrisGamePage() {
   const previousClearWasTetrisRef = useRef(false);
   const nextQueueEntryIdRef = useRef(0);
 
-   const blockSize = useMemo(() => {
-     return calculateBlockSize(viewportSize.width, viewportSize.height, {
-       MOBILE_BREAKPOINT,
-       MOBILE_BLOCK_SIZE,
-       SMALL_HEIGHT_BLOCK_SIZE,
-       LARGE_DESKTOP_BLOCK_SIZE,
-       DESKTOP_BLOCK_SIZE,
-       COMPACT_DESKTOP_BLOCK_SIZE,
-       mobileLayoutMode: isMobileViewport ? "expanded" : "prestart",
-       compactMobileHeight: isShortMobileViewport,
-       veryShortMobileHeight: isVeryShortMobileViewport,
-     });
-   }, [isMobileViewport, isShortMobileViewport, isVeryShortMobileViewport, viewportSize.height, viewportSize.width]);
+    const blockSize = useMemo(() => {
+      const mobileLayoutMode = isMobileViewport ? (isFullscreen ? "fullscreen" : "expanded") : "prestart";
+
+      return calculateBlockSize(viewportSize.width, viewportSize.height, {
+        MOBILE_BREAKPOINT,
+        MOBILE_BLOCK_SIZE,
+        SMALL_HEIGHT_BLOCK_SIZE,
+        LARGE_DESKTOP_BLOCK_SIZE,
+        DESKTOP_BLOCK_SIZE,
+        COMPACT_DESKTOP_BLOCK_SIZE,
+        mobileLayoutMode,
+        compactMobileHeight: isShortMobileViewport,
+        veryShortMobileHeight: isVeryShortMobileViewport,
+      });
+    }, [isFullscreen, isMobileViewport, isShortMobileViewport, isVeryShortMobileViewport, viewportSize.height, viewportSize.width]);
 
   const {
     boardPixelWidth,
@@ -202,6 +204,7 @@ export default function TetrisGamePage() {
     GRID_WIDTH,
     GRID_INSET_PX,
     MOBILE_BREAKPOINT,
+    isFullscreen,
   });
 
   const shouldShowBoardFocusHint = !isBoardFocused && gameStarted && !gameOver && viewportSize.width >= MOBILE_BREAKPOINT;

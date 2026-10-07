@@ -242,9 +242,13 @@ export function calculateBlockSize(
     const isShortMobileViewport = compactMobileHeight || viewportHeight <= 760;
     const isVeryShortMobileViewport = veryShortMobileHeight || viewportHeight <= 680;
 
-    const horizontalReserve = 18;
+    const horizontalReserve = mobileLayoutMode === "fullscreen"
+      ? (isVeryShortMobileViewport ? 76 : isShortMobileViewport ? 80 : 84)
+      : 18;
     const verticalReserve = mobileLayoutMode === "gameplay"
       ? (isVeryShortMobileViewport ? 390 : isShortMobileViewport ? 430 : 460)
+      : mobileLayoutMode === "fullscreen"
+        ? (isVeryShortMobileViewport ? 126 : isShortMobileViewport ? 142 : 156)
       : mobileLayoutMode === "expanded"
         ? (isVeryShortMobileViewport ? 182 : isShortMobileViewport ? 202 : 222)
         : (isVeryShortMobileViewport ? 238 : isShortMobileViewport ? 262 : 286);
@@ -252,8 +256,12 @@ export function calculateBlockSize(
     const widthFit = Math.floor(Math.max(120, viewportWidth - horizontalReserve) / GRID_WIDTH);
     const heightFit = Math.floor(Math.max(200, viewportHeight - verticalReserve) / GRID_HEIGHT);
     const minimumBlockSize = isVeryShortMobileViewport ? 12 : 13;
+    const fullscreenCap = isVeryShortMobileViewport ? 24 : isShortMobileViewport ? 26 : 28;
+    const mobileCap = mobileLayoutMode === "fullscreen"
+      ? Math.max(MOBILE_BLOCK_SIZE, fullscreenCap)
+      : MOBILE_BLOCK_SIZE;
 
-    return Math.max(minimumBlockSize, Math.min(MOBILE_BLOCK_SIZE, widthFit, heightFit));
+    return Math.max(minimumBlockSize, Math.min(mobileCap, widthFit, heightFit));
   }
 
   const isUltraCompactHeight = viewportHeight <= 820;

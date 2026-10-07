@@ -1,14 +1,11 @@
 export default function TetrisBoardStage({
-  isMobileViewport,
   boardFrameRef,
   boardShellStyle,
-  isBoardFocused,
   boardTopStatsBar,
   holdPiece,
   holdPiecePreview,
   holdTileId,
   holdBrandTile,
-  getPreviewGridStyle,
   getBrandColor,
   renderTileFace,
   nextQueuePreviewEntries,
@@ -16,14 +13,24 @@ export default function TetrisBoardStage({
   children,
 }) {
   const renderPreviewPiece = (matrix, tileId, title, emptyLabel = "Empty") => {
-    // Helper: Detect and rotate I piece (and S/Z) horizontally to fit in narrow panels
+    const rotateClockwise = (m) => m[0].map((_, colIndex) => m.map((row) => row[colIndex]).reverse());
+
     const rotateForPreview = (m) => {
       // Check if it's a horizontal I piece: 1 row, 4 columns
       if (m.length === 1 && m[0].length === 4) {
         // Rotate to vertical: [[1], [1], [1], [1]]
         return m[0].map(cell => [cell]);
       }
-      // Check if it's a horizontal S or Z (2 rows, 3 columns)
+
+      const isTShape = m.length === 2 && m[0].length === 3 && m[0][1] === 1 && m[1][0] === 1 && m[1][1] === 1 && m[1][2] === 1;
+      const isZShape = m.length === 2 && m[0].length === 3 && m[0][0] === 1 && m[0][1] === 1 && m[1][1] === 1 && m[1][2] === 1;
+
+      if (isTShape || isZShape) {
+        // Rotate T sideways and Z upright for hold/next previews
+        return rotateClockwise(m);
+      }
+
+      // Check if it's a horizontal S piece (2 rows, 3 columns)
       if (m.length === 2 && m[0].length === 3) {
         // These can stay as-is, they fit fine
         return m;
@@ -32,7 +39,6 @@ export default function TetrisBoardStage({
     };
 
     const displayMatrix = rotateForPreview(matrix);
-    const rowCount = matrix.length || 1;
     const rowCount2 = displayMatrix.length || 1;
     const columnCount = Math.max(1, ...displayMatrix.map((row) => row.length || 0));
     const hasActiveCells = matrix.some((row) => row.some(Boolean));
