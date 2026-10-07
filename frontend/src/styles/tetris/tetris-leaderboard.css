@@ -148,16 +148,6 @@
 }
 
 
-.tetris-shell.is-fullscreen-focus .tetris-leaderboard-column {
-    display: none;
-}
-
-.tetris-shell.is-fullscreen-focus .tetris-main {
-    grid-template-areas: "board side";
-    grid-template-columns: minmax(0, max-content) minmax(284px, 344px);
-    align-items: start;
-    justify-content: center;
-}
 
 /* ========================================
    LEADERBOARD FILTERS & TABS

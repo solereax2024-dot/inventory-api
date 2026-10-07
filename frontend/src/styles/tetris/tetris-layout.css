@@ -110,6 +110,26 @@
     overflow: hidden;
 }
 
+.tetris-shell.is-fullscreen-focus .tetris-main {
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: center;
+    align-items: stretch;
+}
+
+.tetris-shell.is-fullscreen-focus .tetris-leaderboard-column,
+.tetris-shell.is-fullscreen-focus .tetris-side-details,
+.tetris-shell.is-fullscreen-focus .tetris-touch-controls {
+    display: none !important;
+}
+
+.tetris-shell.is-fullscreen-focus .tetris-board-column {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    justify-self: center;
+    align-self: stretch;
+}
+
 @media (min-width: 1440px) {
      .tetris-main {
          --tetris-leaderboard-column-width: clamp(220px, 13.4vw, 280px);

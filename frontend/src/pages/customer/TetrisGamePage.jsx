@@ -434,22 +434,37 @@ export default function TetrisGamePage() {
     });
   }, [emitSound]);
 
-  const toggleFullscreen = useCallback(async () => {
-    if (typeof document === "undefined") return;
+   const requestFullscreenMode = useCallback(async () => {
+     if (typeof document === "undefined") return;
 
-    try {
-      if (document.fullscreenElement === shellRef.current) {
-        await document.exitFullscreen();
-        return;
-      }
+     try {
+       // Only request fullscreen if not already in fullscreen
+       if (document.fullscreenElement !== shellRef.current) {
+         if (shellRef.current?.requestFullscreen) {
+           await shellRef.current.requestFullscreen();
+         }
+       }
+     } catch (error) {
+       console.error("Unable to enter fullscreen mode:", error);
+     }
+   }, []);
 
-      if (shellRef.current?.requestFullscreen) {
-        await shellRef.current.requestFullscreen();
-      }
-    } catch (error) {
-      console.error("Unable to toggle fullscreen mode:", error);
-    }
-  }, []);
+   const toggleFullscreen = useCallback(async () => {
+     if (typeof document === "undefined") return;
+
+     try {
+       if (document.fullscreenElement === shellRef.current) {
+         await document.exitFullscreen();
+         return;
+       }
+
+       if (shellRef.current?.requestFullscreen) {
+         await shellRef.current.requestFullscreen();
+       }
+     } catch (error) {
+       console.error("Unable to toggle fullscreen mode:", error);
+     }
+   }, []);
 
   const closePlayerModal = useCallback(() => {
     setSelectedLeaderboardEntry(null);
@@ -626,52 +641,55 @@ export default function TetrisGamePage() {
   }, [playerName]);
 
    const startGame = useCallback(() => {
-     if (!playerName.trim()) {
-       setMessage("Please enter a name first!");
-       emitSound("tap");
-       triggerHaptic('tap');
-       return false;
-     }
+      if (!playerName.trim()) {
+        setMessage("Please enter a name first!");
+        emitSound("tap");
+        triggerHaptic('tap');
+        return false;
+      }
 
-     const openingEntry = createUpcomingEntry();
-     const queuedEntries = ensureUpcomingQueue([
-       createUpcomingEntry(),
-       createUpcomingEntry(),
-       createUpcomingEntry(),
-     ]);
+      const openingEntry = createUpcomingEntry();
+      const queuedEntries = ensureUpcomingQueue([
+        createUpcomingEntry(),
+        createUpcomingEntry(),
+        createUpcomingEntry(),
+      ]);
 
-     clearScheduledTimeouts();
-     clearTransientEffects();
-     scoreSubmittedRef.current = false;
+      clearScheduledTimeouts();
+      clearTransientEffects();
+      scoreSubmittedRef.current = false;
 
-     setGameStarted(true);
-     setGameOver(false);
-     setIsPaused(false);
-     setScore(0);
-     setLevel(1);
-     setLinesCleared(0);
-     setGrid(createEmptyGrid());
-     setMessage("Game Started! Use arrows on desktop or swipe/tap on mobile.");
-     setCurrentPiece(openingEntry.piece);
-     setCurrentPieceKey(openingEntry.pieceKey);
-     setCurrentTileId(openingEntry.tileId);
-     setCurrentPieceRow(0);
-     setCurrentPieceCol(getSpawnColumn(openingEntry.piece));
-     syncUpcomingQueue(queuedEntries);
-     setCanHoldPiece(true);
-     setHoldPiece(null);
-     setHoldPieceKey(null);
-     setHoldTileId(null);
-     triggerPulseEffect(setRestartPulse, 240);
-     triggerPulseEffect(setPieceSpawnPulse, 180);
-     emitSound("start");
-     triggerHaptic('focus');
+      setGameStarted(true);
+      setGameOver(false);
+      setIsPaused(false);
+      setScore(0);
+      setLevel(1);
+      setLinesCleared(0);
+      setGrid(createEmptyGrid());
+      setMessage("Game Started! Use arrows on desktop or swipe/tap on mobile.");
+      setCurrentPiece(openingEntry.piece);
+      setCurrentPieceKey(openingEntry.pieceKey);
+      setCurrentTileId(openingEntry.tileId);
+      setCurrentPieceRow(0);
+      setCurrentPieceCol(getSpawnColumn(openingEntry.piece));
+      syncUpcomingQueue(queuedEntries);
+      setCanHoldPiece(true);
+      setHoldPiece(null);
+      setHoldPieceKey(null);
+      setHoldTileId(null);
+      triggerPulseEffect(setRestartPulse, 240);
+      triggerPulseEffect(setPieceSpawnPulse, 180);
+      emitSound("start");
+      triggerHaptic('focus');
 
-     if (gameSurfaceRef.current) {
-       gameSurfaceRef.current.focus();
-     }
-     return true;
-   }, [playerName, clearScheduledTimeouts, clearTransientEffects, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic]);
+      // Request fullscreen mode when game starts
+      requestFullscreenMode();
+
+      if (gameSurfaceRef.current) {
+        gameSurfaceRef.current.focus();
+      }
+      return true;
+    }, [playerName, clearScheduledTimeouts, clearTransientEffects, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
 
    const openStartModal = useCallback(() => {
      setIsStartModalOpen(true);
