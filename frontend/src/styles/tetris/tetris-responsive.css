@@ -201,6 +201,7 @@
         max-width: 100%;
         min-height: auto;
         padding: clamp(6px, 2vw, 10px);
+        padding-top: max(54px, calc(var(--tetris-safe-top, 0px) + 50px));
     }
 
     /* CRITICAL FIX: Change grid to single column on mobile */

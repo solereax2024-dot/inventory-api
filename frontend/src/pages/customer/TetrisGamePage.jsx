@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Trophy } from "lucide-react";
+import { HelpCircle, Minimize2, MoreVertical, RotateCcw, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { apiRequest } from "../../utils/api";
 import { triggerHapticFeedback } from "../../utils/hapticFeedback";
 import { getHapticIntensityMultiplier } from "../../utils/gestureCustomization";
@@ -92,6 +92,7 @@ export default function TetrisGamePage() {
   const playerNameInputRef = useRef(null);
   const scoreSubmittedRef = useRef(false);
   const timeoutIdsRef = useRef([]);
+  const fullscreenOptionsPausedRef = useRef(false);
 
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -145,6 +146,7 @@ export default function TetrisGamePage() {
    const [isStartModalOpen, setIsStartModalOpen] = useState(false);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+   const [isFullscreenOptionsOpen, setIsFullscreenOptionsOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useLocalStorage(SOUND_PREFERENCE_KEY, true, {
     parse: parseSoundEnabledPreference,
     serialize: String,
@@ -309,6 +311,24 @@ export default function TetrisGamePage() {
   }, []);
 
   useEffect(() => {
+    if (isFullscreen || !isFullscreenOptionsOpen) return;
+
+    setIsFullscreenOptionsOpen(false);
+
+    if (fullscreenOptionsPausedRef.current && gameStarted && !gameOver) {
+      fullscreenOptionsPausedRef.current = false;
+      setIsPaused(false);
+      setMessage("Resumed!");
+      window.requestAnimationFrame(() => {
+        gameSurfaceRef.current?.focus();
+      });
+      return;
+    }
+
+    fullscreenOptionsPausedRef.current = false;
+  }, [gameOver, gameStarted, isFullscreen, isFullscreenOptionsOpen]);
+
+  useEffect(() => {
     if (typeof document === "undefined") return undefined;
     if (!gameStarted || gameOver || viewportSize.width >= MOBILE_BREAKPOINT) return undefined;
 
@@ -471,6 +491,64 @@ export default function TetrisGamePage() {
     setSelectedPlayerStats(null);
     setPlayerStatsError("");
   }, []);
+
+  const releaseFullscreenOptionsPause = useCallback(({ resumeGameplay = true, emitFeedback = false, message = "Resumed!" } = {}) => {
+    const shouldResume = resumeGameplay && fullscreenOptionsPausedRef.current && gameStarted && !gameOver;
+
+    fullscreenOptionsPausedRef.current = false;
+
+    if (!shouldResume) return;
+
+    setIsPaused(false);
+    setMessage(message);
+
+    if (emitFeedback) {
+      emitSound("resume");
+      triggerHaptic("pause");
+    }
+
+    window.requestAnimationFrame(() => {
+      gameSurfaceRef.current?.focus();
+    });
+  }, [emitSound, gameOver, gameStarted, triggerHaptic]);
+
+  const openFullscreenOptions = useCallback(() => {
+    if (gameStarted && !gameOver && !isPaused) {
+      setIsPaused(true);
+      setMessage("Game paused - Options open");
+      fullscreenOptionsPausedRef.current = true;
+    } else {
+      fullscreenOptionsPausedRef.current = false;
+    }
+
+    setIsFullscreenOptionsOpen(true);
+    emitSound("modal");
+    triggerHaptic("modal");
+  }, [emitSound, gameOver, gameStarted, isPaused, triggerHaptic]);
+
+  const closeFullscreenOptions = useCallback(({ resumeGameplay = true, emitFeedback = false, message = "Resumed!" } = {}) => {
+    setIsFullscreenOptionsOpen(false);
+    releaseFullscreenOptionsPause({ resumeGameplay, emitFeedback, message });
+  }, [releaseFullscreenOptionsPause]);
+
+  const handleFullscreenExit = useCallback(async () => {
+    const shouldResume = fullscreenOptionsPausedRef.current && gameStarted && !gameOver;
+
+    setIsFullscreenOptionsOpen(false);
+    fullscreenOptionsPausedRef.current = false;
+
+    await toggleFullscreen();
+
+    if (shouldResume) {
+      setIsPaused(false);
+      setMessage("Resumed!");
+      emitSound("resume");
+      triggerHaptic("pause");
+      window.requestAnimationFrame(() => {
+        gameSurfaceRef.current?.focus();
+      });
+    }
+  }, [emitSound, gameOver, gameStarted, toggleFullscreen, triggerHaptic]);
 
   const openSettings = useCallback(() => {
     if (gameStarted && !gameOver && !isPaused) {
@@ -712,6 +790,8 @@ export default function TetrisGamePage() {
       clearScheduledTimeouts();
       clearTransientEffects();
       scoreSubmittedRef.current = false;
+      fullscreenOptionsPausedRef.current = false;
+      setIsFullscreenOptionsOpen(false);
       setIsStartModalOpen(false);
       setGameStarted(false);
       setGameOver(false);
@@ -738,6 +818,11 @@ export default function TetrisGamePage() {
       emitSound("reset");
       triggerHaptic('tap');
     }, [clearScheduledTimeouts, clearTransientEffects, emitSound, scheduleUiTimeout, triggerHaptic]);
+
+    const handleFullscreenReset = useCallback(() => {
+      closeFullscreenOptions({ resumeGameplay: false });
+      resetGame();
+    }, [closeFullscreenOptions, resetGame]);
 
    const togglePauseGame = useCallback(() => {
      if (gameStarted && !gameOver) {
@@ -1193,6 +1278,69 @@ export default function TetrisGamePage() {
           isUltraCompactDesktopHeight ? "is-ultra-compact-height" : "",
         ].filter(Boolean).join(" ")}
       >
+
+        {isFullscreen && (
+          <div className="tetris-fullscreen-options-anchor">
+            <button
+              type="button"
+              className="tetris-fullscreen-options-trigger"
+              onClick={isFullscreenOptionsOpen ? () => closeFullscreenOptions({ emitFeedback: true }) : openFullscreenOptions}
+              aria-label={isFullscreenOptionsOpen ? "Close fullscreen options" : "Open fullscreen options"}
+              aria-expanded={isFullscreenOptionsOpen}
+              aria-controls="tetris-fullscreen-options-panel"
+            >
+              {isFullscreenOptionsOpen ? <X size={18} /> : <MoreVertical size={18} />}
+            </button>
+
+            {isFullscreenOptionsOpen && (
+              <div className="tetris-fullscreen-options-backdrop" onClick={() => closeFullscreenOptions({ emitFeedback: true })}>
+                <section
+                  id="tetris-fullscreen-options-panel"
+                  className="tetris-fullscreen-options-panel"
+                  aria-label="Fullscreen game options"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="tetris-fullscreen-options-header">
+                    <div>
+                      <p className="tetris-fullscreen-options-kicker">Fullscreen</p>
+                      <h2>Options</h2>
+                    </div>
+                    <button
+                      type="button"
+                      className="tetris-fullscreen-options-close"
+                      onClick={() => closeFullscreenOptions({ emitFeedback: true })}
+                      aria-label="Close fullscreen options"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <div className="tetris-fullscreen-options-list">
+                    <button type="button" className="tetris-fullscreen-option-btn" onClick={openHowToPlay}>
+                      <HelpCircle size={18} />
+                      <span>How to Play</span>
+                    </button>
+
+                    <button type="button" className="tetris-fullscreen-option-btn" onClick={handleFullscreenReset}>
+                      <RotateCcw size={18} />
+                      <span>Reset</span>
+                    </button>
+
+                    <button type="button" className="tetris-fullscreen-option-btn" onClick={toggleSound}>
+                      {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                      <span>{soundEnabled ? "Sound: On" : "Sound: Off"}</span>
+                    </button>
+
+                    <button type="button" className="tetris-fullscreen-option-btn is-exit" onClick={handleFullscreenExit}>
+                      <Minimize2 size={18} />
+                      <span>Exit Fullscreen</span>
+                    </button>
+                  </div>
+                </section>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className={[
           "tetris-main",
