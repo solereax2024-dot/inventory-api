@@ -96,10 +96,10 @@ export default function TetrisHowToPlayModal({
                  <span className="tetris-control-key">Tap Piece</span>
                  <span>Rotate clockwise</span>
                </div>
-               <div className="tetris-control-item">
-                 <span className="tetris-control-key">Double Tap</span>
-                 <span>Hold piece</span>
-               </div>
+                <div className="tetris-control-item">
+                  <span className="tetris-control-key">Swipe Up</span>
+                  <span>Hold piece</span>
+                </div>
              </div>
            </section>
 

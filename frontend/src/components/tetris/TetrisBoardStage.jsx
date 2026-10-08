@@ -14,6 +14,13 @@ export default function TetrisBoardStage({
 }) {
   const renderPreviewPiece = (matrix, tileId, title, emptyLabel = "Empty") => {
     const rotateClockwise = (m) => m[0].map((_, colIndex) => m.map((row) => row[colIndex]).reverse());
+    const rotateCounterClockwise = (m) => {
+      const rows = m.length;
+      const cols = m[0].length;
+      return Array.from({ length: cols }, (_, colIndex) =>
+        Array.from({ length: rows }, (_, rowIndex) => m[rows - 1 - rowIndex][colIndex])
+      );
+    };
 
     const rotateForPreview = (m) => {
       // Check if it's a horizontal I piece: 1 row, 4 columns
@@ -24,17 +31,23 @@ export default function TetrisBoardStage({
 
       const isTShape = m.length === 2 && m[0].length === 3 && m[0][1] === 1 && m[1][0] === 1 && m[1][1] === 1 && m[1][2] === 1;
       const isZShape = m.length === 2 && m[0].length === 3 && m[0][0] === 1 && m[0][1] === 1 && m[1][1] === 1 && m[1][2] === 1;
+      const isSShape = m.length === 2 && m[0].length === 3 && m[0][0] === 0 && m[0][1] === 1 && m[0][2] === 1 && m[1][0] === 1 && m[1][1] === 1 && m[1][2] === 0;
 
-      if (isTShape || isZShape) {
-        // Rotate T sideways and Z upright for hold/next previews
+      if (isTShape) {
+        // Rotate T clockwise
         return rotateClockwise(m);
       }
 
-      // Check if it's a horizontal S piece (2 rows, 3 columns)
-      if (m.length === 2 && m[0].length === 3) {
-        // These can stay as-is, they fit fine
-        return m;
+      if (isZShape) {
+        // Rotate Z counter-clockwise for proper vertical display
+        return rotateCounterClockwise(m);
       }
+
+      if (isSShape) {
+        // Rotate S clockwise for proper vertical display
+        return rotateClockwise(m);
+      }
+
       return m;
     };
 

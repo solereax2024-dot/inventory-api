@@ -16,8 +16,6 @@ export default function useTetrisTouchGestures({
   hardDropCurrentPiece,
   holdCurrentPiece,
 }) {
-  const LONG_PRESS_HOLD_MS = 420;
-  const LONG_PRESS_MOVE_CANCEL_PX = 16;
   const UPWARD_HOLD_MIN_DISTANCE_PX = 42;
   const UPWARD_HOLD_VERTICAL_RATIO = 1.5;
   const touchGestureRef = useRef({
@@ -25,23 +23,7 @@ export default function useTetrisTouchGestures({
     startX: 0,
     startY: 0,
     startTime: 0,
-    holdTriggered: false,
-    holdTimerId: null,
   });
-
-  const clearHoldTimer = useCallback(() => {
-    if (touchGestureRef.current.holdTimerId) {
-      clearTimeout(touchGestureRef.current.holdTimerId);
-      touchGestureRef.current.holdTimerId = null;
-    }
-  }, []);
-
-  const triggerHold = useCallback(() => {
-    if (isBlocked || typeof holdCurrentPiece !== "function") return;
-    touchGestureRef.current.holdTriggered = true;
-    clearHoldTimer();
-    holdCurrentPiece();
-  }, [clearHoldTimer, holdCurrentPiece, isBlocked]);
 
   const handleBoardTouchStart = useCallback((event) => {
     if (isBlocked) return;
@@ -54,16 +36,10 @@ export default function useTetrisTouchGestures({
       startX: touch.clientX,
       startY: touch.clientY,
       startTime: Date.now(),
-      holdTriggered: false,
-      holdTimerId: null,
     };
 
-    touchGestureRef.current.holdTimerId = window.setTimeout(() => {
-      triggerHold();
-    }, LONG_PRESS_HOLD_MS);
-
     focusBoard(false);
-  }, [focusBoard, isBlocked, triggerHold]);
+  }, [focusBoard, isBlocked]);
 
   const handleBoardTouchMove = useCallback((event) => {
     const activeTouchId = touchGestureRef.current.activeTouchId;
@@ -75,19 +51,14 @@ export default function useTetrisTouchGestures({
     const deltaX = Math.abs(touch.clientX - touchGestureRef.current.startX);
     const deltaY = Math.abs(touch.clientY - touchGestureRef.current.startY);
 
-    if (deltaX > LONG_PRESS_MOVE_CANCEL_PX || deltaY > LONG_PRESS_MOVE_CANCEL_PX) {
-      clearHoldTimer();
-    }
-
     if (deltaX > TOUCH_TAP_MAX_MOVE_PX || deltaY > TOUCH_TAP_MAX_MOVE_PX) {
       if (event.cancelable) event.preventDefault();
     }
-  }, [clearHoldTimer]);
+  }, []);
 
   const handleBoardTouchEnd = useCallback((event) => {
     if (isBlocked) {
       touchGestureRef.current.activeTouchId = null;
-      clearHoldTimer();
       return;
     }
 
@@ -105,14 +76,6 @@ export default function useTetrisTouchGestures({
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
     const elapsedMs = Date.now() - touchGestureRef.current.startTime;
-    const holdTriggered = touchGestureRef.current.holdTriggered;
-
-    clearHoldTimer();
-
-    if (holdTriggered) {
-      touchGestureRef.current.activeTouchId = null;
-      return;
-    }
 
     const isTap = absX <= TOUCH_TAP_MAX_MOVE_PX && absY <= TOUCH_TAP_MAX_MOVE_PX && elapsedMs <= TOUCH_TAP_MAX_DURATION_MS;
 
@@ -144,16 +107,15 @@ export default function useTetrisTouchGestures({
     }
 
     touchGestureRef.current.activeTouchId = null;
-  }, [clearHoldTimer, hardDropCurrentPiece, isBlocked, movePieceHorizontal, rotateCurrentPiece, softDropCurrentPiece]);
+  }, [hardDropCurrentPiece, isBlocked, movePieceHorizontal, rotateCurrentPiece, softDropCurrentPiece, holdCurrentPiece]);
 
   const handleBoardTouchCancel = useCallback(() => {
     touchGestureRef.current.activeTouchId = null;
-    clearHoldTimer();
-  }, [clearHoldTimer]);
+  }, []);
 
   useEffect(() => () => {
-    clearHoldTimer();
-  }, [clearHoldTimer]);
+    // Cleanup on unmount
+  }, []);
 
   return {
     handleBoardTouchStart,
