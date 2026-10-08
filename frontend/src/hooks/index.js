@@ -7,3 +7,4 @@ export { default as useTetrisTouchGestures } from "./useTetrisTouchGestures";
 export { default as useToggleState } from "./useToggleState";
 export { default as useReservationEditorState } from "./useReservationEditorState";
 export { default as useCountdown } from "./useCountdown";
+export { useTetrisAuth } from "./useTetrisAuth";

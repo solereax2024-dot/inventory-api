@@ -27,6 +27,15 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(nullable = true, length = 255)
+    private String fullName;
+
+    @Column(name = "profile_image_path", nullable = true, length = 500)
+    private String profileImagePath;
+
+    @Column(name = "profile_image_filename", nullable = true, length = 255)
+    private String profileImageFilename;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRole role;

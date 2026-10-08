@@ -1,0 +1,473 @@
+/* ========================================
+   TETRIS - REGISTRATION MODAL
+   Gaming-focused registration form
+   ======================================== */
+
+.tetris-registration-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 2vw, 20px);
+  background: radial-gradient(circle at center, rgba(0, 217, 255, 0.12), transparent 32%),
+              rgba(2, 6, 23, 0.94);
+  backdrop-filter: blur(16px) saturate(1.12);
+  animation: tetris-overlay-fade-in 0.32s ease-out;
+}
+
+.tetris-registration-modal {
+  position: relative;
+  width: min(100%, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 2px solid rgba(0, 217, 255, 0.44);
+  background:
+    radial-gradient(circle at top left, rgba(0, 217, 255, 0.18), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(255, 20, 147, 0.12), transparent 36%),
+    linear-gradient(180deg, rgba(10, 15, 31, 0.98), rgba(20, 28, 52, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(0, 217, 255, 0.28),
+    0 0 40px rgba(0, 217, 255, 0.24),
+    0 0 80px rgba(0, 217, 255, 0.12),
+    0 32px 84px rgba(2, 6, 23, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: tetris-modal-rise-enhanced 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tetris-registration-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  z-index: 0;
+  background: linear-gradient(90deg,
+    rgba(0, 217, 255, 1),
+    rgba(124, 58, 237, 0.92),
+    rgba(255, 20, 147, 0.92),
+    rgba(0, 255, 136, 0.88));
+  box-shadow: 0 0 24px rgba(0, 217, 255, 0.48);
+}
+
+.tetris-registration-modal::after {
+  content: "";
+  position: absolute;
+  inset: -18% -10% auto;
+  height: 42%;
+  z-index: 0;
+  background: radial-gradient(circle at top, rgba(0, 217, 255, 0.24), transparent 64%);
+  filter: blur(18px);
+  opacity: 0.88;
+  pointer-events: none;
+}
+
+/* Close Button */
+.tetris-registration-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid rgba(0, 217, 255, 0.32);
+  border-radius: 12px;
+  background: rgba(0, 217, 255, 0.08);
+  color: rgba(0, 217, 255, 0.92);
+  cursor: pointer;
+  transition:
+    background 0.18s ease-out,
+    color 0.18s ease-out,
+    transform 0.12s ease-out,
+    box-shadow 0.18s ease-out,
+    border-color 0.18s ease-out;
+  box-shadow: 0 0 12px rgba(0, 217, 255, 0.12);
+}
+
+.tetris-registration-close-btn:hover {
+  background: rgba(0, 217, 255, 0.16);
+  border-color: rgba(0, 217, 255, 0.52);
+  color: rgba(0, 255, 255, 1);
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.28);
+}
+
+.tetris-registration-close-btn:active {
+  transform: scale(0.94);
+}
+
+/* Header */
+.tetris-registration-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: clamp(24px, 3vw, 32px);
+  padding-bottom: clamp(16px, 2vw, 20px);
+  text-align: center;
+  background:
+    linear-gradient(135deg, rgba(0, 217, 255, 0.06) 0%, rgba(255, 20, 147, 0.04) 100%),
+    rgba(10, 15, 31, 0.14);
+  border-bottom: 1.5px solid rgba(0, 217, 255, 0.18);
+}
+
+.tetris-registration-header h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 4vw, 1.8rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #00ffff 0%, #7c3aed 50%, #ff1493 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 28px rgba(0, 217, 255, 0.32), 0 0 48px rgba(255, 20, 147, 0.18);
+}
+
+.tetris-registration-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(0, 217, 255, 0.78);
+  text-shadow: 0 0 8px rgba(0, 217, 255, 0.24);
+}
+
+.tetris-auth-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px;
+  align-self: center;
+  border-radius: 999px;
+  background: rgba(10, 15, 31, 0.64);
+  border: 1.5px solid rgba(0, 217, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 16px rgba(0, 217, 255, 0.08);
+}
+
+.tetris-auth-mode-btn {
+  min-width: 104px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(0, 217, 255, 0.72);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.18s ease-out;
+}
+
+.tetris-auth-mode-btn:hover:not(:disabled) {
+  color: rgba(0, 255, 255, 1);
+  background: rgba(0, 217, 255, 0.08);
+}
+
+.tetris-auth-mode-btn.is-active {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.26), rgba(124, 58, 237, 0.2));
+  border-color: rgba(0, 217, 255, 0.32);
+  box-shadow: 0 0 16px rgba(0, 217, 255, 0.14);
+}
+
+.tetris-auth-mode-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Form */
+.tetris-registration-form {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(20px, 3vw, 28px);
+}
+
+/* Form Group */
+.tetris-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Form Label */
+.tetris-form-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(0, 255, 255, 0.84);
+  text-shadow: 0 0 6px rgba(0, 217, 255, 0.18);
+}
+
+.tetris-form-hint {
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: rgba(0, 217, 255, 0.6);
+  display: block;
+}
+
+/* Form Input */
+.tetris-form-input {
+  padding: 12px 14px;
+  border: 1.5px solid rgba(0, 217, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(10, 15, 31, 0.8);
+  color: #ffffff;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.18s ease-out;
+  box-shadow: 0 0 12px rgba(0, 217, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.tetris-form-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.tetris-form-input:focus {
+  outline: none;
+  border-color: rgba(0, 217, 255, 0.64);
+  background: rgba(10, 15, 31, 0.92);
+  box-shadow: 0 0 24px rgba(0, 217, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: rgba(0, 255, 255, 1);
+}
+
+.tetris-form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Image Upload */
+.tetris-image-upload-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  border: 2px dashed rgba(0, 217, 255, 0.32);
+  border-radius: 12px;
+  background: rgba(0, 217, 255, 0.06);
+  transition: all 0.18s ease-out;
+  overflow: hidden;
+}
+
+.tetris-image-upload-container:hover {
+  border-color: rgba(0, 217, 255, 0.52);
+  background: rgba(0, 217, 255, 0.1);
+}
+
+.tetris-image-upload-label {
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  user-select: none;
+}
+
+.tetris-image-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: rgba(0, 217, 255, 0.78);
+}
+
+.tetris-image-upload-content svg {
+  color: rgba(0, 217, 255, 0.64);
+}
+
+.tetris-image-upload-content span {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.tetris-image-upload-content small {
+  font-size: 0.8rem;
+  color: rgba(0, 217, 255, 0.5);
+  display: block;
+}
+
+.tetris-file-input {
+  display: none;
+}
+
+/* Image Preview */
+.tetris-image-preview-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+}
+
+.tetris-image-preview {
+  max-width: 100%;
+  max-height: 140px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  border: 1.5px solid rgba(0, 217, 255, 0.32);
+  box-shadow: 0 0 16px rgba(0, 217, 255, 0.16);
+}
+
+.tetris-image-remove-btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(0, 217, 255, 0.32);
+  border-radius: 6px;
+  background: rgba(255, 20, 147, 0.1);
+  color: rgba(255, 20, 147, 0.84);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease-out;
+}
+
+.tetris-image-remove-btn:hover:not(:disabled) {
+  background: rgba(255, 20, 147, 0.2);
+  border-color: rgba(255, 20, 147, 0.52);
+  color: rgba(255, 20, 147, 1);
+}
+
+.tetris-image-remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error & Success Messages */
+.tetris-form-error,
+.tetris-form-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  animation: tetris-message-slide-in 0.24s ease-out;
+}
+
+.tetris-form-error {
+  background: rgba(255, 20, 147, 0.12);
+  border: 1px solid rgba(255, 20, 147, 0.32);
+  color: rgba(255, 20, 147, 0.96);
+}
+
+.tetris-form-success {
+  background: rgba(0, 255, 136, 0.12);
+  border: 1px solid rgba(0, 255, 136, 0.32);
+  color: rgba(0, 255, 136, 0.96);
+}
+
+@keyframes tetris-message-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Submit Button */
+.tetris-registration-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  min-height: 48px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff1493 0%, #ff69b4 50%, #ff6b35 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.32, 0, 0.67, 1);
+  box-shadow: 0 0 0 1px rgba(255, 20, 147, 0.32), 0 0 24px rgba(255, 20, 147, 0.28), 0 12px 32px rgba(255, 20, 147, 0.24);
+}
+
+.tetris-registration-submit-btn:hover:not(:disabled) {
+  transform: translateY(-4px);
+  background: linear-gradient(135deg, rgba(255, 20, 147, 1) 0%, rgba(255, 105, 180, 1) 50%, rgba(255, 107, 53, 1) 100%);
+  box-shadow: 0 0 0 2px rgba(255, 20, 147, 0.48), 0 0 32px rgba(255, 20, 147, 0.42), 0 18px 48px rgba(255, 20, 147, 0.36);
+  filter: brightness(1.18) drop-shadow(0 0 12px rgba(255, 20, 147, 0.54));
+}
+
+.tetris-registration-submit-btn:active:not(:disabled) {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.tetris-registration-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.tetris-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .tetris-registration-modal {
+    width: calc(100vw - 20px);
+    border-radius: 16px;
+  }
+
+  .tetris-registration-header {
+    padding: 18px 16px 12px;
+  }
+
+  .tetris-registration-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .tetris-registration-form {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .tetris-image-upload-container {
+    min-height: 120px;
+  }
+
+  .tetris-image-preview {
+    max-height: 120px;
+  }
+
+  .tetris-registration-submit-btn {
+    min-height: 44px;
+    font-size: 0.95rem;
+  }
+}
+

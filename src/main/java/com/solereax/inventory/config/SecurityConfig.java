@@ -70,7 +70,8 @@ public class SecurityConfig {
                                 "/site.webmanifest",
                                 "/logo.png",
                                 "/api/public/**",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/auth/register"
                         ).permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/admin/products/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/admin/orders/**").hasRole("SUPER_ADMIN")

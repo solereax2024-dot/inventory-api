@@ -8,8 +8,6 @@ export default function TetrisTouchControls({
   gameOver,
   loading,
   playerName,
-  onPlayerNameChange,
-  playerNameInputRef,
   onStartGame,
   onResetGame,
   canResetGame,
@@ -27,25 +25,9 @@ export default function TetrisTouchControls({
     >
       <div className="tetris-mobile-controls-grid">
         <section className="tetris-mobile-control-cluster" aria-label="Player setup and session controls">
-          <div className="tetris-mobile-control-cluster-header">
-            <span className="tetris-mobile-control-cluster-title">Brand Tetris</span>
-            <span className="tetris-session-chip is-highlighted">
-              {gameOver ? "Game over" : "Ready"}
-            </span>
-           </div>
-
-          <div className="tetris-start-primary-row">
-            <input
-              ref={playerNameInputRef}
-              type="text"
-              placeholder="Enter your name"
-              value={playerName}
-              onChange={(event) => onPlayerNameChange(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && onStartGame()}
-              disabled={loading}
-              className="tetris-input"
-              aria-label="Player name"
-            />
+          <div className="tetris-auth-summary-card" aria-label="Authenticated player">
+            <span className="tetris-live-summary-label">Signed in as</span>
+            <strong>{playerName || "Player"}</strong>
           </div>
 
           <div className="tetris-start-secondary-row">

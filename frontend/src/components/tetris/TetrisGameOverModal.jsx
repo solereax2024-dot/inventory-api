@@ -50,37 +50,24 @@ export default function TetrisGameOverModal({
           </button>
         )}
         <div className="tetris-game-over-content">
-          <p className="tetris-game-over-kicker">Run complete</p>
           <h2 id="tetris-game-over-title">Game Over</h2>
-          <div className="tetris-game-over-player">
-            <p className="tetris-game-over-label">Player</p>
-            <p className="tetris-game-over-value">{playerName || "Guest"}</p>
-            {isNewBest && <span className="tetris-game-over-highlight">New best run</span>}
+          <div className="tetris-game-over-primary-stat">
+            <span>Score</span>
+            <strong>{finalScore.toLocaleString()}</strong>
           </div>
-          <div className="tetris-game-over-stats">
-            <div className="tetris-game-over-stat">
-              <span>Final Score</span>
-              <strong>{finalScore.toLocaleString()}</strong>
-            </div>
-            <div className="tetris-game-over-stat">
-              <span>Best Score</span>
-              <strong>{bestScore.toLocaleString()}</strong>
-            </div>
-            <div className="tetris-game-over-stat">
-              <span>Level</span>
-              <strong>{finalLevel}</strong>
-            </div>
-            <div className="tetris-game-over-stat">
+          {isNewBest && <span className="tetris-game-over-highlight">New best run</span>}
+          <div className="tetris-game-over-stats-compact">
+            <div className="tetris-game-over-stat-compact">
               <span>Lines</span>
               <strong>{linesCleared}</strong>
             </div>
+            {hasValidRank && (
+              <div className="tetris-game-over-stat-compact">
+                <span>Rank</span>
+                <strong>#{playerRank}</strong>
+              </div>
+            )}
           </div>
-          {hasValidRank && (
-            <div className="tetris-game-over-rank">
-              <p className="tetris-game-over-label">🏆 Leaderboard Rank</p>
-              <p className="tetris-game-over-value">#{playerRank}</p>
-            </div>
-          )}
           <div className="tetris-game-over-actions">
             <button
               type="button"

@@ -8,7 +8,6 @@ export default function TetrisSideDetailsPanel({
   playerName,
   score,
   linesCleared,
-  onPlayerNameChange,
   onStartGame,
   isPaused,
   comboCount,
@@ -20,7 +19,6 @@ export default function TetrisSideDetailsPanel({
   togglePauseGame,
   toggleSound,
   toggleFullscreen,
-  playerNameInputRef,
   renderCompactStatsBar,
   hapticEnabled,
   onHapticToggle,
@@ -70,16 +68,10 @@ export default function TetrisSideDetailsPanel({
             </>
           ) : (
             <div className="tetris-start-primary-row">
-              <input
-                ref={playerNameInputRef}
-                type="text"
-                placeholder="Enter your name"
-                value={playerName}
-                onChange={(event) => onPlayerNameChange(event.target.value)}
-                onKeyDown={(event) => event.key === "Enter" && onStartGame()}
-                disabled={gameStarted}
-                className="tetris-input"
-              />
+              <div className="tetris-auth-summary-card" aria-label="Authenticated player">
+                <span className="tetris-live-summary-label">Signed in as</span>
+                <strong>{playerName || "Player"}</strong>
+              </div>
               <div className="tetris-action-row">
                 <button
                   type="button"

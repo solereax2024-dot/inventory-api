@@ -38,6 +38,8 @@ app:
     password: ${ADMIN_PASSWORD:admin123}
   media:
     upload-dir: ${MEDIA_UPLOAD_DIR:uploads}
+  upload:
+    profile-images-dir: ${PROFILE_IMAGES_UPLOAD_DIR:uploads/profile-images}
   paymongo:
     enabled: ${PAYMONGO_ENABLED:false}
     api-base-url: ${PAYMONGO_API_BASE_URL:https://api.paymongo.com/v1}

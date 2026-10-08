@@ -6,21 +6,20 @@
     /* Cell size is set dynamically by React inline style */
     position: relative;
     background:
-            radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.14), transparent 36%),
-            linear-gradient(180deg, #0f172a 0%, #111827 100%);
+            radial-gradient(circle at 50% 0%, rgba(0, 217, 255, 0.18), transparent 36%),
+            linear-gradient(180deg, #0f1628 0%, #0a0f1f 100%);
     border: 3px solid var(--tetris-border-light);
     border-radius: var(--tetris-border-radius-sm);
     box-sizing: content-box;
-    overflow: hidden;
+    overflow: visible;
     outline: none;
     touch-action: manipulation;
     box-shadow:
             var(--shadow-inset),
-            0 0 0 1px rgba(99, 102, 241, 0.12),
-            var(--shadow-lg),
-            0 0 12px rgba(99, 102, 241, 0.08);
-    clip-path: inset(0);
-    contain: layout paint;
+            0 0 0 1px rgba(0, 217, 255, 0.18),
+            var(--tetris-glow-cyan),
+            var(--shadow-lg);
+    contain: layout style;
     touch-action: none;
     overscroll-behavior: contain;
     -webkit-user-select: none;
@@ -31,32 +30,35 @@
     height: auto;
     margin: 0 auto;
     transition: box-shadow 0.18s cubic-bezier(0.32, 0, 0.67, 1),
-                border-color 0.18s cubic-bezier(0.32, 0, 0.67, 1);
+                border-color 0.18s cubic-bezier(0.32, 0, 0.67, 1),
+                filter 0.18s cubic-bezier(0.32, 0, 0.67, 1);
 }
 
 .tetris-grid.is-spawning {
     box-shadow:
             var(--shadow-inset),
-            0 0 0 1px rgba(251, 191, 36, 0.18),
-            0 0 8px rgba(251, 191, 36, 0.12),
-            0 0 18px rgba(251, 191, 36, 0.1),
+            0 0 0 1px rgba(252, 211, 77, 0.28),
+            0 0 12px rgba(252, 211, 77, 0.24),
+            0 0 28px rgba(252, 211, 77, 0.18),
+            var(--tetris-glow-strong),
             var(--shadow-lg);
+    border-color: rgba(252, 211, 77, 0.32);
 }
 
 .tetris-grid.is-soft-dropping {
-    filter: brightness(1.04) saturate(1.04);
+    filter: brightness(1.08) saturate(1.12) hue-rotate(-2deg);
 }
 
 .tetris-grid.is-rotating {
-    filter: brightness(1.03) saturate(1.06);
+    filter: brightness(1.06) saturate(1.14) hue-rotate(1deg);
 }
 
 .tetris-grid.is-hard-dropping {
-    filter: brightness(1.01) saturate(1.02);
+    filter: brightness(1.04) saturate(1.08);
 }
 
 .tetris-grid.is-restarting {
-    filter: brightness(0.98) saturate(0.94);
+    filter: brightness(0.96) saturate(0.88);
 }
 
 
@@ -70,9 +72,12 @@
 .tetris-grid.is-keyboard-ready {
     box-shadow:
             var(--shadow-inset),
-            0 0 0 1px rgba(6, 182, 212, 0.18),
-            0 0 12px rgba(6, 182, 212, 0.12),
+            0 0 0 2px rgba(0, 217, 255, 0.28),
+            0 0 16px rgba(0, 217, 255, 0.22),
+            0 0 32px rgba(0, 217, 255, 0.14),
+            var(--tetris-glow-cyan),
             var(--shadow-lg);
+    border-color: rgba(0, 217, 255, 0.38);
 }
 
 .tetris-block {

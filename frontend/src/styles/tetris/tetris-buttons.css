@@ -4,12 +4,12 @@
 
 .tetris-panel-secondary {
     padding: 8px;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(30, 41, 59, 0.88) 100%);
-    border: 1.5px solid rgba(99, 102, 241, 0.32);
+    background: linear-gradient(135deg, rgba(10, 15, 31, 0.82) 0%, rgba(20, 28, 52, 0.92) 100%);
+    border: 1.5px solid rgba(0, 217, 255, 0.28);
     box-shadow:
-            0 0 0 1px rgba(99, 102, 241, 0.16),
-            0 0 16px rgba(99, 102, 241, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(0, 217, 255, 0.16),
+            0 0 20px rgba(0, 217, 255, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
             var(--shadow-md);
     color: var(--tetris-text-primary);
     backdrop-filter: blur(14px);
@@ -34,8 +34,9 @@
     padding: clamp(11px, 1.3vw, 18px);
     border-radius: 20px;
     box-shadow:
-            0 0 0 1px rgba(99, 102, 241, 0.14),
-            0 18px 36px rgba(2, 6, 23, 0.2),
+            0 0 0 1px rgba(0, 217, 255, 0.2),
+            0 0 20px rgba(0, 217, 255, 0.12),
+            0 20px 40px rgba(2, 6, 23, 0.28),
             inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
@@ -43,7 +44,7 @@
     .tetris-side-details .tetris-panel {
         padding: 10px;
         border-radius: 14px;
-        box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.08), 0 8px 16px rgba(2, 6, 23, 0.12);
+        box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.16), 0 0 16px rgba(0, 217, 255, 0.08), 0 10px 20px rgba(2, 6, 23, 0.16);
     }
 }
 
@@ -60,9 +61,9 @@
     position: absolute;
     inset: auto -12% -26% 35%;
     height: 110px;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.14), transparent 68%);
+    background: radial-gradient(circle, rgba(0, 217, 255, 0.2), transparent 68%);
     filter: blur(18px);
-    opacity: 0.72;
+    opacity: 0.82;
     pointer-events: none;
 }
 
@@ -124,11 +125,11 @@
 }
 
 .tetris-stats-bar-side .stat-item.is-pulsed {
-    background: linear-gradient(180deg, rgba(99, 102, 241, 0.22), rgba(15, 23, 42, 0.65));
+    background: linear-gradient(180deg, rgba(0, 217, 255, 0.18), rgba(10, 15, 31, 0.72));
     box-shadow:
-            0 0 0 1px rgba(99, 102, 241, 0.18),
-            0 0 16px rgba(99, 102, 241, 0.18),
-            0 10px 20px rgba(99, 102, 241, 0.12);
+            0 0 0 1.5px rgba(0, 217, 255, 0.24),
+            0 0 24px rgba(0, 217, 255, 0.22),
+            0 12px 28px rgba(0, 217, 255, 0.14);
 }
 
 .tetris-stats-bar-side .stat-value {

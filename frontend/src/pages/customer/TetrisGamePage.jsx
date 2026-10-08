@@ -4,14 +4,16 @@ import { apiRequest } from "../../utils/api";
 import { triggerHapticFeedback } from "../../utils/hapticFeedback";
 import { getHapticIntensityMultiplier } from "../../utils/gestureCustomization";
 import TetrisGameOverModal from "../../components/tetris/TetrisGameOverModal";
-import TetrisStartModal from "../../components/tetris/TetrisStartModal";
 import TetrisBoardStage from "../../components/tetris/TetrisBoardStage";
 import TetrisGridContent from "../../components/tetris/TetrisGridContent";
 import TetrisTouchControls from "../../components/tetris/TetrisTouchControls";
+import TetrisGameWrapper from "../../components/tetris/TetrisGameWrapper";
+import TetrisHeader from "../../components/tetris/TetrisHeader";
 import TetrisPlayerDetailsModal from "../../components/tetris/TetrisPlayerDetailsModal";
 import TetrisSettingsModal from "../../components/tetris/TetrisSettingsModal";
 import TetrisHowToPlayModal from "../../components/tetris/TetrisHowToPlayModal";
 import TetrisSideDetailsPanel from "../../components/tetris/TetrisSideDetailsPanel";
+import TetrisOptionsMenu from "../../components/tetris/TetrisOptionsMenu";
 import { TetrisLeaderboardList } from "../../components/tetris/TetrisLeaderboardPanel";
 import {
   BEST_RUN_PREFERENCE_KEY,
@@ -84,12 +86,11 @@ function getViewportMetrics() {
   };
 }
 
-export default function TetrisGamePage() {
+function TetrisGamePageContent({ authenticatedUser }) {
   const shellRef = useRef(null);
   const gameSurfaceRef = useRef(null);
   const boardFrameRef = useRef(null);
   const audioContextRef = useRef(null);
-  const playerNameInputRef = useRef(null);
   const scoreSubmittedRef = useRef(false);
   const timeoutIdsRef = useRef([]);
   const fullscreenOptionsPausedRef = useRef(false);
@@ -101,7 +102,7 @@ export default function TetrisGamePage() {
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [linesCleared, setLinesCleared] = useState(0);
-  const [playerName, setPlayerName] = useState("");
+  const [playerName, setPlayerName] = useState(() => authenticatedUser?.fullName || authenticatedUser?.username || "");
   const [message, setMessage] = useState("Welcome to Brand Tetris!");
   const [loading, setLoading] = useState(false);
   const [brandTiles, setBrandTiles] = useState(FALLBACK_BRANDS);
@@ -143,7 +144,6 @@ export default function TetrisGamePage() {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState(null);
    const [isBoardFocused, setIsBoardFocused] = useState(false);
-   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
    const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
    const [isFullscreenOptionsOpen, setIsFullscreenOptionsOpen] = useState(false);
@@ -164,6 +164,20 @@ export default function TetrisGamePage() {
   const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
   const [playerStatsError, setPlayerStatsError] = useState("");
   const [viewportSize, setViewportSize] = useState(getViewportMetrics);
+
+  const authenticatedPlayerName = useMemo(() => {
+    return authenticatedUser?.username?.trim()
+      || authenticatedUser?.fullName?.trim()
+      || playerName.trim();
+  }, [authenticatedUser, playerName]);
+
+  useEffect(() => {
+    const preferredName = authenticatedUser?.fullName || authenticatedUser?.username || "";
+    if (preferredName) {
+      setPlayerName(preferredName);
+      setMessage(`Welcome back, ${preferredName}!`);
+    }
+  }, [authenticatedUser]);
   const isMobileViewport = viewportSize.width < MOBILE_BREAKPOINT;
   const isShortMobileViewport = isMobileViewport && viewportSize.height <= 760;
   const isVeryShortMobileViewport = isMobileViewport && viewportSize.height <= 680;
@@ -696,7 +710,7 @@ export default function TetrisGamePage() {
    }, []);
 
   const submitScore = useCallback(async (finalScore, finalLevel, finalLinesCleared) => {
-    const trimmedPlayerName = playerName.trim();
+    const trimmedPlayerName = authenticatedPlayerName.trim();
     if (!trimmedPlayerName) return;
 
     setLoading(true);
@@ -719,15 +733,18 @@ export default function TetrisGamePage() {
     } finally {
       setLoading(false);
     }
-  }, [playerName]);
+  }, [authenticatedPlayerName]);
 
    const startGame = useCallback(() => {
-      if (!playerName.trim()) {
-        setMessage("Please enter a name first!");
+      const trimmedPlayerName = authenticatedPlayerName.trim();
+      if (!trimmedPlayerName) {
+        setMessage("Unable to identify your account. Please log in again.");
         emitSound("tap");
         triggerHaptic('tap');
         return false;
       }
+
+      setPlayerName(trimmedPlayerName);
 
       const openingEntry = createUpcomingEntry();
       const queuedEntries = ensureUpcomingQueue([
@@ -770,24 +787,7 @@ export default function TetrisGamePage() {
         gameSurfaceRef.current.focus();
       }
       return true;
-    }, [playerName, clearScheduledTimeouts, clearTransientEffects, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
-
-   const openStartModal = useCallback(() => {
-     setIsStartModalOpen(true);
-     setMessage("Enter your username to start playing.");
-     emitSound("modal");
-     triggerHaptic('modal');
-   }, [emitSound, triggerHaptic]);
-
-  const closeStartModal = useCallback(() => {
-    setIsStartModalOpen(false);
-  }, []);
-
-  const handleStartFromModal = useCallback(() => {
-    if (startGame()) {
-      setIsStartModalOpen(false);
-    }
-  }, [startGame]);
+    }, [authenticatedPlayerName, clearScheduledTimeouts, clearTransientEffects, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
 
     const resetGame = useCallback(() => {
       clearScheduledTimeouts();
@@ -795,7 +795,6 @@ export default function TetrisGamePage() {
       scoreSubmittedRef.current = false;
       fullscreenOptionsPausedRef.current = false;
       setIsFullscreenOptionsOpen(false);
-      setIsStartModalOpen(false);
       setGameStarted(false);
       setGameOver(false);
       setIsPaused(false);
@@ -1282,74 +1281,31 @@ export default function TetrisGamePage() {
         ].filter(Boolean).join(" ")}
       >
 
-        {isFullscreen && (
-          <div className="tetris-fullscreen-options-anchor">
-            <button
-              type="button"
-              className="tetris-fullscreen-options-trigger"
-              onClick={isFullscreenOptionsOpen ? () => closeFullscreenOptions({ emitFeedback: true }) : openFullscreenOptions}
-              aria-label={isFullscreenOptionsOpen ? "Close fullscreen options" : "Open fullscreen options"}
-              aria-expanded={isFullscreenOptionsOpen}
-              aria-controls="tetris-fullscreen-options-panel"
-            >
-              {isFullscreenOptionsOpen ? <X size={18} /> : <MoreVertical size={18} />}
-            </button>
+        <TetrisHeader
+          gameStarted={gameStarted}
+          gameOver={gameOver}
+          soundEnabled={soundEnabled}
+          isFullscreen={isFullscreen}
+          onToggleSound={toggleSound}
+          onToggleFullscreen={toggleFullscreen}
+        />
 
-            {isFullscreenOptionsOpen && (
-              <div className="tetris-fullscreen-options-backdrop" onClick={() => closeFullscreenOptions({ emitFeedback: true })}>
-                <section
-                  id="tetris-fullscreen-options-panel"
-                  className="tetris-fullscreen-options-panel"
-                  aria-label="Fullscreen game options"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <div className="tetris-fullscreen-options-header">
-                    <div>
-                      <p className="tetris-fullscreen-options-kicker">Fullscreen</p>
-                      <h2>Options</h2>
-                    </div>
-                    <button
-                      type="button"
-                      className="tetris-fullscreen-options-close"
-                      onClick={() => closeFullscreenOptions({ emitFeedback: true })}
-                      aria-label="Close fullscreen options"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
+         <TetrisOptionsMenu
+           isFullscreen={isFullscreen}
+           gameStarted={gameStarted}
+           gameOver={gameOver}
+           isMobileViewport={isMobileViewport}
+           onOpenSettings={openSettings}
+           onOpenHowToPlay={openHowToPlay}
+           onReset={resetGame}
+           onToggleFullscreen={toggleFullscreen}
+         />
 
-                  <div className="tetris-fullscreen-options-list">
-                    <button type="button" className="tetris-fullscreen-option-btn" onClick={openHowToPlay}>
-                      <HelpCircle size={18} />
-                      <span>How to Play</span>
-                    </button>
-
-                    <button type="button" className="tetris-fullscreen-option-btn" onClick={handleFullscreenReset}>
-                      <RotateCcw size={18} />
-                      <span>Reset</span>
-                    </button>
-
-                    <button type="button" className="tetris-fullscreen-option-btn" onClick={toggleSound}>
-                      {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-                      <span>{soundEnabled ? "Sound: On" : "Sound: Off"}</span>
-                    </button>
-
-                    <button type="button" className="tetris-fullscreen-option-btn is-exit" onClick={handleFullscreenExit}>
-                      <Minimize2 size={18} />
-                      <span>Exit Fullscreen</span>
-                    </button>
-                  </div>
-                </section>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className={[
-          "tetris-main",
-          isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
-        ].filter(Boolean).join(" ")}>
-            {/* COLUMN 1: LEADERBOARD (LEFT) */}
+         <div className={[
+           "tetris-main",
+           isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
+         ].filter(Boolean).join(" ")}>
+             {/* COLUMN 1: LEADERBOARD (LEFT) */}
             <aside className="tetris-layout-column tetris-leaderboard-column" aria-label="Leaderboard column">
              <section className="tetris-panel tetris-panel-compact tetris-panel-featured tetris-hud-card tetris-leaderboard-embed tetris-leaderboard-panel" aria-label="Embedded Tetris leaderboard">
                <div className="tetris-panel-heading tetris-panel-heading-compact">
@@ -1448,8 +1404,6 @@ export default function TetrisGamePage() {
                   gameOver={gameOver}
                   loading={loading}
                   playerName={playerName}
-                  onPlayerNameChange={setPlayerName}
-                  playerNameInputRef={playerNameInputRef}
                   onStartGame={startGame}
                   onResetGame={resetGame}
                   isPaused={isPaused}
@@ -1468,7 +1422,6 @@ export default function TetrisGamePage() {
              playerName={playerName}
              score={score}
              linesCleared={linesCleared}
-             onPlayerNameChange={setPlayerName}
              onStartGame={startGame}
              onResetGame={resetGame}
              isPaused={isPaused}
@@ -1481,21 +1434,12 @@ export default function TetrisGamePage() {
              togglePauseGame={togglePauseGame}
              toggleSound={toggleSound}
              toggleFullscreen={toggleFullscreen}
-             playerNameInputRef={playerNameInputRef}
              renderCompactStatsBar={renderCompactStatsBar}
               hapticEnabled={hapticEnabled}
               onHapticToggle={toggleHaptics}
            />
         </div>
 
-        <TetrisStartModal
-          isVisible={isStartModalOpen}
-          playerName={playerName}
-          message={message}
-          onPlayerNameChange={setPlayerName}
-          onStart={handleStartFromModal}
-          onCancel={closeStartModal}
-        />
 
          <TetrisSettingsModal
            isVisible={isSettingsOpen}
@@ -1525,3 +1469,13 @@ export default function TetrisGamePage() {
     </div>
   );
 }
+
+// Export with authentication wrapper
+export default function TetrisGamePage() {
+  return (
+    <TetrisGameWrapper>
+      <TetrisGamePageContent />
+    </TetrisGameWrapper>
+  );
+}
+

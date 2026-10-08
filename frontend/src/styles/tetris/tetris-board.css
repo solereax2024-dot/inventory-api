@@ -29,15 +29,16 @@
     padding: clamp(6px, 0.7vw, 8px);
     border-radius: var(--tetris-border-radius-lg);
     background:
-            radial-gradient(circle at top, rgba(99, 102, 241, 0.12), transparent 34%),
+            radial-gradient(circle at top, rgba(0, 217, 255, 0.14), transparent 34%),
             var(--tetris-surface-primary);
-    border: 1px solid var(--tetris-border-light);
+    border: 1.5px solid rgba(0, 217, 255, 0.28);
     box-shadow:
             var(--shadow-inset),
+            0 0 24px rgba(0, 217, 255, 0.16),
             var(--shadow-lg);
     backdrop-filter: blur(14px);
-    overflow: hidden;
-    clip-path: inset(0);
+    overflow: visible;
+    /* clip-path removed to allow point popups to overflow above playfield */
     min-width: 0;
     min-height: 0;
     width: 100%;
@@ -55,13 +56,14 @@
         max-width: 100%;
         padding: clamp(2px, 1vw, 4px);
         border-radius: 14px;
-        border-color: rgba(148, 163, 184, 0.14);
+        border-color: rgba(0, 217, 255, 0.22);
         background:
-                radial-gradient(circle at top, rgba(99, 102, 241, 0.08), transparent 34%),
+                radial-gradient(circle at top, rgba(0, 217, 255, 0.1), transparent 34%),
                 var(--tetris-surface-primary);
         box-shadow:
                 inset 0 1px 0 rgba(255, 255, 255, 0.04),
-                0 6px 16px rgba(2, 6, 23, 0.12);
+                0 0 16px rgba(0, 217, 255, 0.12),
+                0 8px 20px rgba(2, 6, 23, 0.16);
     }
 
 }

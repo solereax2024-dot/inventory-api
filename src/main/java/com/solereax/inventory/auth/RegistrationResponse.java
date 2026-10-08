@@ -1,9 +1,11 @@
 package com.solereax.inventory.auth;
 
-public record LoginResponse(
-        String token,
+public record RegistrationResponse(
+        String message,
         String username,
         String fullName,
+        String token,
         String role
 ) {
 }
+

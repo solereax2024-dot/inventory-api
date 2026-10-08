@@ -4,31 +4,42 @@
 
 :root {
     /* Color Palette */
-    --tetris-bg-dark: #171d3d;
-    --tetris-bg-darker: #1f2550;
-    --tetris-bg-darkest: #11162d;
+    --tetris-bg-dark: #0f1628;
+    --tetris-bg-darker: #0a0f1f;
+    --tetris-bg-darkest: #060912;
 
-    --tetris-surface-primary: rgba(15, 23, 42, 0.6);
-    --tetris-surface-secondary: rgba(15, 23, 42, 0.94);
-    --tetris-surface-tertiary: rgba(30, 41, 59, 0.88);
+    --tetris-surface-primary: rgba(10, 15, 31, 0.7);
+    --tetris-surface-secondary: rgba(10, 15, 31, 0.96);
+    --tetris-surface-tertiary: rgba(20, 28, 52, 0.92);
 
-    --tetris-border-light: rgba(255, 255, 255, 0.12);
-    --tetris-border-lighter: rgba(148, 163, 184, 0.2);
-    --tetris-text-primary: #f8fafc;
-    --tetris-text-secondary: rgba(226, 232, 240, 0.84);
-    --tetris-text-tertiary: rgba(226, 232, 240, 0.72);
+    --tetris-border-light: rgba(255, 255, 255, 0.18);
+    --tetris-border-lighter: rgba(148, 163, 184, 0.28);
+    --tetris-text-primary: #ffffff;
+    --tetris-text-secondary: rgba(226, 232, 240, 0.9);
+    --tetris-text-tertiary: rgba(226, 232, 240, 0.78);
 
-    --tetris-accent-gold: #fbbf24;
-    --tetris-accent-purple: #6366f1;
-    --tetris-accent-pink: #fb7185;
+    /* Enhanced Neon Accent Colors */
+    --tetris-accent-gold: #fcd34d;
+    --tetris-accent-gold-bright: #fef08a;
+    --tetris-accent-purple: #7c3aed;
+    --tetris-accent-purple-bright: #a78bfa;
+    --tetris-accent-pink: #ff1493;
+    --tetris-accent-pink-bright: #ff69b4;
 
-    /* Enhanced Colors for Polish */
-    --tetris-accent-cyan: #06b6d4;
-    --tetris-accent-green: #10b981;
-    --tetris-accent-orange: #f97316;
-    --tetris-accent-gold-soft: rgba(251, 191, 36, 0.16);
-    --tetris-accent-cyan-soft: rgba(6, 182, 212, 0.16);
-    --tetris-accent-green-soft: rgba(16, 185, 129, 0.16);
+    /* Neon Enhanced Colors */
+    --tetris-accent-cyan: #00d9ff;
+    --tetris-accent-cyan-bright: #00ffff;
+    --tetris-accent-green: #00ff88;
+    --tetris-accent-green-bright: #39ff14;
+    --tetris-accent-orange: #ff6b35;
+    --tetris-accent-orange-bright: #ff8c42;
+
+    /* Soft Glow Variants */
+    --tetris-accent-gold-soft: rgba(252, 211, 77, 0.24);
+    --tetris-accent-cyan-soft: rgba(0, 217, 255, 0.24);
+    --tetris-accent-green-soft: rgba(0, 255, 136, 0.24);
+    --tetris-accent-purple-soft: rgba(124, 58, 237, 0.24);
+    --tetris-accent-pink-soft: rgba(255, 20, 147, 0.24);
 
     /* Spacing (8px system) */
     --space-xs: 4px;
@@ -65,19 +76,28 @@
     --font-weight-black: 800;
 
     /* Shadows & Depth */
-    --shadow-sm: 0 8px 16px rgba(99, 102, 241, 0.2);
-    --shadow-md: 0 12px 28px rgba(2, 6, 23, 0.24);
-    --shadow-lg: 0 18px 36px rgba(0, 0, 0, 0.32);
-    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    --tetris-glow-soft: 0 0 22px rgba(251, 191, 36, 0.16);
-    --tetris-glow-strong: 0 0 36px rgba(251, 191, 36, 0.26);
-    --tetris-focus-ring: 0 0 0 2px rgba(251, 191, 36, 0.36);
-    --tetris-card-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --shadow-sm: 0 8px 16px rgba(0, 217, 255, 0.24);
+    --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.36);
+    --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.48);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+    /* Neon Glow Effects */
+    --tetris-glow-soft: 0 0 28px rgba(252, 211, 77, 0.22);
+    --tetris-glow-strong: 0 0 48px rgba(252, 211, 77, 0.38);
+    --tetris-glow-cyan: 0 0 32px rgba(0, 217, 255, 0.32);
+    --tetris-glow-cyan-strong: 0 0 56px rgba(0, 217, 255, 0.48);
+    --tetris-glow-purple: 0 0 32px rgba(124, 58, 237, 0.3);
+    --tetris-glow-purple-strong: 0 0 56px rgba(124, 58, 237, 0.44);
+    --tetris-glow-pink: 0 0 32px rgba(255, 20, 147, 0.3);
+    --tetris-glow-pink-strong: 0 0 56px rgba(255, 20, 147, 0.44);
+    --tetris-glow-green: 0 0 32px rgba(0, 255, 136, 0.28);
+    --tetris-focus-ring: 0 0 0 2px rgba(252, 211, 77, 0.54), 0 0 12px rgba(252, 211, 77, 0.48);
+    --tetris-card-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
     /* Transitions */
-    --transition-fast: 0.15s ease;
-    --transition-base: 0.2s ease;
-    --transition-slow: 0.3s ease;
-    --transition-spring: 0.24s cubic-bezier(0.32, 0, 0.67, 1);
+    --transition-fast: 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+    --transition-base: 0.24s cubic-bezier(0.32, 0, 0.67, 1);
+    --transition-slow: 0.36s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-spring: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
