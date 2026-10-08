@@ -2,7 +2,7 @@
 
 .tetris-options-menu-container {
   position: fixed;
-  top: 1rem;
+  bottom: 1rem;
   right: 1rem;
   z-index: 1000;
 }
@@ -28,7 +28,7 @@
   background: linear-gradient(135deg, rgba(99, 90, 249, 0.95), rgba(159, 112, 266, 0.95));
   border-color: rgba(168, 85, 247, 0.8);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 16px rgba(168, 85, 247, 0.5);
-  transform: translateY(-2px);
+  transform: translateY(2px);
 }
 
 .tetris-options-menu-button:active {
@@ -42,7 +42,7 @@
 
 .tetris-options-menu {
   position: absolute;
-  top: 3rem;
+  bottom: 3rem;
   right: 0;
   background: linear-gradient(135deg, rgba(30, 27, 75, 0.98), rgba(55, 48, 163, 0.98));
   border: 2px solid rgba(168, 85, 247, 0.5);
@@ -53,14 +53,14 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  animation: slideDown 0.15s ease-out;
+  animation: slideUp 0.15s ease-out;
   backdrop-filter: blur(10px);
 }
 
-@keyframes slideDown {
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -104,15 +104,10 @@
   color: #fecaca;
 }
 
-.tetris-options-menu.is-fullscreen {
-  top: auto;
-  bottom: 1rem;
-}
-
 /* Mobile Adjustments */
 @media (max-width: 640px) {
   .tetris-options-menu-container {
-    top: 0.75rem;
+    bottom: 0.75rem;
     right: 0.75rem;
   }
 
@@ -136,7 +131,7 @@
 /* Fullscreen specific adjustments */
 .tetris-shell.is-fullscreen-focus .tetris-options-menu-container {
   position: fixed;
-  top: 1rem;
+  bottom: 1rem;
   right: 1rem;
   z-index: 1000;
 }
