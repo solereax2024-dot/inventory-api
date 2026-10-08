@@ -1314,6 +1314,7 @@ function TetrisGamePageContent({ authenticatedUser }) {
               "tetris-layout-column",
               "tetris-board-column",
               isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
+              gameOver ? "is-game-over" : "",
             ].filter(Boolean).join(" ")} style={{ "--tetris-board-pixel-width": `${boardPixelWidth}px` }}>
                <div className="tetris-board-column-header">
                  <TetrisOptionsMenu
