@@ -1,9 +1,16 @@
 /* Tetris Options Menu Styles */
 
+.tetris-board-column-header {
+  position: relative;
+  width: 100%;
+  height: 3rem;
+  margin-bottom: 0.5rem;
+}
+
 .tetris-options-menu-container {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: 0.25rem;
+  right: 0;
   z-index: 100;
 }
 
@@ -106,9 +113,14 @@
 
 /* Mobile Adjustments */
 @media (max-width: 640px) {
+  .tetris-board-column-header {
+    height: 2.75rem;
+    margin-bottom: 0.5rem;
+  }
+
   .tetris-options-menu-container {
-    top: 0.75rem;
-    right: 0.75rem;
+    top: 0.2rem;
+    right: 0.25rem;
   }
 
   .tetris-options-menu-button {
@@ -129,10 +141,17 @@
 }
 
 /* Fullscreen specific adjustments */
+.tetris-shell.is-fullscreen-focus .tetris-board-column-header {
+  position: relative;
+  width: 100%;
+  height: 3rem;
+  margin-bottom: 0.5rem;
+}
+
 .tetris-shell.is-fullscreen-focus .tetris-options-menu-container {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: 0.25rem;
+  right: 0;
   z-index: 100;
 }
 

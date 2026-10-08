@@ -1290,16 +1290,6 @@ function TetrisGamePageContent({ authenticatedUser }) {
           onToggleFullscreen={toggleFullscreen}
         />
 
-         <TetrisOptionsMenu
-           isFullscreen={isFullscreen}
-           gameStarted={gameStarted}
-           gameOver={gameOver}
-           isMobileViewport={isMobileViewport}
-           onOpenSettings={openSettings}
-           onOpenHowToPlay={openHowToPlay}
-           onReset={resetGame}
-           onToggleFullscreen={toggleFullscreen}
-         />
 
          <div className={[
            "tetris-main",
@@ -1325,6 +1315,18 @@ function TetrisGamePageContent({ authenticatedUser }) {
               "tetris-board-column",
               isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
             ].filter(Boolean).join(" ")} style={{ "--tetris-board-pixel-width": `${boardPixelWidth}px` }}>
+               <div className="tetris-board-column-header">
+                 <TetrisOptionsMenu
+                   isFullscreen={isFullscreen}
+                   gameStarted={gameStarted}
+                   gameOver={gameOver}
+                   isMobileViewport={isMobileViewport}
+                   onOpenSettings={openSettings}
+                   onOpenHowToPlay={openHowToPlay}
+                   onReset={resetGame}
+                   onToggleFullscreen={toggleFullscreen}
+                 />
+               </div>
                <TetrisBoardStage
                   isMobileViewport={isMobileViewport}
                  boardFrameRef={boardFrameRef}
