@@ -1131,7 +1131,7 @@ export default function TetrisGamePage() {
   useEffect(() => {
     if (!gameStarted || gameOver || isPaused || !currentPiece) return undefined;
 
-    const fallDelay = Math.max(120, 760 - (level - 1) * 55);
+    const fallDelay = Math.max(100, 700 - (level - 1) * 60);
     const timerId = window.setTimeout(() => {
       stepActivePieceDown();
     }, fallDelay);
