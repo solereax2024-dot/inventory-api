@@ -505,16 +505,17 @@
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
-  .tetris-registration-overlay {
-    padding: 10px;
-    align-items: flex-end;
-  }
+   .tetris-registration-overlay {
+     padding: 10px;
+     align-items: center;
+     justify-content: center;
+   }
 
-  .tetris-registration-modal {
-    width: calc(100vw - 20px);
-    max-height: calc(100dvh - 20px);
-    border-radius: 16px;
-  }
+   .tetris-registration-modal {
+     width: min(100%, calc(100vw - 20px));
+     max-height: min(95vh, 95dvh);
+     border-radius: 16px;
+   }
 
   .tetris-registration-close-btn {
     top: 10px;
@@ -576,15 +577,17 @@
 }
 
 @media (max-width: 380px) {
-  .tetris-registration-overlay {
-    padding: 8px;
-  }
+   .tetris-registration-overlay {
+     padding: 8px;
+     align-items: center;
+     justify-content: center;
+   }
 
-  .tetris-registration-modal {
-    width: calc(100vw - 16px);
-    max-height: calc(100dvh - 16px);
-    border-radius: 14px;
-  }
+   .tetris-registration-modal {
+     width: min(100%, calc(100vw - 16px));
+     max-height: min(95vh, 95dvh);
+     border-radius: 14px;
+   }
 
   .tetris-registration-header {
     padding: 16px 14px 10px;
@@ -629,9 +632,14 @@
 }
 
 @media (max-height: 760px) {
-  .tetris-registration-modal {
-    max-height: min(96vh, 96dvh);
-  }
+   .tetris-registration-overlay {
+     align-items: center;
+     justify-content: center;
+   }
+
+   .tetris-registration-modal {
+     max-height: min(96vh, 96dvh);
+   }
 
   .tetris-registration-header {
     padding: 18px 18px 12px;
@@ -653,9 +661,14 @@
 }
 
 @media (max-height: 640px) {
-  .tetris-registration-header {
-    padding: 16px 16px 10px;
-  }
+   .tetris-registration-overlay {
+     align-items: center;
+     justify-content: center;
+   }
+
+   .tetris-registration-header {
+     padding: 16px 16px 10px;
+   }
 
   .tetris-registration-header h2 {
     font-size: 1.3rem;
@@ -680,16 +693,16 @@
 }
 
 @media (max-width: 920px) and (max-height: 600px) {
-  .tetris-registration-overlay {
-    align-items: stretch;
-    padding: 8px;
-  }
+   .tetris-registration-overlay {
+     align-items: center;
+     justify-content: center;
+     padding: 8px;
+   }
 
-  .tetris-registration-modal {
-    width: min(100%, 620px);
-    max-height: 100%;
-    margin: auto;
-  }
+   .tetris-registration-modal {
+     width: min(100%, 620px);
+     max-height: min(95vh, 95dvh);
+   }
 
   .tetris-registration-header {
     padding: 14px 16px 10px;
