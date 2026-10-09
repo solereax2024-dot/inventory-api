@@ -1410,3 +1410,328 @@
      }
 }
 
+/* ========================================
+   TETRIS - CONFIRMATION MODAL
+   ======================================== */
+
+.tetris-confirm-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    background:
+        radial-gradient(circle at center, rgba(0, 217, 255, 0.12), transparent 32%),
+        rgba(2, 6, 23, 0.84);
+    backdrop-filter: blur(12px) saturate(1.06);
+    animation: tetris-overlay-fade-in 0.28s ease-out;
+}
+
+.tetris-confirm-modal {
+    width: min(100%, 420px);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: 28px;
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at top left, rgba(0, 217, 255, 0.12), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.1), transparent 36%),
+        linear-gradient(180deg, rgba(10, 15, 31, 0.96), rgba(20, 28, 52, 0.94));
+    border: 1.5px solid rgba(0, 217, 255, 0.22);
+    box-shadow:
+        0 0 0 1px rgba(0, 217, 255, 0.12),
+        0 0 32px rgba(0, 217, 255, 0.16),
+        0 8px 32px rgba(2, 6, 23, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    color: var(--tetris-text-primary);
+    animation: tetris-modal-rise-enhanced 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tetris-confirm-modal.is-danger {
+    border-color: rgba(255, 20, 147, 0.28);
+    background:
+        radial-gradient(circle at top left, rgba(255, 20, 147, 0.1), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.08), transparent 36%),
+        linear-gradient(180deg, rgba(10, 15, 31, 0.96), rgba(20, 28, 52, 0.94));
+    box-shadow:
+        0 0 0 1px rgba(255, 20, 147, 0.16),
+        0 0 28px rgba(255, 20, 147, 0.12),
+        0 8px 32px rgba(2, 6, 23, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.tetris-confirm-modal::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    z-index: 0;
+    background: linear-gradient(90deg,
+        rgba(0, 217, 255, 0.88),
+        rgba(124, 58, 237, 0.8),
+        rgba(0, 217, 255, 0.88));
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.42);
+}
+
+.tetris-confirm-modal.is-danger::before {
+    background: linear-gradient(90deg,
+        rgba(255, 20, 147, 0.9),
+        rgba(255, 107, 53, 0.8),
+        rgba(255, 20, 147, 0.9));
+    box-shadow: 0 0 20px rgba(255, 20, 147, 0.4);
+}
+
+.tetris-confirm-modal::after {
+    content: "";
+    position: absolute;
+    inset: -12% -10% auto;
+    height: 36%;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at top, rgba(0, 217, 255, 0.18), transparent 64%);
+    filter: blur(16px);
+    opacity: 0.84;
+}
+
+.tetris-confirm-modal-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.tetris-confirm-modal-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: rgba(0, 217, 255, 0.1);
+    border: 1.5px solid rgba(0, 217, 255, 0.24);
+    box-shadow:
+        0 0 0 1px rgba(0, 217, 255, 0.12),
+        0 0 20px rgba(0, 217, 255, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.tetris-confirm-modal.is-danger .tetris-confirm-modal-icon-wrapper {
+    background: rgba(255, 20, 147, 0.1);
+    border-color: rgba(255, 20, 147, 0.28);
+    box-shadow:
+        0 0 0 1px rgba(255, 20, 147, 0.16),
+        0 0 18px rgba(255, 20, 147, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.tetris-confirm-modal-icon {
+    color: rgba(0, 217, 255, 0.88);
+    filter: drop-shadow(0 0 6px rgba(0, 217, 255, 0.24));
+}
+
+.tetris-confirm-modal.is-danger .tetris-confirm-modal-icon {
+    color: rgba(255, 20, 147, 0.92);
+    filter: drop-shadow(0 0 6px rgba(255, 20, 147, 0.28));
+}
+
+.tetris-confirm-modal-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tetris-confirm-modal-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, #00ffff 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.tetris-confirm-modal.is-danger .tetris-confirm-modal-title {
+    background: linear-gradient(135deg, #ff1493 0%, #ff6b35 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.tetris-confirm-modal-message {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(226, 232, 240, 0.84);
+}
+
+.tetris-confirm-modal-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.tetris-confirm-modal-btn {
+    appearance: none;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    min-height: 42px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.32, 0, 0.67, 1);
+    flex: 1 1 auto;
+    min-width: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.tetris-confirm-modal-btn-cancel {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.5px solid rgba(148, 163, 184, 0.18);
+    color: rgba(226, 232, 240, 0.8);
+    box-shadow:
+        0 0 0 1px rgba(148, 163, 184, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.tetris-confirm-modal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(148, 163, 184, 0.28);
+    color: rgba(226, 232, 240, 0.95);
+    box-shadow:
+        0 0 12px rgba(148, 163, 184, 0.12),
+        0 0 0 1px rgba(148, 163, 184, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.tetris-confirm-modal-btn-cancel:active {
+    transform: scale(0.98);
+}
+
+.tetris-confirm-modal-btn-confirm {
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.26), rgba(124, 58, 237, 0.18));
+    border: 1.5px solid rgba(0, 217, 255, 0.32);
+    color: #00ffff;
+    box-shadow:
+        0 0 0 1px rgba(0, 217, 255, 0.18),
+        0 0 20px rgba(0, 217, 255, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.tetris-confirm-modal-btn-confirm:hover {
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.32), rgba(124, 58, 237, 0.24));
+    border-color: rgba(0, 217, 255, 0.52);
+    color: #ffffff;
+    box-shadow:
+        0 0 0 1px rgba(0, 217, 255, 0.28),
+        0 0 28px rgba(0, 217, 255, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+}
+
+.tetris-confirm-modal-btn-confirm:active {
+    transform: scale(0.96);
+}
+
+.tetris-confirm-modal-btn-danger {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.28), rgba(255, 107, 53, 0.2));
+    border: 1.5px solid rgba(255, 20, 147, 0.36);
+    color: #ff1493;
+    box-shadow:
+        0 0 0 1px rgba(255, 20, 147, 0.2),
+        0 0 18px rgba(255, 20, 147, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.tetris-confirm-modal-btn-danger:hover {
+    background: linear-gradient(135deg, rgba(255, 20, 147, 0.34), rgba(255, 107, 53, 0.28));
+    border-color: rgba(255, 20, 147, 0.56);
+    color: #ff69b4;
+    box-shadow:
+        0 0 0 1px rgba(255, 20, 147, 0.3),
+        0 0 26px rgba(255, 20, 147, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+}
+
+.tetris-confirm-modal-btn-danger:active {
+    transform: scale(0.96);
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+    .tetris-confirm-modal-backdrop {
+        padding: 12px;
+    }
+
+    .tetris-confirm-modal {
+        width: min(100%, calc(100vw - 24px));
+        padding: 20px;
+        gap: 18px;
+        border-radius: 16px;
+    }
+
+    .tetris-confirm-modal-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+    }
+
+    .tetris-confirm-modal-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .tetris-confirm-modal-title {
+        font-size: 1.1rem;
+    }
+
+    .tetris-confirm-modal-message {
+        font-size: 0.9rem;
+    }
+
+    .tetris-confirm-modal-actions {
+        gap: 10px;
+    }
+
+    .tetris-confirm-modal-btn {
+        padding: 9px 16px;
+        min-height: 40px;
+        font-size: 0.88rem;
+        border-radius: 9px;
+    }
+}
+
+@media (max-width: 380px) {
+    .tetris-confirm-modal {
+        padding: 16px;
+        gap: 14px;
+    }
+
+    .tetris-confirm-modal-actions {
+        flex-direction: column;
+    }
+
+    .tetris-confirm-modal-btn {
+        min-width: auto;
+        width: 100%;
+    }
+}
