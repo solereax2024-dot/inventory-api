@@ -15,13 +15,15 @@
               rgba(2, 6, 23, 0.94);
   backdrop-filter: blur(16px) saturate(1.12);
   animation: tetris-overlay-fade-in 0.32s ease-out;
+  overflow: hidden;
 }
 
 .tetris-registration-modal {
   position: relative;
   width: min(100%, 520px);
-  display: flex;
-  flex-direction: column;
+  max-height: min(92vh, 92dvh);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0;
   overflow: hidden;
   border-radius: 20px;
@@ -173,6 +175,24 @@
   flex-direction: column;
   gap: 16px;
   padding: clamp(20px, 3vw, 28px);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 217, 255, 0.3) transparent;
+}
+
+.tetris-registration-form::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tetris-registration-form::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0, 217, 255, 0.44), rgba(124, 58, 237, 0.28));
+  border-radius: 999px;
+}
+
+.tetris-registration-form::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Form Group */
@@ -237,7 +257,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 140px;
+  min-height: clamp(108px, 20vh, 140px);
   border: 2px dashed rgba(0, 217, 255, 0.32);
   border-radius: 12px;
   background: rgba(0, 217, 255, 0.06);
@@ -302,7 +322,7 @@
 
 .tetris-image-preview {
   max-width: 100%;
-  max-height: 140px;
+  max-height: min(140px, 20vh);
   width: auto;
   height: auto;
   border-radius: 8px;
@@ -372,6 +392,30 @@
   color: rgba(226, 232, 240, 0.78);
   font-size: 0.84rem;
   line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  .tetris-registration-modal {
+    width: min(100%, 560px);
+    max-height: min(94vh, 94dvh);
+  }
+
+  .tetris-registration-header {
+    padding: 20px 18px 14px;
+  }
+
+  .tetris-registration-header h2 {
+    font-size: clamp(1.45rem, 4vw, 1.65rem);
+  }
+
+  .tetris-registration-subtitle {
+    font-size: 0.86rem;
+  }
+
+  .tetris-registration-form {
+    gap: 14px;
+    padding: 18px;
+  }
 }
 
 /* Error & Success Messages */
@@ -461,9 +505,22 @@
 
 /* Mobile Responsive */
 @media (max-width: 640px) {
+  .tetris-registration-overlay {
+    padding: 10px;
+    align-items: flex-end;
+  }
+
   .tetris-registration-modal {
     width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
     border-radius: 16px;
+  }
+
+  .tetris-registration-close-btn {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
   }
 
   .tetris-registration-header {
@@ -479,6 +536,18 @@
     padding: 16px;
   }
 
+  .tetris-auth-mode-toggle {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .tetris-auth-mode-btn {
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 8px 10px;
+    font-size: 0.76rem;
+  }
+
   .tetris-image-upload-container {
     min-height: 120px;
   }
@@ -490,6 +559,149 @@
   .tetris-registration-submit-btn {
     min-height: 44px;
     font-size: 0.95rem;
+  }
+
+  .tetris-consent-card {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .tetris-consent-title {
+    font-size: 0.74rem;
+  }
+
+  .tetris-consent-text {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .tetris-registration-overlay {
+    padding: 8px;
+  }
+
+  .tetris-registration-modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    border-radius: 14px;
+  }
+
+  .tetris-registration-header {
+    padding: 16px 14px 10px;
+    gap: 4px;
+  }
+
+  .tetris-registration-header h2 {
+    font-size: 1.26rem;
+  }
+
+  .tetris-registration-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .tetris-registration-form {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .tetris-form-input {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+
+  .tetris-auth-mode-toggle {
+    gap: 6px;
+    padding: 5px;
+  }
+
+  .tetris-auth-mode-btn {
+    font-size: 0.72rem;
+    padding: 7px 8px;
+  }
+
+  .tetris-image-upload-container {
+    min-height: 104px;
+  }
+
+  .tetris-image-preview {
+    max-height: 104px;
+  }
+}
+
+@media (max-height: 760px) {
+  .tetris-registration-modal {
+    max-height: min(96vh, 96dvh);
+  }
+
+  .tetris-registration-header {
+    padding: 18px 18px 12px;
+    gap: 4px;
+  }
+
+  .tetris-registration-form {
+    gap: 12px;
+    padding: 16px 18px 18px;
+  }
+
+  .tetris-image-upload-container {
+    min-height: 108px;
+  }
+
+  .tetris-image-preview {
+    max-height: 108px;
+  }
+}
+
+@media (max-height: 640px) {
+  .tetris-registration-header {
+    padding: 16px 16px 10px;
+  }
+
+  .tetris-registration-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .tetris-registration-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .tetris-registration-form {
+    gap: 10px;
+    padding: 14px 16px 16px;
+  }
+
+  .tetris-image-upload-container {
+    min-height: 96px;
+  }
+
+  .tetris-image-preview {
+    max-height: 96px;
+  }
+}
+
+@media (max-width: 920px) and (max-height: 600px) {
+  .tetris-registration-overlay {
+    align-items: stretch;
+    padding: 8px;
+  }
+
+  .tetris-registration-modal {
+    width: min(100%, 620px);
+    max-height: 100%;
+    margin: auto;
+  }
+
+  .tetris-registration-header {
+    padding: 14px 16px 10px;
+  }
+
+  .tetris-registration-form {
+    gap: 10px;
+    padding: 12px 16px 16px;
+  }
+
+  .tetris-auth-mode-toggle {
+    margin-top: 6px;
   }
 }
 

@@ -99,12 +99,10 @@ export default function TetrisPlayerDetailsModal({
 
         <section className="tetris-player-modal-hero tetris-player-modal-reveal is-delay-1" aria-label="Player spotlight summary">
           <div className="tetris-player-modal-player">
+            <span className="tetris-player-modal-corner-rank">#{rank}</span>
             <div className="tetris-player-modal-avatar" aria-hidden="true">{getPlayerInitial(playerName)}</div>
             <div className="tetris-player-modal-copy">
-              <div className="tetris-player-modal-title-row">
-                <p className="tetris-player-modal-name">{playerName}</p>
-                <span className="tetris-player-rank-pill">#{rank}</span>
-              </div>
+              <p className="tetris-player-modal-name">{playerName}</p>
               <div className="tetris-player-modal-rank-row">
                 <span className="tetris-player-rank-badge"><Trophy size={14} /> {rankHighlight}</span>
               </div>

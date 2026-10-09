@@ -47,7 +47,7 @@ export default function TetrisSideDetailsPanel({
     <aside className="tetris-layout-column tetris-side-details" aria-label="Game details" data-state={startState}>
 
       <section className={gameStarted ? "tetris-panel tetris-panel-secondary tetris-panel-recessed tetris-start-panel-compact tetris-detail-panel tetris-side-details-primary is-live" : "tetris-panel tetris-panel-secondary tetris-panel-recessed tetris-start-panel-compact tetris-detail-panel tetris-side-details-primary"} data-state={startState}>
-        <div className="tetris-panel-heading">
+        <div className="tetris-panel-heading tetris-panel-heading-compact">
           {!isMobileViewport && (
             <TetrisOptionsMenu
               isFullscreen={isFullscreen}
