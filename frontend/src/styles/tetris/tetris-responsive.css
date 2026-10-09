@@ -800,3 +800,39 @@
          font-size: 0.76rem;
      }
 }
+
+/* Mobile Header Username Display */
+@media (max-width: 640px) {
+    .tetris-header {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        min-height: 40px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(15, 23, 42, 0.68) 100%);
+        border: 1px solid rgba(99, 102, 241, 0.22);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        margin-bottom: 4px;
+    }
+
+    .tetris-header-copy {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .tetris-header-username {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        text-transform: none;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+}

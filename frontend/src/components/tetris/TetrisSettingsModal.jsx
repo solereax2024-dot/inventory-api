@@ -47,11 +47,11 @@ export default function TetrisSettingsModal({
           <h2>Settings</h2>
           <button
             type="button"
-            className="tetris-settings-close"
+            className="tetris-modal-close tetris-settings-close"
             onClick={onClose}
             aria-label="Close settings"
           >
-            <X size={24} />
+            <X size={18} />
           </button>
         </div>
 

@@ -36,6 +36,9 @@ public class AppUser {
     @Column(name = "profile_image_filename", nullable = true, length = 255)
     private String profileImageFilename;
 
+    @Column(name = "facebook_winner_contact_consent", nullable = false)
+    private boolean facebookWinnerContactConsent = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRole role;

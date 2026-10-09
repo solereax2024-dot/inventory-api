@@ -8,7 +8,6 @@ export function TetrisLeaderboardList({
   leaderboardSortBy,
   openPlayerModal,
   getMedalIcon,
-  formatRelativeTime,
 }) {
   return (
     <>
@@ -17,26 +16,22 @@ export function TetrisLeaderboardList({
       {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length === 0 && <p className="text-muted">Play a round to create the first score.</p>}
 
       {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length > 0 && (
-        <div className="tetris-mini-leaderboard" role="table" aria-label={`Top Tetris scores - ${leaderboardTimeFilter} - sorted by ${leaderboardSortBy}`}>
+        <div className="tetris-mini-leaderboard" aria-label={`Top Tetris scores - ${leaderboardTimeFilter} - sorted by ${leaderboardSortBy}`}>
           {filteredLeaderboard.map((entry, index) => (
             <button
               key={entry.id || `${entry.playerName}-${index}`}
               type="button"
               className={index < 3 ? "tetris-mini-leaderboard-row is-medal is-clickable" : "tetris-mini-leaderboard-row is-clickable"}
-              role="row"
               onClick={() => openPlayerModal(entry)}
               aria-label={`View leaderboard details for ${entry.playerName || "Anonymous"}`}
             >
-              <span className="tetris-mini-leaderboard-rank" role="cell">{getMedalIcon(entry.displayRank) || `#${entry.displayRank}`}</span>
+              <span className="tetris-mini-leaderboard-rank">{getMedalIcon(entry.displayRank) || `#${entry.displayRank}`}</span>
               <div className="tetris-mini-leaderboard-copy">
-                <span className="tetris-mini-leaderboard-player" role="cell">{entry.playerName || "Anonymous"}</span>
-                <span className="tetris-mini-leaderboard-subline" role="cell">
-                  {(entry.totalGames || 0)} game{entry.totalGames !== 1 ? "s" : ""} • {entry.totalLinesCleared || 0} lines • {formatRelativeTime(entry.lastPlayed)}
-                </span>
+                <span className="tetris-mini-leaderboard-player">{entry.playerName || "Anonymous"}</span>
               </div>
               <div className="tetris-mini-leaderboard-score-stack">
-                <span className="tetris-mini-leaderboard-score" role="cell">{entry.highestScore?.toLocaleString() || 0}</span>
-                <span className="tetris-mini-leaderboard-level" role="cell">L{entry.highestLevel || 1}</span>
+                <span className="tetris-mini-leaderboard-level">L{entry.highestLevel || 1}</span>
+                <span className="tetris-mini-leaderboard-score">{entry.highestScore?.toLocaleString() || 0}</span>
               </div>
             </button>
           ))}
@@ -102,7 +97,6 @@ export default function TetrisLeaderboardPanel({
           leaderboardSortBy={leaderboardSortBy}
           openPlayerModal={openPlayerModal}
           getMedalIcon={getMedalIcon}
-          formatRelativeTime={formatRelativeTime}
         />
       </section>
     </aside>

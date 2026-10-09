@@ -1,4 +1,5 @@
 import { Volume2, VolumeX, Vibrate } from "lucide-react";
+import TetrisOptionsMenu from "./TetrisOptionsMenu";
 
 export default function TetrisSideDetailsPanel({
   gameStarted,
@@ -14,6 +15,7 @@ export default function TetrisSideDetailsPanel({
   backToBackActive,
   soundEnabled,
   isFullscreen,
+  isMobileViewport,
   namedPlayerBestEntry,
   globalBestEntry,
   togglePauseGame,
@@ -22,6 +24,10 @@ export default function TetrisSideDetailsPanel({
   renderCompactStatsBar,
   hapticEnabled,
   onHapticToggle,
+  onOpenSettings,
+  onOpenHowToPlay,
+  onReset,
+  onSignOut,
 }) {
   const startState = gameStarted ? (gameOver ? "game-over" : "live") : "prestart";
   const playerBestScore = namedPlayerBestEntry?.highestScore || 0;
@@ -42,6 +48,21 @@ export default function TetrisSideDetailsPanel({
 
       <section className={gameStarted ? "tetris-panel tetris-panel-secondary tetris-panel-recessed tetris-start-panel-compact tetris-detail-panel tetris-side-details-primary is-live" : "tetris-panel tetris-panel-secondary tetris-panel-recessed tetris-start-panel-compact tetris-detail-panel tetris-side-details-primary"} data-state={startState}>
         <div className="tetris-panel-heading">
+          {!isMobileViewport && (
+            <TetrisOptionsMenu
+              isFullscreen={isFullscreen}
+              gameStarted={gameStarted}
+              gameOver={gameOver}
+              isPaused={isPaused}
+              isMobileViewport={isMobileViewport}
+              onOpenSettings={onOpenSettings}
+              onOpenHowToPlay={onOpenHowToPlay}
+              onReset={onReset}
+              onToggleFullscreen={toggleFullscreen}
+              onTogglePause={togglePauseGame}
+              onSignOut={onSignOut}
+            />
+          )}
           <h2 className="tetris-panel-title">Game Session</h2>
           <span className="tetris-panel-badge">{loading ? "Loading" : sessionStatusLabel}</span>
         </div>

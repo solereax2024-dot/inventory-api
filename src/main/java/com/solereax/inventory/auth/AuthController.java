@@ -52,6 +52,7 @@ public class AuthController {
             @RequestParam String fullName,
             @RequestParam String username,
             @RequestParam String password,
+            @RequestParam(defaultValue = "false") boolean facebookWinnerContactConsent,
             @RequestParam(required = false) MultipartFile profileImage
     ) {
         try {
@@ -76,6 +77,11 @@ public class AuthController {
                         .body(new RegistrationResponse("Profile image is required", null, null, null, null));
             }
 
+            if (!facebookWinnerContactConsent) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new RegistrationResponse("You must agree to be contacted via Facebook if you win.", null, null, null, null));
+            }
+
             String contentType = profileImage.getContentType();
             if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -95,6 +101,7 @@ public class AuthController {
             newUser.setPasswordHash(passwordEncoder.encode(password));
             newUser.setRole(UserRole.CUSTOMER);
             newUser.setEnabled(true);
+            newUser.setFacebookWinnerContactConsent(true);
 
             // Handle profile image upload
             if (profileImage != null && !profileImage.isEmpty()) {

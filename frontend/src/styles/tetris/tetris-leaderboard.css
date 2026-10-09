@@ -145,6 +145,28 @@
     font-size: clamp(0.9rem, 1.2vw, 1.1rem);
 }
 
+@media (min-width: 641px) {
+    .tetris-leaderboard-panel .tetris-panel-heading {
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+    }
+
+    .tetris-leaderboard-panel .tetris-panel-heading::after {
+        width: 72px;
+        background: linear-gradient(90deg, rgba(0, 217, 255, 0.92), rgba(124, 58, 237, 0.4), transparent);
+    }
+
+    .tetris-leaderboard-panel .tetris-panel-title {
+        font-size: clamp(0.98rem, 1.3vw, 1.12rem);
+        font-weight: var(--font-weight-black);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #f8fbff;
+        text-shadow: 0 0 14px rgba(0, 217, 255, 0.12);
+    }
+}
+
 
 .tetris-leaderboard-panel .tetris-next-brand-name {
     color: #fde68a;
@@ -244,11 +266,17 @@
 .tetris-mini-leaderboard-row {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    box-sizing: border-box;
     gap: 10px;
     padding: 8px 10px;
     border-radius: 10px;
     background: rgba(15, 23, 42, 0.5);
     border: 1px solid rgba(99, 102, 241, 0.12);
+    appearance: none;
+    -webkit-appearance: none;
+    text-align: left;
     cursor: default;
     transition: all var(--transition-base);
     position: relative;
@@ -267,6 +295,8 @@
 
 .tetris-mini-leaderboard-row.is-clickable {
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .tetris-mini-leaderboard-row.is-clickable:hover {
@@ -353,6 +383,7 @@
     align-items: flex-end;
     gap: 2px;
     flex-shrink: 0;
+    min-width: 68px;
 }
 
 .tetris-mini-leaderboard-score {
@@ -382,6 +413,49 @@
     color: #fef3c7;
 }
 
+@media (min-width: 641px) {
+    .tetris-mini-leaderboard {
+        gap: 8px;
+    }
+
+    .tetris-mini-leaderboard-row {
+        display: grid;
+        grid-template-columns: 32px minmax(0, 1fr) minmax(92px, auto);
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        min-height: 56px;
+    }
+
+    .tetris-mini-leaderboard-rank {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .tetris-mini-leaderboard-copy {
+        gap: 4px;
+    }
+
+    .tetris-mini-leaderboard-player {
+        font-size: 0.9rem;
+        line-height: 1.2;
+    }
+
+    .tetris-mini-leaderboard-score-stack {
+        min-width: 92px;
+        gap: 4px;
+    }
+
+    .tetris-mini-leaderboard-score {
+        font-size: 0.95rem;
+    }
+
+    .tetris-mini-leaderboard-level {
+        align-self: flex-end;
+    }
+}
+
 /* ========================================
    LEADERBOARD RESPONSIVE
    ======================================== */
@@ -404,8 +478,8 @@
     }
 
     .tetris-mini-leaderboard-row {
-        padding: 6px 8px;
         gap: 8px;
+        padding: 8px 10px;
     }
 
     .tetris-mini-leaderboard-rank {
@@ -416,10 +490,9 @@
 
     .tetris-mini-leaderboard-player {
         font-size: 0.8rem;
-    }
-
-    .tetris-mini-leaderboard-subline {
-        font-size: 0.65rem;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
     }
 
     .tetris-mini-leaderboard-score {
@@ -429,5 +502,9 @@
     .tetris-mini-leaderboard-level {
         font-size: 0.65rem;
         padding: 1px 4px;
+    }
+
+    .tetris-mini-leaderboard-score-stack {
+        min-width: 60px;
     }
 }

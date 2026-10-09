@@ -19,11 +19,11 @@ export default function TetrisHowToPlayModal({
           <h2>How to Play</h2>
           <button
             type="button"
-            className="tetris-howtoplay-close"
+            className="tetris-modal-close tetris-howtoplay-close"
             onClick={onClose}
             aria-label="Close"
           >
-            <X size={24} />
+            <X size={18} />
           </button>
         </div>
 

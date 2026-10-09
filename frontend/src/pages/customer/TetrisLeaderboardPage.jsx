@@ -95,7 +95,7 @@ export default function TetrisLeaderboardPage() {
                         </span>
                       </td>
                       <td className="tetris-leaderboard-col-player">
-                        <span className="tetris-leaderboard-player-name">{entry.playerName || "Anonymous"}</span>
+                        <span className="tetris-leaderboard-player-name">{entry.username || entry.playerName || "Anonymous"}</span>
                       </td>
                       <td className="tetris-leaderboard-col-score">
                         <span className="tetris-leaderboard-score">{entry.highestScore?.toLocaleString() || 0}</span>

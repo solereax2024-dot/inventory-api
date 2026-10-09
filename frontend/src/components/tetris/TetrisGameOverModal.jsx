@@ -42,11 +42,11 @@ export default function TetrisGameOverModal({
           <button
             type="button"
             onClick={onClose}
-            className="tetris-game-over-close-btn"
+            className="tetris-modal-close tetris-game-over-close-btn"
             aria-label="Close game over modal"
             title="Close"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         )}
         <div className="tetris-game-over-content">

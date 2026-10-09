@@ -344,20 +344,70 @@
 
 /* Floating Hold & Next Panels */
 .tetris-board-side-panel.tetris-hud-card {
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 41, 59, 0.84) 100%);
-    border: 1px solid rgba(99, 102, 241, 0.16);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1),
+    background:
+        radial-gradient(circle at top right, rgba(0, 217, 255, 0.14), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(124, 58, 237, 0.1), transparent 40%),
+        linear-gradient(180deg, rgba(10, 15, 31, 0.98), rgba(20, 28, 52, 0.95));
+    border: 1.5px solid rgba(0, 217, 255, 0.24);
+    box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.1),
+                0 0 24px rgba(0, 217, 255, 0.14),
                 var(--tetris-card-sheen),
-                0 8px 20px rgba(2, 6, 23, 0.18);
+                0 16px 30px rgba(2, 6, 23, 0.22);
     backdrop-filter: blur(12px);
     padding: 12px 8px;
     position: relative;
+    overflow: hidden;
 }
 
 .tetris-board-side-panel.tetris-hud-card:hover {
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.12),
+    border-color: rgba(0, 217, 255, 0.34);
+    box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.14),
+                0 0 30px rgba(0, 217, 255, 0.18),
                 var(--tetris-card-sheen),
-                0 12px 28px rgba(2, 6, 23, 0.22);
+                0 20px 36px rgba(2, 6, 23, 0.24);
+}
+
+.tetris-board-side-panel.tetris-hud-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 56px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent);
+    pointer-events: none;
+}
+
+.tetris-board-side-panel.tetris-hud-card::after {
+    content: "";
+    position: absolute;
+    inset: auto -14% -28% 28%;
+    height: 110px;
+    background: radial-gradient(circle, rgba(0, 217, 255, 0.16), transparent 68%);
+    filter: blur(18px);
+    opacity: 0.82;
+    pointer-events: none;
+}
+
+.tetris-shell.is-live-gameplay .tetris-board-side-panel.tetris-hud-card {
+    border-color: rgba(0, 217, 255, 0.38);
+    box-shadow: 0 0 0 1.5px rgba(0, 217, 255, 0.18),
+                0 0 34px rgba(0, 217, 255, 0.2),
+                var(--tetris-card-sheen),
+                0 22px 40px rgba(0, 217, 255, 0.1);
+}
+
+.tetris-shell.is-live-gameplay .tetris-board-side-panel.tetris-hud-card::after {
+    animation: tetris-side-panel-glow 2.8s ease-in-out infinite;
+}
+
+@keyframes tetris-side-panel-glow {
+    0%, 100% {
+        opacity: 0.68;
+        filter: blur(18px) brightness(1);
+    }
+    50% {
+        opacity: 0.95;
+        filter: blur(18px) brightness(1.08);
+    }
 }
 
 

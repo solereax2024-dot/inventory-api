@@ -14,18 +14,23 @@
 /* MOBILE: Compact header */
 @media (max-width: 640px) {
     .tetris-header {
-        flex-shrink: 0;
+        flex-shrink: 1;
+        flex: 1 1 auto;
+        min-width: 0;
         gap: 6px;
-        padding: 8px;
-        background: rgba(15, 23, 42, 0.4);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0;
+        background: transparent;
+        border-bottom: none;
         margin: 0;
         height: auto;
         min-height: 44px;
+        display: flex;
+        align-items: center;
     }
 
     .tetris-header.is-live {
         gap: 4px;
+        padding: 0;
     }
 }
 
@@ -46,10 +51,11 @@
 @media (max-width: 640px) {
     .tetris-header-copy {
         gap: 0;
-        flex: 0 1 auto;
+        flex: 1 1 auto;
         min-width: 0;
         max-width: calc(100% - 100px);
         overflow: hidden;
+        justify-content: center;
     }
 }
 

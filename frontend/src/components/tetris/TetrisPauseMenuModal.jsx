@@ -27,11 +27,11 @@ export default function TetrisPauseMenuModal({
           <h2>GAME PAUSED</h2>
           <button
             type="button"
-            className="tetris-pause-close-btn"
+            className="tetris-modal-close tetris-pause-close-btn"
             onClick={onResume}
             aria-label="Close pause menu"
           >
-            <X size={24} />
+            <X size={18} />
           </button>
         </div>
 

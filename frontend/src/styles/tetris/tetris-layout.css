@@ -168,7 +168,7 @@
     align-items: flex-start;
     justify-content: flex-end;
     padding: max(96px, calc(var(--tetris-safe-top, 0px) + 88px)) max(12px, var(--tetris-safe-right, 0px)) max(12px, var(--tetris-safe-bottom, 0px)) max(12px, var(--tetris-safe-left, 0px));
-    z-index: 100;
+    z-index: 110;
 }
 
 .tetris-fullscreen-options-panel {

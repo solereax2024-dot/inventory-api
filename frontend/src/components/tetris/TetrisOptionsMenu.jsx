@@ -1,15 +1,19 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, HelpCircle, RotateCcw, Settings, X, Minimize2 } from "lucide-react";
+import { MoreVertical, HelpCircle, RotateCcw, Settings, X, Minimize2, Pause, Play, LogOut } from "lucide-react";
 
 export default function TetrisOptionsMenu({
   isFullscreen,
   gameStarted,
   gameOver,
+  isPaused,
   isMobileViewport,
+  headerState,
   onOpenSettings,
   onOpenHowToPlay,
   onReset,
   onToggleFullscreen,
+  onTogglePause,
+  onSignOut,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
@@ -47,10 +51,22 @@ export default function TetrisOptionsMenu({
     }
   };
 
-  const handleToggleFullscreen = () => {
-    onToggleFullscreen();
-    setIsOpen(false);
-  };
+   const handleToggleFullscreen = () => {
+     onToggleFullscreen();
+     setIsOpen(false);
+   };
+
+   const handleTogglePause = () => {
+     onTogglePause();
+     setIsOpen(false);
+   };
+
+   const handleSignOut = () => {
+     if (window.confirm("Are you sure you want to sign out?")) {
+       onSignOut();
+       setIsOpen(false);
+     }
+   };
 
   return (
     <div className={["tetris-options-menu-container", isOpen ? "is-open" : ""].filter(Boolean).join(" ")}>
@@ -63,6 +79,7 @@ export default function TetrisOptionsMenu({
         aria-label="Game Options"
         aria-expanded={isOpen}
         aria-haspopup="menu"
+        data-state={headerState || "default"}
       >
         {isOpen ? <X size={20} /> : <MoreVertical size={20} />}
       </button>
@@ -93,30 +110,52 @@ export default function TetrisOptionsMenu({
             <span>Settings</span>
           </button>
 
-          {(gameStarted || gameOver) && (
-            <button
-              type="button"
-              className="tetris-options-menu-item is-danger"
-              onClick={handleReset}
-              role="menuitem"
-            >
-              <RotateCcw size={16} />
-              <span>Reset Game</span>
-            </button>
-          )}
+           {(gameStarted && !gameOver) && (
+             <button
+               type="button"
+               className="tetris-options-menu-item"
+               onClick={handleTogglePause}
+               role="menuitem"
+             >
+               {isPaused ? <Play size={16} /> : <Pause size={16} />}
+               <span>{isPaused ? "Resume" : "Pause"}</span>
+             </button>
+           )}
 
-          {isFullscreen && (
-            <button
-              type="button"
-              className="tetris-options-menu-item"
-              onClick={handleToggleFullscreen}
-              role="menuitem"
-            >
-              <Minimize2 size={16} />
-              <span>Exit Fullscreen</span>
-            </button>
-          )}
-        </div>
+           {(gameStarted || gameOver) && (
+             <button
+               type="button"
+               className="tetris-options-menu-item is-danger"
+               onClick={handleReset}
+               role="menuitem"
+             >
+               <RotateCcw size={16} />
+               <span>Reset Game</span>
+             </button>
+           )}
+
+           {isFullscreen && (
+             <button
+               type="button"
+               className="tetris-options-menu-item"
+               onClick={handleToggleFullscreen}
+               role="menuitem"
+             >
+               <Minimize2 size={16} />
+               <span>Exit Fullscreen</span>
+             </button>
+           )}
+
+           <button
+             type="button"
+             className="tetris-options-menu-item is-danger"
+             onClick={handleSignOut}
+             role="menuitem"
+           >
+             <LogOut size={16} />
+             <span>Sign Out</span>
+           </button>
+         </div>
       )}
     </div>
   );

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HelpCircle, Minimize2, MoreVertical, RotateCcw, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../../utils/api";
+import { useTetrisAuth } from "../../hooks";
 import { triggerHapticFeedback } from "../../utils/hapticFeedback";
 import { getHapticIntensityMultiplier } from "../../utils/gestureCustomization";
 import TetrisGameOverModal from "../../components/tetris/TetrisGameOverModal";
@@ -12,6 +14,7 @@ import TetrisHeader from "../../components/tetris/TetrisHeader";
 import TetrisPlayerDetailsModal from "../../components/tetris/TetrisPlayerDetailsModal";
 import TetrisSettingsModal from "../../components/tetris/TetrisSettingsModal";
 import TetrisHowToPlayModal from "../../components/tetris/TetrisHowToPlayModal";
+import TetrisLeaderboardModal from "../../components/tetris/TetrisLeaderboardModal";
 import TetrisSideDetailsPanel from "../../components/tetris/TetrisSideDetailsPanel";
 import TetrisOptionsMenu from "../../components/tetris/TetrisOptionsMenu";
 import { TetrisLeaderboardList } from "../../components/tetris/TetrisLeaderboardPanel";
@@ -87,6 +90,8 @@ function getViewportMetrics() {
 }
 
 function TetrisGamePageContent({ authenticatedUser }) {
+  const navigate = useNavigate();
+  const { logout } = useTetrisAuth();
   const shellRef = useRef(null);
   const gameSurfaceRef = useRef(null);
   const boardFrameRef = useRef(null);
@@ -101,9 +106,9 @@ function TetrisGamePageContent({ authenticatedUser }) {
   const [grid, setGrid] = useState(createEmptyGrid());
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
-  const [linesCleared, setLinesCleared] = useState(0);
-  const [playerName, setPlayerName] = useState(() => authenticatedUser?.fullName || authenticatedUser?.username || "");
-  const [message, setMessage] = useState("Welcome to Brand Tetris!");
+   const [linesCleared, setLinesCleared] = useState(0);
+   const [playerName, setPlayerName] = useState(() => authenticatedUser?.username || authenticatedUser?.fullName || "");
+   const [message, setMessage] = useState("Welcome to Brand Tetris!");
   const [loading, setLoading] = useState(false);
   const [brandTiles, setBrandTiles] = useState(FALLBACK_BRANDS);
   const [currentPiece, setCurrentPiece] = useState(null);
@@ -144,9 +149,10 @@ function TetrisGamePageContent({ authenticatedUser }) {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState(null);
    const [isBoardFocused, setIsBoardFocused] = useState(false);
-   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
-   const [isFullscreenOptionsOpen, setIsFullscreenOptionsOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
+    const [isFullscreenOptionsOpen, setIsFullscreenOptionsOpen] = useState(false);
+    const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useLocalStorage(SOUND_PREFERENCE_KEY, true, {
     parse: parseSoundEnabledPreference,
     serialize: String,
@@ -171,13 +177,13 @@ function TetrisGamePageContent({ authenticatedUser }) {
       || playerName.trim();
   }, [authenticatedUser, playerName]);
 
-  useEffect(() => {
-    const preferredName = authenticatedUser?.fullName || authenticatedUser?.username || "";
-    if (preferredName) {
-      setPlayerName(preferredName);
-      setMessage(`Welcome back, ${preferredName}!`);
-    }
-  }, [authenticatedUser]);
+   useEffect(() => {
+     const preferredName = authenticatedUser?.username || authenticatedUser?.fullName || "";
+     if (preferredName) {
+       setPlayerName(preferredName);
+       setMessage(`Welcome back, ${preferredName}!`);
+     }
+   }, [authenticatedUser]);
   const isMobileViewport = viewportSize.width < MOBILE_BREAKPOINT;
   const isShortMobileViewport = isMobileViewport && viewportSize.height <= 760;
   const isVeryShortMobileViewport = isMobileViewport && viewportSize.height <= 680;
@@ -506,7 +512,6 @@ function TetrisGamePageContent({ authenticatedUser }) {
   const closePlayerModal = useCallback(() => {
     setSelectedLeaderboardEntry(null);
     setSelectedPlayerStats(null);
-    setPlayerStatsError("");
   }, []);
 
   const releaseFullscreenOptionsPause = useCallback(({ resumeGameplay = true, emitFeedback = false, message = "Resumed!" } = {}) => {
@@ -599,23 +604,39 @@ function TetrisGamePageContent({ authenticatedUser }) {
    const openPlayerModal = useCallback(async (entry) => {
      if (!entry) return;
 
-     setSelectedLeaderboardEntry(entry);
-     setSelectedPlayerStats(entry);
-     setPlayerStatsLoading(true);
-     setPlayerStatsError("");
-     emitSound("modal");
-     triggerHaptic('modal');
+      const openSpotlight = async () => {
+        setSelectedLeaderboardEntry(entry);
+        setSelectedPlayerStats(entry);
+        setPlayerStatsLoading(true);
+        setPlayerStatsError("");
+        emitSound("modal");
+        triggerHaptic('modal');
 
-     try {
-       const playerStats = await apiRequest(`/api/public/games/tetris/player/${encodeURIComponent(entry.playerName || "")}`, "GET");
-       setSelectedPlayerStats(playerStats || entry);
-     } catch (error) {
-       setPlayerStatsError("Unable to load player details right now.");
-       setSelectedPlayerStats(entry);
-     } finally {
-       setPlayerStatsLoading(false);
-     }
-   }, [emitSound, triggerHaptic]);
+        try {
+          const playerStats = await apiRequest(`/api/public/games/tetris/player/${encodeURIComponent(entry.playerName || "")}`, "GET");
+          setSelectedPlayerStats(playerStats || entry);
+        } catch (error) {
+          setPlayerStatsError("Unable to load player details right now.");
+          setSelectedPlayerStats(entry);
+        } finally {
+          setPlayerStatsLoading(false);
+        }
+      };
+
+      if (isMobileViewport) {
+        setIsLeaderboardModalOpen(false);
+        if (typeof window !== "undefined") {
+          window.setTimeout(() => {
+            openSpotlight();
+          }, 0);
+        } else {
+          openSpotlight();
+        }
+        return;
+      }
+
+      openSpotlight();
+    }, [emitSound, isMobileViewport, triggerHaptic]);
 
   const scheduleUiTimeout = useCallback((callback, delayMs) => {
     const timeoutId = window.setTimeout(() => {
@@ -834,6 +855,19 @@ function TetrisGamePageContent({ authenticatedUser }) {
        triggerHaptic('pause');
      }
    }, [gameStarted, gameOver, isPaused, emitSound, triggerHaptic]);
+
+   const handleSignOut = useCallback(() => {
+     logout();
+     navigate("/");
+   }, [logout, navigate]);
+
+   const openLeaderboard = useCallback(() => {
+     setIsLeaderboardModalOpen(true);
+   }, []);
+
+   const closeLeaderboard = useCallback(() => {
+     setIsLeaderboardModalOpen(false);
+   }, []);
 
    const movePieceHorizontal = useCallback(
      (direction) => {
@@ -1197,6 +1231,12 @@ function TetrisGamePageContent({ authenticatedUser }) {
   }, [currentPiece, currentPieceCol, currentPieceRow, gameOver, gameStarted, grid]);
   const shimmerSweepRows = useMemo(() => [...rowClearFlashRows].sort((leftRow, rightRow) => rightRow - leftRow), [rowClearFlashRows]);
   const activePlayerStats = selectedPlayerStats || selectedLeaderboardEntry;
+  const shouldShowLeaderboardModal = isLeaderboardModalOpen && (!isMobileViewport || !selectedLeaderboardEntry);
+  const mobileBoardHeaderState = gameOver
+    ? "game-over"
+    : gameStarted
+      ? (isPaused ? "paused" : "live")
+      : "prestart";
   const boardShellStyle = useMemo(() => ({
     "--tetris-board-shell-width": boardShellWidth,
     "--tetris-clear-intensity": `${clearIntensity}`,
@@ -1281,53 +1321,85 @@ function TetrisGamePageContent({ authenticatedUser }) {
         ].filter(Boolean).join(" ")}
       >
 
-        <TetrisHeader
-          gameStarted={gameStarted}
-          gameOver={gameOver}
-          soundEnabled={soundEnabled}
-          isFullscreen={isFullscreen}
-          onToggleSound={toggleSound}
-          onToggleFullscreen={toggleFullscreen}
-        />
+        {!isMobileViewport && (
+          <TetrisHeader
+            gameStarted={gameStarted}
+            gameOver={gameOver}
+            soundEnabled={soundEnabled}
+            isFullscreen={isFullscreen}
+            onToggleSound={toggleSound}
+            onToggleFullscreen={toggleFullscreen}
+            playerName={playerName}
+          />
+        )}
 
 
-         <div className={[
-           "tetris-main",
-           isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
-         ].filter(Boolean).join(" ")}>
-             {/* COLUMN 1: LEADERBOARD (LEFT) */}
-            <aside className="tetris-layout-column tetris-leaderboard-column" aria-label="Leaderboard column">
-             <section className="tetris-panel tetris-panel-compact tetris-panel-featured tetris-hud-card tetris-leaderboard-embed tetris-leaderboard-panel" aria-label="Embedded Tetris leaderboard">
-               <div className="tetris-panel-heading tetris-panel-heading-compact">
-                 <h2 className="tetris-panel-title"><Trophy size={16} /> Leaderboard</h2>
-               </div>
+          <div className={[
+            "tetris-main",
+            isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
+          ].filter(Boolean).join(" ")}>
+              {/* COLUMN 1: LEADERBOARD (LEFT) */}
+             <aside className="tetris-layout-column tetris-leaderboard-column" aria-label="Leaderboard column">
+              <section className="tetris-panel tetris-panel-compact tetris-panel-featured tetris-hud-card tetris-leaderboard-embed tetris-leaderboard-panel" aria-label="Embedded Tetris leaderboard">
+                <div className="tetris-panel-heading tetris-panel-heading-compact">
+                  <h2 className="tetris-panel-title"><Trophy size={16} /> Leaderboard</h2>
+                </div>
 
-               {leaderboardLoading && <p className="text-muted">Loading leaderboard...</p>}
-               {!leaderboardLoading && leaderboardError && <p className="text-muted">{leaderboardError}</p>}
-               {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length === 0 && <p className="text-muted">Play a round to create the first score.</p>}
-               {leaderboardListContent}
-             </section>
-            </aside>
+                {leaderboardLoading && <p className="text-muted">Loading leaderboard...</p>}
+                {!leaderboardLoading && leaderboardError && <p className="text-muted">{leaderboardError}</p>}
+                {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length === 0 && <p className="text-muted">Play a round to create the first score.</p>}
+                {leaderboardListContent}
+              </section>
+             </aside>
 
-            {/* COLUMN 2: GAME BOARD (CENTER) */}
-            <section className={[
-              "tetris-layout-column",
-              "tetris-board-column",
-              isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
-              gameOver ? "is-game-over" : "",
-            ].filter(Boolean).join(" ")} style={{ "--tetris-board-pixel-width": `${boardPixelWidth}px` }}>
-               <div className="tetris-board-column-header">
-                 <TetrisOptionsMenu
-                   isFullscreen={isFullscreen}
-                   gameStarted={gameStarted}
-                   gameOver={gameOver}
-                   isMobileViewport={isMobileViewport}
-                   onOpenSettings={openSettings}
-                   onOpenHowToPlay={openHowToPlay}
-                   onReset={resetGame}
-                   onToggleFullscreen={toggleFullscreen}
-                 />
-               </div>
+             {/* COLUMN 2: GAME BOARD (CENTER) */}
+             <section className={[
+               "tetris-layout-column",
+               "tetris-board-column",
+               isMobileViewport && isMobileGameplayActive ? "is-mobile-gameplay" : "",
+               gameOver ? "is-game-over" : "",
+             ].filter(Boolean).join(" ")} style={{ "--tetris-board-pixel-width": `${boardPixelWidth}px` }}>
+                <div className={`tetris-board-column-header is-${mobileBoardHeaderState}`} data-state={mobileBoardHeaderState}>
+                  {isMobileViewport && (
+                    <>
+                      <button
+                        type="button"
+                        className="tetris-leaderboard-header-btn"
+                        onClick={openLeaderboard}
+                        title="View Leaderboard"
+                        aria-label="View Leaderboard"
+                        data-state={mobileBoardHeaderState}
+                      >
+                        <Trophy size={18} />
+                      </button>
+                      <TetrisHeader
+                        gameStarted={gameStarted}
+                        gameOver={gameOver}
+                        soundEnabled={soundEnabled}
+                        isFullscreen={isFullscreen}
+                        onToggleSound={toggleSound}
+                        onToggleFullscreen={toggleFullscreen}
+                        playerName={playerName}
+                      />
+                    </>
+                  )}
+                  {isMobileViewport && (
+                    <TetrisOptionsMenu
+                      isFullscreen={isFullscreen}
+                      gameStarted={gameStarted}
+                      gameOver={gameOver}
+                      isPaused={isPaused}
+                      isMobileViewport={isMobileViewport}
+                      headerState={mobileBoardHeaderState}
+                      onOpenSettings={openSettings}
+                      onOpenHowToPlay={openHowToPlay}
+                      onReset={resetGame}
+                      onToggleFullscreen={toggleFullscreen}
+                      onTogglePause={togglePauseGame}
+                      onSignOut={handleSignOut}
+                    />
+                  )}
+                </div>
                <TetrisBoardStage
                   isMobileViewport={isMobileViewport}
                  boardFrameRef={boardFrameRef}
@@ -1401,46 +1473,51 @@ function TetrisGamePageContent({ authenticatedUser }) {
                 onClose={resetGame}
               />
 
-              {isMobileViewport && (
-                <TetrisTouchControls
-                  gameStarted={gameStarted}
-                  gameOver={gameOver}
-                  loading={loading}
-                  playerName={playerName}
-                  onStartGame={startGame}
-                  onResetGame={resetGame}
-                  isPaused={isPaused}
-                  togglePauseGame={togglePauseGame}
-                  canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
-                />
-              )}
+               {isMobileViewport && (
+                 <TetrisTouchControls
+                   gameStarted={gameStarted}
+                   gameOver={gameOver}
+                   loading={loading}
+                   playerName={playerName}
+                   onStartGame={startGame}
+                   onResetGame={resetGame}
+                   isPaused={isPaused}
+                   togglePauseGame={togglePauseGame}
+                   canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
+                 />
+               )}
            </section>
 
-           {/* COLUMN 3: DETAILS (RIGHT) */}
-           <TetrisSideDetailsPanel
-             gameStarted={gameStarted}
-             gameOver={gameOver}
-             loading={loading}
-             message={message}
-             playerName={playerName}
-             score={score}
-             linesCleared={linesCleared}
-             onStartGame={startGame}
-             onResetGame={resetGame}
-             isPaused={isPaused}
-             comboCount={comboCount}
-             backToBackActive={backToBackActive}
-             soundEnabled={soundEnabled}
-             isFullscreen={isFullscreen}
-             namedPlayerBestEntry={namedPlayerBestEntry}
-             globalBestEntry={globalBestEntry}
-             togglePauseGame={togglePauseGame}
-             toggleSound={toggleSound}
-             toggleFullscreen={toggleFullscreen}
-             renderCompactStatsBar={renderCompactStatsBar}
+            {/* COLUMN 3: DETAILS (RIGHT) */}
+            <TetrisSideDetailsPanel
+              gameStarted={gameStarted}
+              gameOver={gameOver}
+              loading={loading}
+              message={message}
+              playerName={playerName}
+              score={score}
+              linesCleared={linesCleared}
+              onStartGame={startGame}
+              onResetGame={resetGame}
+              isPaused={isPaused}
+              comboCount={comboCount}
+              backToBackActive={backToBackActive}
+              soundEnabled={soundEnabled}
+              isFullscreen={isFullscreen}
+              isMobileViewport={isMobileViewport}
+              namedPlayerBestEntry={namedPlayerBestEntry}
+              globalBestEntry={globalBestEntry}
+              togglePauseGame={togglePauseGame}
+              toggleSound={toggleSound}
+              toggleFullscreen={toggleFullscreen}
+              renderCompactStatsBar={renderCompactStatsBar}
               hapticEnabled={hapticEnabled}
               onHapticToggle={toggleHaptics}
-           />
+               onOpenSettings={openSettings}
+               onOpenHowToPlay={openHowToPlay}
+               onReset={resetGame}
+               onSignOut={handleSignOut}
+             />
         </div>
 
 
@@ -1453,10 +1530,19 @@ function TetrisGamePageContent({ authenticatedUser }) {
            onHapticToggle={toggleHaptics}
          />
 
-         <TetrisHowToPlayModal
-           isVisible={isHowToPlayOpen}
-           onClose={closeHowToPlay}
-         />
+          <TetrisHowToPlayModal
+            isVisible={isHowToPlayOpen}
+            onClose={closeHowToPlay}
+          />
+
+          <TetrisLeaderboardModal
+            isVisible={shouldShowLeaderboardModal}
+            leaderboard={filteredLeaderboard}
+            leaderboardLoading={leaderboardLoading}
+            leaderboardError={leaderboardError}
+            onClose={closeLeaderboard}
+            leaderboardListContent={leaderboardListContent}
+          />
 
          <TetrisPlayerDetailsModal
           selectedLeaderboardEntry={selectedLeaderboardEntry}

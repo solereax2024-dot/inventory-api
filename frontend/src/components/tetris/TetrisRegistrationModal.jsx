@@ -8,6 +8,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
     fullName: "",
     username: "",
     password: "",
+    facebookWinnerContactConsent: false,
     profileImage: null,
     profileImagePreview: null,
   });
@@ -38,10 +39,10 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
     setError("");
   };
@@ -105,6 +106,10 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         setError("Profile image is required for authenticity");
         return false;
       }
+      if (!formData.facebookWinnerContactConsent) {
+        setError("Please agree to be contacted via Facebook if you win.");
+        return false;
+      }
     }
     return true;
   };
@@ -143,6 +148,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         formDataToSubmit.append("fullName", formData.fullName.trim());
         formDataToSubmit.append("username", formData.username.trim());
         formDataToSubmit.append("password", formData.password);
+        formDataToSubmit.append("facebookWinnerContactConsent", String(formData.facebookWinnerContactConsent));
         formDataToSubmit.append("profileImage", formData.profileImage);
 
         const response = await fetch("/api/auth/register", {
@@ -188,10 +194,10 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
           <button
             type="button"
             onClick={onClose}
-            className="tetris-registration-close-btn"
+            className="tetris-modal-close tetris-registration-close-btn"
             aria-label="Close registration"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         )}
 
@@ -333,6 +339,25 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
               disabled={loading}
             />
           </div>
+
+          {!isLoginMode && (
+            <label className="tetris-consent-card">
+              <input
+                type="checkbox"
+                name="facebookWinnerContactConsent"
+                className="tetris-consent-checkbox"
+                checked={formData.facebookWinnerContactConsent}
+                onChange={handleInputChange}
+                disabled={loading}
+              />
+              <div className="tetris-consent-copy">
+                <span className="tetris-consent-title">Winner contact consent *</span>
+                <span className="tetris-consent-text">
+                  I agree that I may be contacted using my Facebook profile details if I win the Tetris challenge.
+                </span>
+              </div>
+            </label>
+          )}
 
           {/* Error Message */}
           {error && (

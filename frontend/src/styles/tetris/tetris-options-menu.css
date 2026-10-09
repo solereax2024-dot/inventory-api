@@ -1,20 +1,112 @@
 /* Tetris Options Menu Styles */
 
-.tetris-board-column-header {
-  position: relative;
-  width: 100%;
-  height: 3rem;
-  margin-bottom: 0.5rem;
+/* DESKTOP: Position menu within panel heading - normal flex flow */
+@media (min-width: 641px) {
+  .tetris-panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .tetris-panel-heading .tetris-options-menu-container {
+    position: relative;
+    z-index: 100;
+    flex-shrink: 0;
+    order: 2;
+  }
+
+  .tetris-panel-heading .tetris-panel-title {
+    order: 1;
+    flex: 1 1 auto;
+  }
+
+  .tetris-panel-heading .tetris-panel-badge {
+    order: 3;
+  }
+
+  .tetris-board-column-header {
+    display: none;
+  }
 }
 
-.tetris-options-menu-container {
-  position: absolute;
-  top: 0.25rem;
-  right: 0;
-  z-index: 100;
+/* MOBILE: Position menu in header */
+@media (max-width: 640px) {
+  .tetris-board-column-header {
+    position: relative;
+    width: 100%;
+    min-height: 40px;
+    margin-bottom: 0.5rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0 8px;
+  }
+
+  .tetris-board-column-header.is-prestart {
+    min-height: 36px;
+    gap: 10px;
+    padding-bottom: 8px;
+  }
+
+  .tetris-board-column-header.is-live {
+    min-height: 40px;
+    gap: 8px;
+    padding-bottom: 6px;
+  }
+
+  .tetris-board-column-header.is-paused {
+    min-height: 42px;
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+
+  .tetris-board-column-header.is-game-over {
+    min-height: 34px;
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+
+  .tetris-board-column-header .tetris-header {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .tetris-board-column-header .tetris-header-copy {
+    width: 100%;
+    align-items: center;
+    text-align: center;
+  }
+
+  .tetris-board-column-header .tetris-options-menu-container {
+    position: static;
+    top: auto;
+    right: auto;
+    justify-self: end;
+  }
+
+  .tetris-options-menu-container {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 100;
+    flex-shrink: 0;
+  }
+
+  .tetris-side-details .tetris-options-menu-container {
+    display: none;
+  }
 }
 
 /* Hide menu during game over */
+@media (min-width: 641px) {
+  .tetris-side-details[data-state="game-over"] .tetris-options-menu-container {
+    display: none;
+  }
+}
+
 .tetris-board-column.is-game-over .tetris-options-menu-container {
   display: none;
 }
@@ -40,6 +132,43 @@
   backdrop-filter: blur(12px);
 }
 
+.tetris-board-column-header .tetris-leaderboard-header-btn,
+.tetris-board-column-header .tetris-options-menu-button {
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.tetris-board-column-header[data-state="prestart"] .tetris-leaderboard-header-btn {
+  border-color: rgba(251, 191, 36, 0.34);
+  color: rgba(251, 191, 36, 0.96);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.16), 0 0 20px rgba(251, 191, 36, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.tetris-board-column-header[data-state="prestart"] .tetris-options-menu-button[data-state="prestart"] {
+  border-color: rgba(0, 217, 255, 0.3);
+  color: rgba(0, 217, 255, 0.94);
+}
+
+.tetris-board-column-header[data-state="live"] .tetris-leaderboard-header-btn,
+.tetris-board-column-header[data-state="live"] .tetris-options-menu-button[data-state="live"] {
+  border-color: rgba(0, 217, 255, 0.44);
+  color: rgba(0, 255, 255, 0.98);
+  box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.18), 0 0 28px rgba(0, 217, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.tetris-board-column-header[data-state="paused"] .tetris-leaderboard-header-btn,
+.tetris-board-column-header[data-state="paused"] .tetris-options-menu-button[data-state="paused"] {
+  border-color: rgba(251, 191, 36, 0.42);
+  color: #fde68a;
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.16), 0 0 24px rgba(251, 191, 36, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.tetris-board-column-header[data-state="game-over"] .tetris-leaderboard-header-btn,
+.tetris-board-column-header[data-state="game-over"] .tetris-options-menu-button[data-state="game-over"] {
+  border-color: rgba(255, 20, 147, 0.36);
+  color: #f9a8d4;
+  box-shadow: 0 0 0 1px rgba(255, 20, 147, 0.14), 0 0 24px rgba(255, 20, 147, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
 .tetris-options-menu-button:hover:not(.is-active) {
   background: linear-gradient(135deg, rgba(10, 15, 31, 0.95), rgba(20, 28, 52, 1));
   border-color: rgba(0, 217, 255, 0.6);
@@ -63,6 +192,18 @@
     0 0 40px rgba(0, 217, 255, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: none !important;
+}
+
+.tetris-board-column-header[data-state="paused"] .tetris-options-menu-button.is-active {
+  border-color: rgba(251, 191, 36, 0.72);
+  color: #fef3c7;
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.28), 0 0 34px rgba(251, 191, 36, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.tetris-board-column-header[data-state="game-over"] .tetris-options-menu-button.is-active {
+  border-color: rgba(255, 20, 147, 0.68);
+  color: #fbcfe8;
+  box-shadow: 0 0 0 1px rgba(255, 20, 147, 0.24), 0 0 34px rgba(255, 20, 147, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .tetris-options-menu {
@@ -135,20 +276,12 @@
 
 /* Mobile Adjustments */
 @media (max-width: 640px) {
-  .tetris-board-column-header {
-    height: 2.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .tetris-options-menu-container {
-    top: 0.2rem;
-    right: 0.25rem;
-  }
 
   .tetris-options-menu-button {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 40px;
+    height: 40px;
     font-size: 0.9rem;
+    border-radius: 12px;
   }
 
   .tetris-options-menu {
@@ -166,21 +299,17 @@
 .tetris-shell.is-fullscreen-focus .tetris-board-column-header {
   position: relative;
   width: 100%;
-  height: 3rem;
+  min-height: 3rem;
   margin-bottom: 0.5rem;
 }
 
 .tetris-shell.is-fullscreen-focus .tetris-options-menu-container {
-  position: absolute;
-  top: 0.25rem;
-  right: 0;
+  position: static;
   z-index: 100;
 }
 
 /* Ensure button is always on top */
 .tetris-options-menu-button,
 .tetris-options-menu {
-  position: relative;
-  z-index: 1001;
+   z-index: 1001;
 }
-

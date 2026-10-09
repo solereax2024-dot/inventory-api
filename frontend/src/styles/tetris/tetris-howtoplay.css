@@ -6,7 +6,7 @@
 .tetris-howtoplay-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 180;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -105,25 +105,11 @@
 }
 
 .tetris-howtoplay-close {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 255, 153, 0.1);
-  border: 1px solid rgba(0, 255, 153, 0.2);
-  border-radius: 10px;
-  color: rgba(0, 255, 153, 0.8);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
 }
 
-.tetris-howtoplay-close:hover {
-  background: rgba(0, 255, 153, 0.2);
-  border-color: rgba(0, 255, 153, 0.4);
-  color: rgba(0, 255, 153, 1);
-}
 
 /* ========================================
    CONTENT
