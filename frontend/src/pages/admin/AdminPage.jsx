@@ -188,6 +188,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
    const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
   const [gamingSettings, setGamingSettings] = useState({ gamingSectionVisible: false });
   const [isGamingSettingsSaving, setIsGamingSettingsSaving] = useState(false);
+  const [registeredPlayers, setRegisteredPlayers] = useState([]);
+  const [isRegisteredPlayersLoading, setIsRegisteredPlayersLoading] = useState(false);
+  const [bonusActionKey, setBonusActionKey] = useState("");
   const {
     isOpen: isStockGuideOpen,
     open: openStockGuideModal,
@@ -246,7 +249,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       () => [
         { key: "products", label: "Products" },
         { key: "reservations", label: "Reservations" },
-        { key: "gaming", label: "Gaming" },
+        { key: "gaming", label: "Giveaway Arcade" },
         ...(isSuperAdmin ? [{ key: "promotions", label: "Promotions" }, { key: "users", label: "Admin Users" }] : [])
       ],
       [isSuperAdmin]
@@ -302,19 +305,22 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const loadAdminData = async (authToken, role = adminRole) => {
     setIsAdminLoading(true);
+    setIsRegisteredPlayersLoading(true);
     try {
-      const [productData, orderData, brandData, productNameData, gamingSettingData] = await Promise.all([
+      const [productData, orderData, brandData, productNameData, gamingSettingData, playersData] = await Promise.all([
         apiRequest("/api/admin/products", "GET", undefined, authToken),
         apiRequest("/api/admin/orders", "GET", undefined, authToken),
         apiRequest("/api/admin/brands", "GET", undefined, authToken),
         apiRequest("/api/admin/product-names", "GET", undefined, authToken),
-        apiRequest("/api/admin/settings/gaming", "GET", undefined, authToken)
+        apiRequest("/api/admin/settings/gaming", "GET", undefined, authToken),
+        apiRequest("/api/admin/settings/gaming/players", "GET", undefined, authToken)
       ]);
       setProducts(productData);
       setOrders(orderData);
       setSavedBrands(brandData);
       setSavedProductNames(productNameData);
       setGamingSettings({ gamingSectionVisible: Boolean(gamingSettingData?.gamingSectionVisible ?? false) });
+      setRegisteredPlayers(Array.isArray(playersData) ? playersData : []);
       setEditProductId((prev) => prev || (productData[0]?.id?.toString() ?? ""));
       setStockForm((prev) => ({ ...prev, productId: prev.productId || (productData[0]?.id?.toString() ?? "") }));
       if (role === "SUPER_ADMIN") {
@@ -325,6 +331,47 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       }
     } finally {
       setIsAdminLoading(false);
+      setIsRegisteredPlayersLoading(false);
+    }
+  };
+
+  const refreshRegisteredPlayers = async () => {
+    if (!token) return;
+
+    setIsRegisteredPlayersLoading(true);
+    try {
+      const playersData = await apiRequest("/api/admin/settings/gaming/players", "GET", undefined, token);
+      setRegisteredPlayers(Array.isArray(playersData) ? playersData : []);
+    } catch (err) {
+      setMessage(err.message || "Unable to refresh giveaway players.");
+    } finally {
+      setIsRegisteredPlayersLoading(false);
+    }
+  };
+
+  const handleBonusProofAction = async (userId, bonusType, action) => {
+    if (!token) return;
+
+    const actionKey = `${userId}:${bonusType}:${action}`;
+    setBonusActionKey(actionKey);
+    setMessage("");
+
+    try {
+      await apiRequest(
+        `/api/admin/settings/gaming/bonuses/${userId}/${bonusType}/${action}`,
+        "PATCH",
+        undefined,
+        token
+      );
+      await refreshRegisteredPlayers();
+      setSuccessModal({
+        isOpen: true,
+        message: `${bonusType === "follow" ? "Follow" : "Review"} proof ${action === "revoke" ? "revoked" : "validated"} successfully.`,
+      });
+    } catch (err) {
+      setMessage(err.message || "Unable to update giveaway bonus status.");
+    } finally {
+      setBonusActionKey("");
     }
   };
 
@@ -1704,8 +1751,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setSuccessModal({
         isOpen: true,
         message: resolvedVisible
-          ? "Gaming section is now visible to customers."
-          : "Gaming section is now hidden from customers."
+          ? "Giveaway is now visible to customers."
+          : "Giveaway is now hidden from customers."
       });
     } catch (err) {
       setMessage(err.message);
@@ -1802,6 +1849,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
           gamingSectionVisible={gamingSettings.gamingSectionVisible !== false}
           isSaving={isGamingSettingsSaving}
           onToggleVisibility={toggleGamingSectionVisibility}
+          registeredPlayers={registeredPlayers}
+          isLoadingPlayers={isRegisteredPlayersLoading || isAdminLoading}
+          onBonusAction={handleBonusProofAction}
+          bonusActionKey={bonusActionKey}
         />
       ) : null}
 

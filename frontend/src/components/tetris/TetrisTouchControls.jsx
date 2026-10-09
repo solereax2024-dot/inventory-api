@@ -1,4 +1,5 @@
 import {
+  Gift,
   Play,
   RotateCcw,
 } from "lucide-react";
@@ -11,9 +12,14 @@ export default function TetrisTouchControls({
   onStartGame,
   onResetGame,
   canResetGame,
+  bonusStatus,
+  bonusLoading,
+  onOpenBonusModal,
 }) {
   const isLiveGame = gameStarted && !gameOver;
   const startButtonLabel = gameOver ? "Play Again" : "Start Game";
+  const totalBonusPoints = bonusStatus?.totalBonusPoints || 0;
+  const formattedBonusPoints = new Intl.NumberFormat("en-US").format(totalBonusPoints);
 
   // Don't show controls during active gameplay
   if (isLiveGame) return null;
@@ -29,6 +35,21 @@ export default function TetrisTouchControls({
             <span className="tetris-live-summary-label">Signed in as</span>
             <strong>{playerName || "Player"}</strong>
           </div>
+
+          <button
+            type="button"
+            className="tetris-bonus-trigger is-mobile"
+            onClick={onOpenBonusModal}
+            aria-label={`Open bonus points details. Current bonus points: +${formattedBonusPoints}`}
+          >
+            <span className="tetris-bonus-trigger-icon" aria-hidden="true">
+              <Gift size={18} />
+            </span>
+            <span className="tetris-bonus-trigger-copy">
+              <span className="tetris-bonus-trigger-label">Bonus Points</span>
+              <strong>{bonusLoading ? "Checking..." : `+${formattedBonusPoints}`}</strong>
+            </span>
+          </button>
 
           <div className="tetris-start-secondary-row">
             <button

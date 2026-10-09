@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HelpCircle, Minimize2, MoreVertical, RotateCcw, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { apiRequest } from "../../utils/api";
+import { apiRequest, uploadImage } from "../../utils/api";
 import { useTetrisAuth } from "../../hooks";
 import { triggerHapticFeedback } from "../../utils/hapticFeedback";
 import { getHapticIntensityMultiplier } from "../../utils/gestureCustomization";
@@ -17,6 +17,7 @@ import TetrisHowToPlayModal from "../../components/tetris/TetrisHowToPlayModal";
 import TetrisLeaderboardModal from "../../components/tetris/TetrisLeaderboardModal";
 import TetrisSideDetailsPanel from "../../components/tetris/TetrisSideDetailsPanel";
 import TetrisOptionsMenu from "../../components/tetris/TetrisOptionsMenu";
+import TetrisBonusModal from "../../components/tetris/TetrisBonusModal";
 import { TetrisLeaderboardList } from "../../components/tetris/TetrisLeaderboardPanel";
 import {
   BEST_RUN_PREFERENCE_KEY,
@@ -76,6 +77,25 @@ import {
 } from "../../utils/preferenceDefaults";
 import "../../styles/tetris/index.css";
 
+const EMPTY_BONUS_STATUS = {
+  followProofUploaded: false,
+  followProofValidated: false,
+  followProofRevoked: false,
+  reviewProofUploaded: false,
+  reviewProofValidated: false,
+  reviewProofRevoked: false,
+  followBonusPoints: 0,
+  reviewBonusPoints: 0,
+  totalBonusPoints: 0,
+};
+
+function normalizeBonusStatus(status) {
+  return {
+    ...EMPTY_BONUS_STATUS,
+    ...(status || {}),
+  };
+}
+
 function getViewportMetrics() {
   if (typeof window === "undefined") {
     return { width: 1440, height: 900 };
@@ -89,7 +109,7 @@ function getViewportMetrics() {
   };
 }
 
-function TetrisGamePageContent({ authenticatedUser }) {
+function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const navigate = useNavigate();
   const { logout } = useTetrisAuth();
   const shellRef = useRef(null);
@@ -170,6 +190,12 @@ function TetrisGamePageContent({ authenticatedUser }) {
   const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
   const [playerStatsError, setPlayerStatsError] = useState("");
   const [viewportSize, setViewportSize] = useState(getViewportMetrics);
+  const [bonusStatus, setBonusStatus] = useState(EMPTY_BONUS_STATUS);
+  const [bonusLoading, setBonusLoading] = useState(false);
+  const [bonusUploadingType, setBonusUploadingType] = useState(null);
+  const [bonusError, setBonusError] = useState("");
+  const [bonusFeedback, setBonusFeedback] = useState("");
+  const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
 
   const authenticatedPlayerName = useMemo(() => {
     return authenticatedUser?.username?.trim()
@@ -184,6 +210,52 @@ function TetrisGamePageContent({ authenticatedUser }) {
        setMessage(`Welcome back, ${preferredName}!`);
      }
    }, [authenticatedUser]);
+
+    useEffect(() => {
+      if (!authenticatedToken) {
+        setBonusStatus(EMPTY_BONUS_STATUS);
+        setBonusLoading(false);
+        setBonusUploadingType(null);
+        setBonusError("");
+        setBonusFeedback("");
+        return undefined;
+      }
+
+      let isCancelled = false;
+
+      const fetchBonusStatus = async () => {
+        setBonusLoading(true);
+        setBonusError("");
+
+        try {
+          const data = await apiRequest("/api/giveaway/bonus/me", "GET", undefined, authenticatedToken);
+          if (!isCancelled) {
+            setBonusStatus(normalizeBonusStatus(data));
+          }
+        } catch (error) {
+          if (!isCancelled) {
+            setBonusStatus(EMPTY_BONUS_STATUS);
+            setBonusError("Unable to load your active giveaway bonuses right now.");
+          }
+        } finally {
+          if (!isCancelled) {
+            setBonusLoading(false);
+          }
+        }
+      };
+
+      void fetchBonusStatus();
+
+      return () => {
+        isCancelled = true;
+      };
+    }, [authenticatedToken]);
+
+      useEffect(() => {
+        if (gameStarted && isBonusModalOpen) {
+          setIsBonusModalOpen(false);
+        }
+      }, [gameStarted, isBonusModalOpen]);
   const isMobileViewport = viewportSize.width < MOBILE_BREAKPOINT;
   const isShortMobileViewport = isMobileViewport && viewportSize.height <= 760;
   const isVeryShortMobileViewport = isMobileViewport && viewportSize.height <= 680;
@@ -742,7 +814,7 @@ function TetrisGamePageContent({ authenticatedUser }) {
         score: finalScore,
         level: finalLevel,
         linesCleared: finalLinesCleared,
-      });
+      }, authenticatedToken);
 
       const refreshedLeaderboard = await apiRequest("/api/public/games/tetris/leaderboard/all", "GET");
       if (Array.isArray(refreshedLeaderboard)) {
@@ -754,7 +826,45 @@ function TetrisGamePageContent({ authenticatedUser }) {
     } finally {
       setLoading(false);
     }
-  }, [authenticatedPlayerName]);
+  }, [authenticatedPlayerName, authenticatedToken]);
+
+  const handleBonusProofSelected = useCallback(async (bonusType, file) => {
+    if (!authenticatedToken) {
+      setBonusError("Your session has expired. Please sign in again before uploading bonus proof.");
+      setBonusFeedback("");
+      return;
+    }
+
+    if (!file?.type?.startsWith("image/")) {
+      setBonusError("Please upload an image file for your bonus proof.");
+      setBonusFeedback("");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setBonusError("Bonus proof images must be 5MB or smaller.");
+      setBonusFeedback("");
+      return;
+    }
+
+    const endpoint = bonusType === "review"
+      ? "/api/giveaway/bonus/me/review-proof"
+      : "/api/giveaway/bonus/me/follow-proof";
+
+    setBonusUploadingType(bonusType);
+    setBonusError("");
+    setBonusFeedback("");
+
+    try {
+      const response = await uploadImage(endpoint, file, authenticatedToken);
+      setBonusStatus(normalizeBonusStatus(response?.bonusStatus));
+      setBonusFeedback(response?.message || "Bonus proof uploaded successfully.");
+    } catch (error) {
+      setBonusError(error?.message || "Unable to upload your bonus proof right now.");
+    } finally {
+      setBonusUploadingType(null);
+    }
+  }, [authenticatedToken]);
 
    const startGame = useCallback(() => {
       const trimmedPlayerName = authenticatedPlayerName.trim();
@@ -1484,6 +1594,9 @@ function TetrisGamePageContent({ authenticatedUser }) {
                    isPaused={isPaused}
                    togglePauseGame={togglePauseGame}
                    canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
+                   bonusStatus={bonusStatus}
+                   bonusLoading={bonusLoading}
+                   onOpenBonusModal={() => setIsBonusModalOpen(true)}
                  />
                )}
            </section>
@@ -1517,6 +1630,9 @@ function TetrisGamePageContent({ authenticatedUser }) {
                onOpenHowToPlay={openHowToPlay}
                onReset={resetGame}
                onSignOut={handleSignOut}
+               bonusStatus={bonusStatus}
+               bonusLoading={bonusLoading}
+               onOpenBonusModal={() => setIsBonusModalOpen(true)}
              />
         </div>
 
@@ -1542,6 +1658,17 @@ function TetrisGamePageContent({ authenticatedUser }) {
             leaderboardError={leaderboardError}
             onClose={closeLeaderboard}
             leaderboardListContent={leaderboardListContent}
+          />
+
+          <TetrisBonusModal
+            isVisible={isBonusModalOpen}
+            onClose={() => setIsBonusModalOpen(false)}
+            bonusStatus={bonusStatus}
+            bonusLoading={bonusLoading}
+            bonusUploadingType={bonusUploadingType}
+            bonusError={bonusError}
+            bonusFeedback={bonusFeedback}
+            onBonusProofSelected={handleBonusProofSelected}
           />
 
          <TetrisPlayerDetailsModal

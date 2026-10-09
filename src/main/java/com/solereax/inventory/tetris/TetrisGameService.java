@@ -18,13 +18,20 @@ public class TetrisGameService {
      */
     @Transactional
     public TetrisLeaderboard recordScore(String playerName, Integer score, Integer level, Integer linesCleared) {
+        return recordScore(playerName, score, level, linesCleared, 0);
+    }
+
+    @Transactional
+    public TetrisLeaderboard recordScore(String playerName, Integer score, Integer level, Integer linesCleared, Integer bonusPoints) {
         if (playerName == null || playerName.trim().isEmpty()) {
             throw new IllegalArgumentException("Player name cannot be empty");
         }
 
         playerName = playerName.trim();
-        
-        TetrisLeaderboard leaderboard = leaderboardRepository.findByPlayerName(playerName)
+        int safeBonusPoints = bonusPoints != null ? Math.max(bonusPoints, 0) : 0;
+        int finalScore = Math.max((score != null ? score : 0) + safeBonusPoints, 0);
+
+        TetrisLeaderboard leaderboard = leaderboardRepository.findByPlayerNameIgnoreCase(playerName)
                 .orElse(TetrisLeaderboard.builder()
                         .playerName(playerName)
                         .highestScore(0)
@@ -34,8 +41,8 @@ public class TetrisGameService {
                         .build());
 
         // Update stats
-        if (score > leaderboard.getHighestScore()) {
-            leaderboard.setHighestScore(score);
+        if (finalScore > leaderboard.getHighestScore()) {
+            leaderboard.setHighestScore(finalScore);
         }
         
         if (level > leaderboard.getHighestLevel()) {
@@ -60,7 +67,7 @@ public class TetrisGameService {
      * Get player stats
      */
     public TetrisLeaderboard getPlayerStats(String playerName) {
-        return leaderboardRepository.findByPlayerName(playerName)
+        return leaderboardRepository.findByPlayerNameIgnoreCase(playerName)
                 .orElseThrow(() -> new RuntimeException("Player not found: " + playerName));
     }
 

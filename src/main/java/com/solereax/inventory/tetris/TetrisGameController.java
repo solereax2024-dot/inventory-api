@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -15,6 +16,7 @@ public class TetrisGameController {
 
     private final TetrisGameService gameService;
     private final TetrisLeaderboardRepository leaderboardRepository;
+    private final GiveawayBonusService giveawayBonusService;
 
     /**
      * Submit a Tetris game score
@@ -22,16 +24,20 @@ public class TetrisGameController {
      * Body: { "playerName": "John", "score": 1500, "level": 5, "linesCleared": 12 }
      */
     @PostMapping("/scores")
-    public ResponseEntity<TetrisLeaderboard> submitScore(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<TetrisLeaderboard> submitScore(@RequestBody Map<String, Object> request, Principal principal) {
         try {
-            String playerName = (String) request.get("playerName");
+            String requestPlayerName = (String) request.get("playerName");
+            String playerName = principal != null && principal.getName() != null && !principal.getName().isBlank()
+                    ? principal.getName()
+                    : requestPlayerName;
             Integer score = ((Number) request.get("score")).intValue();
             Integer level = ((Number) request.get("level")).intValue();
             Integer linesCleared = request.containsKey("linesCleared") 
                 ? ((Number) request.get("linesCleared")).intValue() 
                 : 0;
+            Integer bonusPoints = principal != null ? giveawayBonusService.getActiveBonusPoints(principal.getName()) : 0;
 
-            TetrisLeaderboard result = gameService.recordScore(playerName, score, level, linesCleared);
+            TetrisLeaderboard result = gameService.recordScore(playerName, score, level, linesCleared, bonusPoints);
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();

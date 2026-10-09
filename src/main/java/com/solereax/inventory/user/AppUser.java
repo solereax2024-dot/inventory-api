@@ -36,6 +36,30 @@ public class AppUser {
     @Column(name = "profile_image_filename", nullable = true, length = 255)
     private String profileImageFilename;
 
+    @Column(name = "follow_proof_image_path", nullable = true, length = 500)
+    private String followProofImagePath;
+
+    @Column(name = "follow_proof_image_filename", nullable = true, length = 255)
+    private String followProofImageFilename;
+
+    @Column(name = "follow_proof_validated", nullable = false)
+    private boolean followProofValidated = false;
+
+    @Column(name = "follow_proof_revoked", nullable = false)
+    private boolean followProofRevoked = false;
+
+    @Column(name = "review_proof_image_path", nullable = true, length = 500)
+    private String reviewProofImagePath;
+
+    @Column(name = "review_proof_image_filename", nullable = true, length = 255)
+    private String reviewProofImageFilename;
+
+    @Column(name = "review_proof_validated", nullable = false)
+    private boolean reviewProofValidated = false;
+
+    @Column(name = "review_proof_revoked", nullable = false)
+    private boolean reviewProofRevoked = false;
+
     @Column(name = "facebook_winner_contact_consent", nullable = false)
     private boolean facebookWinnerContactConsent = false;
 

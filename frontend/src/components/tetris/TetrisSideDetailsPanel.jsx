@@ -1,5 +1,5 @@
-import { Volume2, VolumeX, Vibrate } from "lucide-react";
 import TetrisOptionsMenu from "./TetrisOptionsMenu";
+import { Gift } from "lucide-react";
 
 export default function TetrisSideDetailsPanel({
   gameStarted,
@@ -7,42 +7,28 @@ export default function TetrisSideDetailsPanel({
   loading,
   message,
   playerName,
-  score,
-  linesCleared,
   onStartGame,
   isPaused,
   comboCount,
   backToBackActive,
-  soundEnabled,
   isFullscreen,
   isMobileViewport,
-  namedPlayerBestEntry,
-  globalBestEntry,
   togglePauseGame,
-  toggleSound,
   toggleFullscreen,
-  renderCompactStatsBar,
-  hapticEnabled,
-  onHapticToggle,
   onOpenSettings,
   onOpenHowToPlay,
   onReset,
   onSignOut,
+  bonusStatus,
+  bonusLoading,
+  onOpenBonusModal,
 }) {
   const startState = gameStarted ? (gameOver ? "game-over" : "live") : "prestart";
-  const playerBestScore = namedPlayerBestEntry?.highestScore || 0;
-  const globalBestScore = globalBestEntry?.highestScore || 0;
   const sessionStatusLabel = gameStarted
     ? (gameOver ? "Finished" : isPaused ? "Paused" : "Running")
     : "Waiting";
-  const momentumLabel = comboCount > 1
-    ? `Combo x${comboCount}`
-    : backToBackActive
-      ? "Back-to-Back"
-      : gameStarted
-        ? "Building"
-        : "Ready";
-
+  const totalBonusPoints = bonusStatus?.totalBonusPoints || 0;
+  const formattedBonusPoints = new Intl.NumberFormat("en-US").format(totalBonusPoints);
   return (
     <aside className="tetris-layout-column tetris-side-details" aria-label="Game details" data-state={startState}>
 
@@ -93,6 +79,20 @@ export default function TetrisSideDetailsPanel({
                 <span className="tetris-live-summary-label">Signed in as</span>
                 <strong>{playerName || "Player"}</strong>
               </div>
+              <button
+                type="button"
+                className="tetris-bonus-trigger"
+                onClick={onOpenBonusModal}
+                aria-label={`Open bonus points details. Current bonus points: +${formattedBonusPoints}`}
+              >
+                <span className="tetris-bonus-trigger-icon" aria-hidden="true">
+                  <Gift size={18} />
+                </span>
+                <span className="tetris-bonus-trigger-copy">
+                  <span className="tetris-bonus-trigger-label">Bonus Points</span>
+                  <strong>{bonusLoading ? "Checking..." : `+${formattedBonusPoints}`}</strong>
+                </span>
+              </button>
               <div className="tetris-action-row">
                 <button
                   type="button"
@@ -107,6 +107,7 @@ export default function TetrisSideDetailsPanel({
           )}
         </div>
       </section>
+
     </aside>
   );
 }

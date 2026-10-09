@@ -13,6 +13,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
     profileImagePreview: null,
   });
   const [mode, setMode] = useState("register");
+  const [hasConfirmedFollow, setHasConfirmedFollow] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,6 +26,15 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
       }
     };
   }, [formData.profileImagePreview]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    setHasConfirmedFollow(false);
+    setMode("register");
+    setError("");
+    setSuccess("");
+  }, [isVisible]);
 
   const isLoginMode = mode === "login";
 
@@ -103,7 +113,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         return false;
       }
       if (!formData.profileImage) {
-        setError("Profile image is required for authenticity");
+        setError("Facebook profile image is required");
         return false;
       }
       if (!formData.facebookWinnerContactConsent) {
@@ -202,37 +212,89 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         )}
 
         <div className="tetris-registration-header">
-          <h2>{isLoginMode ? "Welcome Back" : "Register to Play"}</h2>
+          <h2>
+            {!hasConfirmedFollow
+              ? "Join the Giveaway"
+              : (isLoginMode ? "Welcome Back" : "Register to Play")}
+          </h2>
           <p className="tetris-registration-subtitle">
-            {isLoginMode
-              ? "Use your username and password to continue playing."
-              : "Create your account first, then you can start playing right away."}
+            {!hasConfirmedFollow
+              ? "Play the Giveaway challenge for a chance to win. Before you continue, please confirm that you follow our page and can upload proof."
+              : (isLoginMode
+                ? "Use your username and password to continue playing."
+                : "Create your account first, then upload your Facebook profile screenshot for authenticity." )}
           </p>
 
-          <div className="tetris-auth-mode-toggle" role="tablist" aria-label="Authentication mode">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!isLoginMode}
-              className={`tetris-auth-mode-btn ${!isLoginMode ? "is-active" : ""}`}
-              onClick={() => switchMode("register")}
-              disabled={loading}
-            >
-              Register
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={isLoginMode}
-              className={`tetris-auth-mode-btn ${isLoginMode ? "is-active" : ""}`}
-              onClick={() => switchMode("login")}
-              disabled={loading}
-            >
-              Login
-            </button>
-          </div>
+          {hasConfirmedFollow ? (
+            <div className="tetris-auth-mode-toggle" role="tablist" aria-label="Authentication mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!isLoginMode}
+                className={`tetris-auth-mode-btn ${!isLoginMode ? "is-active" : ""}`}
+                onClick={() => switchMode("register")}
+                disabled={loading}
+              >
+                Register
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isLoginMode}
+                className={`tetris-auth-mode-btn ${isLoginMode ? "is-active" : ""}`}
+                onClick={() => switchMode("login")}
+                disabled={loading}
+              >
+                Login
+              </button>
+            </div>
+          ) : null}
         </div>
 
+        {!hasConfirmedFollow ? (
+          <div className="tetris-registration-gate">
+            <div className="tetris-registration-gate-card">
+              <p className="tetris-registration-gate-label">How to Join</p>
+              <ul className="tetris-registration-gate-list">
+                <li>
+                  <Check size={16} />
+                  <span>Play the Giveaway challenge for a chance to win our featured prize.</span>
+                </li>
+                <li>
+                  <Check size={16} />
+                  <span>You must be following our official page.</span>
+                </li>
+                <li>
+                  <Check size={16} />
+                  <span>You will upload a screenshot showing that you follow us.</span>
+                </li>
+                <li>
+                  <Check size={16} />
+                  <span>If you win, we may contact you using the follower details shown in your submitted screenshot.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="tetris-registration-gate-actions">
+              {onClose ? (
+                <button
+                  type="button"
+                  className="tetris-registration-secondary-btn"
+                  onClick={onClose}
+                >
+                  Not Yet
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="tetris-registration-submit-btn"
+                onClick={() => setHasConfirmedFollow(true)}
+              >
+                I Follow, Continue
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="tetris-registration-form">
           {!isLoginMode && (
             <>
@@ -256,14 +318,14 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
               {/* Profile Image Upload */}
               <div className="tetris-form-group">
                 <label htmlFor="profileImage" className="tetris-form-label">
-                  Profile Picture * <span className="tetris-form-hint">(Facebook screenshot for authenticity)</span>
+                  Facebook Profile * <span className="tetris-form-hint">(Upload a Facebook profile screenshot for authenticity)</span>
                 </label>
                 <div className="tetris-image-upload-container">
                   {formData.profileImagePreview ? (
                     <div className="tetris-image-preview-wrapper">
                       <img
                         src={formData.profileImagePreview}
-                        alt="Profile preview"
+                          alt="Facebook profile preview"
                         className="tetris-image-preview"
                       />
                       <button
@@ -288,7 +350,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
                     <label className="tetris-image-upload-label">
                       <div className="tetris-image-upload-content">
                         <Upload size={32} />
-                        <span>Click to upload image</span>
+                        <span>Upload Facebook profile screenshot</span>
                         <small>PNG, JPG up to 5MB</small>
                       </div>
                       <input
@@ -391,6 +453,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
             )}
           </button>
         </form>
+        )}
       </div>
     </div>
   );

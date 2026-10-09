@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/inventory
+    url: jdbc:postgresql://localhost:5432/inventory?currentSchema=inventory_test
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
@@ -9,10 +9,16 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: create-drop
+    properties:
+      hibernate:
+        default_schema: inventory_test
 
   flyway:
     enabled: true
     validate-on-migrate: false
+    default-schema: inventory_test
+    schemas: inventory_test
+    create-schemas: true
 
 app:
   jwt:

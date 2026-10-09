@@ -60,6 +60,7 @@ export default function SiteHeader({
     { label: "Kids", to: "/collections?q=kids", isActive: isCatalogPath && activeKeyword === "kids" },
     { label: "Sale", to: "/collections?sale=true", isActive: isCatalogPath && activeSale === "true" },
     { label: "Featured", to: "/featured", isActive: isFeaturedPath || (isCatalogPath && activeStock === "IN_STOCK") },
+    ...(isGamingSectionVisible ? [{ label: "Giveaway", to: "/tetris-game", isActive: location.pathname.startsWith("/tetris-game") }] : []),
   ];
   const quickBrandOptions = (catalogNav.brandOptions || []).filter((brand) => brand && brand !== "ALL").slice(0, 6);
 

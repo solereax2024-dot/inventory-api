@@ -1,9 +1,11 @@
 import { cloneElement, isValidElement } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTetrisAuth } from "../../hooks";
 import TetrisRegistrationModal from "./TetrisRegistrationModal";
 
 export default function TetrisGameWrapper({ children }) {
-  const { isAuthenticated, isLoading, login, user } = useTetrisAuth();
+  const { isAuthenticated, isLoading, login, user, token } = useTetrisAuth();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -25,13 +27,16 @@ export default function TetrisGameWrapper({ children }) {
       <TetrisRegistrationModal
         isVisible={true}
         onAuthenticated={login}
-        onClose={null}
+        onClose={() => navigate("/collections")}
       />
     );
   }
 
   if (isValidElement(children)) {
-    return cloneElement(children, { authenticatedUser: user });
+    return cloneElement(children, {
+      authenticatedUser: user,
+      authenticatedToken: token,
+    });
   }
 
   return children;

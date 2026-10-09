@@ -9,6 +9,7 @@ import java.util.Optional;
 @Repository
 public interface TetrisLeaderboardRepository extends JpaRepository<TetrisLeaderboard, Long> {
     Optional<TetrisLeaderboard> findByPlayerName(String playerName);
+    Optional<TetrisLeaderboard> findByPlayerNameIgnoreCase(String playerName);
     List<TetrisLeaderboard> findAllByOrderByHighestScoreDesc();
     List<TetrisLeaderboard> findTop10ByOrderByHighestScoreDesc();
 }

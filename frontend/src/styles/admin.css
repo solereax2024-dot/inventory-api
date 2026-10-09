@@ -40,6 +40,13 @@
   overflow: hidden;
 }
 
+.admin-subsection {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+
 .products-table-wrap {
   margin-top: 10px;
   width: 100%;
@@ -81,6 +88,43 @@
    font-size: 13px;
    border-collapse: separate;
    border-spacing: 0;
+}
+
+.giveaway-players-table {
+   min-width: 1480px;
+}
+
+.giveaway-players-table th:nth-child(1),
+.giveaway-players-table td:nth-child(1) { width: 8%; min-width: 90px; }
+.giveaway-players-table th:nth-child(2),
+.giveaway-players-table td:nth-child(2) { width: 18%; min-width: 220px; }
+.giveaway-players-table th:nth-child(3),
+.giveaway-players-table td:nth-child(3) { width: 16%; min-width: 180px; }
+.giveaway-players-table th:nth-child(4),
+.giveaway-players-table td:nth-child(4) { width: 10%; min-width: 130px; }
+.giveaway-players-table th:nth-child(5),
+.giveaway-players-table td:nth-child(5) { width: 7%; min-width: 90px; }
+.giveaway-players-table th:nth-child(6),
+.giveaway-players-table td:nth-child(6) { width: 8%; min-width: 100px; }
+.giveaway-players-table th:nth-child(7),
+.giveaway-players-table td:nth-child(7) { width: 8%; min-width: 90px; }
+.giveaway-players-table th:nth-child(8),
+.giveaway-players-table td:nth-child(8) { width: 13%; min-width: 170px; }
+.giveaway-players-table th:nth-child(9),
+.giveaway-players-table td:nth-child(9) { width: 8%; min-width: 130px; }
+.giveaway-players-table th:nth-child(10),
+.giveaway-players-table td:nth-child(10) { width: 8%; min-width: 120px; }
+.giveaway-players-table th:nth-child(11),
+.giveaway-players-table td:nth-child(11) { width: 14%; min-width: 170px; }
+
+@media (max-width: 980px) {
+  .giveaway-admin-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .giveaway-admin-summary-card {
+    padding: 12px;
+  }
 }
 
 .admin-table th,
@@ -242,7 +286,6 @@
 }
 
 .reservation-inline-icon-btn {
-  margin-top: 0;
   margin: 0;
   width: 32px;
   min-width: 32px;

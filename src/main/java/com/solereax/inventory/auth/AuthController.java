@@ -33,7 +33,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        AppUser user = appUserRepository.findByUsername(request.username().trim())
+        AppUser user = appUserRepository.findByUsernameIgnoreCase(request.username().trim())
                 .orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
@@ -74,7 +74,7 @@ public class AuthController {
 
             if (profileImage == null || profileImage.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new RegistrationResponse("Profile image is required", null, null, null, null));
+                        .body(new RegistrationResponse("Facebook profile image is required", null, null, null, null));
             }
 
             if (!facebookWinnerContactConsent) {
@@ -85,11 +85,11 @@ public class AuthController {
             String contentType = profileImage.getContentType();
             if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new RegistrationResponse("Profile image must be an image file", null, null, null, null));
+                        .body(new RegistrationResponse("Facebook profile image must be an image file", null, null, null, null));
             }
 
             // Check if username already exists
-            if (appUserRepository.findByUsername(username.trim()).isPresent()) {
+            if (appUserRepository.existsByUsernameIgnoreCase(username.trim())) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body(new RegistrationResponse("Username already exists", null, null, null, null));
             }
@@ -111,7 +111,7 @@ public class AuthController {
                     newUser.setProfileImageFilename(profileImage.getOriginalFilename());
                 } catch (IOException e) {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(new RegistrationResponse("Failed to upload profile image: " + e.getMessage(), null, null, null, null));
+                            .body(new RegistrationResponse("Failed to upload Facebook profile image: " + e.getMessage(), null, null, null, null));
                 }
             }
 
