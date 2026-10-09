@@ -204,9 +204,16 @@ body {
 }
 
 .app-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+   min-height: 100vh;
+   display: flex;
+   flex-direction: column;
+   background: var(--bg-base);
+}
+
+/* Tetris Game Page - dark background */
+.app-shell > .tetris-game-container {
+   flex: 1;
+   background: linear-gradient(180deg, var(--tetris-bg-dark) 0%, var(--tetris-bg-darker) 48%, var(--tetris-bg-darkest) 100%) !important;
 }
 
 .container {

@@ -12,9 +12,8 @@
     --tetris-page-height: calc(100dvh - var(--tetris-site-header-height) - var(--tetris-site-footer-height));
     background: linear-gradient(180deg, var(--tetris-bg-dark) 0%, var(--tetris-bg-darker) 48%, var(--tetris-bg-darkest) 100%);
     width: 100%;
-    min-height: var(--tetris-page-height);
-    height: var(--tetris-page-height);
-    max-height: var(--tetris-page-height);
+    min-height: 100%;
+    flex: 1 1 auto;
     padding: var(--space-md) clamp(8px, 0.9vw, var(--space-md)) var(--space-lg);
     box-sizing: border-box;
     display: flex;
@@ -33,6 +32,9 @@
      .tetris-game-container {
          width: 100vw;
          max-width: 100vw;
+         min-height: 100%;
+         height: auto;
+         max-height: none;
          overflow-x: hidden;
          overflow-y: hidden;
          padding: calc(var(--tetris-safe-top, 0px) + 1px) calc(var(--tetris-safe-right, 0px) + 2px) calc(var(--tetris-safe-bottom, 0px) + 1px) calc(var(--tetris-safe-left, 0px) + 2px);
