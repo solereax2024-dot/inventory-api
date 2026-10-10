@@ -72,10 +72,10 @@ public class TetrisGameService {
     }
 
     /**
-     * Get full leaderboard
+     * Get full leaderboard (top 10 players)
      */
     public List<TetrisLeaderboard> getFullLeaderboard() {
-        return leaderboardRepository.findAllByOrderByHighestScoreDesc();
+        return leaderboardRepository.findTop10ByOrderByHighestScoreDesc();
     }
 
     /**

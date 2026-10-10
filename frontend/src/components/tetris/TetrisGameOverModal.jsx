@@ -31,8 +31,9 @@ export default function TetrisGameOverModal({
 }) {
   if (!isVisible) return null;
 
-  // Only show rank if it's a valid positive number
-  const hasValidRank = typeof playerRank === 'number' && playerRank > 0 && isFinite(playerRank);
+  // Only show rank if it's a valid positive number and in top 10
+  const hasValidRank = typeof playerRank === 'number' && playerRank > 0 && playerRank <= 10 && isFinite(playerRank);
+  const isNotInTop10 = typeof playerRank === 'number' && playerRank > 10 && isFinite(playerRank);
   const isNewBest = finalScore >= bestScore && finalScore > 0;
 
   return (
@@ -56,6 +57,7 @@ export default function TetrisGameOverModal({
             <strong>{finalScore.toLocaleString()}</strong>
           </div>
           {isNewBest && <span className="tetris-game-over-highlight">New best run</span>}
+          {isNotInTop10 && <span className="tetris-game-over-highlight tetris-game-over-not-top10">Sorry, you are not in the top 10 yet! Keep playing to climb the leaderboard.</span>}
           <div className="tetris-game-over-stats-compact">
             <div className="tetris-game-over-stat-compact">
               <span>Lines</span>

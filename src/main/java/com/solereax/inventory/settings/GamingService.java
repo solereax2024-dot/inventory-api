@@ -89,6 +89,7 @@ public class GamingService {
                         .thenComparing((RegisteredPlayerResponse player) -> player.totalLinesCleared() == null ? 0 : player.totalLinesCleared(), Comparator.reverseOrder())
                         .thenComparing((RegisteredPlayerResponse player) -> player.createdAt(), Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing((RegisteredPlayerResponse player) -> player.username() == null ? "" : player.username(), String.CASE_INSENSITIVE_ORDER))
+                .limit(10) // Limit to top 10 players
                 .toList();
     }
 
