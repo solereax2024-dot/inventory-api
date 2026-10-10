@@ -240,12 +240,12 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         <div className="tetris-registration-header">
           <h2>
             {!hasConfirmedFollow
-              ? "Join the Giveaway"
+              ? (giveawaySettings.title || "Join the Giveaway")
               : (isLoginMode ? "Welcome Back" : "Register to Play")}
           </h2>
           <p className="tetris-registration-subtitle">
             {!hasConfirmedFollow
-              ? "Play the Giveaway challenge for a chance to win. Before you continue, please confirm that you follow our page and can upload proof."
+              ? (giveawaySettings.intro || "Play the Giveaway challenge for a chance to win. Before you continue, please confirm that you follow our page and can upload proof.")
               : (isLoginMode
                 ? "Use your username and password to continue playing."
                 : "Create your account first, then upload your Facebook profile screenshot for authenticity." )}

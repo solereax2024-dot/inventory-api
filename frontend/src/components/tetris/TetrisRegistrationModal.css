@@ -221,7 +221,7 @@
 }
 
 .tetris-registration-prize-card .tetris-bonus-prize-image {
-  height: 140px;
+  height: 180px;
 }
 
 .tetris-registration-gate-label {
@@ -704,7 +704,7 @@
   }
 
   .tetris-registration-prize-card .tetris-bonus-prize-image {
-    height: 126px;
+    height: 160px;
   }
 
   .tetris-registration-gate-list li {
@@ -800,7 +800,7 @@
   }
 
   .tetris-registration-prize-card .tetris-bonus-prize-image {
-    height: 108px;
+    height: 140px;
   }
 
   .tetris-form-input {

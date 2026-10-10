@@ -843,7 +843,16 @@
 .tetris-bonus-prize-card {
     grid-template-columns: minmax(0, 1fr) minmax(160px, 240px);
     align-items: center;
-    gap: 14px;
+    gap: 16px;
+    border: 2px solid rgba(0, 217, 255, 0.32);
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.06), rgba(124, 58, 237, 0.06));
+    box-shadow: 0 0 40px rgba(0, 217, 255, 0.18), 0 0 80px rgba(124, 58, 237, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.tetris-bonus-prize-card:hover {
+    border-color: rgba(0, 217, 255, 0.52);
+    box-shadow: 0 0 56px rgba(0, 217, 255, 0.28), 0 0 112px rgba(124, 58, 237, 0.14), 0 12px 36px rgba(0, 217, 255, 0.16);
 }
 
 .tetris-bonus-prize-copy {
@@ -871,13 +880,20 @@
 
 .tetris-bonus-prize-image {
     width: 100%;
-    height: 180px;
-    object-fit: contain;
+    height: 320px;
+    object-fit: cover;
     object-position: center;
-    border-radius: 14px;
-    border: 1px solid rgba(148, 163, 184, 0.16);
-    background: rgba(15, 23, 42, 0.5);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    border: 2px solid rgba(0, 217, 255, 0.48);
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.08), rgba(124, 58, 237, 0.08));
+    box-shadow: 0 0 32px rgba(0, 217, 255, 0.32), 0 0 64px rgba(124, 58, 237, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.tetris-bonus-prize-image:hover {
+    transform: scale(1.02);
+    border-color: rgba(0, 217, 255, 0.72);
+    box-shadow: 0 0 48px rgba(0, 217, 255, 0.48), 0 0 96px rgba(124, 58, 237, 0.28), 0 16px 48px rgba(0, 217, 255, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .tetris-bonus-join-card h3 {
@@ -1056,7 +1072,7 @@
     }
 
     .tetris-bonus-prize-image {
-        height: 190px;
+        height: 220px;
     }
 
     .tetris-bonus-modal .tetris-bonus-item {
@@ -1092,7 +1108,7 @@
     }
 
     .tetris-bonus-prize-image {
-        height: 160px;
+        height: 200px;
     }
 
     .tetris-bonus-modal-header {
