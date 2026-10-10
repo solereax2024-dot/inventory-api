@@ -9,6 +9,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
+    List<Product> findByActiveTrueOrderByNameAsc();
+
+    Optional<Product> findByIdAndActiveTrue(Long id);
+
     @Query("""
             select distinct p from Product p
             left join fetch p.stocks s

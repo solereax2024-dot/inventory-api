@@ -41,6 +41,8 @@ public class InventoryService {
     private static final String MANUAL_STOCK_ADJUSTMENT_REASON = "Manual adjustment";
     private static final String NO_SUPPLIER_REFERENCE = "__NO_SUPPLIER__";
     private static final int MAX_PUBLIC_PRODUCTS_BY_IDS = 120;
+    private static final int MIN_SPECIAL_CATALOG_CANDIDATES = 96;
+    private static final int MAX_SPECIAL_CATALOG_CANDIDATES = 240;
 
     private final ProductRepository productRepository;
     private final ProductViewSessionRepository productViewSessionRepository;
@@ -64,7 +66,7 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public List<PublicProductResponse> listPublicProducts() {
-        List<Product> products = productRepository.findAllActiveWithStocks();
+        List<Product> products = productRepository.findByActiveTrueOrderByNameAsc();
         List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(products);
         Map<Long, Integer> recentSoldByStockId = mapRecentReservationSoldByStockId(products);
@@ -94,16 +96,7 @@ public class InventoryService {
             return Collections.emptyList();
         }
 
-        List<Product> hydrated = productRepository.findAllByIdInWithStocks(orderedIds);
-        Map<Long, Product> productById = new HashMap<>();
-        hydrated.stream()
-                .filter(Product::isActive)
-                .forEach(product -> productById.put(product.getId(), product));
-
-        List<Product> orderedProducts = orderedIds.stream()
-                .map(productById::get)
-                .filter(product -> product != null)
-                .toList();
+        List<Product> orderedProducts = loadActiveProductsPreservingOrder(orderedIds);
         if (orderedProducts.isEmpty()) {
             return Collections.emptyList();
         }
@@ -201,13 +194,7 @@ public class InventoryService {
             return new PublicCatalogPageResponse(Collections.emptyList(), idPage.getTotalElements(), safePage, safePageSize);
         }
 
-        List<Product> hydrated = productRepository.findAllByIdInWithStocks(pageIds);
-        Map<Long, Product> productById = new HashMap<>();
-        hydrated.forEach(product -> productById.put(product.getId(), product));
-        List<Product> orderedProducts = pageIds.stream()
-                .map(productById::get)
-                .filter(product -> product != null)
-                .toList();
+        List<Product> orderedProducts = loadProductsPreservingOrder(pageIds, false);
 
         List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
 
@@ -237,7 +224,7 @@ public class InventoryService {
             int page,
             int pageSize
     ) {
-        Pageable allCandidates = PageRequest.of(0, 2000, resolveCatalogSort(sort));
+        Pageable allCandidates = PageRequest.of(0, resolveSpecialCatalogCandidateLimit(page, pageSize), resolveCatalogSort(sort));
         Page<Long> candidateIdPage = productRepository.findCatalogProductIds(
                 brand,
                 department,
@@ -255,13 +242,7 @@ public class InventoryService {
             return new PublicCatalogPageResponse(Collections.emptyList(), 0, page, pageSize);
         }
 
-        List<Product> hydrated = productRepository.findAllByIdInWithStocks(candidateIds);
-        Map<Long, Product> productById = new HashMap<>();
-        hydrated.forEach(product -> productById.put(product.getId(), product));
-        List<Product> orderedProducts = candidateIds.stream()
-                .map(productById::get)
-                .filter(product -> product != null)
-                .toList();
+        List<Product> orderedProducts = loadProductsPreservingOrder(candidateIds, false);
 
         List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
@@ -411,7 +392,7 @@ public class InventoryService {
             int page,
             int pageSize
     ) {
-        Pageable allCandidates = PageRequest.of(0, 2000, resolveCatalogSort(sort));
+        Pageable allCandidates = PageRequest.of(0, resolveSpecialCatalogCandidateLimit(page, pageSize), resolveCatalogSort(sort));
         Page<Long> candidateIdPage = productRepository.findCatalogProductIds(
                 brand,
                 department,
@@ -429,13 +410,7 @@ public class InventoryService {
             return new PublicCatalogPageResponse(Collections.emptyList(), 0, page, pageSize);
         }
 
-        List<Product> hydrated = productRepository.findAllByIdInWithStocks(candidateIds);
-        Map<Long, Product> productById = new HashMap<>();
-        hydrated.forEach(product -> productById.put(product.getId(), product));
-        List<Product> orderedProducts = candidateIds.stream()
-                .map(productById::get)
-                .filter(product -> product != null)
-                .toList();
+        List<Product> orderedProducts = loadProductsPreservingOrder(candidateIds, false);
 
         List<Promotion> visibleSalePromotions = loadVisibleSalePromotions();
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(orderedProducts);
@@ -469,7 +444,7 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public PublicProductResponse getPublicProduct(Long productId) {
-        Product product = productRepository.findActiveByIdWithStocks(productId)
+        Product product = productRepository.findByIdAndActiveTrue(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found: " + productId));
         long viewCount = product.getId() == null ? 0L : productViewSessionRepository.countByProductId(product.getId());
         Map<Long, Integer> recentSoldByStockId = mapRecentReservationSoldByStockId(List.of(product));
@@ -478,12 +453,43 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public List<PublicProductResponse> listAdminProducts() {
-        List<Product> products = productRepository.findAllWithStocks();
+        List<Product> products = productRepository.findAll(Sort.by(Sort.Direction.ASC, "name"));
         Map<Long, Long> viewCountByProductId = mapViewCountByProductId(products);
         return products
                 .stream()
                 .map(product -> toAdminResponse(product, viewCountByProductId.getOrDefault(product.getId(), 0L)))
                 .toList();
+    }
+
+    private int resolveSpecialCatalogCandidateLimit(int page, int pageSize) {
+        int requestedWindow = Math.max(page, 1) * Math.max(pageSize, 1) * 6;
+        return Math.max(MIN_SPECIAL_CATALOG_CANDIDATES, Math.min(requestedWindow, MAX_SPECIAL_CATALOG_CANDIDATES));
+    }
+
+    private List<Product> loadActiveProductsPreservingOrder(List<Long> ids) {
+        return loadProductsPreservingOrder(ids, true);
+    }
+
+    private List<Product> loadProductsPreservingOrder(List<Long> ids, boolean activeOnly) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, Product> productById = new HashMap<>();
+        productRepository.findAllById(ids).forEach(product -> {
+            if (!activeOnly || product.isActive()) {
+                productById.put(product.getId(), product);
+            }
+        });
+
+        List<Product> orderedProducts = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            Product product = productById.get(id);
+            if (product != null) {
+                orderedProducts.add(product);
+            }
+        }
+        return orderedProducts;
     }
 
     @Transactional
