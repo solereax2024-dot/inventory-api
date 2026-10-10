@@ -192,7 +192,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [isGamingSettingsSaving, setIsGamingSettingsSaving] = useState(false);
   const [isGiveawaySettingsSaving, setIsGiveawaySettingsSaving] = useState(false);
   const [isGiveawayPrizeUploading, setIsGiveawayPrizeUploading] = useState(false);
-  const [giveawayPrizeFile, setGiveawayPrizeFile] = useState(null);
+  const [activeGiveawayPrizeUploadSlot, setActiveGiveawayPrizeUploadSlot] = useState(null);
   const [registeredPlayers, setRegisteredPlayers] = useState([]);
   const [isRegisteredPlayersLoading, setIsRegisteredPlayersLoading] = useState(false);
   const [bonusActionKey, setBonusActionKey] = useState("");
@@ -1828,6 +1828,22 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setGiveawaySettings((prev) => ({ ...prev, [field]: value }));
   };
 
+  const updateGiveawayPrizeImageCount = (nextCount) => {
+    setGiveawaySettings((prev) => {
+      const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(nextCount, 10) || 1));
+      const nextPrizeImageUrls = Array.isArray(prev.prizeImageUrls)
+        ? prev.prizeImageUrls.slice(0, normalizedCount)
+        : [];
+
+      return {
+        ...prev,
+        prizeImageCount: normalizedCount,
+        prizeImageUrls: nextPrizeImageUrls,
+        prizeImageUrl: nextPrizeImageUrls[0] || "",
+      };
+    });
+  };
+
   const updateGiveawayStep = (index, value) => {
     setGiveawaySettings((prev) => {
       const nextSteps = [...(prev.steps || [])];
@@ -1857,39 +1873,64 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
-  const uploadGiveawayPrizeImage = async (fileOverride) => {
-    const fileToUpload = fileOverride || giveawayPrizeFile;
+  const uploadGiveawayPrizeImage = async (fileToUpload, slotIndex) => {
     if (!fileToUpload) {
       throw new Error("Please choose a prize image file first.");
     }
 
     setIsGiveawayPrizeUploading(true);
+    setActiveGiveawayPrizeUploadSlot(slotIndex);
     setMessage("");
 
     try {
       const data = await uploadImage("/api/admin/media/giveaway-prize", fileToUpload, token);
-      setGiveawaySettings((prev) => ({ ...prev, prizeImageUrl: data.url || prev.prizeImageUrl }));
-      setSuccessModal({ isOpen: true, message: "Giveaway prize image uploaded." });
+      setGiveawaySettings((prev) => {
+        const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(prev.prizeImageCount, 10) || 1));
+        const nextPrizeImageUrls = Array.from({ length: normalizedCount }, (_, index) => prev.prizeImageUrls?.[index] || "");
+        nextPrizeImageUrls[slotIndex] = data.url || nextPrizeImageUrls[slotIndex] || "";
+        const normalizedPrizeImageUrls = nextPrizeImageUrls.filter(Boolean);
+
+        return {
+          ...prev,
+          prizeImageUrls: nextPrizeImageUrls,
+          prizeImageUrl: normalizedPrizeImageUrls[0] || "",
+        };
+      });
+      setSuccessModal({ isOpen: true, message: `Giveaway image ${slotIndex + 1} uploaded.` });
     } finally {
       setIsGiveawayPrizeUploading(false);
+      setActiveGiveawayPrizeUploadSlot(null);
     }
   };
 
-  const handleGiveawayPrizeImageChange = async (event) => {
+  const handleGiveawayPrizeImageChange = async (slotIndex, event) => {
     const file = event.target.files?.[0] || null;
-    setGiveawayPrizeFile(file);
     if (!file) {
       return;
     }
 
     try {
-      await uploadGiveawayPrizeImage(file);
-      setGiveawayPrizeFile(null);
+      await uploadGiveawayPrizeImage(file, slotIndex);
     } catch (err) {
       setMessage(err.message);
     } finally {
       event.target.value = "";
     }
+  };
+
+  const clearGiveawayPrizeImage = (slotIndex) => {
+    setGiveawaySettings((prev) => {
+      const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(prev.prizeImageCount, 10) || 1));
+      const nextPrizeImageUrls = Array.from({ length: normalizedCount }, (_, index) => prev.prizeImageUrls?.[index] || "");
+      nextPrizeImageUrls[slotIndex] = "";
+      const normalizedPrizeImageUrls = nextPrizeImageUrls.filter(Boolean);
+
+      return {
+        ...prev,
+        prizeImageUrls: nextPrizeImageUrls,
+        prizeImageUrl: normalizedPrizeImageUrls[0] || "",
+      };
+    });
   };
 
   const playGiveawayAsAdmin = () => {
@@ -1989,13 +2030,15 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
           onToggleVisibility={toggleGamingSectionVisibility}
           onPlayAsAdmin={playGiveawayAsAdmin}
           giveawaySettings={giveawaySettings}
-          giveawayPrizeFile={giveawayPrizeFile}
           isGiveawaySettingsSaving={isGiveawaySettingsSaving}
           isGiveawayPrizeUploading={isGiveawayPrizeUploading}
+          activeGiveawayPrizeUploadSlot={activeGiveawayPrizeUploadSlot}
           onGiveawaySettingChange={updateGiveawaySetting}
+          onGiveawayPrizeImageCountChange={updateGiveawayPrizeImageCount}
           onGiveawayStepChange={updateGiveawayStep}
           onSaveGiveawaySettings={saveGiveawaySettings}
           onGiveawayPrizeImageChange={handleGiveawayPrizeImageChange}
+          onClearGiveawayPrizeImage={clearGiveawayPrizeImage}
           registeredPlayers={registeredPlayers}
           isLoadingPlayers={isRegisteredPlayersLoading || isAdminLoading}
           onBonusAction={handleBonusProofAction}

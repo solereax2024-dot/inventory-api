@@ -9,13 +9,15 @@ export default function GamingSettingsSection({
   onToggleVisibility,
   onPlayAsAdmin,
   giveawaySettings,
-  giveawayPrizeFile,
   isGiveawaySettingsSaving,
   isGiveawayPrizeUploading,
+  activeGiveawayPrizeUploadSlot,
   onGiveawaySettingChange,
+  onGiveawayPrizeImageCountChange,
   onGiveawayStepChange,
   onSaveGiveawaySettings,
   onGiveawayPrizeImageChange,
+  onClearGiveawayPrizeImage,
   registeredPlayers = [],
   isLoadingPlayers = false,
   onBonusAction,
@@ -27,7 +29,10 @@ export default function GamingSettingsSection({
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState({ isOpen: false });
   const safeGiveawaySettings = normalizeGiveawaySettings(giveawaySettings || DEFAULT_GIVEAWAY_SETTINGS);
-  const prizeImageSrc = giveawayImageSrc(safeGiveawaySettings.prizeImageUrl);
+  const prizeImageSlots = Array.from(
+    { length: Math.max(1, Math.min(10, Number.parseInt(safeGiveawaySettings.prizeImageCount, 10) || 1)) },
+    (_, index) => giveawayImageSrc(safeGiveawaySettings.prizeImageUrls?.[index])
+  );
 
   return (
     <section className="card products-card admin-section">
@@ -154,16 +159,6 @@ export default function GamingSettingsSection({
                   </label>
 
                   <label className="giveaway-settings-field">
-                    <span>Prize Label</span>
-                    <input
-                      type="text"
-                      value={safeGiveawaySettings.prizeLabel}
-                      onChange={(event) => onGiveawaySettingChange("prizeLabel", event.target.value)}
-                      placeholder="Featured Prize"
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field">
                     <span>Prize Image Alt Text</span>
                     <input
                       type="text"
@@ -199,36 +194,66 @@ export default function GamingSettingsSection({
               </div>
 
               <div className="giveaway-settings-section">
-                <h4>Prize Image</h4>
-                <input
-                  id="giveaway-prize-image-file"
-                  className="sr-only-file-input"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                  onChange={onGiveawayPrizeImageChange}
-                />
-                <div className="product-image-upload-tile-wrap">
-                  <label htmlFor="giveaway-prize-image-file" className="product-image-upload-tile" title="Click to upload prize image">
-                    {prizeImageSrc ? (
-                      <img className="product-image-upload-tile-img" src={prizeImageSrc} alt={safeGiveawaySettings.prizeImageAlt} />
-                    ) : (
-                      <span className="product-image-upload-placeholder">
-                        <ImagePlus size={20} />
-                      </span>
-                    )}
-                    {isGiveawayPrizeUploading ? <span className="product-image-uploading">•••</span> : null}
+                <div className="giveaway-settings-panel-head">
+                  <h4>Prize Images</h4>
+                  <label className="giveaway-settings-field giveaway-image-count-field">
+                    <span>How many images?</span>
+                    <select
+                      value={safeGiveawaySettings.prizeImageCount}
+                      onChange={(event) => onGiveawayPrizeImageCountChange(event.target.value)}
+                    >
+                      {Array.from({ length: 10 }, (_, index) => index + 1).map((count) => (
+                        <option key={count} value={count}>{count}</option>
+                      ))}
+                    </select>
                   </label>
-                  <div className="product-image-upload-copy">
-                    <small className="field-hint image-upload-name">
-                      {giveawayPrizeFile
-                        ? `${giveawayPrizeFile.name}`
-                        : (prizeImageSrc ? "Prize image uploaded" : "No file selected")}
-                    </small>
-                    <small className="field-hint image-upload-note">
-                      {isGiveawayPrizeUploading ? "Uploading prize image..." : (prizeImageSrc ? "Click the tile to replace the prize image." : "Click the tile to upload the prize image. Auto-upload starts immediately.")}
-                    </small>
-                  </div>
                 </div>
+
+                <div className="giveaway-prize-upload-grid">
+                  {prizeImageSlots.map((prizeImageSrc, index) => {
+                    const inputId = `giveaway-prize-image-file-${index}`;
+                    const isUploadingCurrentSlot = isGiveawayPrizeUploading && activeGiveawayPrizeUploadSlot === index;
+
+                    return (
+                      <div key={inputId} className="giveaway-prize-upload-card">
+                        <input
+                          id={inputId}
+                          className="sr-only-file-input"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                          onChange={(event) => onGiveawayPrizeImageChange(index, event)}
+                        />
+                        <label htmlFor={inputId} className="product-image-upload-tile giveaway-prize-upload-tile" title={`Click to upload giveaway image ${index + 1}`}>
+                          {prizeImageSrc ? (
+                            <img className="product-image-upload-tile-img" src={prizeImageSrc} alt={`${safeGiveawaySettings.prizeImageAlt} ${index + 1}`} />
+                          ) : (
+                            <span className="product-image-upload-placeholder">
+                              <ImagePlus size={20} />
+                            </span>
+                          )}
+                          <span className="giveaway-prize-upload-slot-label">Image {index + 1}</span>
+                          {isUploadingCurrentSlot ? <span className="product-image-uploading">•••</span> : null}
+                        </label>
+                        <div className="giveaway-prize-upload-actions">
+                          <small className="field-hint image-upload-note">
+                            {prizeImageSrc ? "Click the tile to replace this image." : "Upload an image for this slot."}
+                          </small>
+                          <button
+                            type="button"
+                            className="button-secondary giveaway-prize-remove-btn"
+                            onClick={() => onClearGiveawayPrizeImage(index)}
+                            disabled={!prizeImageSrc}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <small className="field-hint image-upload-note">
+                  Upload up to 10 giveaway images. The customer giveaway view will rotate through the uploaded images automatically.
+                </small>
               </div>
             </div>
 

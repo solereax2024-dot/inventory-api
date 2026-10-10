@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Upload, AlertCircle, Check, Loader } from "lucide-react";
 import { apiRequest } from "../../utils/api";
-import { DEFAULT_GIVEAWAY_SETTINGS, giveawayImageSrc, normalizeGiveawaySettings } from "../../constants/giveaway";
+import { DEFAULT_GIVEAWAY_SETTINGS, giveawayImageList, normalizeGiveawaySettings } from "../../constants/giveaway";
 import "./TetrisRegistrationModal.css";
 
 export default function TetrisRegistrationModal({ isVisible, onAuthenticated, onClose }) {
@@ -16,6 +16,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
   const [mode, setMode] = useState("register");
   const [hasConfirmedFollow, setHasConfirmedFollow] = useState(false);
   const [giveawaySettings, setGiveawaySettings] = useState(DEFAULT_GIVEAWAY_SETTINGS);
+  const [activePrizeImageIndex, setActivePrizeImageIndex] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -59,6 +60,24 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
       isCancelled = true;
     };
   }, [isVisible]);
+
+  const prizeImageSources = giveawayImageList(giveawaySettings);
+
+  useEffect(() => {
+    setActivePrizeImageIndex(0);
+  }, [isVisible, prizeImageSources.length]);
+
+  useEffect(() => {
+    if (!isVisible || prizeImageSources.length <= 1) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActivePrizeImageIndex((previousIndex) => (previousIndex + 1) % prizeImageSources.length);
+    }, 2600);
+
+    return () => window.clearInterval(intervalId);
+  }, [isVisible, prizeImageSources.length]);
 
   const isLoginMode = mode === "login";
 
@@ -158,8 +177,6 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
   };
 
   if (!isVisible) return null;
-
-  const prizeImageSrc = giveawayImageSrc(giveawaySettings.prizeImageUrl);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -284,16 +301,32 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
                 <p className="tetris-registration-gate-label">{giveawaySettings.howToJoinTitle}</p>
               ) : null}
 
-               {prizeImageSrc ? (
+               {prizeImageSources.length > 0 ? (
                  <div className="tetris-bonus-prize-card tetris-registration-prize-card">
-                   {giveawaySettings.prizeLabel ? (
-                     <span className="tetris-bonus-prize-label">{giveawaySettings.prizeLabel}</span>
+                   <div className="tetris-bonus-prize-image-rotator">
+                     {prizeImageSources.map((imageSrc, index) => (
+                       <img
+                         key={`${imageSrc}-${index}`}
+                         className={`tetris-bonus-prize-image${index === activePrizeImageIndex ? " is-active" : ""}`}
+                         src={imageSrc}
+                         alt={giveawaySettings.prizeImageAlt || "Giveaway prize"}
+                       />
+                     ))}
+                   </div>
+                   {prizeImageSources.length > 1 ? (
+                     <div className="tetris-bonus-prize-rail" aria-label="Giveaway prize images">
+                       {prizeImageSources.map((imageSrc, index) => (
+                         <button
+                           key={`prize-dot-${imageSrc}-${index}`}
+                           type="button"
+                           className={`tetris-bonus-prize-rail-dot${index === activePrizeImageIndex ? " is-active" : ""}`}
+                           aria-label={`Show giveaway image ${index + 1}`}
+                           aria-pressed={index === activePrizeImageIndex}
+                           onClick={() => setActivePrizeImageIndex(index)}
+                         />
+                       ))}
+                     </div>
                    ) : null}
-                   <img
-                     className="tetris-bonus-prize-image"
-                     src={prizeImageSrc}
-                     alt={giveawaySettings.prizeImageAlt || giveawaySettings.prizeLabel || "Giveaway prize"}
-                   />
                  </div>
                ) : null}
 

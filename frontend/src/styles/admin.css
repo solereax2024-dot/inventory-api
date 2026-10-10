@@ -713,6 +713,57 @@
   min-height: 240px;
 }
 
+.giveaway-image-count-field {
+  min-width: 180px;
+}
+
+.giveaway-image-count-field select {
+  width: 100%;
+}
+
+.giveaway-prize-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.giveaway-prize-upload-card {
+  display: grid;
+  gap: 8px;
+}
+
+.giveaway-prize-upload-tile {
+  position: relative;
+  min-height: 180px;
+}
+
+.giveaway-prize-upload-slot-label {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.giveaway-prize-upload-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.giveaway-prize-remove-btn {
+  min-width: 72px;
+}
+
 @media (max-width: 760px) {
   .giveaway-settings-grid {
     grid-template-columns: 1fr;
@@ -720,6 +771,15 @@
 
   .giveaway-content-preview-grid {
     grid-template-columns: 1fr;
+  }
+
+  .giveaway-prize-upload-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .giveaway-prize-upload-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

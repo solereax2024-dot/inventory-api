@@ -13,11 +13,15 @@ export const DEFAULT_GIVEAWAY_SETTINGS = {
   accountDeletionNote: "After the giveaway ends, giveaway accounts will be deleted and you will no longer be able to access the game using that account.",
   prizeLabel: "Featured Prize",
   prizeImageUrl: "",
+  prizeImageUrls: [],
+  prizeImageCount: 1,
   prizeImageAlt: "Featured giveaway prize",
 };
 
 export function normalizeGiveawaySettings(settings = {}) {
   const sourceSteps = Array.isArray(settings.steps) ? settings.steps : [];
+  const prizeImageUrls = normalizePrizeImageUrls(settings.prizeImageUrls, settings.prizeImageUrl);
+  const prizeImageCount = clampPrizeImageCount(settings.prizeImageCount, prizeImageUrls.length);
 
   return {
     title: cleanText(settings.title),
@@ -26,7 +30,9 @@ export function normalizeGiveawaySettings(settings = {}) {
     steps: DEFAULT_GIVEAWAY_STEPS.map((_, index) => cleanText(sourceSteps[index])),
     accountDeletionNote: cleanText(settings.accountDeletionNote),
     prizeLabel: cleanText(settings.prizeLabel),
-    prizeImageUrl: cleanOptionalUrl(settings.prizeImageUrl),
+    prizeImageUrl: prizeImageUrls[0] || cleanOptionalUrl(settings.prizeImageUrl),
+    prizeImageUrls,
+    prizeImageCount,
     prizeImageAlt: cleanText(settings.prizeImageAlt),
   };
 }
@@ -37,6 +43,11 @@ export function giveawayImageSrc(imageUrl) {
   return value.startsWith("/") ? value : `/${value}`;
 }
 
+export function giveawayImageList(settings = {}) {
+  const normalized = normalizeGiveawaySettings(settings);
+  return normalized.prizeImageUrls.map(giveawayImageSrc).filter(Boolean);
+}
+
 function cleanText(value) {
   const trimmed = String(value ?? "").trim();
   return trimmed;
@@ -44,6 +55,28 @@ function cleanText(value) {
 
 function cleanOptionalUrl(value) {
   return String(value ?? "").trim();
+}
+
+function normalizePrizeImageUrls(prizeImageUrls, prizeImageUrl) {
+  const fromList = Array.isArray(prizeImageUrls)
+    ? prizeImageUrls.map(cleanOptionalUrl).filter(Boolean)
+    : [];
+
+  if (fromList.length > 0) {
+    return fromList.slice(0, 10);
+  }
+
+  const singleImage = cleanOptionalUrl(prizeImageUrl);
+  return singleImage ? [singleImage] : [];
+}
+
+function clampPrizeImageCount(value, imageCount = 0) {
+  const parsed = Number.parseInt(value, 10);
+  const fallback = Math.max(imageCount || 0, 1);
+  if (!Number.isFinite(parsed)) {
+    return Math.min(10, fallback);
+  }
+  return Math.max(1, Math.min(10, parsed));
 }
 
 

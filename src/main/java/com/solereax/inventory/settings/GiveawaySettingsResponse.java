@@ -10,6 +10,8 @@ public record GiveawaySettingsResponse(
         String accountDeletionNote,
         String prizeLabel,
         String prizeImageUrl,
+        List<String> prizeImageUrls,
+        Integer prizeImageCount,
         String prizeImageAlt
 ) {
 }

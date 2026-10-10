@@ -220,6 +220,7 @@
   padding: 0;
 }
 
+.tetris-registration-prize-card .tetris-bonus-prize-image-rotator,
 .tetris-registration-prize-card .tetris-bonus-prize-image {
   height: 220px;
 }
@@ -704,6 +705,7 @@
     padding: 0;
   }
 
+  .tetris-registration-prize-card .tetris-bonus-prize-image-rotator,
   .tetris-registration-prize-card .tetris-bonus-prize-image {
     height: 190px;
   }
@@ -800,6 +802,7 @@
     flex-direction: column;
   }
 
+  .tetris-registration-prize-card .tetris-bonus-prize-image-rotator,
   .tetris-registration-prize-card .tetris-bonus-prize-image {
     height: 170px;
   }
