@@ -83,6 +83,7 @@ public class GamingService {
                         leaderboardByPlayerKey.get(normalizeKey(user.getUsername())),
                         rankByPlayerKey.get(normalizeKey(user.getUsername()))
                 ))
+                .filter(player -> player.rank() != null && player.rank() > 0 && player.rank() <= 10)
                 .sorted(Comparator
                         .comparing((RegisteredPlayerResponse player) -> player.rank() == null ? Integer.MAX_VALUE : player.rank())
                         .thenComparing((RegisteredPlayerResponse player) -> player.highestScore() == null ? 0 : player.highestScore(), Comparator.reverseOrder())
