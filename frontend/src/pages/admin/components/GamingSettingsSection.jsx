@@ -208,7 +208,7 @@ export default function GamingSettingsSection({
                   <div className="giveaway-prize-panel-copy">
                     <h4>Prize Images</h4>
                     <p className="field-hint" style={{ margin: 0 }}>
-                      Arrange the giveaway visuals here. Customers will see these images rotate automatically in the giveaway section.
+                      Upload one or more prize images here. The leaderboard will display every uploaded image based on how many the admin adds.
                     </p>
                   </div>
                   <label className="giveaway-settings-field giveaway-image-count-field">
@@ -227,7 +227,7 @@ export default function GamingSettingsSection({
                 <div className="giveaway-prize-upload-summary">
                   <span className="giveaway-settings-badge">{prizeImageSlots.length} slot{prizeImageSlots.length === 1 ? "" : "s"} active</span>
                   <small className="field-hint image-upload-note">
-                    Recommended: use the same image ratio for cleaner rotation. Max 10 images.
+                    Recommended: use the same image ratio for a cleaner gallery layout. Max 10 images.
                   </small>
                 </div>
 
@@ -248,7 +248,7 @@ export default function GamingSettingsSection({
                         <div className="giveaway-prize-upload-card-head">
                           <div>
                             <strong>Image {index + 1}</strong>
-                            <small className="field-hint">{prizeImageSrc ? "Ready for rotation" : "Waiting for upload"}</small>
+                            <small className="field-hint">{prizeImageSrc ? "Ready for display" : "Waiting for upload"}</small>
                           </div>
                           {prizeImageSrc ? (
                             <button
@@ -284,7 +284,7 @@ export default function GamingSettingsSection({
                   })}
                 </div>
                 <small className="field-hint image-upload-note">
-                  Upload up to 10 giveaway images. The customer giveaway view will rotate through the uploaded images automatically.
+                  Upload up to 10 giveaway images. Every uploaded image will appear on the leaderboard together, not as a rotating banner.
                 </small>
               </div>
             </div>

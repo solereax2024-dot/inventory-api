@@ -77,8 +77,8 @@
 
 .tetris-leaderboard-prize-banner {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(108px, 360px);
+  align-items: start;
   gap: 16px;
   margin-bottom: 18px;
   padding: 16px 18px;
@@ -102,6 +102,7 @@
   min-width: 0;
   display: grid;
   gap: 6px;
+  align-content: start;
 }
 
 .tetris-leaderboard-prize-eyebrow {
@@ -130,9 +131,57 @@
   font-size: 0.85rem;
 }
 
-.tetris-leaderboard-prize-visual {
+.tetris-leaderboard-prize-count {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  color: rgba(251, 241, 199, 0.94);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tetris-leaderboard-prize-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, 360px);
+  justify-self: end;
+  align-self: center;
+}
+
+.tetris-leaderboard-prize-gallery.has-1 {
+  grid-template-columns: minmax(0, 1fr);
   width: clamp(72px, 14vw, 104px);
-  height: clamp(72px, 14vw, 104px);
+}
+
+.tetris-leaderboard-prize-gallery.has-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tetris-leaderboard-prize-gallery.has-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 324px);
+}
+
+.tetris-leaderboard-prize-gallery.is-compact {
+  gap: 8px;
+  width: min(100%, 260px);
+}
+
+.tetris-leaderboard-prize-gallery.is-compact.has-1 {
+  width: 72px;
+}
+
+.tetris-leaderboard-prize-visual {
+  width: 100%;
+  aspect-ratio: 1 / 1;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(251, 191, 36, 0.28);
@@ -142,8 +191,7 @@
 }
 
 .tetris-leaderboard-prize-banner.is-compact .tetris-leaderboard-prize-visual {
-  width: 72px;
-  height: 72px;
+  border-radius: 14px;
 }
 
 .tetris-leaderboard-prize-image {
@@ -395,9 +443,14 @@
   }
 
   .tetris-leaderboard-prize-banner {
-    grid-template-columns: minmax(0, 1fr) 88px;
+    grid-template-columns: minmax(0, 1fr) minmax(92px, 240px);
     gap: 14px;
     padding: 14px 16px;
+  }
+
+  .tetris-leaderboard-prize-gallery.has-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 220px);
   }
 }
 
@@ -424,12 +477,26 @@
 
   .tetris-leaderboard-prize-banner {
     grid-template-columns: 1fr;
-    justify-items: start;
+    justify-items: stretch;
+  }
+
+  .tetris-leaderboard-prize-gallery,
+  .tetris-leaderboard-prize-gallery.is-compact {
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .tetris-leaderboard-prize-gallery.has-1,
+  .tetris-leaderboard-prize-gallery.is-compact.has-1 {
+    width: 84px;
+  }
+
+  .tetris-leaderboard-prize-gallery.has-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .tetris-leaderboard-prize-visual {
-    width: 84px;
-    height: 84px;
+    max-width: none;
   }
 
   .tetris-leaderboard-back-btn {
@@ -808,9 +875,12 @@
     padding: 12px 14px;
   }
 
-  .tetris-leaderboard-modal-content .tetris-leaderboard-prize-visual {
+  .tetris-leaderboard-modal-content .tetris-leaderboard-prize-gallery {
+    width: 100%;
+  }
+
+  .tetris-leaderboard-modal-content .tetris-leaderboard-prize-gallery.has-1 {
     width: 72px;
-    height: 72px;
   }
 
   .tetris-leaderboard-modal-content .tetris-mini-leaderboard {
