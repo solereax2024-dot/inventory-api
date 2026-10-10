@@ -178,6 +178,46 @@ export default function GamingSettingsSection({
                     />
                   </label>
 
+                  <label className="giveaway-settings-field">
+                    <span>Leaderboard Prize Eyebrow</span>
+                    <input
+                      type="text"
+                      value={safeGiveawaySettings.leaderboardPrizeEyebrow}
+                      onChange={(event) => onGiveawaySettingChange("leaderboardPrizeEyebrow", event.target.value)}
+                      placeholder="Prize to Win"
+                    />
+                  </label>
+
+                  <label className="giveaway-settings-field">
+                    <span>Leaderboard Prize Title</span>
+                    <input
+                      type="text"
+                      value={safeGiveawaySettings.prizeLabel}
+                      onChange={(event) => onGiveawaySettingChange("prizeLabel", event.target.value)}
+                      placeholder="Featured Prize"
+                    />
+                  </label>
+
+                  <label className="giveaway-settings-field giveaway-settings-field-wide">
+                    <span>Leaderboard Prize Note</span>
+                    <textarea
+                      rows={2}
+                      value={safeGiveawaySettings.leaderboardPrizeNote}
+                      onChange={(event) => onGiveawaySettingChange("leaderboardPrizeNote", event.target.value)}
+                      placeholder="Climb to No. 1 to claim this prize."
+                    />
+                  </label>
+
+                  <label className="giveaway-settings-field giveaway-settings-field-wide">
+                    <span>Leaderboard Goal Message</span>
+                    <textarea
+                      rows={2}
+                      value={safeGiveawaySettings.leaderboardGoalMessage}
+                      onChange={(event) => onGiveawaySettingChange("leaderboardGoalMessage", event.target.value)}
+                      placeholder="Win by reaching No. 1 on the leaderboard!"
+                    />
+                  </label>
+
                   <label className="giveaway-settings-field giveaway-settings-field-wide">
                     <span>Account Deletion Note</span>
                     <textarea

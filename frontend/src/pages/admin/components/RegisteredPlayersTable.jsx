@@ -227,27 +227,32 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
               With scores: {playersWithScores}
             </span>
           </div>
-          {onBroadcastNotification ? (
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={openBroadcastComposer}
-              disabled={notificationActionKey === "broadcast"}
-              title="Send a message to all active giveaway players"
-            >
-              {notificationActionKey === "broadcast" ? "Sending Broadcast..." : "Broadcast Message"}
-            </button>
-          ) : null}
-          {onDeleteAllPlayers && totalPlayers > 0 ? (
-            <button
-              type="button"
-              className="btn-delete"
-              onClick={onDeleteAllPlayers}
-              disabled={isDeletingPlayers}
-              title="Delete all registered players"
-            >
-              Delete All Players
-            </button>
+
+          {onBroadcastNotification || (onDeleteAllPlayers && totalPlayers > 0) ? (
+            <div className="giveaway-player-actions-toolbar">
+              {onBroadcastNotification ? (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={openBroadcastComposer}
+                  disabled={notificationActionKey === "broadcast"}
+                  title="Send a message to all active giveaway players"
+                >
+                  {notificationActionKey === "broadcast" ? "Sending Broadcast..." : "Broadcast Message"}
+                </button>
+              ) : null}
+              {onDeleteAllPlayers && totalPlayers > 0 ? (
+                <button
+                  type="button"
+                  className="btn-delete"
+                  onClick={onDeleteAllPlayers}
+                  disabled={isDeletingPlayers}
+                  title="Delete all registered players"
+                >
+                  Delete All Players
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>

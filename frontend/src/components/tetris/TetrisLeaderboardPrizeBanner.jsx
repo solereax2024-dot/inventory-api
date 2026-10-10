@@ -2,7 +2,9 @@ import { giveawayImageList, giveawayImageSrc } from "../../constants/giveaway";
 
 export default function TetrisLeaderboardPrizeBanner({ giveawaySettings, compact = false }) {
   const prizeImages = giveawayImageList(giveawaySettings);
+  const prizeEyebrow = giveawaySettings?.leaderboardPrizeEyebrow || "Prize to Win";
   const prizeLabel = giveawaySettings?.prizeLabel || "Featured Prize";
+  const prizeNote = giveawaySettings?.leaderboardPrizeNote || "Climb to No. 1 to claim this prize.";
   const prizeImageAlt = giveawaySettings?.prizeImageAlt || prizeLabel;
   const prizeImageCountLabel = `${prizeImages.length} prize image${prizeImages.length === 1 ? "" : "s"}`;
 
@@ -12,10 +14,9 @@ export default function TetrisLeaderboardPrizeBanner({ giveawaySettings, compact
       aria-label="Leaderboard prize information"
     >
       <div className="tetris-leaderboard-prize-copy">
-        <span className="tetris-leaderboard-prize-eyebrow">Prize to Win</span>
+        <span className="tetris-leaderboard-prize-eyebrow">{prizeEyebrow}</span>
         <strong className="tetris-leaderboard-prize-title">{prizeLabel}</strong>
-        <p className="tetris-leaderboard-prize-note">Win by reaching No. 1 on the leaderboard!</p>
-        {prizeImages.length > 1 ? <span className="tetris-leaderboard-prize-count">{prizeImageCountLabel}</span> : null}
+        <p className="tetris-leaderboard-prize-note">{prizeNote}</p>
       </div>
 
       {prizeImages.length > 0 ? (

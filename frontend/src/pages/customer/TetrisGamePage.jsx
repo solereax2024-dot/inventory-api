@@ -1837,6 +1837,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                  boardShellStyle={boardShellStyle}
                  isBoardFocused={isBoardFocused}
                   boardTopStatsBar={renderCompactStatsBar("tetris-stats-bar tetris-stats-bar-board-top")}
+                  leaderboardGoalMessage={giveawayContent.leaderboardGoalMessage}
                  holdPiece={holdPiece}
                  holdPiecePreview={holdPiecePreview}
                  holdTileId={holdTileId}

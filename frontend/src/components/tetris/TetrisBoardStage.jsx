@@ -2,6 +2,7 @@ export default function TetrisBoardStage({
   boardFrameRef,
   boardShellStyle,
   boardTopStatsBar,
+  leaderboardGoalMessage,
   holdPiece,
   holdPiecePreview,
   holdTileId,
@@ -114,7 +115,7 @@ export default function TetrisBoardStage({
       <div className="tetris-board-center">
         {boardTopStatsBar}
         <p className="tetris-leaderboard-goal-message" role="note">
-          Win by reaching No. 1 on the leaderboard!
+          {leaderboardGoalMessage || "Win by reaching No. 1 on the leaderboard!"}
         </p>
         {children}
         {afterGridContent}

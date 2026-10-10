@@ -110,10 +110,19 @@
 
 .giveaway-player-actions-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap-reverse;
+  flex-wrap: wrap;
+}
+
+.giveaway-player-actions-toolbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .giveaway-visibility-actions {
@@ -129,17 +138,37 @@
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-start;
-  flex: 1 1 auto;
+  flex: 1 1 360px;
 }
 
 .giveaway-player-summary-chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 28px;
   padding: 0 0.75rem;
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.giveaway-player-actions-toolbar .btn-primary,
+.giveaway-player-actions-toolbar .btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-top: 0;
+  padding: 0 16px;
+  white-space: nowrap;
+}
+
+.giveaway-player-actions-toolbar .btn-primary {
+  min-width: 172px;
+}
+
+.giveaway-player-actions-toolbar .btn-delete {
+  min-width: 156px;
 }
 
 .giveaway-player-summary-chip.is-total {
@@ -1944,6 +1973,17 @@
 
     .giveaway-player-summary-row {
       justify-content: flex-start;
+    }
+
+    .giveaway-player-actions-toolbar {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    .giveaway-player-actions-toolbar .btn-primary,
+    .giveaway-player-actions-toolbar .btn-delete {
+      flex: 1 1 0;
+      min-width: 0;
     }
 
     .giveaway-player-proof-row {

@@ -17,7 +17,10 @@ public class GiveawaySettingsService {
     public static final String GIVEAWAY_MODAL_STEP_3_KEY = "GIVEAWAY_MODAL_STEP_3";
     public static final String GIVEAWAY_MODAL_STEP_4_KEY = "GIVEAWAY_MODAL_STEP_4";
     public static final String GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY = "GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE";
+    public static final String GIVEAWAY_LEADERBOARD_PRIZE_EYEBROW_KEY = "GIVEAWAY_LEADERBOARD_PRIZE_EYEBROW";
     public static final String GIVEAWAY_MODAL_PRIZE_LABEL_KEY = "GIVEAWAY_MODAL_PRIZE_LABEL";
+    public static final String GIVEAWAY_LEADERBOARD_PRIZE_NOTE_KEY = "GIVEAWAY_LEADERBOARD_PRIZE_NOTE";
+    public static final String GIVEAWAY_LEADERBOARD_GOAL_MESSAGE_KEY = "GIVEAWAY_LEADERBOARD_GOAL_MESSAGE";
     public static final String GIVEAWAY_MODAL_PRIZE_IMAGE_URL_KEY = "GIVEAWAY_MODAL_PRIZE_IMAGE_URL";
     public static final String GIVEAWAY_MODAL_PRIZE_IMAGE_URLS_KEY = "GIVEAWAY_MODAL_PRIZE_IMAGE_URLS";
     public static final String GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY = "GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT";
@@ -27,7 +30,10 @@ public class GiveawaySettingsService {
     private static final String DEFAULT_INTRO = "Play the Giveaway challenge for a chance to win. Before you continue, please confirm that you follow our page and can upload proof.";
     private static final String DEFAULT_HOW_TO_JOIN_TITLE = "How to Join";
     private static final String DEFAULT_ACCOUNT_DELETION_NOTE = "After the giveaway ends, giveaway accounts will be deleted and you will no longer be able to access the game using that account.";
+    private static final String DEFAULT_LEADERBOARD_PRIZE_EYEBROW = "Prize to Win";
     private static final String DEFAULT_PRIZE_LABEL = "Featured Prize";
+    private static final String DEFAULT_LEADERBOARD_PRIZE_NOTE = "Climb to No. 1 to claim this prize.";
+    private static final String DEFAULT_LEADERBOARD_GOAL_MESSAGE = "Win by reaching No. 1 on the leaderboard!";
     private static final String DEFAULT_PRIZE_IMAGE_ALT = "Featured giveaway prize";
     private static final List<String> DEFAULT_STEPS = List.of(
             "Play the Giveaway challenge for a chance to win our featured prize.",
@@ -58,7 +64,10 @@ public class GiveawaySettingsService {
                         getSetting(GIVEAWAY_MODAL_STEP_4_KEY, DEFAULT_STEPS.get(3))
                 ),
                 getSetting(GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY, DEFAULT_ACCOUNT_DELETION_NOTE),
+                getSetting(GIVEAWAY_LEADERBOARD_PRIZE_EYEBROW_KEY, DEFAULT_LEADERBOARD_PRIZE_EYEBROW),
                 getSetting(GIVEAWAY_MODAL_PRIZE_LABEL_KEY, DEFAULT_PRIZE_LABEL),
+                getSetting(GIVEAWAY_LEADERBOARD_PRIZE_NOTE_KEY, DEFAULT_LEADERBOARD_PRIZE_NOTE),
+                getSetting(GIVEAWAY_LEADERBOARD_GOAL_MESSAGE_KEY, DEFAULT_LEADERBOARD_GOAL_MESSAGE),
                 prizeImageUrls.isEmpty() ? primaryPrizeImageUrl : prizeImageUrls.getFirst(),
                 prizeImageUrls,
                 prizeImageCount,
@@ -69,7 +78,7 @@ public class GiveawaySettingsService {
     @Transactional
     public GiveawaySettingsResponse updateSettings(GiveawaySettingsUpdateRequest request) {
         GiveawaySettingsUpdateRequest safeRequest = request == null
-                ? new GiveawaySettingsUpdateRequest(null, null, null, null, null, null, null, null, null, null)
+                ? new GiveawaySettingsUpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null)
                 : request;
         List<String> steps = normalizeSteps(safeRequest.steps());
         List<String> normalizedPrizeImageUrls = normalizePrizeImageUrls(safeRequest.prizeImageUrls(), safeRequest.prizeImageUrl());
@@ -86,7 +95,10 @@ public class GiveawaySettingsService {
         saveSetting(GIVEAWAY_MODAL_STEP_3_KEY, steps.get(2));
         saveSetting(GIVEAWAY_MODAL_STEP_4_KEY, steps.get(3));
         saveSetting(GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY, normalizeText(safeRequest.accountDeletionNote()));
+        saveSetting(GIVEAWAY_LEADERBOARD_PRIZE_EYEBROW_KEY, normalizeText(safeRequest.leaderboardPrizeEyebrow()));
         saveSetting(GIVEAWAY_MODAL_PRIZE_LABEL_KEY, normalizeText(safeRequest.prizeLabel()));
+        saveSetting(GIVEAWAY_LEADERBOARD_PRIZE_NOTE_KEY, normalizeText(safeRequest.leaderboardPrizeNote()));
+        saveSetting(GIVEAWAY_LEADERBOARD_GOAL_MESSAGE_KEY, normalizeText(safeRequest.leaderboardGoalMessage()));
         saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_URL_KEY, prizeImageUrls.isEmpty() ? "" : prizeImageUrls.getFirst());
         saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_URLS_KEY, serializeList(prizeImageUrls));
         saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY, String.valueOf(prizeImageCount));

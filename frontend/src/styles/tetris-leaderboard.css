@@ -131,21 +131,6 @@
   font-size: 0.85rem;
 }
 
-.tetris-leaderboard-prize-count {
-  display: inline-flex;
-  width: fit-content;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: rgba(251, 191, 36, 0.12);
-  border: 1px solid rgba(251, 191, 36, 0.18);
-  color: rgba(251, 241, 199, 0.94);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
 
 .tetris-leaderboard-prize-gallery {
   display: grid;
@@ -493,6 +478,11 @@
 
   .tetris-leaderboard-prize-gallery.has-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .tetris-leaderboard-prize-gallery.has-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .tetris-leaderboard-prize-visual {
