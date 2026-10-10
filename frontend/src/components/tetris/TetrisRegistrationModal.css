@@ -216,12 +216,12 @@
 }
 
 .tetris-registration-prize-card {
-  grid-template-columns: minmax(0, 1fr) minmax(130px, 180px);
-  align-items: center;
+  min-height: 220px;
+  padding: 0;
 }
 
 .tetris-registration-prize-card .tetris-bonus-prize-image {
-  height: 180px;
+  height: 220px;
 }
 
 .tetris-registration-gate-label {
@@ -700,11 +700,12 @@
   }
 
   .tetris-registration-prize-card {
-    grid-template-columns: 1fr;
+    min-height: 190px;
+    padding: 0;
   }
 
   .tetris-registration-prize-card .tetris-bonus-prize-image {
-    height: 160px;
+    height: 190px;
   }
 
   .tetris-registration-gate-list li {
@@ -800,7 +801,7 @@
   }
 
   .tetris-registration-prize-card .tetris-bonus-prize-image {
-    height: 140px;
+    height: 170px;
   }
 
   .tetris-form-input {

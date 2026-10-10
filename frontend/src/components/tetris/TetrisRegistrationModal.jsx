@@ -286,11 +286,9 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
 
                {prizeImageSrc ? (
                  <div className="tetris-bonus-prize-card tetris-registration-prize-card">
-                    {giveawaySettings.prizeLabel ? (
-                      <div className="tetris-bonus-prize-copy">
-                        <span className="tetris-bonus-prize-label">{giveawaySettings.prizeLabel}</span>
-                      </div>
-                    ) : null}
+                   {giveawaySettings.prizeLabel ? (
+                     <span className="tetris-bonus-prize-label">{giveawaySettings.prizeLabel}</span>
+                   ) : null}
                    <img
                      className="tetris-bonus-prize-image"
                      src={prizeImageSrc}

@@ -198,6 +198,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const [bonusFeedback, setBonusFeedback] = useState("");
   const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
   const [giveawayContent, setGiveawayContent] = useState(DEFAULT_GIVEAWAY_SETTINGS);
+  const [lastScoreSubmission, setLastScoreSubmission] = useState(null);
 
   const authenticatedPlayerName = useMemo(() => {
     return authenticatedUser?.username?.trim()
@@ -513,6 +514,14 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
     return rankIndex >= 0 ? rankIndex + 1 : null;
   }, [leaderboard, playerName]);
+
+  const gameOverPlayerRank = typeof lastScoreSubmission?.rank === "number"
+    ? lastScoreSubmission.rank
+    : currentPlayerRank;
+
+  const gameOverPlayerInTop10 = typeof lastScoreSubmission?.inTop10 === "boolean"
+    ? lastScoreSubmission.inTop10
+    : (typeof currentPlayerRank === "number" && currentPlayerRank > 0 && currentPlayerRank <= 10);
 
   const emitSound = useCallback((soundName, force = false) => {
     if ((!soundEnabled && !force) || typeof window === "undefined") return;
@@ -831,12 +840,14 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     setLoading(true);
 
     try {
-      await apiRequest("/api/public/games/tetris/scores", "POST", {
+      const scoreResponse = await apiRequest("/api/public/games/tetris/scores", "POST", {
         playerName: trimmedPlayerName,
         score: finalScore,
         level: finalLevel,
         linesCleared: finalLinesCleared,
       }, authenticatedToken);
+
+      setLastScoreSubmission(scoreResponse || null);
 
       const refreshedLeaderboard = await apiRequest("/api/public/games/tetris/leaderboard/all", "GET");
       if (Array.isArray(refreshedLeaderboard)) {
@@ -844,6 +855,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       }
     } catch (error) {
       console.error("Failed to submit Tetris score:", error);
+      setLastScoreSubmission(null);
       setLeaderboardError("Score submission failed. Please try another run.");
     } finally {
       setLoading(false);
@@ -909,6 +921,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       clearScheduledTimeouts();
       clearTransientEffects();
       scoreSubmittedRef.current = false;
+      setLastScoreSubmission(null);
 
       setGameStarted(true);
       setGameOver(false);
@@ -946,6 +959,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       clearScheduledTimeouts();
       clearTransientEffects();
       scoreSubmittedRef.current = false;
+      setLastScoreSubmission(null);
       fullscreenOptionsPausedRef.current = false;
       setIsFullscreenOptionsOpen(false);
       setGameStarted(false);
@@ -1599,7 +1613,8 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                 bestScore={bestRun.score}
                 finalLevel={level}
                 linesCleared={linesCleared}
-                playerRank={currentPlayerRank}
+                playerRank={gameOverPlayerRank}
+                isInTop10={gameOverPlayerInTop10}
                 onPlayAgain={resetGame}
                 onOpenLeaderboard={undefined}
                 onClose={resetGame}

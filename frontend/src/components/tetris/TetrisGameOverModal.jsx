@@ -7,33 +7,30 @@ import { RotateCcw, Trophy, X } from "lucide-react";
  *
  * Props:
  * - isVisible (boolean): Whether modal is visible
- * - playerName (string): Player name
  * - finalScore (number): Final score
  * - bestScore (number): Best score
- * - finalLevel (number): Final level
  * - linesCleared (number): Total lines cleared
  * - playerRank (number): Player's rank (if available)
+ * - isInTop10 (boolean): Whether the submitted score qualified for the top 10
  * - onPlayAgain (function): Callback to play again
  * - onOpenLeaderboard (function): Callback to open leaderboard
  * - onClose (function): Callback to close modal
  */
 export default function TetrisGameOverModal({
   isVisible,
-  playerName,
   finalScore,
   bestScore,
-  finalLevel,
   linesCleared,
   playerRank,
+  isInTop10,
   onPlayAgain,
   onOpenLeaderboard,
   onClose,
 }) {
   if (!isVisible) return null;
 
-  // Only show rank if it's a valid positive number and in top 10
-  const hasValidRank = typeof playerRank === 'number' && playerRank > 0 && playerRank <= 10 && isFinite(playerRank);
-  const isNotInTop10 = typeof playerRank === 'number' && playerRank > 10 && isFinite(playerRank);
+  const hasValidRank = isInTop10 === true && typeof playerRank === 'number' && playerRank > 0 && playerRank <= 10 && isFinite(playerRank);
+  const isNotInTop10 = isInTop10 === false;
   const isNewBest = finalScore >= bestScore && finalScore > 0;
 
   return (
@@ -57,7 +54,7 @@ export default function TetrisGameOverModal({
             <strong>{finalScore.toLocaleString()}</strong>
           </div>
           {isNewBest && <span className="tetris-game-over-highlight">New best run</span>}
-          {isNotInTop10 && <span className="tetris-game-over-highlight tetris-game-over-not-top10">Sorry, you are not in the top 10 yet! Keep playing to climb the leaderboard.</span>}
+          {isNotInTop10 && <span className="tetris-game-over-highlight tetris-game-over-not-top10">Sorry, you are not in top 10. Keep playing to climb the leaderboard.</span>}
           <div className="tetris-game-over-stats-compact">
             <div className="tetris-game-over-stat-compact">
               <span>Lines</span>

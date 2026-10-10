@@ -15,7 +15,6 @@ import java.util.Map;
 public class TetrisGameController {
 
     private final TetrisGameService gameService;
-    private final TetrisLeaderboardRepository leaderboardRepository;
     private final GiveawayBonusService giveawayBonusService;
 
     /**
@@ -24,7 +23,7 @@ public class TetrisGameController {
      * Body: { "playerName": "John", "score": 1500, "level": 5, "linesCleared": 12 }
      */
     @PostMapping("/scores")
-    public ResponseEntity<TetrisLeaderboard> submitScore(@RequestBody Map<String, Object> request, Principal principal) {
+    public ResponseEntity<TetrisScoreSubmissionResponse> submitScore(@RequestBody Map<String, Object> request, Principal principal) {
         try {
             String requestPlayerName = (String) request.get("playerName");
             String playerName = principal != null && principal.getName() != null && !principal.getName().isBlank()
@@ -37,7 +36,7 @@ public class TetrisGameController {
                 : 0;
             Integer bonusPoints = principal != null ? giveawayBonusService.getActiveBonusPoints(principal.getName()) : 0;
 
-            TetrisLeaderboard result = gameService.recordScore(playerName, score, level, linesCleared, bonusPoints);
+            TetrisScoreSubmissionResponse result = gameService.recordScore(playerName, score, level, linesCleared, bonusPoints);
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
