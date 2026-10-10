@@ -20,14 +20,14 @@ export function normalizeGiveawaySettings(settings = {}) {
   const sourceSteps = Array.isArray(settings.steps) ? settings.steps : [];
 
   return {
-    title: cleanText(settings.title, DEFAULT_GIVEAWAY_SETTINGS.title),
-    intro: cleanText(settings.intro, DEFAULT_GIVEAWAY_SETTINGS.intro),
-    howToJoinTitle: cleanText(settings.howToJoinTitle, DEFAULT_GIVEAWAY_SETTINGS.howToJoinTitle),
-    steps: DEFAULT_GIVEAWAY_STEPS.map((fallback, index) => cleanText(sourceSteps[index], fallback)),
-    accountDeletionNote: cleanText(settings.accountDeletionNote, DEFAULT_GIVEAWAY_SETTINGS.accountDeletionNote),
-    prizeLabel: cleanText(settings.prizeLabel, DEFAULT_GIVEAWAY_SETTINGS.prizeLabel),
+    title: cleanText(settings.title),
+    intro: cleanText(settings.intro),
+    howToJoinTitle: cleanText(settings.howToJoinTitle),
+    steps: DEFAULT_GIVEAWAY_STEPS.map((_, index) => cleanText(sourceSteps[index])),
+    accountDeletionNote: cleanText(settings.accountDeletionNote),
+    prizeLabel: cleanText(settings.prizeLabel),
     prizeImageUrl: cleanOptionalUrl(settings.prizeImageUrl),
-    prizeImageAlt: cleanText(settings.prizeImageAlt, DEFAULT_GIVEAWAY_SETTINGS.prizeImageAlt),
+    prizeImageAlt: cleanText(settings.prizeImageAlt),
   };
 }
 
@@ -37,9 +37,9 @@ export function giveawayImageSrc(imageUrl) {
   return value.startsWith("/") ? value : `/${value}`;
 }
 
-function cleanText(value, fallback) {
+function cleanText(value) {
   const trimmed = String(value ?? "").trim();
-  return trimmed || fallback;
+  return trimmed;
 }
 
 function cleanOptionalUrl(value) {

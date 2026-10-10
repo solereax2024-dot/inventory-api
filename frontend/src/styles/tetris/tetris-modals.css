@@ -871,8 +871,9 @@
 
 .tetris-bonus-prize-image {
     width: 100%;
-    max-height: 180px;
-    object-fit: cover;
+    height: 180px;
+    object-fit: contain;
+    object-position: center;
     border-radius: 14px;
     border: 1px solid rgba(148, 163, 184, 0.16);
     background: rgba(15, 23, 42, 0.5);
@@ -1011,9 +1012,9 @@
     .tetris-bonus-modal {
         width: min(100%, 640px);
         max-height: min(90dvh, calc(100dvh - 24px));
-        padding: 18px 16px;
+        padding: 16px 14px;
         border-radius: 18px;
-        gap: 14px;
+        gap: 12px;
     }
 
     .tetris-bonus-modal-header {
@@ -1047,11 +1048,15 @@
     }
 
     .tetris-bonus-prize-card {
+        gap: 10px;
+    }
+
+    .tetris-bonus-prize-card {
         grid-template-columns: 1fr;
     }
 
     .tetris-bonus-prize-image {
-        max-height: 220px;
+        height: 190px;
     }
 
     .tetris-bonus-modal .tetris-bonus-item {
@@ -1068,13 +1073,26 @@
 
 @media (max-width: 380px) {
     .tetris-bonus-modal {
-        padding: 16px 14px;
-        gap: 12px;
+        padding: 14px 12px;
+        gap: 10px;
         border-radius: 18px;
     }
 
     .tetris-bonus-modal-title-row {
         gap: 8px;
+    }
+
+    .tetris-bonus-prize-card {
+        gap: 8px;
+    }
+
+    .tetris-bonus-prize-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.06em;
+    }
+
+    .tetris-bonus-prize-image {
+        height: 160px;
     }
 
     .tetris-bonus-modal-header {

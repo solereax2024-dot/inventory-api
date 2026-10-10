@@ -65,17 +65,17 @@ public class GiveawaySettingsService {
                 : request;
         List<String> steps = normalizeSteps(safeRequest.steps());
 
-        saveSetting(GIVEAWAY_MODAL_TITLE_KEY, normalizeOrDefault(safeRequest.title(), DEFAULT_TITLE));
-        saveSetting(GIVEAWAY_MODAL_INTRO_KEY, normalizeOrDefault(safeRequest.intro(), DEFAULT_INTRO));
-        saveSetting(GIVEAWAY_MODAL_HOW_TO_JOIN_TITLE_KEY, normalizeOrDefault(safeRequest.howToJoinTitle(), DEFAULT_HOW_TO_JOIN_TITLE));
+        saveSetting(GIVEAWAY_MODAL_TITLE_KEY, normalizeText(safeRequest.title()));
+        saveSetting(GIVEAWAY_MODAL_INTRO_KEY, normalizeText(safeRequest.intro()));
+        saveSetting(GIVEAWAY_MODAL_HOW_TO_JOIN_TITLE_KEY, normalizeText(safeRequest.howToJoinTitle()));
         saveSetting(GIVEAWAY_MODAL_STEP_1_KEY, steps.get(0));
         saveSetting(GIVEAWAY_MODAL_STEP_2_KEY, steps.get(1));
         saveSetting(GIVEAWAY_MODAL_STEP_3_KEY, steps.get(2));
         saveSetting(GIVEAWAY_MODAL_STEP_4_KEY, steps.get(3));
-        saveSetting(GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY, normalizeOrDefault(safeRequest.accountDeletionNote(), DEFAULT_ACCOUNT_DELETION_NOTE));
-        saveSetting(GIVEAWAY_MODAL_PRIZE_LABEL_KEY, normalizeOrDefault(safeRequest.prizeLabel(), DEFAULT_PRIZE_LABEL));
+        saveSetting(GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY, normalizeText(safeRequest.accountDeletionNote()));
+        saveSetting(GIVEAWAY_MODAL_PRIZE_LABEL_KEY, normalizeText(safeRequest.prizeLabel()));
         saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_URL_KEY, normalizeOptional(safeRequest.prizeImageUrl()));
-        saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, normalizeOrDefault(safeRequest.prizeImageAlt(), DEFAULT_PRIZE_IMAGE_ALT));
+        saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, normalizeText(safeRequest.prizeImageAlt()));
         return getSettings();
     }
 
@@ -87,9 +87,8 @@ public class GiveawaySettingsService {
     private List<String> normalizeSteps(List<String> steps) {
         List<String> normalized = new ArrayList<>(DEFAULT_STEPS.size());
         for (int index = 0; index < DEFAULT_STEPS.size(); index++) {
-            String fallback = DEFAULT_STEPS.get(index);
             String value = steps != null && index < steps.size() ? steps.get(index) : null;
-            normalized.add(normalizeOrDefault(value, fallback));
+            normalized.add(normalizeText(value));
         }
         return normalized;
     }
@@ -98,7 +97,6 @@ public class GiveawaySettingsService {
         return appSettingRepository.findById(key)
                 .map(AppSetting::getSettingValue)
                 .map(value -> value == null ? "" : value.trim())
-                .filter(value -> !value.isEmpty())
                 .orElse(fallback);
     }
 
@@ -114,9 +112,9 @@ public class GiveawaySettingsService {
         return appSettingRepository.save(setting).getSettingValue();
     }
 
-    private String normalizeOrDefault(String value, String fallback) {
+    private String normalizeText(String value) {
         String trimmed = value == null ? "" : value.trim();
-        return trimmed.isEmpty() ? fallback : trimmed;
+        return trimmed;
     }
 
     private String normalizeOptional(String value) {

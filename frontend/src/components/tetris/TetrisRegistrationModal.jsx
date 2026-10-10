@@ -280,13 +280,17 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         {!hasConfirmedFollow ? (
           <div className="tetris-registration-gate">
             <div className="tetris-registration-gate-card">
-              <p className="tetris-registration-gate-label">{giveawaySettings.howToJoinTitle}</p>
+              {giveawaySettings.howToJoinTitle ? (
+                <p className="tetris-registration-gate-label">{giveawaySettings.howToJoinTitle}</p>
+              ) : null}
 
                {prizeImageSrc ? (
                  <div className="tetris-bonus-prize-card tetris-registration-prize-card">
-                   <div className="tetris-bonus-prize-copy">
-                     <span className="tetris-bonus-prize-label">{giveawaySettings.prizeLabel}</span>
-                   </div>
+                    {giveawaySettings.prizeLabel ? (
+                      <div className="tetris-bonus-prize-copy">
+                        <span className="tetris-bonus-prize-label">{giveawaySettings.prizeLabel}</span>
+                      </div>
+                    ) : null}
                    <img
                      className="tetris-bonus-prize-image"
                      src={prizeImageSrc}
@@ -295,18 +299,24 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
                  </div>
                ) : null}
 
-              <ul className="tetris-registration-gate-list">
-                {giveawaySettings.steps.map((step) => (
-                  <li key={step}>
-                    <Check size={16} />
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="tetris-registration-gate-note" role="note">
-                <strong>Account Access Notice</strong>
-                <p>{giveawaySettings.accountDeletionNote}</p>
-              </div>
+              {giveawaySettings.steps.filter((step) => Boolean(String(step || "").trim())).length ? (
+                <ul className="tetris-registration-gate-list">
+                  {giveawaySettings.steps
+                    .filter((step) => Boolean(String(step || "").trim()))
+                    .map((step) => (
+                      <li key={step}>
+                        <Check size={16} />
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                </ul>
+              ) : null}
+              {giveawaySettings.accountDeletionNote ? (
+                <div className="tetris-registration-gate-note" role="note">
+                  <strong>Account Access Notice</strong>
+                  <p>{giveawaySettings.accountDeletionNote}</p>
+                </div>
+              ) : null}
             </div>
 
             <div className="tetris-registration-gate-actions">
