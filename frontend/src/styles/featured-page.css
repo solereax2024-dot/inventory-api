@@ -45,7 +45,7 @@
 
 .featured-products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -70,7 +70,7 @@
   }
 
   .featured-products-grid .product-image-wrap {
-    height: clamp(148px, 25vw, 176px);
+    height: auto;
     margin-bottom: 4px;
   }
 
@@ -121,7 +121,7 @@
   }
 
   .featured-products-grid .product-image-wrap {
-    height: clamp(138px, 39vw, 168px);
+    height: auto;
   }
 }
 
@@ -131,7 +131,7 @@
   }
 
   .featured-products-grid .product-image-wrap {
-    height: 168px;
+    height: auto;
   }
 }
 
