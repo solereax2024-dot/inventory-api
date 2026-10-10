@@ -48,8 +48,8 @@ export default function TetrisLeaderboardPage() {
           <button
             type="button"
             className="tetris-leaderboard-back-btn"
-            onClick={() => navigate("/tetris-game")}
-            aria-label="Back to Tetris game"
+            onClick={() => navigate("/giveaway-game")}
+            aria-label="Back to Giveaway game"
           >
             <ArrowLeft size={20} />
           </button>

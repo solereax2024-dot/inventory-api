@@ -389,9 +389,10 @@ export default function App() {
          <Route path="/reserve" element={<Navigate to="/collections" replace />} />
          <Route path="/reserve/:productId" element={<ReservePage />} />
          <Route
-           path="/tetris-game"
+           path="/giveaway-game"
            element={branding.gamingSectionVisible !== false || Boolean(adminToken) ? <TetrisGamePage /> : <Navigate to="/collections" replace />}
          />
+         <Route path="/tetris-game" element={<Navigate to="/giveaway-game" replace />} />
          <Route
            path="/tetris-leaderboard"
            element={branding.gamingSectionVisible !== false || Boolean(adminToken) ? <TetrisLeaderboardPage /> : <Navigate to="/collections" replace />}

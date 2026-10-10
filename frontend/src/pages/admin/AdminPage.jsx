@@ -1934,9 +1934,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   };
 
   const playGiveawayAsAdmin = () => {
-    const popup = window.open("/tetris-game", "_blank", "noopener,noreferrer");
+    const popup = window.open("/giveaway-game", "_blank", "noopener,noreferrer");
     if (!popup) {
-      navigate("/tetris-game");
+      navigate("/giveaway-game");
     }
   };
 

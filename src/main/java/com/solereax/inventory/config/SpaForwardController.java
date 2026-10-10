@@ -20,6 +20,7 @@ public class SpaForwardController {
         "/brands", "/brands/", "/brands/**",
         "/shop", "/shop/", "/shop/**",
         "/reserve", "/reserve/", "/reserve/**",
+        "/giveaway-game", "/giveaway-game/", "/giveaway-game/**",
         "/tetris-game", "/tetris-game/", "/tetris-game/**",
         "/admin", "/admin/", "/admin/**",
         "/admin.html", "/admin.html/", "/admin.html/**"
