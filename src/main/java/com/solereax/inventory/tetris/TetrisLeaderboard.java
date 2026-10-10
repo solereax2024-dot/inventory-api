@@ -3,6 +3,7 @@ package com.solereax.inventory.tetris;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -24,15 +25,19 @@ public class TetrisLeaderboard {
     private String playerName;
 
     @Column(nullable = false)
+    @Default
     private Integer highestScore = 0;
 
     @Column(nullable = false)
+    @Default
     private Integer highestLevel = 1;
 
     @Column(nullable = false)
+    @Default
     private Integer totalGames = 0;
 
     @Column(nullable = false)
+    @Default
     private Integer totalLinesCleared = 0;
 
     private LocalDateTime lastPlayed;
