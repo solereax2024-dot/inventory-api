@@ -1,5 +1,7 @@
 package com.solereax.inventory.tetris;
 
+import com.solereax.inventory.notification.PlayerNotificationService;
+import com.solereax.inventory.notification.PlayerNotificationType;
 import com.solereax.inventory.shared.NotFoundException;
 import com.solereax.inventory.user.AppUser;
 import com.solereax.inventory.user.AppUserRepository;
@@ -26,18 +28,24 @@ public class GiveawayBonusService {
 
     private final AppUserRepository appUserRepository;
     private final ImageCompressionService imageCompressionService;
+    private final PlayerNotificationService playerNotificationService;
 
     @Value("${app.upload.profile-images-dir:uploads/profile-images}")
     private String uploadDir;
 
     @Autowired
-    public GiveawayBonusService(AppUserRepository appUserRepository, ImageCompressionService imageCompressionService) {
+    public GiveawayBonusService(
+            AppUserRepository appUserRepository,
+            ImageCompressionService imageCompressionService,
+            PlayerNotificationService playerNotificationService
+    ) {
         this.appUserRepository = appUserRepository;
         this.imageCompressionService = imageCompressionService;
+        this.playerNotificationService = playerNotificationService;
     }
 
-    public GiveawayBonusService(AppUserRepository appUserRepository) {
-        this(appUserRepository, new ImageCompressionService());
+    public GiveawayBonusService(AppUserRepository appUserRepository, PlayerNotificationService playerNotificationService) {
+        this(appUserRepository, new ImageCompressionService(), playerNotificationService);
     }
 
     @Transactional(readOnly = true)
@@ -60,7 +68,9 @@ public class GiveawayBonusService {
         user.setFollowProofImageFilename(file.getOriginalFilename());
         user.setFollowProofValidated(true);
         user.setFollowProofRevoked(false);
+        user.setFollowProofValidationMessage(null);
         appUserRepository.save(user);
+        playerNotificationService.clearNotificationsByType(user.getId(), PlayerNotificationType.FOLLOW_PROOF_REJECTED);
         return new GiveawayBonusUploadResponse("Follow proof uploaded and validated. Your follow bonus is now active for authenticated score submissions.", toBonusStatus(user));
     }
 
@@ -73,18 +83,20 @@ public class GiveawayBonusService {
         user.setReviewProofImageFilename(file.getOriginalFilename());
         user.setReviewProofValidated(true);
         user.setReviewProofRevoked(false);
+        user.setReviewProofValidationMessage(null);
         appUserRepository.save(user);
+        playerNotificationService.clearNotificationsByType(user.getId(), PlayerNotificationType.REVIEW_PROOF_REJECTED);
         return new GiveawayBonusUploadResponse("Review proof uploaded and validated. Your review bonus is now active for authenticated score submissions.", toBonusStatus(user));
     }
 
     @Transactional
     public GiveawayBonusStatusResponse validateProof(Long userId, String bonusType) {
-        return updateProofState(userId, bonusType, true, false);
+        return updateProofState(userId, bonusType, true, false, null);
     }
 
     @Transactional
-    public GiveawayBonusStatusResponse revokeProof(Long userId, String bonusType) {
-        return updateProofState(userId, bonusType, false, true);
+    public GiveawayBonusStatusResponse revokeProof(Long userId, String bonusType, String message) {
+        return updateProofState(userId, bonusType, false, true, message);
     }
 
     @Transactional(readOnly = true)
@@ -107,17 +119,19 @@ public class GiveawayBonusService {
                 user.getFollowProofImagePath(),
                 followValidated,
                 followRevoked,
+                user.getFollowProofValidationMessage(),
                 hasReviewProof,
                 user.getReviewProofImagePath(),
                 reviewValidated,
                 reviewRevoked,
+                user.getReviewProofValidationMessage(),
                 followPoints,
                 reviewPoints,
                 followPoints + reviewPoints
         );
     }
 
-    private GiveawayBonusStatusResponse updateProofState(Long userId, String bonusType, boolean validated, boolean revoked) {
+    private GiveawayBonusStatusResponse updateProofState(Long userId, String bonusType, boolean validated, boolean revoked, String message) {
         AppUser user = findUser(userId);
         String normalizedBonusType = normalizeBonusType(bonusType);
 
@@ -125,13 +139,40 @@ public class GiveawayBonusService {
             ensureProofExists(user.getFollowProofImagePath(), "Follow proof");
             user.setFollowProofValidated(validated);
             user.setFollowProofRevoked(revoked);
+            user.setFollowProofValidationMessage(revoked ? requireMessage(message) : null);
         } else if (REVIEW_BONUS_TYPE.equals(normalizedBonusType)) {
             ensureProofExists(user.getReviewProofImagePath(), "Review proof");
             user.setReviewProofValidated(validated);
             user.setReviewProofRevoked(revoked);
+            user.setReviewProofValidationMessage(revoked ? requireMessage(message) : null);
         }
 
         appUserRepository.save(user);
+
+        if (FOLLOW_BONUS_TYPE.equals(normalizedBonusType)) {
+            if (revoked) {
+                playerNotificationService.sendSystemNotification(
+                        user.getId(),
+                        PlayerNotificationType.FOLLOW_PROOF_REJECTED,
+                        "Follow proof needs re-upload",
+                        user.getFollowProofValidationMessage()
+                );
+            } else {
+                playerNotificationService.clearNotificationsByType(user.getId(), PlayerNotificationType.FOLLOW_PROOF_REJECTED);
+            }
+        } else if (REVIEW_BONUS_TYPE.equals(normalizedBonusType)) {
+            if (revoked) {
+                playerNotificationService.sendSystemNotification(
+                        user.getId(),
+                        PlayerNotificationType.REVIEW_PROOF_REJECTED,
+                        "Review proof needs re-upload",
+                        user.getReviewProofValidationMessage()
+                );
+            } else {
+                playerNotificationService.clearNotificationsByType(user.getId(), PlayerNotificationType.REVIEW_PROOF_REJECTED);
+            }
+        }
+
         return toBonusStatus(user);
     }
 
@@ -198,6 +239,14 @@ public class GiveawayBonusService {
 
     private boolean hasValue(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private String requireMessage(String message) {
+        String sanitized = message == null ? "" : message.trim();
+        if (sanitized.isEmpty()) {
+            throw new IllegalArgumentException("Message is required.");
+        }
+        return sanitized;
     }
 }
 

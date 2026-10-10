@@ -9,6 +9,7 @@ import { X } from "lucide-react";
 export default function TetrisHowToPlayModal({
   isVisible,
   onClose,
+  isMobileViewport = false,
 }) {
   if (!isVisible) return null;
 
@@ -37,44 +38,46 @@ export default function TetrisHowToPlayModal({
             </p>
           </section>
 
-          {/* Desktop Controls */}
-          <section className="tetris-howtoplay-section">
-            <h3>Desktop Controls</h3>
-            <div className="tetris-controls-list">
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">← →</span>
-                <span>Move left/right</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">↓</span>
-                <span>Soft drop</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">Space</span>
-                <span>Hard drop</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">Z</span>
-                <span>Rotate counter-clockwise</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">X</span>
-                <span>Rotate clockwise</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">C / Shift</span>
-                <span>Hold piece</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">P</span>
-                <span>Pause/Resume</span>
-              </div>
-              <div className="tetris-control-item">
-                <span className="tetris-control-key">R</span>
-                <span>Reset game</span>
-              </div>
-            </div>
-          </section>
+           {/* Desktop Controls */}
+           {!isMobileViewport && (
+             <section className="tetris-howtoplay-section">
+               <h3>Desktop Controls</h3>
+               <div className="tetris-controls-list">
+                 <div className="tetris-control-item">
+                   <span className="tetris-control-key">← →</span>
+                   <span>Move left/right</span>
+                 </div>
+                 <div className="tetris-control-item">
+                   <span className="tetris-control-key">↓</span>
+                   <span>Soft drop</span>
+                 </div>
+                 <div className="tetris-control-item">
+                   <span className="tetris-control-key">Space</span>
+                   <span>Hard drop</span>
+                 </div>
+                 <div className="tetris-control-item">
+                   <span className="tetris-control-key">Z</span>
+                   <span>Rotate counter-clockwise</span>
+                 </div>
+                 <div className="tetris-control-item">
+                   <span className="tetris-control-key">X</span>
+                   <span>Rotate clockwise</span>
+                 </div>
+                 <div className="tetris-control-item">
+                   <span className="tetris-control-key">C / Shift</span>
+                   <span>Hold piece</span>
+                 </div>
+                 <div className="tetris-control-item">
+                   <span className="tetris-control-key">P</span>
+                   <span>Pause/Resume</span>
+                 </div>
+                 <div className="tetris-control-item">
+                   <span className="tetris-control-key">R</span>
+                   <span>Reset game</span>
+                 </div>
+               </div>
+             </section>
+           )}
 
            {/* Mobile Gestures */}
            <section className="tetris-howtoplay-section">

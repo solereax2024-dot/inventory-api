@@ -1,4 +1,5 @@
 import { X, Trophy } from "lucide-react";
+import TetrisLeaderboardPrizeBanner from "./TetrisLeaderboardPrizeBanner";
 
 export default function TetrisLeaderboardModal({
   isVisible,
@@ -7,6 +8,7 @@ export default function TetrisLeaderboardModal({
   leaderboardError,
   onClose,
   leaderboardListContent,
+  giveawaySettings,
 }) {
   if (!isVisible) return null;
 
@@ -29,6 +31,8 @@ export default function TetrisLeaderboardModal({
         </div>
 
         <div className="tetris-leaderboard-modal-content">
+          <TetrisLeaderboardPrizeBanner giveawaySettings={giveawaySettings} compact />
+
           {leaderboardLoading && <p className="text-muted">Loading leaderboard...</p>}
           {!leaderboardLoading && leaderboardError && <p className="text-muted">{leaderboardError}</p>}
           {!leaderboardLoading && !leaderboardError && leaderboard.length === 0 && (

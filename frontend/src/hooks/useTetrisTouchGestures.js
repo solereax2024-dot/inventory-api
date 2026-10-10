@@ -9,7 +9,9 @@ import {
 
 export default function useTetrisTouchGestures({
   isBlocked = false,
+  isPaused = false,
   focusBoard,
+  resumePausedGame,
   rotateCurrentPiece,
   movePieceHorizontal,
   softDropCurrentPiece,
@@ -80,7 +82,18 @@ export default function useTetrisTouchGestures({
     const isTap = absX <= TOUCH_TAP_MAX_MOVE_PX && absY <= TOUCH_TAP_MAX_MOVE_PX && elapsedMs <= TOUCH_TAP_MAX_DURATION_MS;
 
     if (isTap) {
+      if (isPaused) {
+        resumePausedGame?.();
+        touchGestureRef.current.activeTouchId = null;
+        return;
+      }
+
       rotateCurrentPiece();
+      touchGestureRef.current.activeTouchId = null;
+      return;
+    }
+
+    if (isPaused) {
       touchGestureRef.current.activeTouchId = null;
       return;
     }
@@ -107,7 +120,7 @@ export default function useTetrisTouchGestures({
     }
 
     touchGestureRef.current.activeTouchId = null;
-  }, [hardDropCurrentPiece, isBlocked, movePieceHorizontal, rotateCurrentPiece, softDropCurrentPiece, holdCurrentPiece]);
+  }, [hardDropCurrentPiece, holdCurrentPiece, isBlocked, isPaused, movePieceHorizontal, resumePausedGame, rotateCurrentPiece, softDropCurrentPiece]);
 
   const handleBoardTouchCancel = useCallback(() => {
     touchGestureRef.current.activeTouchId = null;

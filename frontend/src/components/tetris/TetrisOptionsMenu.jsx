@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreVertical, HelpCircle, RotateCcw, Settings, X, Minimize2, Pause, Play, LogOut, AlertCircle } from "lucide-react";
+import { MoreVertical, HelpCircle, RotateCcw, Settings, X, Minimize2, Pause, Play, LogOut, AlertCircle, Upload, BellRing } from "lucide-react";
 import TetrisConfirmModal from "./TetrisConfirmModal";
 
 export default function TetrisOptionsMenu({
@@ -11,10 +11,13 @@ export default function TetrisOptionsMenu({
   headerState,
   onOpenSettings,
   onOpenHowToPlay,
+  onOpenProfileUpdate,
+  onOpenPlayerNotices,
   onReset,
   onToggleFullscreen,
   onTogglePause,
   onSignOut,
+  unreadNoticeCount = 0,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -46,6 +49,18 @@ export default function TetrisOptionsMenu({
     onOpenHowToPlay();
     setIsOpen(false);
   };
+
+  const handleOpenProfileUpdate = () => {
+    onOpenProfileUpdate?.();
+    setIsOpen(false);
+  };
+
+  const handleOpenPlayerNotices = () => {
+    onOpenPlayerNotices?.();
+    setIsOpen(false);
+  };
+
+  const formattedUnreadNoticeCount = unreadNoticeCount > 99 ? "99+" : unreadNoticeCount;
 
   const handleReset = () => {
     setShowResetConfirm(true);
@@ -92,6 +107,11 @@ export default function TetrisOptionsMenu({
            data-state={headerState || "default"}
          >
            {isOpen ? <X size={20} /> : <MoreVertical size={20} />}
+            {unreadNoticeCount > 0 ? (
+              <span className="tetris-options-menu-badge" aria-label={`${unreadNoticeCount} unread admin notification${unreadNoticeCount === 1 ? "" : "s"}`}>
+                {formattedUnreadNoticeCount}
+              </span>
+            ) : null}
          </button>
 
          {isOpen && (
@@ -119,6 +139,27 @@ export default function TetrisOptionsMenu({
                <Settings size={16} />
                <span>Settings</span>
              </button>
+
+              <button
+                type="button"
+                className="tetris-options-menu-item"
+                onClick={handleOpenPlayerNotices}
+                role="menuitem"
+              >
+                <BellRing size={16} />
+                <span>Notifications</span>
+                {unreadNoticeCount > 0 ? <span className="tetris-options-menu-item-badge">{formattedUnreadNoticeCount}</span> : null}
+              </button>
+
+              <button
+                type="button"
+                className="tetris-options-menu-item"
+                onClick={handleOpenProfileUpdate}
+                role="menuitem"
+              >
+                <Upload size={16} />
+                <span>Re-upload Profile Picture</span>
+              </button>
 
               {(gameStarted && !gameOver) && (
                 <button

@@ -9,6 +9,8 @@ public record RegisteredPlayerResponse(
         String username,
         String fullName,
         String profileImagePath,
+        boolean profileImageValidated,
+        String profileImageValidationMessage,
         boolean facebookWinnerContactConsent,
         boolean enabled,
         Instant createdAt,
@@ -17,6 +19,7 @@ public record RegisteredPlayerResponse(
         Integer highestLevel,
         Integer totalGames,
         Integer totalLinesCleared,
+        Integer totalBonusPoints,
         LocalDateTime lastPlayed,
         GiveawayBonusStatusResponse bonusStatus
 ) {

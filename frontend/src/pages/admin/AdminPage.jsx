@@ -196,6 +196,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [registeredPlayers, setRegisteredPlayers] = useState([]);
   const [isRegisteredPlayersLoading, setIsRegisteredPlayersLoading] = useState(false);
   const [bonusActionKey, setBonusActionKey] = useState("");
+  const [profileImageActionKey, setProfileImageActionKey] = useState("");
+  const [notificationActionKey, setNotificationActionKey] = useState("");
   const [isDeletingPlayers, setIsDeletingPlayers] = useState(false);
   const [deleteAllPlayersConfirm, setDeleteAllPlayersConfirm] = useState({ isOpen: false });
   const {
@@ -358,7 +360,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
-  const handleBonusProofAction = async (userId, bonusType, action) => {
+  const handleBonusProofAction = async (userId, bonusType, action, message = "") => {
     if (!token) return;
 
     const actionKey = `${userId}:${bonusType}:${action}`;
@@ -369,7 +371,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       await apiRequest(
         `/api/admin/settings/gaming/bonuses/${userId}/${bonusType}/${action}`,
         "PATCH",
-        undefined,
+        action === "revoke" ? { message } : undefined,
         token
       );
       await refreshRegisteredPlayers();
@@ -381,6 +383,90 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setMessage(err.message || "Unable to update giveaway bonus status.");
     } finally {
       setBonusActionKey("");
+    }
+  };
+
+  const handleSendPlayerNotification = async (userId, payload) => {
+    if (!token) return;
+
+    const actionKey = `player:${userId}`;
+    setNotificationActionKey(actionKey);
+    setMessage("");
+
+    try {
+      const response = await apiRequest(
+        `/api/admin/settings/gaming/notifications/players/${userId}`,
+        "PATCH",
+        payload,
+        token
+      );
+      setSuccessModal({
+        isOpen: true,
+        message: response?.message || "Admin message sent successfully.",
+      });
+    } catch (err) {
+      setMessage(err.message || "Unable to send player message.");
+    } finally {
+      setNotificationActionKey("");
+    }
+  };
+
+  const handleBroadcastNotification = async (payload) => {
+    if (!token) return;
+
+    setNotificationActionKey("broadcast");
+    setMessage("");
+
+    try {
+      const response = await apiRequest(
+        "/api/admin/settings/gaming/notifications/broadcast",
+        "PATCH",
+        payload,
+        token
+      );
+      setSuccessModal({
+        isOpen: true,
+        message: response?.message || `Broadcast delivered to ${response?.deliveredCount || 0} players.`,
+      });
+    } catch (err) {
+      setMessage(err.message || "Unable to send broadcast message.");
+    } finally {
+      setNotificationActionKey("");
+    }
+  };
+
+  const handleProfileImageAction = async (userId, action, message = "") => {
+    if (!token) return;
+
+    const actionKey = `${userId}:${action}`;
+    setProfileImageActionKey(actionKey);
+    setMessage("");
+
+    try {
+      if (action === "validate") {
+        await apiRequest(
+          `/api/admin/settings/gaming/profile-images/${userId}/validate`,
+          "PATCH",
+          undefined,
+          token
+        );
+      } else if (action === "reject") {
+        await apiRequest(
+          `/api/admin/settings/gaming/profile-images/${userId}/reject`,
+          "PATCH",
+          { message },
+          token
+        );
+      }
+      await refreshRegisteredPlayers();
+      setSuccessModal({
+        isOpen: true,
+        message: `Profile image ${action === "validate" ? "approved" : "rejected"} successfully.`,
+      });
+    } catch (err) {
+      setMessage(err.message || `Unable to ${action} profile image.`);
+    } finally {
+      setProfileImageActionKey("");
     }
   };
 
@@ -2024,29 +2110,34 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       ) : null}
 
       {activeAdminSection === "gaming" ? (
-        <GamingSettingsSection
-          gamingSectionVisible={gamingSettings.gamingSectionVisible !== false}
-          isSaving={isGamingSettingsSaving}
-          onToggleVisibility={toggleGamingSectionVisibility}
-          onPlayAsAdmin={playGiveawayAsAdmin}
-          giveawaySettings={giveawaySettings}
-          isGiveawaySettingsSaving={isGiveawaySettingsSaving}
-          isGiveawayPrizeUploading={isGiveawayPrizeUploading}
-          activeGiveawayPrizeUploadSlot={activeGiveawayPrizeUploadSlot}
-          onGiveawaySettingChange={updateGiveawaySetting}
-          onGiveawayPrizeImageCountChange={updateGiveawayPrizeImageCount}
-          onGiveawayStepChange={updateGiveawayStep}
-          onSaveGiveawaySettings={saveGiveawaySettings}
-          onGiveawayPrizeImageChange={handleGiveawayPrizeImageChange}
-          onClearGiveawayPrizeImage={clearGiveawayPrizeImage}
-          registeredPlayers={registeredPlayers}
-          isLoadingPlayers={isRegisteredPlayersLoading || isAdminLoading}
-          onBonusAction={handleBonusProofAction}
-          bonusActionKey={bonusActionKey}
-          onDeletePlayer={deletePlayer}
-          onDeleteAllPlayers={confirmDeleteAllPlayers}
-          isDeletingPlayers={isDeletingPlayers}
-        />
+         <GamingSettingsSection
+           gamingSectionVisible={gamingSettings.gamingSectionVisible !== false}
+           isSaving={isGamingSettingsSaving}
+           onToggleVisibility={toggleGamingSectionVisibility}
+           onPlayAsAdmin={playGiveawayAsAdmin}
+           giveawaySettings={giveawaySettings}
+           isGiveawaySettingsSaving={isGiveawaySettingsSaving}
+           isGiveawayPrizeUploading={isGiveawayPrizeUploading}
+           activeGiveawayPrizeUploadSlot={activeGiveawayPrizeUploadSlot}
+           onGiveawaySettingChange={updateGiveawaySetting}
+           onGiveawayPrizeImageCountChange={updateGiveawayPrizeImageCount}
+           onGiveawayStepChange={updateGiveawayStep}
+           onSaveGiveawaySettings={saveGiveawaySettings}
+           onGiveawayPrizeImageChange={handleGiveawayPrizeImageChange}
+           onClearGiveawayPrizeImage={clearGiveawayPrizeImage}
+           registeredPlayers={registeredPlayers}
+           isLoadingPlayers={isRegisteredPlayersLoading || isAdminLoading}
+           onBonusAction={handleBonusProofAction}
+           bonusActionKey={bonusActionKey}
+           onProfileImageAction={handleProfileImageAction}
+           profileImageActionKey={profileImageActionKey}
+           onSendPlayerNotification={handleSendPlayerNotification}
+           onBroadcastNotification={handleBroadcastNotification}
+           notificationActionKey={notificationActionKey}
+           onDeletePlayer={deletePlayer}
+           onDeleteAllPlayers={confirmDeleteAllPlayers}
+           isDeletingPlayers={isDeletingPlayers}
+         />
       ) : null}
 
       {isSuperAdmin && activeAdminSection === "promotions" ? (

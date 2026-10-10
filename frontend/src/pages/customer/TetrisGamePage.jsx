@@ -15,9 +15,13 @@ import TetrisPlayerDetailsModal from "../../components/tetris/TetrisPlayerDetail
 import TetrisSettingsModal from "../../components/tetris/TetrisSettingsModal";
 import TetrisHowToPlayModal from "../../components/tetris/TetrisHowToPlayModal";
 import TetrisLeaderboardModal from "../../components/tetris/TetrisLeaderboardModal";
+import TetrisLeaderboardPrizeBanner from "../../components/tetris/TetrisLeaderboardPrizeBanner";
 import TetrisSideDetailsPanel from "../../components/tetris/TetrisSideDetailsPanel";
 import TetrisOptionsMenu from "../../components/tetris/TetrisOptionsMenu";
 import TetrisBonusModal from "../../components/tetris/TetrisBonusModal";
+import TetrisPlayerNoticeButton from "../../components/tetris/TetrisPlayerNoticeButton";
+import TetrisPlayerNoticesModal from "../../components/tetris/TetrisPlayerNoticesModal";
+import TetrisProfileUpdateModal from "../../components/tetris/TetrisProfileUpdateModal";
 import { TetrisLeaderboardList } from "../../components/tetris/TetrisLeaderboardPanel";
 import {
   BEST_RUN_PREFERENCE_KEY,
@@ -82,12 +86,31 @@ const EMPTY_BONUS_STATUS = {
   followProofUploaded: false,
   followProofValidated: false,
   followProofRevoked: false,
+  followProofValidationMessage: "",
   reviewProofUploaded: false,
   reviewProofValidated: false,
   reviewProofRevoked: false,
+  reviewProofValidationMessage: "",
   followBonusPoints: 0,
   reviewBonusPoints: 0,
   totalBonusPoints: 0,
+};
+
+const EMPTY_PLAYER_PROFILE = {
+  username: "",
+  fullName: "",
+  profileImagePath: "",
+  profileImageValidated: false,
+  profileImageValidationMessage: "",
+};
+
+const EMPTY_PLAYER_NOTIFICATION = {
+  id: null,
+  type: "",
+  title: "",
+  message: "",
+  unread: false,
+  createdAt: "",
 };
 
 function normalizeBonusStatus(status) {
@@ -95,6 +118,46 @@ function normalizeBonusStatus(status) {
     ...EMPTY_BONUS_STATUS,
     ...(status || {}),
   };
+}
+
+function normalizePlayerProfile(profile) {
+  return {
+    ...EMPTY_PLAYER_PROFILE,
+    ...(profile || {}),
+  };
+}
+
+function normalizePlayerNotification(notification) {
+  return {
+    ...EMPTY_PLAYER_NOTIFICATION,
+    ...(notification || {}),
+  };
+}
+
+function getNoticeToneFromType(type) {
+  return ["PROFILE_IMAGE_REJECTED", "FOLLOW_PROOF_REJECTED", "REVIEW_PROOF_REJECTED"].includes(type)
+    ? "danger"
+    : "info";
+}
+
+function getNoticeHelperText(type) {
+  if (type === "PROFILE_IMAGE_REJECTED") {
+    return "Open Game Options to re-upload a corrected image for another admin review.";
+  }
+
+  if (type === "FOLLOW_PROOF_REJECTED") {
+    return "Open your bonus tasks and re-upload a valid follow proof if you still want the follow bonus points.";
+  }
+
+  if (type === "REVIEW_PROOF_REJECTED") {
+    return "Open your bonus tasks and re-upload a valid review proof if you still want the review bonus points.";
+  }
+
+  if (type === "BROADCAST_MESSAGE") {
+    return "This update was sent to all active giveaway players.";
+  }
+
+  return "";
 }
 
 function getViewportMetrics() {
@@ -166,9 +229,11 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const [scorePulse, setScorePulse] = useState(false);
   const [levelPulse, setLevelPulse] = useState(false);
   const [linesPulse, setLinesPulse] = useState(false);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
-  const [leaderboardError, setLeaderboardError] = useState(null);
+   const [leaderboard, setLeaderboard] = useState([]);
+   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+   const [leaderboardError, setLeaderboardError] = useState(null);
+   const [leaderboardLastUpdated, setLeaderboardLastUpdated] = useState(null);
+   const [isInitialLeaderboardLoad, setIsInitialLeaderboardLoad] = useState(true);
    const [isBoardFocused, setIsBoardFocused] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
@@ -194,17 +259,49 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const [bonusStatus, setBonusStatus] = useState(EMPTY_BONUS_STATUS);
   const [bonusLoading, setBonusLoading] = useState(false);
   const [bonusUploadingType, setBonusUploadingType] = useState(null);
-  const [bonusError, setBonusError] = useState("");
-  const [bonusFeedback, setBonusFeedback] = useState("");
-  const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
-  const [giveawayContent, setGiveawayContent] = useState(DEFAULT_GIVEAWAY_SETTINGS);
-  const [lastScoreSubmission, setLastScoreSubmission] = useState(null);
+   const [bonusError, setBonusError] = useState("");
+   const [bonusFeedback, setBonusFeedback] = useState("");
+   const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
+   const [isProfileUpdateModalOpen, setIsProfileUpdateModalOpen] = useState(false);
+   const [isPlayerNoticesOpen, setIsPlayerNoticesOpen] = useState(false);
+   const [giveawayContent, setGiveawayContent] = useState(DEFAULT_GIVEAWAY_SETTINGS);
+   const [lastScoreSubmission, setLastScoreSubmission] = useState(null);
+   const [playerProfile, setPlayerProfile] = useState(EMPTY_PLAYER_PROFILE);
+   const [playerNotifications, setPlayerNotifications] = useState([]);
 
   const authenticatedPlayerName = useMemo(() => {
     return authenticatedUser?.username?.trim()
       || authenticatedUser?.fullName?.trim()
       || playerName.trim();
   }, [authenticatedUser, playerName]);
+
+  const refreshPlayerProfile = useCallback(async () => {
+    if (!authenticatedToken) {
+      setPlayerProfile(EMPTY_PLAYER_PROFILE);
+      return;
+    }
+
+    try {
+      const data = await apiRequest("/api/auth/me", "GET", undefined, authenticatedToken);
+      setPlayerProfile(normalizePlayerProfile(data));
+    } catch {
+      setPlayerProfile(EMPTY_PLAYER_PROFILE);
+    }
+  }, [authenticatedToken]);
+
+  const refreshPlayerNotifications = useCallback(async () => {
+    if (!authenticatedToken) {
+      setPlayerNotifications([]);
+      return;
+    }
+
+    try {
+      const data = await apiRequest("/api/player-notifications/me", "GET", undefined, authenticatedToken);
+      setPlayerNotifications(Array.isArray(data) ? data.map(normalizePlayerNotification) : []);
+    } catch {
+      setPlayerNotifications([]);
+    }
+  }, [authenticatedToken]);
 
    useEffect(() => {
      const preferredName = authenticatedUser?.username || authenticatedUser?.fullName || "";
@@ -213,6 +310,76 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
        setMessage(`Welcome back, ${preferredName}!`);
      }
    }, [authenticatedUser]);
+
+    useEffect(() => {
+      if (!authenticatedToken) {
+        setPlayerProfile(EMPTY_PLAYER_PROFILE);
+        return undefined;
+      }
+
+      let isCancelled = false;
+
+      const fetchPlayerProfile = async () => {
+        try {
+          const data = await apiRequest("/api/auth/me", "GET", undefined, authenticatedToken);
+          if (!isCancelled) {
+            setPlayerProfile(normalizePlayerProfile(data));
+          }
+        } catch {
+          if (!isCancelled) {
+            setPlayerProfile(EMPTY_PLAYER_PROFILE);
+          }
+        }
+      };
+
+      void fetchPlayerProfile();
+
+      return () => {
+        isCancelled = true;
+      };
+    }, [authenticatedToken]);
+
+    useEffect(() => {
+      if (!authenticatedToken) {
+        setPlayerNotifications([]);
+        return undefined;
+      }
+
+      let isCancelled = false;
+
+      const fetchPlayerNotifications = async () => {
+        try {
+          const data = await apiRequest("/api/player-notifications/me", "GET", undefined, authenticatedToken);
+          if (!isCancelled) {
+            setPlayerNotifications(Array.isArray(data) ? data.map(normalizePlayerNotification) : []);
+          }
+        } catch {
+          if (!isCancelled) {
+            setPlayerNotifications([]);
+          }
+        }
+      };
+
+      void fetchPlayerNotifications();
+
+      const intervalId = window.setInterval(() => {
+        void fetchPlayerNotifications();
+      }, 30000);
+
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          void fetchPlayerNotifications();
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
+      return () => {
+        isCancelled = true;
+        window.clearInterval(intervalId);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      };
+    }, [authenticatedToken]);
 
     useEffect(() => {
       if (!authenticatedToken) {
@@ -279,12 +446,110 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
           setIsBonusModalOpen(false);
         }
       }, [gameStarted, isBonusModalOpen]);
+
+  const playerNotices = useMemo(() => {
+    const notices = playerNotifications.map((notification) => ({
+      id: notification.id ? `notification-${notification.id}` : `notification-${notification.type}-${notification.createdAt}`,
+      type: notification.type,
+      tone: getNoticeToneFromType(notification.type),
+      title: notification.title?.trim() || "Admin notification",
+      message: notification.message?.trim() || "You have a new admin update.",
+      helperText: getNoticeHelperText(notification.type),
+      unread: Boolean(notification.unread),
+      createdAt: notification.createdAt,
+      metaText: notification.createdAt ? formatRelativeTime(notification.createdAt) : "",
+    }));
+    const hasProfileRejectNotification = notices.some((notice) => notice.type === "PROFILE_IMAGE_REJECTED");
+    const hasFollowRejectNotification = notices.some((notice) => notice.type === "FOLLOW_PROOF_REJECTED");
+    const hasReviewRejectNotification = notices.some((notice) => notice.type === "REVIEW_PROOF_REJECTED");
+    const validationMessage = playerProfile.profileImageValidationMessage?.trim();
+
+    if (validationMessage && !hasProfileRejectNotification) {
+      notices.push({
+        id: "legacy-profile-image-rejected",
+        type: "PROFILE_IMAGE_REJECTED",
+        tone: "danger",
+        title: "Profile image needs re-upload",
+        message: validationMessage,
+        helperText: "Open Game Options to re-upload a corrected image for another admin review.",
+        unread: false,
+        createdAt: "",
+        metaText: "",
+      });
+    } else if (playerProfile.profileImagePath && !playerProfile.profileImageValidated) {
+      notices.push({
+        id: "profile-image-pending",
+        type: "PROFILE_IMAGE_PENDING",
+        tone: "info",
+        title: "Profile image under review",
+        message: "Your current profile image is still waiting for admin approval.",
+        helperText: "You can keep playing while the review is in progress. If needed, open Game Options to upload a new image.",
+        unread: false,
+        createdAt: "",
+        metaText: "",
+      });
+    }
+
+    const followProofMessage = bonusStatus.followProofValidationMessage?.trim();
+    if (bonusStatus.followProofRevoked && followProofMessage && !hasFollowRejectNotification) {
+      notices.push({
+        id: "legacy-follow-proof-rejected",
+        type: "FOLLOW_PROOF_REJECTED",
+        tone: "danger",
+        title: "Follow proof needs re-upload",
+        message: followProofMessage,
+        helperText: getNoticeHelperText("FOLLOW_PROOF_REJECTED"),
+        unread: false,
+        createdAt: "",
+        metaText: "",
+      });
+    }
+
+    const reviewProofMessage = bonusStatus.reviewProofValidationMessage?.trim();
+    if (bonusStatus.reviewProofRevoked && reviewProofMessage && !hasReviewRejectNotification) {
+      notices.push({
+        id: "legacy-review-proof-rejected",
+        type: "REVIEW_PROOF_REJECTED",
+        tone: "danger",
+        title: "Review proof needs re-upload",
+        message: reviewProofMessage,
+        helperText: getNoticeHelperText("REVIEW_PROOF_REJECTED"),
+        unread: false,
+        createdAt: "",
+        metaText: "",
+      });
+    }
+
+    return notices;
+  }, [bonusStatus, playerNotifications, playerProfile]);
+
+  const playerNoticeCount = playerNotices.length;
+  const unreadPlayerNoticeCount = playerNotifications.filter((notification) => notification.unread).length;
+  const primaryPlayerNotice = playerNotices[0] || null;
+  const playerNoticeTone = primaryPlayerNotice?.tone === "danger" ? "danger" : "info";
+  const openPlayerNotices = useCallback(() => {
+    setIsPlayerNoticesOpen(true);
+
+    if (!authenticatedToken || unreadPlayerNoticeCount === 0) {
+      return;
+    }
+
+    setPlayerNotifications((prev) => prev.map((notification) => (
+      notification.unread ? { ...notification, unread: false } : notification
+    )));
+
+    apiRequest("/api/player-notifications/me/read-all", "PATCH", undefined, authenticatedToken)
+      .catch(() => {
+        void refreshPlayerNotifications();
+      });
+  }, [authenticatedToken, refreshPlayerNotifications, unreadPlayerNoticeCount]);
   const isMobileViewport = viewportSize.width < MOBILE_BREAKPOINT;
   const isShortMobileViewport = isMobileViewport && viewportSize.height <= 760;
   const isVeryShortMobileViewport = isMobileViewport && viewportSize.height <= 680;
   const isCompactDesktopHeight = !isMobileViewport && viewportSize.height <= 920;
   const isUltraCompactDesktopHeight = !isMobileViewport && viewportSize.height <= 820;
   const isMobileGameplayActive = gameStarted && !gameOver && isMobileViewport;
+  const shouldShowMobilePlayerNotice = isMobileViewport && playerNoticeCount > 0 && (!gameStarted || gameOver);
   const lastMoveWasRotateRef = useRef(false);
   const comboChainRef = useRef(0);
   const previousClearWasTetrisRef = useRef(false);
@@ -374,29 +639,41 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
-      setLeaderboardLoading(true);
+      // Only show loading on initial load, not on auto-refresh
+      if (isInitialLeaderboardLoad) {
+        setLeaderboardLoading(true);
+      }
       setLeaderboardError(null);
       try {
         const data = await apiRequest("/api/public/games/tetris/leaderboard/all", "GET");
         setLeaderboard(Array.isArray(data) ? data : []);
+        setLeaderboardLastUpdated(Date.now());
+        setIsInitialLeaderboardLoad(false);
       } catch (error) {
         try {
           const fallbackData = await apiRequest("/api/public/games/tetris/leaderboard?limit=10", "GET");
           setLeaderboard(Array.isArray(fallbackData) ? fallbackData : []);
           setLeaderboardError(null);
+          setLeaderboardLastUpdated(Date.now());
+          setIsInitialLeaderboardLoad(false);
         } catch (fallbackError) {
-          setLeaderboardError("Failed to load leaderboard");
-          setLeaderboard([]);
+          if (isInitialLeaderboardLoad) {
+            setLeaderboardError("Failed to load leaderboard");
+            setLeaderboard([]);
+          }
         }
       } finally {
-        setLeaderboardLoading(false);
+        if (isInitialLeaderboardLoad) {
+          setLeaderboardLoading(false);
+        }
       }
     };
 
     fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 8000);
+    // Auto-refresh every 30 seconds instead of 8 for smooth, less obvious updates
+    const interval = setInterval(fetchLeaderboard, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isInitialLeaderboardLoad]);
 
   useEffect(() => () => {
     const audioContext = audioContextRef.current;
@@ -996,11 +1273,11 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
    const togglePauseGame = useCallback(() => {
      if (gameStarted && !gameOver) {
        setIsPaused(!isPaused);
-       setMessage(isPaused ? "Resumed!" : "Paused");
+       setMessage(isPaused ? "Resumed!" : (isMobileViewport ? "Paused — tap the board to resume." : "Paused"));
        emitSound(isPaused ? "resume" : "pause");
        triggerHaptic('pause');
      }
-   }, [gameStarted, gameOver, isPaused, emitSound, triggerHaptic]);
+   }, [gameStarted, gameOver, isPaused, emitSound, isMobileViewport, triggerHaptic]);
 
    const handleSignOut = useCallback(() => {
      logout();
@@ -1210,7 +1487,9 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     handleBoardTouchCancel,
   } = useTetrisTouchGestures({
     isBlocked: Boolean(selectedLeaderboardEntry),
+    isPaused,
     focusBoard,
+    resumePausedGame: togglePauseGame,
     rotateCurrentPiece,
     movePieceHorizontal,
     softDropCurrentPiece,
@@ -1491,6 +1770,8 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                   <h2 className="tetris-panel-title"><Trophy size={16} /> Leaderboard</h2>
                 </div>
 
+                <TetrisLeaderboardPrizeBanner giveawaySettings={giveawayContent} compact />
+
                 {leaderboardLoading && <p className="text-muted">Loading leaderboard...</p>}
                 {!leaderboardLoading && leaderboardError && <p className="text-muted">{leaderboardError}</p>}
                 {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length === 0 && <p className="text-muted">Play a round to create the first score.</p>}
@@ -1527,6 +1808,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                         onToggleFullscreen={toggleFullscreen}
                         playerName={playerName}
                       />
+
                     </>
                   )}
                   {isMobileViewport && (
@@ -1539,10 +1821,13 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                       headerState={mobileBoardHeaderState}
                       onOpenSettings={openSettings}
                       onOpenHowToPlay={openHowToPlay}
+                      onOpenProfileUpdate={() => setIsProfileUpdateModalOpen(true)}
+                      onOpenPlayerNotices={openPlayerNotices}
                       onReset={resetGame}
                       onToggleFullscreen={toggleFullscreen}
                       onTogglePause={togglePauseGame}
                       onSignOut={handleSignOut}
+                      unreadNoticeCount={unreadPlayerNoticeCount}
                     />
                   )}
                 </div>
@@ -1620,22 +1905,24 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                 onClose={resetGame}
               />
 
-               {isMobileViewport && (
-                 <TetrisTouchControls
-                   gameStarted={gameStarted}
-                   gameOver={gameOver}
-                   loading={loading}
-                   playerName={playerName}
-                   onStartGame={startGame}
-                   onResetGame={resetGame}
-                   isPaused={isPaused}
-                   togglePauseGame={togglePauseGame}
-                   canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
-                   bonusStatus={bonusStatus}
-                   bonusLoading={bonusLoading}
-                   onOpenBonusModal={() => setIsBonusModalOpen(true)}
-                 />
-               )}
+                {isMobileViewport && (
+                  <TetrisTouchControls
+                    gameStarted={gameStarted}
+                    gameOver={gameOver}
+                    loading={loading}
+                    playerName={playerName}
+                    onStartGame={startGame}
+                    onResetGame={resetGame}
+                    isPaused={isPaused}
+                    togglePauseGame={togglePauseGame}
+                    canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
+                    bonusStatus={bonusStatus}
+                    bonusLoading={bonusLoading}
+                    onOpenBonusModal={() => setIsBonusModalOpen(true)}
+                    playerNoticeCount={playerNoticeCount}
+                    onOpenPlayerNotices={openPlayerNotices}
+                  />
+                )}
            </section>
 
             {/* COLUMN 3: DETAILS (RIGHT) */}
@@ -1665,11 +1952,15 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
               onHapticToggle={toggleHaptics}
                onOpenSettings={openSettings}
                onOpenHowToPlay={openHowToPlay}
+               onOpenProfileUpdate={() => setIsProfileUpdateModalOpen(true)}
+               onOpenPlayerNotices={openPlayerNotices}
                onReset={resetGame}
                onSignOut={handleSignOut}
                bonusStatus={bonusStatus}
                bonusLoading={bonusLoading}
                onOpenBonusModal={() => setIsBonusModalOpen(true)}
+               playerNotices={playerNotices}
+               unreadNoticeCount={unreadPlayerNoticeCount}
              />
         </div>
 
@@ -1686,6 +1977,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
           <TetrisHowToPlayModal
             isVisible={isHowToPlayOpen}
             onClose={closeHowToPlay}
+            isMobileViewport={isMobileViewport}
           />
 
           <TetrisLeaderboardModal
@@ -1695,21 +1987,40 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
             leaderboardError={leaderboardError}
             onClose={closeLeaderboard}
             leaderboardListContent={leaderboardListContent}
-          />
-
-          <TetrisBonusModal
-            isVisible={isBonusModalOpen}
-            onClose={() => setIsBonusModalOpen(false)}
-            bonusStatus={bonusStatus}
-            bonusLoading={bonusLoading}
-            bonusUploadingType={bonusUploadingType}
-            bonusError={bonusError}
-            bonusFeedback={bonusFeedback}
-            onBonusProofSelected={handleBonusProofSelected}
             giveawaySettings={giveawayContent}
           />
 
-         <TetrisPlayerDetailsModal
+           <TetrisBonusModal
+             isVisible={isBonusModalOpen}
+             onClose={() => setIsBonusModalOpen(false)}
+             bonusStatus={bonusStatus}
+             bonusLoading={bonusLoading}
+             bonusUploadingType={bonusUploadingType}
+             bonusError={bonusError}
+             bonusFeedback={bonusFeedback}
+             onBonusProofSelected={handleBonusProofSelected}
+             giveawaySettings={giveawayContent}
+           />
+
+          <TetrisPlayerNoticesModal
+            isVisible={isPlayerNoticesOpen}
+            notices={playerNotices}
+            onClose={() => setIsPlayerNoticesOpen(false)}
+          />
+
+          <TetrisProfileUpdateModal
+            isVisible={isProfileUpdateModalOpen}
+            onClose={() => setIsProfileUpdateModalOpen(false)}
+            userToken={authenticatedToken}
+            username={playerName}
+            onUpdateSuccess={() => {
+              setMessage("✓ Profile picture uploaded. Waiting for admin review.");
+              void refreshPlayerProfile();
+              void refreshPlayerNotifications();
+            }}
+          />
+
+          <TetrisPlayerDetailsModal
           selectedLeaderboardEntry={selectedLeaderboardEntry}
           activePlayerStats={activePlayerStats}
           formatRelativeTime={formatRelativeTime}

@@ -16,6 +16,7 @@ export default function TetrisPauseModal({
   onResume,
   onRestart,
   onOpenLeaderboard,
+  isMobileViewport = false,
 }) {
   if (!isVisible) return null;
 
@@ -52,8 +53,10 @@ export default function TetrisPauseModal({
           >
             <Trophy size={16} /> Leaderboard
           </button>
-        </div>
-        <p className="tetris-pause-modal-hint">Press P or Esc to resume</p>
+         </div>
+         {!isMobileViewport && (
+           <p className="tetris-pause-modal-hint">Press P or Esc to resume</p>
+         )}
       </div>
     </div>
   );

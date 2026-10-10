@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Trophy, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../../utils/api";
+import TetrisLeaderboardPrizeBanner from "../../components/tetris/TetrisLeaderboardPrizeBanner";
+import { DEFAULT_GIVEAWAY_SETTINGS, normalizeGiveawaySettings } from "../../constants/giveaway";
 import "../../styles/tetris-leaderboard.css";
 
 export default function TetrisLeaderboardPage() {
@@ -9,9 +11,11 @@ export default function TetrisLeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [giveawaySettings, setGiveawaySettings] = useState(DEFAULT_GIVEAWAY_SETTINGS);
 
   useEffect(() => {
     fetchLeaderboard();
+    fetchGiveawaySettings();
   }, []);
 
   const fetchLeaderboard = async () => {
@@ -25,6 +29,15 @@ export default function TetrisLeaderboardPage() {
       setLeaderboard([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchGiveawaySettings = async () => {
+    try {
+      const data = await apiRequest("/api/public/settings/giveaway");
+      setGiveawaySettings(normalizeGiveawaySettings(data));
+    } catch {
+      setGiveawaySettings(DEFAULT_GIVEAWAY_SETTINGS);
     }
   };
 
@@ -61,6 +74,8 @@ export default function TetrisLeaderboardPage() {
         </header>
 
         <div className="tetris-leaderboard-content">
+          <TetrisLeaderboardPrizeBanner giveawaySettings={giveawaySettings} />
+
           {loading && <div className="tetris-leaderboard-loading">Loading leaderboard...</div>}
 
           {error && <div className="tetris-leaderboard-error">{error}</div>}

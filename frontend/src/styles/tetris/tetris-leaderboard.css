@@ -278,7 +278,8 @@
     -webkit-appearance: none;
     text-align: left;
     cursor: default;
-    transition: all var(--transition-base);
+    /* Smooth transitions for background, border, shadow, and opacity changes */
+    transition: all var(--transition-base), opacity var(--transition-base), background-color var(--transition-base), border-color var(--transition-base);
     position: relative;
     overflow: hidden;
 }

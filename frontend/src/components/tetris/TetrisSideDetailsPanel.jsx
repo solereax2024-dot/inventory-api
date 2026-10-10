@@ -1,5 +1,6 @@
 import TetrisOptionsMenu from "./TetrisOptionsMenu";
-import { Gift } from "lucide-react";
+import { Gift, Play } from "lucide-react";
+import TetrisPlayerNotificationsMenu from "./TetrisPlayerNotificationsMenu";
 
 export default function TetrisSideDetailsPanel({
   gameStarted,
@@ -17,11 +18,15 @@ export default function TetrisSideDetailsPanel({
   toggleFullscreen,
   onOpenSettings,
   onOpenHowToPlay,
+  onOpenProfileUpdate,
+  onOpenPlayerNotices,
   onReset,
   onSignOut,
   bonusStatus,
   bonusLoading,
   onOpenBonusModal,
+  playerNotices,
+  unreadNoticeCount,
 }) {
   const startState = gameStarted ? (gameOver ? "game-over" : "live") : "prestart";
   const sessionStatusLabel = gameStarted
@@ -43,15 +48,22 @@ export default function TetrisSideDetailsPanel({
               isMobileViewport={isMobileViewport}
               onOpenSettings={onOpenSettings}
               onOpenHowToPlay={onOpenHowToPlay}
+              onOpenProfileUpdate={onOpenProfileUpdate}
+              onOpenPlayerNotices={onOpenPlayerNotices}
               onReset={onReset}
               onToggleFullscreen={toggleFullscreen}
               onTogglePause={togglePauseGame}
               onSignOut={onSignOut}
+              unreadNoticeCount={unreadNoticeCount}
             />
           )}
           <h2 className="tetris-panel-title">Game Session</h2>
           <span className="tetris-panel-badge">{loading ? "Loading" : sessionStatusLabel}</span>
         </div>
+        <TetrisPlayerNotificationsMenu
+          notices={playerNotices}
+          onOpenPlayerNotices={onOpenPlayerNotices}
+        />
         <p className="tetris-session-note" aria-live="polite">{message}</p>
         <div className="tetris-input-group">
           {gameStarted ? (
@@ -75,9 +87,11 @@ export default function TetrisSideDetailsPanel({
             </>
           ) : (
             <div className="tetris-start-primary-row">
-              <div className="tetris-auth-summary-card" aria-label="Authenticated player">
-                <span className="tetris-live-summary-label">Signed in as</span>
-                <strong>{playerName || "Player"}</strong>
+              <div className="tetris-start-profile-row">
+                <div className="tetris-auth-summary-card" aria-label="Authenticated player">
+                  <span className="tetris-live-summary-label">Signed in as</span>
+                  <strong>{playerName || "Player"}</strong>
+                </div>
               </div>
               <button
                 type="button"
@@ -93,15 +107,23 @@ export default function TetrisSideDetailsPanel({
                   <strong>{bonusLoading ? "Checking..." : `+${formattedBonusPoints}`}</strong>
                 </span>
               </button>
-              <div className="tetris-action-row">
-                <button
-                  type="button"
-                  onClick={onStartGame}
-                  disabled={loading}
-                  className="tetris-button tetris-button-primary"
-                >
-                  Start Game
-                </button>
+              <div className="tetris-start-hero-card" aria-label="Start game call to action">
+                <div className="tetris-start-hero-copy">
+                  <span className="tetris-start-hero-eyebrow">Ready to play?</span>
+                  <strong className="tetris-start-hero-title">Start your run</strong>
+                  <p className="tetris-start-hero-text">Jump in now and chase the top spot on the leaderboard.</p>
+                </div>
+                <div className="tetris-action-row tetris-start-hero-actions">
+                  <button
+                    type="button"
+                    onClick={onStartGame}
+                    disabled={loading}
+                    className="tetris-button tetris-button-primary tetris-start-game-button"
+                  >
+                    <Play size={16} aria-hidden="true" />
+                    Start Game
+                  </button>
+                </div>
               </div>
             </div>
           )}

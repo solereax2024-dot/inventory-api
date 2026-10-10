@@ -91,6 +91,16 @@
      flex-shrink: 0;
    }
 
+   .tetris-board-column-header .tetris-player-notice-btn-mobile-header {
+     justify-self: center;
+     width: min(100%, 176px);
+     max-width: 100%;
+   }
+
+   .tetris-board-column-header .tetris-player-notice-btn-mobile-header .tetris-player-notice-btn-label {
+     font-size: 0.68rem;
+   }
+
    .tetris-options-menu-container {
      position: relative;
       z-index: 20;
@@ -117,6 +127,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
@@ -134,8 +145,29 @@
   backdrop-filter: blur(12px);
 }
 
+.tetris-options-menu-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.98), rgba(220, 38, 38, 0.98));
+  border: 1px solid rgba(254, 242, 242, 0.42);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.32);
+}
+
 .tetris-board-column-header .tetris-leaderboard-header-btn,
-.tetris-board-column-header .tetris-options-menu-button {
+.tetris-board-column-header .tetris-options-menu-button,
+.tetris-board-column-header .tetris-player-notice-btn-mobile-header {
   transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
@@ -148,6 +180,11 @@
 .tetris-board-column-header[data-state="prestart"] .tetris-options-menu-button[data-state="prestart"] {
   border-color: rgba(0, 217, 255, 0.3);
   color: rgba(0, 217, 255, 0.94);
+}
+
+.tetris-board-column-header[data-state="prestart"] .tetris-player-notice-btn-mobile-header {
+  border-color: rgba(251, 191, 36, 0.32);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.14), 0 0 20px rgba(251, 191, 36, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .tetris-board-column-header[data-state="live"] .tetris-leaderboard-header-btn,
@@ -247,6 +284,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  justify-content: flex-start;
   padding: 0.75rem 1rem;
   background: transparent;
   border: none;
@@ -258,6 +296,26 @@
   border-radius: 8px;
   transition: all 0.15s ease;
   white-space: nowrap;
+}
+
+.tetris-options-menu-item span:nth-of-type(1) {
+  min-width: 0;
+}
+
+.tetris-options-menu-item-badge {
+  margin-left: auto;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 113, 113, 0.14);
+  border: 1px solid rgba(248, 113, 113, 0.24);
+  color: #fca5a5;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .tetris-options-menu-item:hover {

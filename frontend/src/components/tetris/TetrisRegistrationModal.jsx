@@ -173,14 +173,24 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
     return true;
   };
 
-  const readResponseBody = async (response) => {
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      return response.json().catch(() => ({}));
-    }
-    const text = await response.text().catch(() => "");
-    return text ? { message: text } : {};
-  };
+   const readResponseBody = async (response) => {
+     const contentType = response.headers.get("content-type") || "";
+     if (contentType.includes("application/json")) {
+       return response.json().catch(() => ({}));
+     }
+     const text = await response.text().catch(() => "");
+     return text ? { message: text } : {};
+   };
+
+   const validateProfileImage = async (profileImagePath) => {
+     if (!profileImagePath) return true; // No image path, consider valid
+     try {
+       const response = await fetch(profileImagePath, { method: "HEAD" });
+       return response.ok;
+     } catch (err) {
+       return false; // Image not accessible
+     }
+   };
 
   if (!isVisible) return null;
 
@@ -226,24 +236,33 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         }
       }
 
-      const session = {
-        token: data?.token,
-        username: data?.username || formData.username.trim(),
-        fullName: data?.fullName || formData.fullName.trim() || data?.username || formData.username.trim(),
-      };
+       const session = {
+         token: data?.token,
+         username: data?.username || formData.username.trim(),
+         fullName: data?.fullName || formData.fullName.trim() || data?.username || formData.username.trim(),
+       };
 
-      if (!session.token || !session.username) {
-        setError("Authentication failed. Please try again.");
-        return;
-      }
+       if (!session.token || !session.username) {
+         setError("Authentication failed. Please try again.");
+         return;
+       }
 
-      setSuccess(isLoginMode ? "✓ Login successful! Starting game..." : "✓ Registration successful! Starting game...");
+       // Check if profile image is accessible (for registration)
+       let imageWarning = "";
+       if (!isLoginMode && data?.profileImagePath) {
+         const imageIsValid = await validateProfileImage(data.profileImagePath);
+         if (!imageIsValid) {
+           imageWarning = " (Note: Your profile image may not be accessible. You can update it later in your profile settings.)";
+         }
+       }
 
-      window.setTimeout(() => {
-        if (onAuthenticated) {
-          onAuthenticated(session);
-        }
-      }, 900);
+       setSuccess(isLoginMode ? "✓ Login successful! Starting game..." : `✓ Registration successful! Starting game...${imageWarning}`);
+
+       window.setTimeout(() => {
+         if (onAuthenticated) {
+           onAuthenticated(session);
+         }
+       }, 900);
     } catch (err) {
       setError(err?.message || (isLoginMode ? "An error occurred during login" : "An error occurred during registration"));
     } finally {

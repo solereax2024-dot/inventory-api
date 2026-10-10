@@ -1,8 +1,12 @@
 package com.solereax.inventory.settings;
 
+import com.solereax.inventory.notification.AdminPlayerNotificationDispatchResponse;
+import com.solereax.inventory.notification.AdminPlayerNotificationRequest;
+import com.solereax.inventory.notification.PlayerNotificationService;
 import com.solereax.inventory.tetris.GiveawayBonusService;
 import com.solereax.inventory.tetris.GiveawayBonusStatusResponse;
 import com.solereax.inventory.user.dto.RegisteredPlayerResponse;
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -23,11 +27,18 @@ public class AdminGamingSettingsController {
     private final GamingService gamingService;
     private final GiveawayBonusService giveawayBonusService;
     private final GiveawaySettingsService giveawaySettingsService;
+    private final PlayerNotificationService playerNotificationService;
 
-    public AdminGamingSettingsController(GamingService gamingService, GiveawayBonusService giveawayBonusService, GiveawaySettingsService giveawaySettingsService) {
+    public AdminGamingSettingsController(
+            GamingService gamingService,
+            GiveawayBonusService giveawayBonusService,
+            GiveawaySettingsService giveawaySettingsService,
+            PlayerNotificationService playerNotificationService
+    ) {
         this.gamingService = gamingService;
         this.giveawayBonusService = giveawayBonusService;
         this.giveawaySettingsService = giveawaySettingsService;
+        this.playerNotificationService = playerNotificationService;
     }
 
     @GetMapping
@@ -76,12 +87,42 @@ public class AdminGamingSettingsController {
         return ResponseEntity.ok(giveawayBonusService.validateProof(userId, bonusType));
     }
 
-    @PatchMapping("/bonuses/{userId}/{bonusType}/revoke")
-    public ResponseEntity<GiveawayBonusStatusResponse> revokeBonusProof(
+     @PatchMapping("/bonuses/{userId}/{bonusType}/revoke")
+     public ResponseEntity<GiveawayBonusStatusResponse> revokeBonusProof(
+             @PathVariable Long userId,
+             @PathVariable String bonusType,
+             @Valid @RequestBody AdminProofRevokeRequest request
+     ) {
+         return ResponseEntity.ok(giveawayBonusService.revokeProof(userId, bonusType, request.message()));
+     }
+
+     @PatchMapping("/profile-images/{userId}/validate")
+     public ResponseEntity<RegisteredPlayerResponse> validateProfileImage(@PathVariable Long userId) {
+         return ResponseEntity.ok(gamingService.validateProfileImage(userId));
+     }
+
+     @PatchMapping("/profile-images/{userId}/reject")
+     public ResponseEntity<RegisteredPlayerResponse> rejectProfileImage(
+             @PathVariable Long userId,
+             @RequestBody Map<String, String> request
+     ) {
+         String message = request != null ? request.get("message") : "";
+         return ResponseEntity.ok(gamingService.rejectProfileImage(userId, message != null ? message : ""));
+     }
+
+    @PatchMapping("/notifications/players/{userId}")
+    public ResponseEntity<AdminPlayerNotificationDispatchResponse> sendPlayerNotification(
             @PathVariable Long userId,
-            @PathVariable String bonusType
+            @Valid @RequestBody AdminPlayerNotificationRequest request
     ) {
-        return ResponseEntity.ok(giveawayBonusService.revokeProof(userId, bonusType));
+        return ResponseEntity.ok(playerNotificationService.sendCustomMessageToUser(userId, request.title(), request.message()));
+    }
+
+    @PatchMapping("/notifications/broadcast")
+    public ResponseEntity<AdminPlayerNotificationDispatchResponse> sendBroadcastNotification(
+            @Valid @RequestBody AdminPlayerNotificationRequest request
+    ) {
+        return ResponseEntity.ok(playerNotificationService.sendBroadcastMessage(request.title(), request.message()));
     }
 
     @PutMapping

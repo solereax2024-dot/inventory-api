@@ -233,6 +233,39 @@
   gap: 2px;
 }
 
+.tetris-leaderboard-goal-message {
+  width: var(--tetris-board-pixel-width, 100%);
+  max-width: 100%;
+  align-self: center;
+  margin: 4px 0 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(250, 204, 21, 0.26);
+  background: linear-gradient(180deg, rgba(120, 53, 15, 0.28), rgba(15, 23, 42, 0.5));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(250, 204, 21, 0.06),
+    0 0 16px rgba(250, 204, 21, 0.08),
+    0 6px 14px rgba(2, 6, 23, 0.12);
+  color: rgba(254, 240, 138, 0.98);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .tetris-leaderboard-goal-message {
+    margin: 3px 0 4px;
+    padding: 4px 8px;
+    border-radius: 10px;
+    font-size: 0.56rem;
+    letter-spacing: 0.03em;
+  }
+}
+
 .tetris-stats-bar-board-top .stat-item-compact::before {
   display: none;
 }

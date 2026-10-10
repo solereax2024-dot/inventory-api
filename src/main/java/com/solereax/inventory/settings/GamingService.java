@@ -1,5 +1,7 @@
 package com.solereax.inventory.settings;
 
+import com.solereax.inventory.notification.PlayerNotificationService;
+import com.solereax.inventory.notification.PlayerNotificationType;
 import com.solereax.inventory.tetris.TetrisLeaderboard;
 import com.solereax.inventory.tetris.TetrisLeaderboardRepository;
 import com.solereax.inventory.tetris.GiveawayBonusService;
@@ -25,17 +27,20 @@ public class GamingService {
     private final AppUserRepository appUserRepository;
     private final TetrisLeaderboardRepository tetrisLeaderboardRepository;
     private final GiveawayBonusService giveawayBonusService;
+    private final PlayerNotificationService playerNotificationService;
 
     public GamingService(
             AppSettingRepository appSettingRepository,
             AppUserRepository appUserRepository,
             TetrisLeaderboardRepository tetrisLeaderboardRepository,
-            GiveawayBonusService giveawayBonusService
+            GiveawayBonusService giveawayBonusService,
+            PlayerNotificationService playerNotificationService
     ) {
         this.appSettingRepository = appSettingRepository;
         this.appUserRepository = appUserRepository;
         this.tetrisLeaderboardRepository = tetrisLeaderboardRepository;
         this.giveawayBonusService = giveawayBonusService;
+        this.playerNotificationService = playerNotificationService;
     }
 
     @Transactional(readOnly = true)
@@ -94,25 +99,28 @@ public class GamingService {
                 .toList();
     }
 
-    private RegisteredPlayerResponse toRegisteredPlayerResponse(AppUser user, TetrisLeaderboard leaderboard, Integer rank) {
-        GiveawayBonusStatusResponse bonusStatus = giveawayBonusService.getBonusStatus(user);
-        return new RegisteredPlayerResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getFullName(),
-                user.getProfileImagePath(),
-                user.isFacebookWinnerContactConsent(),
-                user.isEnabled(),
-                user.getCreatedAt(),
-                rank,
-                leaderboard != null ? leaderboard.getHighestScore() : 0,
-                leaderboard != null ? leaderboard.getHighestLevel() : 1,
-                leaderboard != null ? leaderboard.getTotalGames() : 0,
-                leaderboard != null ? leaderboard.getTotalLinesCleared() : 0,
-                leaderboard != null ? leaderboard.getLastPlayed() : null,
-                bonusStatus
-        );
-    }
+     private RegisteredPlayerResponse toRegisteredPlayerResponse(AppUser user, TetrisLeaderboard leaderboard, Integer rank) {
+         GiveawayBonusStatusResponse bonusStatus = giveawayBonusService.getBonusStatus(user);
+         return new RegisteredPlayerResponse(
+                 user.getId(),
+                 user.getUsername(),
+                 user.getFullName(),
+                 user.getProfileImagePath(),
+                 user.isProfileImageValidated(),
+                 user.getProfileImageValidationMessage(),
+                 user.isFacebookWinnerContactConsent(),
+                 user.isEnabled(),
+                 user.getCreatedAt(),
+                 rank,
+                 leaderboard != null ? leaderboard.getHighestScore() : 0,
+                 leaderboard != null ? leaderboard.getHighestLevel() : 1,
+                 leaderboard != null ? leaderboard.getTotalGames() : 0,
+                 leaderboard != null ? leaderboard.getTotalLinesCleared() : 0,
+                 bonusStatus != null ? bonusStatus.totalBonusPoints() : 0,
+                 leaderboard != null ? leaderboard.getLastPlayed() : null,
+                 bonusStatus
+         );
+     }
 
     private String normalizeKey(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
@@ -134,21 +142,55 @@ public class GamingService {
         }
     }
 
-    @Transactional
-    public void deleteAllPlayers() {
-        // Get all customer players
-        List<AppUser> customers = appUserRepository.findAll().stream()
-                .filter(user -> user.getRole() == UserRole.CUSTOMER)
-                .toList();
+     @Transactional
+     public void deleteAllPlayers() {
+         // Get all customer players
+         List<AppUser> customers = appUserRepository.findAll().stream()
+                 .filter(user -> user.getRole() == UserRole.CUSTOMER)
+                 .toList();
 
-        // Delete all customer accounts (bonus data is stored in AppUser and will be deleted)
-        for (AppUser customer : customers) {
-            appUserRepository.deleteById(customer.getId());
-        }
+         // Delete all customer accounts (bonus data is stored in AppUser and will be deleted)
+         for (AppUser customer : customers) {
+             appUserRepository.deleteById(customer.getId());
+         }
 
-        // Delete each player's leaderboard data
-        for (AppUser customer : customers) {
-            tetrisLeaderboardRepository.deleteByPlayerNameIgnoreCase(customer.getUsername());
-        }
-    }
+         // Delete each player's leaderboard data
+         for (AppUser customer : customers) {
+             tetrisLeaderboardRepository.deleteByPlayerNameIgnoreCase(customer.getUsername());
+         }
+     }
+
+     @Transactional
+     public RegisteredPlayerResponse validateProfileImage(Long userId) {
+         AppUser user = appUserRepository.findById(userId)
+                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+         user.setProfileImageValidated(true);
+         user.setProfileImageValidationMessage(null);
+         AppUser savedUser = appUserRepository.save(user);
+         playerNotificationService.clearNotificationsByType(savedUser.getId(), PlayerNotificationType.PROFILE_IMAGE_REJECTED);
+
+         TetrisLeaderboard leaderboard = tetrisLeaderboardRepository.findByPlayerNameIgnoreCase(savedUser.getUsername()).orElse(null);
+         return toRegisteredPlayerResponse(savedUser, leaderboard, null);
+     }
+
+     @Transactional
+     public RegisteredPlayerResponse rejectProfileImage(Long userId, String message) {
+         AppUser user = appUserRepository.findById(userId)
+                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+         user.setProfileImageValidated(false);
+         user.setProfileImageValidationMessage(message);
+         AppUser savedUser = appUserRepository.save(user);
+         playerNotificationService.clearNotificationsByType(savedUser.getId(), PlayerNotificationType.PROFILE_IMAGE_REJECTED);
+         playerNotificationService.sendSystemNotification(
+                 savedUser.getId(),
+                 PlayerNotificationType.PROFILE_IMAGE_REJECTED,
+                 "Profile image needs re-upload",
+                 message
+         );
+
+         TetrisLeaderboard leaderboard = tetrisLeaderboardRepository.findByPlayerNameIgnoreCase(savedUser.getUsername()).orElse(null);
+         return toRegisteredPlayerResponse(savedUser, leaderboard, null);
+     }
 }

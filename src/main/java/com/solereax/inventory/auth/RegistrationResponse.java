@@ -5,7 +5,8 @@ public record RegistrationResponse(
         String username,
         String fullName,
         String token,
-        String role
+        String role,
+        String profileImagePath
 ) {
 }
 

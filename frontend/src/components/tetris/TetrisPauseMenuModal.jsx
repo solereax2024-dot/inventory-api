@@ -17,6 +17,7 @@ export default function TetrisPauseMenuModal({
   onSettings,
   onQuit,
   gameState = "paused", // paused, playing, gameOver
+  isMobileViewport = false,
 }) {
   if (!isVisible) return null;
 
@@ -77,9 +78,11 @@ export default function TetrisPauseMenuModal({
           </button>
         </div>
 
-        <div className="tetris-pause-modal-footer">
-          <p className="tetris-pause-hint">Press <kbd>P</kbd> or click Resume to continue</p>
-        </div>
+         {!isMobileViewport && (
+           <div className="tetris-pause-modal-footer">
+             <p className="tetris-pause-hint">Press <kbd>P</kbd> or click Resume to continue</p>
+           </div>
+         )}
       </div>
     </div>
   );

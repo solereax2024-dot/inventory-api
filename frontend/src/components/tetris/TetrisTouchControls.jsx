@@ -15,26 +15,30 @@ export default function TetrisTouchControls({
   bonusStatus,
   bonusLoading,
   onOpenBonusModal,
+  playerNoticeCount,
+  onOpenPlayerNotices,
 }) {
   const isLiveGame = gameStarted && !gameOver;
+  const mobileStateClassName = isLiveGame ? "is-gameplay" : gameOver ? "is-postgame" : "is-prestart";
   const startButtonLabel = gameOver ? "Play Again" : "Start Game";
   const totalBonusPoints = bonusStatus?.totalBonusPoints || 0;
   const formattedBonusPoints = new Intl.NumberFormat("en-US").format(totalBonusPoints);
 
-  // Don't show controls during active gameplay
-  if (isLiveGame) return null;
-
   return (
     <aside
-      className="tetris-touch-controls is-prestart"
-      aria-label="Mobile game controls"
+      className={`tetris-touch-controls ${mobileStateClassName}`}
+      aria-label={isLiveGame ? "Mobile bonus controls" : "Mobile game controls"}
     >
       <div className="tetris-mobile-controls-grid">
-        <section className="tetris-mobile-control-cluster" aria-label="Player setup and session controls">
-          <div className="tetris-auth-summary-card" aria-label="Authenticated player">
-            <span className="tetris-live-summary-label">Signed in as</span>
-            <strong>{playerName || "Player"}</strong>
-          </div>
+        <section className="tetris-mobile-control-cluster" aria-label={isLiveGame ? "Bonus controls" : "Player setup and session controls"}>
+          {!isLiveGame && (
+            <>
+              <div className="tetris-auth-summary-card" aria-label="Authenticated player">
+                <span className="tetris-live-summary-label">Signed in as</span>
+                <strong>{playerName || "Player"}</strong>
+              </div>
+            </>
+          )}
 
           <button
             type="button"
@@ -51,30 +55,36 @@ export default function TetrisTouchControls({
             </span>
           </button>
 
-          <div className="tetris-start-secondary-row">
-            <button
-              type="button"
-              onClick={onStartGame}
-              disabled={loading}
-              className="tetris-button tetris-button-primary"
-            >
-              <Play size={16} />
-              {startButtonLabel}
-            </button>
-
-            {canResetGame && (
-              <button
-                type="button"
-                onClick={onResetGame}
-                className="tetris-button tetris-button-secondary"
-              >
-                <RotateCcw size={16} /> Reset
-              </button>
-            )}
-          </div>
+          {!isLiveGame && (
+            <div className="tetris-start-secondary-row">
+              {canResetGame && (
+                <button
+                  type="button"
+                  onClick={onResetGame}
+                  className="tetris-button tetris-button-secondary"
+                >
+                  <RotateCcw size={16} /> Reset
+                </button>
+              )}
+            </div>
+          )}
 
         </section>
       </div>
+
+      {!isLiveGame && (
+        <div className="tetris-mobile-sticky-cta" role="complementary" aria-label="Quick game action">
+          <button
+            type="button"
+            onClick={onStartGame}
+            disabled={loading}
+            className="tetris-button tetris-button-primary tetris-start-game-button tetris-mobile-sticky-cta-btn"
+          >
+            <Play size={16} aria-hidden="true" />
+            {startButtonLabel}
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

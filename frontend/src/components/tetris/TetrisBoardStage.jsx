@@ -113,6 +113,9 @@ export default function TetrisBoardStage({
       {/* BOARD - Center */}
       <div className="tetris-board-center">
         {boardTopStatsBar}
+        <p className="tetris-leaderboard-goal-message" role="note">
+          Win by reaching No. 1 on the leaderboard!
+        </p>
         {children}
         {afterGridContent}
       </div>

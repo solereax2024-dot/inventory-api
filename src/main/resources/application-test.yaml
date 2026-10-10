@@ -14,11 +14,7 @@ spring:
         default_schema: inventory_test
 
   flyway:
-    enabled: true
-    validate-on-migrate: false
-    default-schema: inventory_test
-    schemas: inventory_test
-    create-schemas: true
+    enabled: false
 
 app:
   jwt:

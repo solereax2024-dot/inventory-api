@@ -33,10 +33,16 @@ public class AppUser {
     @Column(name = "profile_image_path", nullable = true, length = 500)
     private String profileImagePath;
 
-    @Column(name = "profile_image_filename", nullable = true, length = 255)
-    private String profileImageFilename;
+     @Column(name = "profile_image_filename", nullable = true, length = 255)
+     private String profileImageFilename;
 
-    @Column(name = "follow_proof_image_path", nullable = true, length = 500)
+     @Column(name = "profile_image_validated", nullable = false)
+     private boolean profileImageValidated = false;
+
+     @Column(name = "profile_image_validation_message", nullable = true, length = 1000)
+     private String profileImageValidationMessage;
+
+     // ...existing code...
     private String followProofImagePath;
 
     @Column(name = "follow_proof_image_filename", nullable = true, length = 255)
@@ -47,6 +53,9 @@ public class AppUser {
 
     @Column(name = "follow_proof_revoked", nullable = false)
     private boolean followProofRevoked = false;
+
+    @Column(name = "follow_proof_validation_message", nullable = true, length = 1000)
+    private String followProofValidationMessage;
 
     @Column(name = "review_proof_image_path", nullable = true, length = 500)
     private String reviewProofImagePath;
@@ -59,6 +68,9 @@ public class AppUser {
 
     @Column(name = "review_proof_revoked", nullable = false)
     private boolean reviewProofRevoked = false;
+
+    @Column(name = "review_proof_validation_message", nullable = true, length = 1000)
+    private String reviewProofValidationMessage;
 
     @Column(name = "facebook_winner_contact_consent", nullable = false)
     private boolean facebookWinnerContactConsent = false;

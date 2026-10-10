@@ -1,0 +1,373 @@
+.tetris-profile-update-overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(15, 23, 42, 0.72);
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    z-index: 100;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+}
+
+.tetris-profile-update-modal {
+    position: relative;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(20, 28, 52, 0.96));
+    border: 1px solid rgba(99, 102, 241, 0.22);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 460px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.48), 0 0 0 1px rgba(99, 102, 241, 0.12);
+    animation: tetris-modal-slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes tetris-modal-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tetris-profile-update-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    border-radius: 999px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.tetris-profile-update-close-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.22);
+    color: #f8fafc;
+}
+
+.tetris-profile-update-header {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.tetris-profile-update-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(34, 197, 94, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #93c5fd;
+}
+
+.tetris-profile-update-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #f8fafc;
+    letter-spacing: -0.01em;
+}
+
+.tetris-profile-update-subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: #94a3b8;
+    letter-spacing: 0.01em;
+}
+
+.tetris-profile-update-note {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(251, 191, 36, 0.18);
+    background: rgba(251, 191, 36, 0.08);
+    color: #fde68a;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.tetris-profile-update-form {
+    display: grid;
+    gap: 16px;
+}
+
+.tetris-form-group {
+    display: grid;
+    gap: 8px;
+}
+
+.tetris-form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #cbd5e1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: block;
+}
+
+.tetris-form-hint {
+    font-size: 10px;
+    font-weight: 400;
+    color: #64748b;
+    text-transform: none;
+    letter-spacing: normal;
+    display: block;
+    margin-top: 2px;
+}
+
+.tetris-profile-image-upload-container {
+    display: grid;
+    gap: 8px;
+}
+
+.tetris-profile-image-upload-label {
+    display: grid;
+    cursor: pointer;
+    border-radius: 12px;
+    border: 2px dashed rgba(99, 102, 241, 0.3);
+    padding: 32px 16px;
+    background: rgba(99, 102, 241, 0.08);
+    transition: all 0.2s ease;
+}
+
+.tetris-profile-image-upload-label:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+    background: rgba(99, 102, 241, 0.12);
+}
+
+.tetris-profile-image-upload-content {
+    display: grid;
+    gap: 8px;
+    align-items: center;
+    justify-items: center;
+    color: #cbd5e1;
+}
+
+.tetris-profile-image-upload-content svg {
+    color: #93c5fd;
+    opacity: 0.8;
+}
+
+.tetris-profile-image-upload-content span {
+    font-size: 14px;
+    font-weight: 600;
+    display: block;
+}
+
+.tetris-profile-image-upload-content small {
+    font-size: 11px;
+    color: #94a3b8;
+    display: block;
+}
+
+.tetris-file-input {
+    display: none;
+}
+
+.tetris-profile-image-preview-wrapper {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.tetris-profile-image-preview {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 300px;
+    object-fit: cover;
+}
+
+.tetris-profile-image-remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.9);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.tetris-profile-image-remove-btn:hover {
+    background: rgba(220, 38, 38, 1);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.tetris-profile-image-remove-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.tetris-profile-form-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.1);
+    color: #fecaca;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.tetris-profile-form-error svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.tetris-profile-form-success {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    background: rgba(34, 197, 94, 0.1);
+    color: #86efac;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.tetris-profile-form-success svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.tetris-profile-update-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.tetris-profile-cancel-btn,
+.tetris-profile-submit-btn {
+    flex: 1;
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    border: 0;
+    margin: 0;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.tetris-profile-cancel-btn {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.2);
+}
+
+.tetris-profile-cancel-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #f8fafc;
+}
+
+.tetris-profile-submit-btn {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #fff;
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+}
+
+.tetris-profile-submit-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 12px 24px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.tetris-profile-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tetris-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .tetris-profile-update-modal {
+        max-width: 100%;
+        border-radius: 12px;
+        padding: 16px;
+        max-height: calc(100dvh - 32px);
+    }
+
+    .tetris-profile-update-header {
+        margin-bottom: 20px;
+    }
+
+    .tetris-profile-update-header h2 {
+        font-size: 18px;
+    }
+
+    .tetris-profile-image-upload-label {
+        padding: 24px 12px;
+    }
+
+    .tetris-profile-update-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .tetris-profile-cancel-btn,
+    .tetris-profile-submit-btn {
+        flex: 1;
+    }
+}
+

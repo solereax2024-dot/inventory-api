@@ -22,6 +22,11 @@ export default function GamingSettingsSection({
   isLoadingPlayers = false,
   onBonusAction,
   bonusActionKey,
+  onProfileImageAction,
+  profileImageActionKey,
+  onSendPlayerNotification,
+  onBroadcastNotification,
+  notificationActionKey,
   onDeletePlayer,
   onDeleteAllPlayers,
   isDeletingPlayers = false,
@@ -69,15 +74,20 @@ export default function GamingSettingsSection({
          </div>
       </div>
 
-      <RegisteredPlayersTable
-        players={registeredPlayers}
-        isLoading={isLoadingPlayers}
-        onBonusAction={onBonusAction}
-        bonusActionKey={bonusActionKey}
-        onDeletePlayer={onDeletePlayer}
-        onDeleteAllPlayers={() => setDeleteAllConfirm({ isOpen: true })}
-        isDeletingPlayers={isDeletingPlayers}
-      />
+       <RegisteredPlayersTable
+         players={registeredPlayers}
+         isLoading={isLoadingPlayers}
+         onBonusAction={onBonusAction}
+         bonusActionKey={bonusActionKey}
+         onProfileImageAction={onProfileImageAction}
+         profileImageActionKey={profileImageActionKey}
+         onSendPlayerNotification={onSendPlayerNotification}
+         onBroadcastNotification={onBroadcastNotification}
+         notificationActionKey={notificationActionKey}
+         onDeletePlayer={onDeletePlayer}
+         onDeleteAllPlayers={() => setDeleteAllConfirm({ isOpen: true })}
+         isDeletingPlayers={isDeletingPlayers}
+       />
 
       {deleteAllConfirm.isOpen && onDeleteAllPlayers ? (
         <div className="modal-overlay" onClick={() => setDeleteAllConfirm({ isOpen: false })}>
