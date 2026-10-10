@@ -45,6 +45,20 @@ function getReadableTextColor(rgb) {
 }
 
 const THEME_DEFAULT_MIGRATION_KEY = "themeDefaultMigrationV1";
+const MODAL_SCROLL_LOCK_SELECTOR = [
+  ".modal-overlay",
+  ".modal-backdrop",
+  ".theme-picker-modal-backdrop",
+  ".tetris-registration-overlay",
+  ".tetris-settings-overlay",
+  ".tetris-howtoplay-overlay",
+  ".tetris-pause-overlay",
+  ".tetris-game-over-overlay",
+  ".tetris-confirm-modal-backdrop",
+  ".tetris-leaderboard-modal-backdrop",
+  ".tetris-player-modal-backdrop",
+  '[role="dialog"][aria-modal="true"]',
+].join(", ");
 
 export default function App() {
   const location = useLocation();
@@ -77,6 +91,90 @@ export default function App() {
   });
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
   const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+
+    const { body, documentElement } = document;
+    let lockedScrollY = 0;
+    let isScrollLocked = false;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+    const previousBodyTouchAction = body.style.touchAction;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+    const previousDocumentOverflow = documentElement.style.overflow;
+    const previousDocumentOverscrollBehavior = documentElement.style.overscrollBehavior;
+    const previousDocumentTouchAction = documentElement.style.touchAction;
+
+    const lockScroll = () => {
+      if (isScrollLocked) return;
+
+      lockedScrollY = window.scrollY || window.pageYOffset || 0;
+      body.style.position = "fixed";
+      body.style.top = `-${lockedScrollY}px`;
+      body.style.left = "0";
+      body.style.right = "0";
+      body.style.width = "100%";
+      body.style.overflow = "hidden";
+      body.style.overscrollBehavior = "none";
+      body.style.touchAction = "none";
+      documentElement.style.overflow = "hidden";
+      documentElement.style.overscrollBehavior = "none";
+      documentElement.style.touchAction = "none";
+      isScrollLocked = true;
+    };
+
+    const unlockScroll = () => {
+      if (!isScrollLocked) return;
+
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+      body.style.touchAction = previousBodyTouchAction;
+      documentElement.style.overflow = previousDocumentOverflow;
+      documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
+      documentElement.style.touchAction = previousDocumentTouchAction;
+      window.scrollTo(0, lockedScrollY);
+      isScrollLocked = false;
+    };
+
+    const syncModalScrollLock = () => {
+      const hasOpenModal = Boolean(document.querySelector(MODAL_SCROLL_LOCK_SELECTOR));
+
+      if (hasOpenModal) {
+        lockScroll();
+        return;
+      }
+
+      unlockScroll();
+    };
+
+    syncModalScrollLock();
+
+    const observer = new MutationObserver(() => {
+      syncModalScrollLock();
+    });
+
+    observer.observe(body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "style", "aria-hidden"],
+    });
+
+    return () => {
+      observer.disconnect();
+      unlockScroll();
+    };
+  }, []);
 
   // Use dark logo variant when night mode is enabled.
   const activeLogoUrl = isDarkMode && branding.logoDarkUrl ? branding.logoDarkUrl : branding.logoUrl;

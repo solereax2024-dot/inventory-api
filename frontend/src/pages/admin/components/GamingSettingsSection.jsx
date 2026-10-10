@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Trash2 } from "lucide-react";
 import RegisteredPlayersTable from "./RegisteredPlayersTable.jsx";
 import { DEFAULT_GIVEAWAY_SETTINGS, giveawayImageSrc, normalizeGiveawaySettings } from "../../../constants/giveaway";
 
@@ -194,10 +194,15 @@ export default function GamingSettingsSection({
               </div>
 
               <div className="giveaway-settings-section">
-                <div className="giveaway-settings-panel-head">
-                  <h4>Prize Images</h4>
+                <div className="giveaway-settings-panel-head giveaway-prize-panel-head">
+                  <div className="giveaway-prize-panel-copy">
+                    <h4>Prize Images</h4>
+                    <p className="field-hint" style={{ margin: 0 }}>
+                      Arrange the giveaway visuals here. Customers will see these images rotate automatically in the giveaway section.
+                    </p>
+                  </div>
                   <label className="giveaway-settings-field giveaway-image-count-field">
-                    <span>How many images?</span>
+                    <span>Number of images</span>
                     <select
                       value={safeGiveawaySettings.prizeImageCount}
                       onChange={(event) => onGiveawayPrizeImageCountChange(event.target.value)}
@@ -207,6 +212,13 @@ export default function GamingSettingsSection({
                       ))}
                     </select>
                   </label>
+                </div>
+
+                <div className="giveaway-prize-upload-summary">
+                  <span className="giveaway-settings-badge">{prizeImageSlots.length} slot{prizeImageSlots.length === 1 ? "" : "s"} active</span>
+                  <small className="field-hint image-upload-note">
+                    Recommended: use the same image ratio for cleaner rotation. Max 10 images.
+                  </small>
                 </div>
 
                 <div className="giveaway-prize-upload-grid">
@@ -223,6 +235,24 @@ export default function GamingSettingsSection({
                           accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                           onChange={(event) => onGiveawayPrizeImageChange(index, event)}
                         />
+                        <div className="giveaway-prize-upload-card-head">
+                          <div>
+                            <strong>Image {index + 1}</strong>
+                            <small className="field-hint">{prizeImageSrc ? "Ready for rotation" : "Waiting for upload"}</small>
+                          </div>
+                          {prizeImageSrc ? (
+                            <button
+                              type="button"
+                              className="button-secondary giveaway-prize-remove-btn"
+                              onClick={() => onClearGiveawayPrizeImage(index)}
+                              aria-label={`Remove giveaway image ${index + 1}`}
+                              title={`Remove image ${index + 1}`}
+                            >
+                              <Trash2 size={14} aria-hidden="true" />
+                              <span className="giveaway-prize-remove-btn-label">Remove</span>
+                            </button>
+                          ) : null}
+                        </div>
                         <label htmlFor={inputId} className="product-image-upload-tile giveaway-prize-upload-tile" title={`Click to upload giveaway image ${index + 1}`}>
                           {prizeImageSrc ? (
                             <img className="product-image-upload-tile-img" src={prizeImageSrc} alt={`${safeGiveawaySettings.prizeImageAlt} ${index + 1}`} />
@@ -231,21 +261,13 @@ export default function GamingSettingsSection({
                               <ImagePlus size={20} />
                             </span>
                           )}
-                          <span className="giveaway-prize-upload-slot-label">Image {index + 1}</span>
+                          <span className="giveaway-prize-upload-slot-label">Slot {index + 1}</span>
                           {isUploadingCurrentSlot ? <span className="product-image-uploading">•••</span> : null}
                         </label>
                         <div className="giveaway-prize-upload-actions">
                           <small className="field-hint image-upload-note">
                             {prizeImageSrc ? "Click the tile to replace this image." : "Upload an image for this slot."}
                           </small>
-                          <button
-                            type="button"
-                            className="button-secondary giveaway-prize-remove-btn"
-                            onClick={() => onClearGiveawayPrizeImage(index)}
-                            disabled={!prizeImageSrc}
-                          >
-                            Clear
-                          </button>
                         </div>
                       </div>
                     );
