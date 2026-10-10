@@ -87,8 +87,10 @@ export default function TetrisBonusModal({
                 <Gift size={20} />
               </span>
               <div className="tetris-bonus-modal-title-stack">
-                <h2 id="tetris-bonus-modal-title">Bonus Proof</h2>
-                <p className="tetris-bonus-modal-description">Upload proof once and your bonus points will be added automatically.</p>
+                <h2 id="tetris-bonus-modal-title">Bonus Rewards</h2>
+                <p className="tetris-bonus-modal-description">
+                  Upload proof for eligible actions to earn bonus points for your game account.
+                </p>
               </div>
             </div>
           </div>
@@ -96,10 +98,15 @@ export default function TetrisBonusModal({
             type="button"
             className="tetris-modal-close"
             onClick={onClose}
-            aria-label="Close giveaway bonuses"
+            aria-label="Close bonus rewards"
           >
             <X size={18} />
           </button>
+        </div>
+
+        <div className="tetris-bonus-join-card">
+          <h3>Earn Bonus Points</h3>
+          <p>Upload proof to earn bonus points for your account.</p>
         </div>
 
         <div className="tetris-bonus-modal-summary">

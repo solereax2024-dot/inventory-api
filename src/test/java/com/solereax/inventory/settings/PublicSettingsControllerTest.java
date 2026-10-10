@@ -13,11 +13,12 @@ class PublicSettingsControllerTest {
     void brandingResponseIsNotCachedSoLatestLogoIsAlwaysFetched() {
         BrandingService brandingService = mock(BrandingService.class);
         GamingService gamingService = mock(GamingService.class);
+        GiveawaySettingsService giveawaySettingsService = mock(GiveawaySettingsService.class);
         when(brandingService.getLogoUrl()).thenReturn("/uploads/branding/day-logo.png");
         when(brandingService.getLogoDarkUrl()).thenReturn("/uploads/branding/night-logo.png");
         when(gamingService.isGamingSectionVisible()).thenReturn(false);
 
-        PublicSettingsController controller = new PublicSettingsController(brandingService, gamingService);
+        PublicSettingsController controller = new PublicSettingsController(brandingService, gamingService, giveawaySettingsService);
 
         var response = controller.branding();
 

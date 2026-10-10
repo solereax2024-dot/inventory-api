@@ -13,10 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublicSettingsController {
     private final BrandingService brandingService;
     private final GamingService gamingService;
+    private final GiveawaySettingsService giveawaySettingsService;
 
-    public PublicSettingsController(BrandingService brandingService, GamingService gamingService) {
+    public PublicSettingsController(BrandingService brandingService, GamingService gamingService, GiveawaySettingsService giveawaySettingsService) {
         this.brandingService = brandingService;
         this.gamingService = gamingService;
+        this.giveawaySettingsService = giveawaySettingsService;
     }
 
     @GetMapping("/branding")
@@ -28,5 +30,12 @@ public class PublicSettingsController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(response);
+    }
+
+    @GetMapping("/giveaway")
+    public ResponseEntity<GiveawaySettingsResponse> giveaway() {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(giveawaySettingsService.getSettings());
     }
 }

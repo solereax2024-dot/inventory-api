@@ -17,6 +17,7 @@ import { aggregateStockSummaryTotals, filterStockSummaryRows, sortStockSummaryRo
 import { buildSizeSections, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { buildDefaultProductDescription } from "../../utils/productDescription";
 import { CUSTOMER_MARKUP } from "../../utils/price";
+import { DEFAULT_GIVEAWAY_SETTINGS, normalizeGiveawaySettings } from "../../constants/giveaway";
 import {
   decodeRoleFromToken,
   formatFileSize,
@@ -187,10 +188,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
    const [activeAdminSection, setActiveAdminSection] = useState("products");
    const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
   const [gamingSettings, setGamingSettings] = useState({ gamingSectionVisible: false });
+  const [giveawaySettings, setGiveawaySettings] = useState(DEFAULT_GIVEAWAY_SETTINGS);
   const [isGamingSettingsSaving, setIsGamingSettingsSaving] = useState(false);
+  const [isGiveawaySettingsSaving, setIsGiveawaySettingsSaving] = useState(false);
+  const [isGiveawayPrizeUploading, setIsGiveawayPrizeUploading] = useState(false);
+  const [giveawayPrizeFile, setGiveawayPrizeFile] = useState(null);
   const [registeredPlayers, setRegisteredPlayers] = useState([]);
   const [isRegisteredPlayersLoading, setIsRegisteredPlayersLoading] = useState(false);
   const [bonusActionKey, setBonusActionKey] = useState("");
+  const [isDeletingPlayers, setIsDeletingPlayers] = useState(false);
+  const [deleteAllPlayersConfirm, setDeleteAllPlayersConfirm] = useState({ isOpen: false });
   const {
     isOpen: isStockGuideOpen,
     open: openStockGuideModal,
@@ -307,12 +314,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setIsAdminLoading(true);
     setIsRegisteredPlayersLoading(true);
     try {
-      const [productData, orderData, brandData, productNameData, gamingSettingData, playersData] = await Promise.all([
+      const [productData, orderData, brandData, productNameData, gamingSettingData, giveawaySettingData, playersData] = await Promise.all([
         apiRequest("/api/admin/products", "GET", undefined, authToken),
         apiRequest("/api/admin/orders", "GET", undefined, authToken),
         apiRequest("/api/admin/brands", "GET", undefined, authToken),
         apiRequest("/api/admin/product-names", "GET", undefined, authToken),
         apiRequest("/api/admin/settings/gaming", "GET", undefined, authToken),
+        apiRequest("/api/admin/settings/gaming/giveaway", "GET", undefined, authToken),
         apiRequest("/api/admin/settings/gaming/players", "GET", undefined, authToken)
       ]);
       setProducts(productData);
@@ -320,6 +328,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setSavedBrands(brandData);
       setSavedProductNames(productNameData);
       setGamingSettings({ gamingSectionVisible: Boolean(gamingSettingData?.gamingSectionVisible ?? false) });
+      setGiveawaySettings(normalizeGiveawaySettings(giveawaySettingData));
       setRegisteredPlayers(Array.isArray(playersData) ? playersData : []);
       setEditProductId((prev) => prev || (productData[0]?.id?.toString() ?? ""));
       setStockForm((prev) => ({ ...prev, productId: prev.productId || (productData[0]?.id?.toString() ?? "") }));
@@ -375,6 +384,60 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+  const deletePlayer = async (playerId) => {
+    if (!token) return;
+
+    setIsDeletingPlayers(true);
+    try {
+      await apiRequest(
+        `/api/admin/settings/gaming/players/${playerId}`,
+        "DELETE",
+        undefined,
+        token
+      );
+      await refreshRegisteredPlayers();
+      setSuccessModal({
+        isOpen: true,
+        message: "Player deleted successfully."
+      });
+    } catch (err) {
+      setMessage(err.message || "Unable to delete player.");
+    } finally {
+      setIsDeletingPlayers(false);
+    }
+  };
+
+  const requestDeleteAllPlayers = () => {
+    if (!registeredPlayers.length) {
+      setMessage("No players to delete.");
+      return;
+    }
+    setDeleteAllPlayersConfirm({ isOpen: true });
+  };
+
+  const confirmDeleteAllPlayers = async () => {
+    if (!token) return;
+
+    setDeleteAllPlayersConfirm({ isOpen: false });
+    setIsDeletingPlayers(true);
+    try {
+      await apiRequest(
+        `/api/admin/settings/gaming/players`,
+        "DELETE",
+        undefined,
+        token
+      );
+      await refreshRegisteredPlayers();
+      setSuccessModal({
+        isOpen: true,
+        message: "All players deleted successfully."
+      });
+    } catch (err) {
+      setMessage(err.message || "Unable to delete all players.");
+    } finally {
+      setIsDeletingPlayers(false);
+    }
+  };
 
   const pushUndoEntry = (type, value, label) => {
     const entry = {
@@ -1761,6 +1824,81 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+  const updateGiveawaySetting = (field, value) => {
+    setGiveawaySettings((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateGiveawayStep = (index, value) => {
+    setGiveawaySettings((prev) => {
+      const nextSteps = [...(prev.steps || [])];
+      nextSteps[index] = value;
+      return { ...prev, steps: nextSteps };
+    });
+  };
+
+  const saveGiveawaySettings = async () => {
+    setIsGiveawaySettingsSaving(true);
+    setMessage("");
+
+    try {
+      const updated = await apiRequest(
+        "/api/admin/settings/gaming/giveaway",
+        "PUT",
+        normalizeGiveawaySettings(giveawaySettings),
+        token
+      );
+      const resolved = normalizeGiveawaySettings(updated);
+      setGiveawaySettings(resolved);
+      setSuccessModal({ isOpen: true, message: "Giveaway modal content updated." });
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setIsGiveawaySettingsSaving(false);
+    }
+  };
+
+  const uploadGiveawayPrizeImage = async (fileOverride) => {
+    const fileToUpload = fileOverride || giveawayPrizeFile;
+    if (!fileToUpload) {
+      throw new Error("Please choose a prize image file first.");
+    }
+
+    setIsGiveawayPrizeUploading(true);
+    setMessage("");
+
+    try {
+      const data = await uploadImage("/api/admin/media/giveaway-prize", fileToUpload, token);
+      setGiveawaySettings((prev) => ({ ...prev, prizeImageUrl: data.url || prev.prizeImageUrl }));
+      setSuccessModal({ isOpen: true, message: "Giveaway prize image uploaded." });
+    } finally {
+      setIsGiveawayPrizeUploading(false);
+    }
+  };
+
+  const handleGiveawayPrizeImageChange = async (event) => {
+    const file = event.target.files?.[0] || null;
+    setGiveawayPrizeFile(file);
+    if (!file) {
+      return;
+    }
+
+    try {
+      await uploadGiveawayPrizeImage(file);
+      setGiveawayPrizeFile(null);
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const playGiveawayAsAdmin = () => {
+    const popup = window.open("/tetris-game", "_blank", "noopener,noreferrer");
+    if (!popup) {
+      navigate("/tetris-game");
+    }
+  };
+
   return (
     <main className="container container-wide">
       <AdminSectionTabs
@@ -1849,10 +1987,22 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
           gamingSectionVisible={gamingSettings.gamingSectionVisible !== false}
           isSaving={isGamingSettingsSaving}
           onToggleVisibility={toggleGamingSectionVisibility}
+          onPlayAsAdmin={playGiveawayAsAdmin}
+          giveawaySettings={giveawaySettings}
+          giveawayPrizeFile={giveawayPrizeFile}
+          isGiveawaySettingsSaving={isGiveawaySettingsSaving}
+          isGiveawayPrizeUploading={isGiveawayPrizeUploading}
+          onGiveawaySettingChange={updateGiveawaySetting}
+          onGiveawayStepChange={updateGiveawayStep}
+          onSaveGiveawaySettings={saveGiveawaySettings}
+          onGiveawayPrizeImageChange={handleGiveawayPrizeImageChange}
           registeredPlayers={registeredPlayers}
           isLoadingPlayers={isRegisteredPlayersLoading || isAdminLoading}
           onBonusAction={handleBonusProofAction}
           bonusActionKey={bonusActionKey}
+          onDeletePlayer={deletePlayer}
+          onDeleteAllPlayers={confirmDeleteAllPlayers}
+          isDeletingPlayers={isDeletingPlayers}
         />
       ) : null}
 

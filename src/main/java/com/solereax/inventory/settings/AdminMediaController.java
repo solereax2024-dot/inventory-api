@@ -12,10 +12,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class AdminMediaController {
     private final MediaStorageService mediaStorageService;
     private final BrandingService brandingService;
+    private final GiveawaySettingsService giveawaySettingsService;
 
-    public AdminMediaController(MediaStorageService mediaStorageService, BrandingService brandingService) {
+    public AdminMediaController(MediaStorageService mediaStorageService, BrandingService brandingService, GiveawaySettingsService giveawaySettingsService) {
         this.mediaStorageService = mediaStorageService;
         this.brandingService = brandingService;
+        this.giveawaySettingsService = giveawaySettingsService;
     }
 
     @PostMapping("/product-image")
@@ -35,6 +37,13 @@ public class AdminMediaController {
     public Map<String, String> uploadLogoDark(@RequestParam("file") MultipartFile file) {
         String url = mediaStorageService.storeImage(file, "branding");
         brandingService.updateLogoDarkUrl(url);
+        return Map.of("url", url);
+    }
+
+    @PostMapping("/giveaway-prize")
+    public Map<String, String> uploadGiveawayPrizeImage(@RequestParam("file") MultipartFile file) {
+        String url = mediaStorageService.storeImage(file, "giveaway");
+        giveawaySettingsService.updatePrizeImageUrl(url);
         return Map.of("url", url);
     }
 }

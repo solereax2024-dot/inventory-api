@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Upload, AlertCircle, Check, Loader } from "lucide-react";
 import { apiRequest } from "../../utils/api";
+import { DEFAULT_GIVEAWAY_SETTINGS, giveawayImageSrc, normalizeGiveawaySettings } from "../../constants/giveaway";
 import "./TetrisRegistrationModal.css";
 
 export default function TetrisRegistrationModal({ isVisible, onAuthenticated, onClose }) {
@@ -14,6 +15,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
   });
   const [mode, setMode] = useState("register");
   const [hasConfirmedFollow, setHasConfirmedFollow] = useState(false);
+  const [giveawaySettings, setGiveawaySettings] = useState(DEFAULT_GIVEAWAY_SETTINGS);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,6 +36,28 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
     setMode("register");
     setError("");
     setSuccess("");
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (!isVisible) return undefined;
+
+    let isCancelled = false;
+
+    apiRequest("/api/public/settings/giveaway")
+      .then((data) => {
+        if (!isCancelled) {
+          setGiveawaySettings(normalizeGiveawaySettings(data));
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setGiveawaySettings(DEFAULT_GIVEAWAY_SETTINGS);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isVisible]);
 
   const isLoginMode = mode === "login";
@@ -134,6 +158,8 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
   };
 
   if (!isVisible) return null;
+
+  const prizeImageSrc = giveawayImageSrc(giveawaySettings.prizeImageUrl);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -254,25 +280,33 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         {!hasConfirmedFollow ? (
           <div className="tetris-registration-gate">
             <div className="tetris-registration-gate-card">
-              <p className="tetris-registration-gate-label">How to Join</p>
+              <p className="tetris-registration-gate-label">{giveawaySettings.howToJoinTitle}</p>
+
+               {prizeImageSrc ? (
+                 <div className="tetris-bonus-prize-card tetris-registration-prize-card">
+                   <div className="tetris-bonus-prize-copy">
+                     <span className="tetris-bonus-prize-label">{giveawaySettings.prizeLabel}</span>
+                   </div>
+                   <img
+                     className="tetris-bonus-prize-image"
+                     src={prizeImageSrc}
+                     alt={giveawaySettings.prizeImageAlt || giveawaySettings.prizeLabel || "Giveaway prize"}
+                   />
+                 </div>
+               ) : null}
+
               <ul className="tetris-registration-gate-list">
-                <li>
-                  <Check size={16} />
-                  <span>Play the Giveaway challenge for a chance to win our featured prize.</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>You must be following our official page.</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>You will upload a screenshot showing that you follow us.</span>
-                </li>
-                <li>
-                  <Check size={16} />
-                  <span>If you win, we may contact you using the follower details shown in your submitted screenshot.</span>
-                </li>
+                {giveawaySettings.steps.map((step) => (
+                  <li key={step}>
+                    <Check size={16} />
+                    <span>{step}</span>
+                  </li>
+                ))}
               </ul>
+              <div className="tetris-registration-gate-note" role="note">
+                <strong>Account Access Notice</strong>
+                <p>{giveawaySettings.accountDeletionNote}</p>
+              </div>
             </div>
 
             <div className="tetris-registration-gate-actions">

@@ -75,6 +75,7 @@ import {
   parseSoundEnabledPreference,
   parseBestRunPreference,
 } from "../../utils/preferenceDefaults";
+import { DEFAULT_GIVEAWAY_SETTINGS, normalizeGiveawaySettings } from "../../constants/giveaway";
 import "../../styles/tetris/index.css";
 
 const EMPTY_BONUS_STATUS = {
@@ -196,6 +197,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const [bonusError, setBonusError] = useState("");
   const [bonusFeedback, setBonusFeedback] = useState("");
   const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
+  const [giveawayContent, setGiveawayContent] = useState(DEFAULT_GIVEAWAY_SETTINGS);
 
   const authenticatedPlayerName = useMemo(() => {
     return authenticatedUser?.username?.trim()
@@ -250,6 +252,26 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         isCancelled = true;
       };
     }, [authenticatedToken]);
+
+    useEffect(() => {
+      let isCancelled = false;
+
+      apiRequest("/api/public/settings/giveaway")
+        .then((data) => {
+          if (!isCancelled) {
+            setGiveawayContent(normalizeGiveawaySettings(data));
+          }
+        })
+        .catch(() => {
+          if (!isCancelled) {
+            setGiveawayContent(DEFAULT_GIVEAWAY_SETTINGS);
+          }
+        });
+
+      return () => {
+        isCancelled = true;
+      };
+    }, []);
 
       useEffect(() => {
         if (gameStarted && isBonusModalOpen) {
@@ -1669,6 +1691,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
             bonusError={bonusError}
             bonusFeedback={bonusFeedback}
             onBonusProofSelected={handleBonusProofSelected}
+            giveawaySettings={giveawayContent}
           />
 
          <TetrisPlayerDetailsModal

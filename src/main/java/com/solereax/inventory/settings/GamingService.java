@@ -115,5 +115,38 @@ public class GamingService {
     private String normalizeKey(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
-}
 
+    @Transactional
+    public void deletePlayer(Long userId) {
+        // Get username before deleting the user
+        String username = appUserRepository.findById(userId)
+            .map(AppUser::getUsername)
+            .orElse(null);
+
+        // Delete the player account (bonus data is stored in AppUser and will be deleted)
+        appUserRepository.deleteById(userId);
+
+        // Delete the player's tetris leaderboard data
+        if (username != null) {
+            tetrisLeaderboardRepository.deleteByPlayerName(username);
+        }
+    }
+
+    @Transactional
+    public void deleteAllPlayers() {
+        // Get all customer players
+        List<AppUser> customers = appUserRepository.findAll().stream()
+                .filter(user -> user.getRole() == UserRole.CUSTOMER)
+                .toList();
+
+        // Delete all customer accounts (bonus data is stored in AppUser and will be deleted)
+        for (AppUser customer : customers) {
+            appUserRepository.deleteById(customer.getId());
+        }
+
+        // Delete each player's leaderboard data
+        for (AppUser customer : customers) {
+            tetrisLeaderboardRepository.deleteByPlayerName(customer.getUsername());
+        }
+    }
+}

@@ -12,5 +12,6 @@ public interface TetrisLeaderboardRepository extends JpaRepository<TetrisLeaderb
     Optional<TetrisLeaderboard> findByPlayerNameIgnoreCase(String playerName);
     List<TetrisLeaderboard> findAllByOrderByHighestScoreDesc();
     List<TetrisLeaderboard> findTop10ByOrderByHighestScoreDesc();
+    void deleteByPlayerName(String playerName);
 }
 

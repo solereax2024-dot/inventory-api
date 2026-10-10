@@ -15,13 +15,16 @@
               rgba(2, 6, 23, 0.94);
   backdrop-filter: blur(16px) saturate(1.12);
   animation: tetris-overlay-fade-in 0.32s ease-out;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 
 .tetris-registration-modal {
   position: relative;
   width: min(100%, 520px);
   max-height: min(92vh, 92dvh);
+  margin: auto;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0;
@@ -182,6 +185,24 @@
   display: grid;
   gap: 18px;
   padding: clamp(20px, 3vw, 28px);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 217, 255, 0.3) transparent;
+}
+
+.tetris-registration-gate::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tetris-registration-gate::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0, 217, 255, 0.44), rgba(124, 58, 237, 0.28));
+  border-radius: 999px;
+}
+
+.tetris-registration-gate::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .tetris-registration-gate-card {
@@ -192,6 +213,15 @@
   border: 1.5px solid rgba(0, 217, 255, 0.18);
   background: linear-gradient(135deg, rgba(0, 217, 255, 0.08), rgba(124, 58, 237, 0.08) 60%, rgba(255, 255, 255, 0.03));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 14px 26px rgba(2, 6, 23, 0.16);
+}
+
+.tetris-registration-prize-card {
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 180px);
+  align-items: center;
+}
+
+.tetris-registration-prize-card .tetris-bonus-prize-image {
+  max-height: 140px;
 }
 
 .tetris-registration-gate-label {
@@ -225,6 +255,30 @@
   color: rgba(0, 255, 136, 0.96);
   margin-top: 2px;
   filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.24));
+}
+
+.tetris-registration-gate-note {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.3), rgba(30, 41, 59, 0.8));
+}
+
+.tetris-registration-gate-note strong {
+  color: #fde68a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tetris-registration-gate-note p {
+  margin: 0;
+  color: rgba(254, 243, 199, 0.94);
+  font-size: 0.84rem;
+  line-height: 1.5;
 }
 
 .tetris-registration-gate-actions {
@@ -645,6 +699,14 @@
     gap: 12px;
   }
 
+  .tetris-registration-prize-card {
+    grid-template-columns: 1fr;
+  }
+
+  .tetris-registration-prize-card .tetris-bonus-prize-image {
+    max-height: 132px;
+  }
+
   .tetris-registration-gate-list li {
     font-size: 0.88rem;
   }
@@ -735,6 +797,10 @@
 
   .tetris-registration-gate-actions {
     flex-direction: column;
+  }
+
+  .tetris-registration-prize-card .tetris-bonus-prize-image {
+    max-height: 116px;
   }
 
   .tetris-form-input {
