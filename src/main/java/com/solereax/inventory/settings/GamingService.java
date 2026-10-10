@@ -129,7 +129,7 @@ public class GamingService {
 
         // Delete the player's tetris leaderboard data
         if (username != null) {
-            tetrisLeaderboardRepository.deleteByPlayerName(username);
+            tetrisLeaderboardRepository.deleteByPlayerNameIgnoreCase(username);
         }
     }
 
@@ -147,7 +147,7 @@ public class GamingService {
 
         // Delete each player's leaderboard data
         for (AppUser customer : customers) {
-            tetrisLeaderboardRepository.deleteByPlayerName(customer.getUsername());
+            tetrisLeaderboardRepository.deleteByPlayerNameIgnoreCase(customer.getUsername());
         }
     }
 }
