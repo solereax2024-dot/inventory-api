@@ -31,6 +31,22 @@ export async function apiRequest(path, method = "GET", body, token) {
   return readBodySafely();
 }
 
+export function getFriendlyUploadErrorMessage(response, fallbackMessage = "Upload failed") {
+  if (!response) {
+    return fallbackMessage;
+  }
+
+  if (response.status === 413) {
+    return "This image is too large. Please compress it or choose a smaller one (max 5MB).";
+  }
+
+  if (response.status === 415) {
+    return "Hindi supported ang file type. Image file lang ang puwedeng i-upload.";
+  }
+
+  return fallbackMessage;
+}
+
 export async function uploadImage(path, file, token) {
   const formData = new FormData();
   formData.append("file", file);
@@ -42,8 +58,15 @@ export async function uploadImage(path, file, token) {
     body: formData
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Upload failed" }));
-    throw new Error(error.message || "Upload failed");
+    const contentType = response.headers.get("content-type") || "";
+    const errorBody = contentType.includes("application/json")
+      ? await response.json().catch(() => null)
+      : { message: await response.text().catch(() => "") };
+
+    throw new Error(
+      (errorBody && errorBody.message) ||
+      getFriendlyUploadErrorMessage(response, "Upload failed")
+    );
   }
   return response.json();
 }

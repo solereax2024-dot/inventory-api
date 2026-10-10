@@ -10,9 +10,11 @@ import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.solereax.inventory.settings.ImageCompressionService;
 
 @Service
 public class GiveawayBonusService {
@@ -23,12 +25,19 @@ public class GiveawayBonusService {
     private static final String REVIEW_BONUS_TYPE = "review";
 
     private final AppUserRepository appUserRepository;
+    private final ImageCompressionService imageCompressionService;
 
     @Value("${app.upload.profile-images-dir:uploads/profile-images}")
     private String uploadDir;
 
-    public GiveawayBonusService(AppUserRepository appUserRepository) {
+    @Autowired
+    public GiveawayBonusService(AppUserRepository appUserRepository, ImageCompressionService imageCompressionService) {
         this.appUserRepository = appUserRepository;
+        this.imageCompressionService = imageCompressionService;
+    }
+
+    public GiveawayBonusService(AppUserRepository appUserRepository) {
+        this(appUserRepository, new ImageCompressionService());
     }
 
     @Transactional(readOnly = true)
@@ -158,8 +167,8 @@ public class GiveawayBonusService {
         if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("image/")) {
             throw new IllegalArgumentException(label + " must be an image file.");
         }
-        if (file.getSize() > 5L * 1024L * 1024L) {
-            throw new IllegalArgumentException(label + " must be less than 5MB.");
+        if (file.getSize() > ImageCompressionService.MAX_UPLOAD_SIZE_BYTES) {
+            throw new IllegalArgumentException(label + " must be less than 25MB before compression.");
         }
     }
 
@@ -168,18 +177,23 @@ public class GiveawayBonusService {
         if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
         }
-        String fileExtension = getFileExtension(file.getOriginalFilename());
+        ImageCompressionService.PreparedImage preparedImage = imageCompressionService.prepareForStorage(file);
+        String fileExtension = getFileExtension(file.getOriginalFilename(), preparedImage.extension());
         String uniqueFilename = prefix + "-" + UUID.randomUUID() + "." + fileExtension;
         Path filePath = uploadPath.resolve(uniqueFilename);
-        Files.write(filePath, file.getBytes());
+        Files.write(filePath, preparedImage.bytes());
         return "uploads/profile-images/" + uniqueFilename;
     }
 
-    private String getFileExtension(String filename) {
+    private String getFileExtension(String filename, String fallbackExtension) {
         if (filename == null || !filename.contains(".")) {
-            return "jpg";
+            return fallbackExtension == null || fallbackExtension.isBlank() ? "jpg" : fallbackExtension;
         }
-        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+        String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+        if (extension.isBlank()) {
+            return fallbackExtension == null || fallbackExtension.isBlank() ? "jpg" : fallbackExtension;
+        }
+        return extension;
     }
 
     private boolean hasValue(String value) {

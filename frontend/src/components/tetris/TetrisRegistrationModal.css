@@ -373,6 +373,48 @@
   cursor: not-allowed;
 }
 
+.tetris-password-field {
+  position: relative;
+}
+
+.tetris-password-input {
+  padding-right: 54px;
+}
+
+.tetris-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 217, 255, 0.08);
+  color: rgba(236, 254, 255, 0.9);
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.tetris-password-toggle:hover {
+  color: rgba(0, 255, 255, 0.96);
+  background: rgba(0, 217, 255, 0.16);
+  box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.18), 0 0 14px rgba(0, 217, 255, 0.14);
+}
+
+.tetris-password-toggle:focus-visible {
+  outline: 2px solid rgba(0, 217, 255, 0.75);
+  outline-offset: 2px;
+}
+
+.tetris-password-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* Image Upload */
 .tetris-image-upload-container {
   position: relative;

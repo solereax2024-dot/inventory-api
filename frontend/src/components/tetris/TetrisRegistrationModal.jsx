@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { X, Upload, AlertCircle, Check, Loader } from "lucide-react";
-import { apiRequest } from "../../utils/api";
+import { X, Upload, AlertCircle, Check, Loader, Eye, EyeOff } from "lucide-react";
+import { apiRequest, getFriendlyUploadErrorMessage } from "../../utils/api";
 import { DEFAULT_GIVEAWAY_SETTINGS, giveawayImageList, normalizeGiveawaySettings } from "../../constants/giveaway";
 import "./TetrisRegistrationModal.css";
 
@@ -17,6 +17,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
   const [hasConfirmedFollow, setHasConfirmedFollow] = useState(false);
   const [giveawaySettings, setGiveawaySettings] = useState(DEFAULT_GIVEAWAY_SETTINGS);
   const [activePrizeImageIndex, setActivePrizeImageIndex] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,6 +36,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
 
     setHasConfirmedFollow(false);
     setMode("register");
+    setShowPassword(false);
     setError("");
     setSuccess("");
   }, [isVisible]);
@@ -91,6 +93,10 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
     resetMessages();
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword((previousValue) => !previousValue);
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -111,7 +117,7 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setError("Image must be less than 5MB");
+        setError("This image is too large. Please compress it or choose a smaller one (max 5MB).");
         return;
       }
 
@@ -212,7 +218,11 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
         data = await readResponseBody(response);
 
         if (!response.ok) {
-          throw new Error(data.message || "Registration failed. Please try again.");
+          setError(
+            data.message ||
+            getFriendlyUploadErrorMessage(response, "Registration failed. Please try again.")
+          );
+          return;
         }
       }
 
@@ -223,7 +233,8 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
       };
 
       if (!session.token || !session.username) {
-        throw new Error("Authentication failed. Please try again.");
+        setError("Authentication failed. Please try again.");
+        return;
       }
 
       setSuccess(isLoginMode ? "✓ Login successful! Starting game..." : "✓ Registration successful! Starting game...");
@@ -465,16 +476,30 @@ export default function TetrisRegistrationModal({ isVisible, onAuthenticated, on
             <label htmlFor="password" className="tetris-form-label">
               Password *
             </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              className="tetris-form-input"
-              placeholder="At least 6 characters"
-              value={formData.password}
-              onChange={handleInputChange}
-              disabled={loading}
-            />
+            <div className="tetris-password-field">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                className="tetris-form-input tetris-password-input"
+                placeholder="At least 6 characters"
+                value={formData.password}
+                onChange={handleInputChange}
+                disabled={loading}
+                autoComplete={isLoginMode ? "current-password" : "new-password"}
+              />
+              <button
+                type="button"
+                className="tetris-password-toggle"
+                onClick={togglePasswordVisibility}
+                disabled={loading}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+              </button>
+            </div>
           </div>
 
           {!isLoginMode && (
