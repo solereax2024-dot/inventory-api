@@ -173,6 +173,42 @@
     font-weight: var(--font-weight-bold);
 }
 
+@media (min-width: 641px) {
+    .tetris-leaderboard-column .tetris-leaderboard-prize-banner.is-compact {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .tetris-leaderboard-column .tetris-leaderboard-prize-banner.is-compact .tetris-leaderboard-prize-copy {
+        gap: 4px;
+    }
+
+    .tetris-leaderboard-column .tetris-leaderboard-prize-banner.is-compact .tetris-leaderboard-prize-title,
+    .tetris-leaderboard-column .tetris-leaderboard-prize-banner.is-compact .tetris-leaderboard-prize-note {
+        overflow-wrap: anywhere;
+    }
+
+    .tetris-leaderboard-column .tetris-leaderboard-prize-gallery.is-compact,
+    .tetris-leaderboard-column .tetris-leaderboard-prize-gallery.is-compact.has-2,
+    .tetris-leaderboard-column .tetris-leaderboard-prize-gallery.is-compact.has-3,
+    .tetris-leaderboard-column .tetris-leaderboard-prize-gallery.is-compact.has-4 {
+        width: 100%;
+        max-width: none;
+        justify-self: stretch;
+        align-self: start;
+    }
+
+    .tetris-leaderboard-column .tetris-leaderboard-prize-gallery.is-compact.has-1 {
+        width: min(84px, 100%);
+        justify-self: start;
+    }
+
+    .tetris-leaderboard-column .tetris-leaderboard-prize-gallery.is-compact.has-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 
 
 /* ========================================
