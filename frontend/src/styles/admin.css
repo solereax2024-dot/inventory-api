@@ -400,8 +400,21 @@
   align-items: center;
   justify-content: center;
   background: #f8fafc;
-  overflow-y: auto;
+  overflow: auto;
+  padding: 16px;
   min-height: 300px;
+}
+
+.profile-image-viewer-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(90vh - 112px);
+  object-fit: contain;
+  object-position: center;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
 }
 
 .giveaway-player-profile-cell {
@@ -2461,7 +2474,12 @@
     }
 
     .profile-image-viewer-body {
+      padding: 12px;
       min-height: 250px;
+    }
+
+    .profile-image-viewer-image {
+      max-height: calc(92vh - 104px);
     }
 
     .admin-table th,
