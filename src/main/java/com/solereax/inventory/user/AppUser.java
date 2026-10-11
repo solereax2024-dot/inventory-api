@@ -72,6 +72,21 @@ public class AppUser {
     @Column(name = "review_proof_validation_message", nullable = true, length = 1000)
     private String reviewProofValidationMessage;
 
+    @Column(name = "comment_proof_image_path", nullable = true, length = 500)
+    private String commentProofImagePath;
+
+    @Column(name = "comment_proof_image_filename", nullable = true, length = 255)
+    private String commentProofImageFilename;
+
+    @Column(name = "comment_proof_validated", nullable = false)
+    private boolean commentProofValidated = false;
+
+    @Column(name = "comment_proof_revoked", nullable = false)
+    private boolean commentProofRevoked = false;
+
+    @Column(name = "comment_proof_validation_message", nullable = true, length = 1000)
+    private String commentProofValidationMessage;
+
     @Column(name = "facebook_winner_contact_consent", nullable = false)
     private boolean facebookWinnerContactConsent = false;
 

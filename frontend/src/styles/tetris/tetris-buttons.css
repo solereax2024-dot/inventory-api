@@ -1813,55 +1813,6 @@
     text-transform: uppercase;
 }
 
-.tetris-auth-summary-card {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 6px 8px;
-    border-radius: var(--tetris-border-radius-sm);
-    background: linear-gradient(135deg, rgba(0, 217, 255, 0.08), rgba(255, 255, 255, 0.03));
-    border: 1px solid rgba(0, 217, 255, 0.12);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    transition: background 0.18s cubic-bezier(0.32, 0, 0.67, 1),
-                border-color 0.18s cubic-bezier(0.32, 0, 0.67, 1),
-                box-shadow 0.18s cubic-bezier(0.32, 0, 0.67, 1);
-}
-
-.tetris-auth-summary-card .tetris-live-summary-label {
-    display: inline;
-    margin-right: 4px;
-    margin-bottom: 0;
-}
-
-.tetris-auth-summary-card strong {
-    display: inline;
-    color: var(--tetris-text-primary);
-    font-size: 0.8rem;
-    line-height: 1.2;
-}
-
-/* MOBILE: Display "Signed in as <name>" on one line */
-@media (max-width: 640px) {
-    .tetris-auth-summary-card {
-        flex-direction: row;
-        align-items: center;
-        gap: 0;
-        padding: 6px 8px;
-    }
-
-    .tetris-auth-summary-card .tetris-live-summary-label {
-        display: inline;
-        margin-right: 4px;
-        font-size: 0.7rem;
-        line-height: 1;
-    }
-
-    .tetris-auth-summary-card strong {
-        display: inline;
-        font-size: 0.8rem;
-        white-space: nowrap;
-    }
-}
 
 .tetris-live-summary-item strong {
     color: var(--tetris-text-primary);

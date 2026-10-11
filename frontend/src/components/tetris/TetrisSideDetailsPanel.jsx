@@ -85,20 +85,14 @@ export default function TetrisSideDetailsPanel({
                 </div>
               )}
             </>
-          ) : (
-            <div className="tetris-start-primary-row">
-              <div className="tetris-start-profile-row">
-                <div className="tetris-auth-summary-card" aria-label="Authenticated player">
-                  <span className="tetris-live-summary-label">Signed in as</span>
-                  <strong>{playerName || "Player"}</strong>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="tetris-bonus-trigger"
-                onClick={onOpenBonusModal}
-                aria-label={`Open bonus points details. Current bonus points: +${formattedBonusPoints}`}
-              >
+           ) : (
+             <div className="tetris-start-primary-row">
+               <button
+                 type="button"
+                 className="tetris-bonus-trigger"
+                 onClick={onOpenBonusModal}
+                 aria-label={`Open bonus points details. Current bonus points: +${formattedBonusPoints}`}
+               >
                 <span className="tetris-bonus-trigger-icon" aria-hidden="true">
                   <Gift size={18} />
                 </span>

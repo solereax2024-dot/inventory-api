@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
 import RegisteredPlayersTable from "./RegisteredPlayersTable.jsx";
+import GiveawaySelector from "./GiveawaySelector.jsx";
 import { DEFAULT_GIVEAWAY_SETTINGS, giveawayImageSrc, normalizeGiveawaySettings } from "../../../constants/giveaway";
 
 export default function GamingSettingsSection({
@@ -8,6 +9,10 @@ export default function GamingSettingsSection({
   isSaving,
   onToggleVisibility,
   onPlayAsAdmin,
+  giveaways = [],
+  selectedGiveawayId = 1,
+  onSelectGiveaway,
+  onAddGiveaway,
   giveawaySettings,
   isGiveawaySettingsSaving,
   isGiveawayPrizeUploading,
@@ -40,56 +45,76 @@ export default function GamingSettingsSection({
     (_, index) => giveawayImageSrc(safeGiveawaySettings.prizeImageUrls?.[index])
   );
 
-  return (
-    <section className="card products-card admin-section">
-      <div className="section-head">
-        <div className="admin-section-heading-copy">
-          <h2>Giveaway</h2>
-          <p className="field-hint" style={{ margin: 0 }}>
-            Control whether customers can see the giveaway game in the customer nav bar.
-          </p>
-        </div>
-        <div className="giveaway-visibility-actions">
-          <button type="button" className="button-secondary" onClick={onPlayAsAdmin}>
-            Play as Admin
-          </button>
-          <button type="button" className="btn-primary" onClick={onToggleVisibility} disabled={isSaving}>
-            {gamingSectionVisible ? "Hide from customers" : "Show to customers"}
-          </button>
-        </div>
-      </div>
+    return (
+      <section className="card products-card admin-section giveaway-admin-section">
+        <GiveawaySelector
+          giveaways={giveaways}
+          selectedGiveawayId={selectedGiveawayId}
+          onSelectGiveaway={onSelectGiveaway}
+          onAddGiveaway={onAddGiveaway}
+        />
 
-      <div className="giveaway-settings-editor">
-        <div className="giveaway-settings-card">
-          <div className="giveaway-settings-card-head">
-            <div>
-              <h3>Giveaway Settings</h3>
-              <p className="field-hint" style={{ margin: 0 }}>
-                Configure the giveaway setup and prize image.
-              </p>
+        {selectedGiveawayId === 1 ? (
+          <>
+            <div className="section-head giveaway-section-head">
+              <div className="admin-section-heading-copy">
+                <h2>Giveaway 1</h2>
+                <p className="field-hint" style={{ margin: 0 }}>
+                  Control whether customers can see the giveaway game in the customer nav bar.
+                </p>
+              </div>
+              <div className="giveaway-visibility-actions">
+                <button type="button" className="button-secondary" onClick={onPlayAsAdmin}>
+                  Play as Admin
+                </button>
+                <button type="button" className="btn-primary" onClick={onToggleVisibility} disabled={isSaving}>
+                  {gamingSectionVisible ? "Hide from customers" : "Show to customers"}
+                </button>
+              </div>
             </div>
-            <button type="button" className="btn-primary" onClick={() => setIsSettingsModalOpen(true)}>
-              Edit Settings
-            </button>
-           </div>
-         </div>
-      </div>
 
-       <RegisteredPlayersTable
-         players={registeredPlayers}
-          totalRegisteredPlayers={totalRegisteredPlayers}
-         isLoading={isLoadingPlayers}
-         onBonusAction={onBonusAction}
-         bonusActionKey={bonusActionKey}
-         onProfileImageAction={onProfileImageAction}
-         profileImageActionKey={profileImageActionKey}
-         onSendPlayerNotification={onSendPlayerNotification}
-         onBroadcastNotification={onBroadcastNotification}
-         notificationActionKey={notificationActionKey}
-         onDeletePlayer={onDeletePlayer}
-         onDeleteAllPlayers={() => setDeleteAllConfirm({ isOpen: true })}
-         isDeletingPlayers={isDeletingPlayers}
-       />
+            <div className="giveaway-content-card">
+              <div className="giveaway-settings-editor">
+                <div className="giveaway-settings-card">
+                  <div className="giveaway-settings-card-head">
+                    <div>
+                      <h3>Giveaway Settings</h3>
+                      <p className="field-hint" style={{ margin: 0 }}>
+                        Configure the giveaway setup and prize image.
+                      </p>
+                    </div>
+                    <button type="button" className="btn-primary" onClick={() => setIsSettingsModalOpen(true)}>
+                      Edit Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <RegisteredPlayersTable
+                players={registeredPlayers}
+                 totalRegisteredPlayers={totalRegisteredPlayers}
+                isLoading={isLoadingPlayers}
+                onBonusAction={onBonusAction}
+                bonusActionKey={bonusActionKey}
+                onProfileImageAction={onProfileImageAction}
+                profileImageActionKey={profileImageActionKey}
+                onSendPlayerNotification={onSendPlayerNotification}
+                onBroadcastNotification={onBroadcastNotification}
+                notificationActionKey={notificationActionKey}
+                onDeletePlayer={onDeletePlayer}
+                onDeleteAllPlayers={() => setDeleteAllConfirm({ isOpen: true })}
+                isDeletingPlayers={isDeletingPlayers}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="giveaway-content-card giveaway-empty-state">
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8" }}>
+              <p style={{ fontSize: "14px", marginBottom: "8px" }}>Giveaway {selectedGiveawayId}</p>
+              <p style={{ fontSize: "12px" }}>Coming soon...</p>
+            </div>
+          </div>
+        )}
 
       {deleteAllConfirm.isOpen && onDeleteAllPlayers ? (
         <div className="modal-overlay" onClick={() => setDeleteAllConfirm({ isOpen: false })}>

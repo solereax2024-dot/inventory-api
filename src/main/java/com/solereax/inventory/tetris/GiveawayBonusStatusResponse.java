@@ -11,6 +11,11 @@ public record GiveawayBonusStatusResponse(
         boolean reviewProofValidated,
         boolean reviewProofRevoked,
         String reviewProofValidationMessage,
+        boolean commentProofUploaded,
+        String commentProofImagePath,
+        boolean commentProofValidated,
+        boolean commentProofRevoked,
+        String commentProofValidationMessage,
         int followBonusPoints,
         int reviewBonusPoints,
         int totalBonusPoints

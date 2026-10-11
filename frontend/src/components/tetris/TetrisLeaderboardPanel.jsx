@@ -28,10 +28,14 @@ export function TetrisLeaderboardList({
               <span className="tetris-mini-leaderboard-rank">{getMedalIcon(entry.displayRank) || `#${entry.displayRank}`}</span>
               <div className="tetris-mini-leaderboard-copy">
                 <span className="tetris-mini-leaderboard-player">{entry.playerName || "Anonymous"}</span>
+                <span className="tetris-mini-leaderboard-subline">
+                  Score {((entry.score ?? 0)).toLocaleString()} • <span className="is-bonus">Bonus +{((entry.bonusPoints ?? 0)).toLocaleString()}</span>
+                </span>
               </div>
               <div className="tetris-mini-leaderboard-score-stack">
                 <span className="tetris-mini-leaderboard-level">L{entry.highestLevel || 1}</span>
-                <span className="tetris-mini-leaderboard-score">{entry.highestScore?.toLocaleString() || 0}</span>
+                <span className="tetris-mini-leaderboard-score">{(entry.totalScore ?? entry.highestScore ?? 0).toLocaleString()}</span>
+                <span className="tetris-mini-leaderboard-total-label">Total</span>
               </div>
             </button>
           ))}

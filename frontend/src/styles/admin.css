@@ -41,8 +41,10 @@
 }
 
 .admin-subsection {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
@@ -99,13 +101,60 @@
    width: 100%;
    min-width: 1200px;
    table-layout: auto;
-   font-size: 13px;
+   font-size: 14px;
    border-collapse: separate;
    border-spacing: 0;
 }
 
 .giveaway-players-table {
-    min-width: 1270px;
+    --giveaway-rank-col-width: 84px;
+    --giveaway-profile-col-width: 196px;
+    min-width: 1760px;
+}
+
+.giveaway-admin-section {
+  height: 90vh;
+  min-height: 940px;
+  gap: 8px;
+}
+
+.giveaway-section-head {
+  margin-bottom: 2px;
+}
+
+.giveaway-admin-section .admin-section-heading-copy {
+  gap: 2px;
+}
+
+.giveaway-admin-section .admin-section-heading-copy h2 {
+  font-size: 18px;
+}
+
+.giveaway-admin-section .giveaway-selector-container {
+  margin-bottom: 8px;
+  padding-bottom: 10px;
+}
+
+.giveaway-admin-section .giveaway-content-card {
+  padding: 12px;
+  gap: 10px;
+}
+
+.giveaway-admin-section .giveaway-settings-editor {
+  gap: 8px;
+}
+
+.giveaway-admin-section .giveaway-settings-card {
+  padding: 10px 12px;
+}
+
+.giveaway-admin-section .admin-subsection {
+  gap: 8px;
+}
+
+.giveaway-admin-section .admin-table-wrap {
+  margin-top: 6px;
+  min-height: 620px;
 }
 
 .giveaway-player-actions-head {
@@ -139,6 +188,18 @@
   gap: 8px;
   justify-content: flex-start;
   flex: 1 1 360px;
+}
+
+.giveaway-admin-section .giveaway-player-actions-head {
+  gap: 8px;
+}
+
+.giveaway-admin-section .giveaway-player-summary-row {
+  gap: 6px;
+}
+
+.giveaway-admin-section .giveaway-player-actions-toolbar {
+  gap: 8px;
 }
 
 .giveaway-player-summary-chip {
@@ -343,16 +404,6 @@
   min-height: 300px;
 }
 
-.profile-image-viewer-image {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  padding: 16px;
-  display: block;
-}
-
 .giveaway-player-profile-cell {
   display: flex;
   align-items: center;
@@ -361,7 +412,18 @@
 }
 
 .giveaway-player-profile-cell.is-detailed {
-  align-items: flex-start;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.giveaway-player-profile-cell.is-detailed.is-stacked {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  justify-items: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
 }
 
 .giveaway-player-profile-button,
@@ -409,23 +471,34 @@
 
 .giveaway-player-profile-meta {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
   flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.giveaway-player-profile-status {
+  width: 100%;
+  max-width: 120px;
 }
 
 .giveaway-player-profile-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  align-items: center;
+  align-items: stretch;
+  justify-content: stretch;
+  min-width: 100%;
+  max-width: 100%;
+  margin-top: 0;
 }
 
 .giveaway-player-user-copy,
 .giveaway-player-date-cell {
   display: grid;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
+  line-height: 1.4;
 }
 
 .giveaway-player-user-name,
@@ -474,74 +547,147 @@
 
 .giveaway-player-proof-list,
 .giveaway-player-actions {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 5px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
   min-width: 0;
 }
 
 .giveaway-player-proof-row {
   display: flex;
   flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
-  padding: 5px 7px;
+  padding: 8px 10px;
   border-radius: 10px;
   background: rgba(248, 250, 252, 0.95);
   border: 1px solid rgba(148, 163, 184, 0.16);
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+}
+
+.giveaway-player-proof-row.is-stacked {
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  justify-items: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
 }
 
 .giveaway-player-proof-title {
-  font-size: 0.68rem;
+  font-size: 0.71rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #64748b;
   flex: 0 0 auto;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 .giveaway-player-proof-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 20px;
-  padding: 0 0.48rem;
+  min-height: 22px;
+  padding: 2px 0.52rem;
   border-radius: 999px;
-  font-size: 0.70rem;
+  font-size: 0.71rem;
   font-weight: 700;
   white-space: nowrap;
   flex: 0 0 auto;
+  line-height: 1.2;
+}
+
+.giveaway-player-proof-status {
+  width: 100%;
+  max-width: 120px;
+  text-align: center;
+}
+
+.giveaway-player-proof-empty {
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.giveaway-player-proof-message {
+  width: 100%;
+  text-align: center;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .giveaway-player-proof-actions {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-start;
-  flex: 0 1 auto;
   gap: 6px;
+  min-width: auto;
+  flex: 0 1 auto;
+}
+
+.giveaway-player-proof-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  gap: 6px;
+  justify-content: stretch;
+  align-items: stretch;
+}
+
+.giveaway-player-proof-actions-grid .giveaway-profile-action-btn {
   min-width: 0;
+  width: 100%;
+}
+
+.giveaway-player-proof-action-spacer {
+  display: block;
+  min-height: 32px;
+  width: 100%;
+}
+
+.giveaway-player-proof-actions-grid .giveaway-profile-action-btn {
+  min-width: 0;
+  width: 100%;
 }
 
 .giveaway-player-proof-btn,
 .giveaway-player-action-btn {
-   min-height: 26px;
-   padding: 0 8px;
-   font-size: 10px;
+   min-height: 32px;
+   padding: 0 10px;
+   font-size: 11px;
    flex: 0 0 auto;
+   line-height: 1.3;
+   white-space: nowrap;
 }
 
 .giveaway-profile-action-btn {
    display: inline-flex;
    align-items: center;
    justify-content: center;
-   gap: 4px;
-   padding: 0 10px;
-   min-height: 28px;
-   min-width: 70px;
+   gap: 6px;
+   padding: 0 12px;
+   min-height: 32px;
+   min-width: 0;
+   width: 100%;
+   line-height: 1.2;
+   margin: 0;
+   flex: 1 1 auto;
+}
+
+.giveaway-player-profile-actions .giveaway-profile-action-btn {
+   min-width: 0;
 }
 
 .giveaway-profile-action-btn .btn-label {
@@ -558,37 +704,128 @@
    text-align: center;
 }
 
+/* Ensure btn-delete variant has same sizing as non-delete variant */
+.giveaway-profile-action-btn.btn-delete {
+   padding: 0 12px;
+   min-height: 32px;
+   min-width: 0;
+   width: 100%;
+   border-radius: 8px;
+   font-size: 11px;
+   font-weight: 500;
+}
+
 .giveaway-player-action-btn {
    width: 100%;
    justify-content: center;
 }
 
 .giveaway-players-table th:nth-child(1),
-.giveaway-players-table td:nth-child(1) { width: 5%; min-width: 60px; }
+.giveaway-players-table td:nth-child(1) {
+  width: 4%;
+  min-width: var(--giveaway-rank-col-width);
+  max-width: var(--giveaway-rank-col-width);
+}
 .giveaway-players-table th:nth-child(2),
-.giveaway-players-table td:nth-child(2) { width: 6%; min-width: 80px; }
+.giveaway-players-table td:nth-child(2) {
+  width: 14%;
+  min-width: var(--giveaway-profile-col-width);
+  max-width: var(--giveaway-profile-col-width);
+}
+.giveaway-players-table th:nth-child(1) {
+  width: 4%;
+  min-width: var(--giveaway-rank-col-width);
+  max-width: var(--giveaway-rank-col-width);
+}
+.giveaway-players-table th:nth-child(2) {
+  width: 14%;
+  min-width: var(--giveaway-profile-col-width);
+  max-width: var(--giveaway-profile-col-width);
+}
 .giveaway-players-table th:nth-child(3),
-.giveaway-players-table td:nth-child(3) { width: 11%; min-width: 140px; }
+.giveaway-players-table td:nth-child(3) { width: 9%; min-width: 140px; }
 .giveaway-players-table th:nth-child(4),
-.giveaway-players-table td:nth-child(4) { width: 8%; min-width: 110px; }
+.giveaway-players-table td:nth-child(4) { width: 10%; min-width: 150px; }
 .giveaway-players-table th:nth-child(5),
-.giveaway-players-table td:nth-child(5) { width: 8%; min-width: 90px; }
+.giveaway-players-table td:nth-child(5) { width: 6%; min-width: 95px; }
 .giveaway-players-table th:nth-child(6),
-.giveaway-players-table td:nth-child(6) { width: 4%; min-width: 55px; }
+.giveaway-players-table td:nth-child(6) { width: 6%; min-width: 95px; }
 .giveaway-players-table th:nth-child(7),
-.giveaway-players-table td:nth-child(7) { width: 5%; min-width: 65px; }
+.giveaway-players-table td:nth-child(7) { width: 7%; min-width: 110px; }
 .giveaway-players-table th:nth-child(8),
-.giveaway-players-table td:nth-child(8) { width: 4%; min-width: 55px; }
+.giveaway-players-table td:nth-child(8) { width: 9%; min-width: 150px; }
 .giveaway-players-table th:nth-child(9),
-.giveaway-players-table td:nth-child(9) { width: 9%; min-width: 115px; }
+.giveaway-players-table td:nth-child(9) { width: 6%; min-width: 95px; }
 .giveaway-players-table th:nth-child(10),
-.giveaway-players-table td:nth-child(10) { width: 5%; min-width: 70px; }
+.giveaway-players-table td:nth-child(10) { width: 18%; min-width: 420px; }
 .giveaway-players-table th:nth-child(11),
-.giveaway-players-table td:nth-child(11) { width: 14%; min-width: 170px; }
+.giveaway-players-table td:nth-child(11) { width: 6%; min-width: 110px; }
 .giveaway-players-table th:nth-child(12),
-.giveaway-players-table td:nth-child(12) { width: 12%; min-width: 130px; }
+.giveaway-players-table td:nth-child(12) { width: 5%; min-width: 90px; }
+.giveaway-players-table th:nth-child(12) { width: 5%; min-width: 90px; }
 .giveaway-players-table th:nth-child(13),
-.giveaway-players-table td:nth-child(13) { width: 9%; min-width: 115px; }
+.giveaway-players-table td:nth-child(13) { width: 7%; min-width: 140px; }
+
+.giveaway-players-table th:nth-child(5) { width: 6%; min-width: 95px; }
+.giveaway-players-table th:nth-child(6) { width: 6%; min-width: 95px; }
+.giveaway-players-table th:nth-child(7) { width: 7%; min-width: 110px; }
+.giveaway-players-table th:nth-child(8) { width: 9%; min-width: 150px; }
+.giveaway-players-table th:nth-child(9) { width: 6%; min-width: 95px; }
+.giveaway-players-table th:nth-child(10) { width: 18%; min-width: 420px; }
+.giveaway-players-table th:nth-child(11) { width: 6%; min-width: 110px; }
+.giveaway-players-table th:nth-child(13) { width: 7%; min-width: 140px; }
+
+.giveaway-players-table th:nth-child(1),
+.giveaway-players-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+}
+
+.giveaway-players-table th:nth-child(2),
+.giveaway-players-table td:nth-child(2) {
+  position: sticky;
+  left: calc(var(--giveaway-rank-col-width) - 1px);
+}
+
+.giveaway-players-table thead th:nth-child(1) {
+  z-index: 6;
+  background: linear-gradient(180deg, #f8fafc, color-mix(in srgb, var(--primary-soft-2) 75%, #eef2ff));
+}
+
+.giveaway-players-table thead th:nth-child(2) {
+  z-index: 5;
+  background: linear-gradient(180deg, #f8fafc, color-mix(in srgb, var(--primary-soft-2) 75%, #eef2ff));
+}
+
+.giveaway-players-table tbody td:nth-child(1) {
+  z-index: 3;
+  background: #ffffff;
+}
+
+.giveaway-players-table tbody td:nth-child(2) {
+  z-index: 2;
+  background: #ffffff;
+}
+
+.giveaway-players-table tbody tr:nth-child(even) td:nth-child(1),
+.giveaway-players-table tbody tr:nth-child(even) td:nth-child(2) {
+  background: #fcfdff;
+}
+
+.giveaway-players-table tbody tr:hover td:nth-child(1),
+.giveaway-players-table tbody tr:hover td:nth-child(2) {
+  background: color-mix(in srgb, var(--primary-soft-2) 48%, #f8fafc);
+}
+
+.giveaway-players-table th:nth-child(1),
+.giveaway-players-table td:nth-child(1) {
+  box-shadow: 1px 0 0 0 var(--border);
+}
+
+.giveaway-players-table th:nth-child(2),
+.giveaway-players-table td:nth-child(2) {
+  box-shadow: 1px 0 0 0 var(--border), 6px 0 14px rgba(15, 23, 42, 0.06);
+}
 
 @media (max-width: 980px) {
   .giveaway-admin-summary {
@@ -604,12 +841,34 @@
   }
 }
 
+.giveaway-content-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(242, 245, 249, 0.96));
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.giveaway-content-card.giveaway-empty-state {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
 .giveaway-settings-editor {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
   align-items: start;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .giveaway-settings-card {
@@ -1015,7 +1274,7 @@
 
 .admin-table th,
 .admin-table td {
-   padding: 10px 12px;
+   padding: 12px 14px;
    vertical-align: middle;
    text-align: left;
 }
@@ -1958,6 +2217,11 @@
      min-height: 72vh;
    }
 
+   .giveaway-admin-section {
+     height: auto;
+     min-height: 72vh;
+   }
+
    .admin-table {
      min-width: 900px;
    }
@@ -1971,6 +2235,15 @@
 @media (max-width: 720px) {
     .products-card {
       padding: 14px;
+    }
+
+    .giveaway-admin-section .giveaway-content-card {
+      padding: 12px;
+    }
+
+    .giveaway-admin-section .admin-table-wrap {
+      min-height: 0;
+      margin-top: 10px;
     }
 
     .manual-reservation-grid,
@@ -2083,14 +2356,18 @@
       min-width: 0;
     }
 
-    .giveaway-player-proof-row {
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: center;
+    .giveaway-player-proof-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .giveaway-player-proof-row.is-stacked {
+      gap: 6px;
+      padding: 8px;
     }
 
     .giveaway-player-profile-cell.is-detailed {
       flex-wrap: wrap;
+      gap: 12px;
     }
 
     .giveaway-player-profile-meta,
@@ -2120,9 +2397,14 @@
 
 
         /* Mobile: Show icons, hide labels in profile and proof action buttons */
+        .giveaway-player-profile-actions {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .giveaway-profile-action-btn {
           padding: 0 6px;
-          min-width: 40px;
+          min-width: 0;
+          width: 100%;
           min-height: 40px;
           gap: 0;
         }
@@ -2131,44 +2413,61 @@
         display: none;
       }
 
-      .giveaway-profile-action-btn .btn-icon {
-        display: inline;
-        font-size: 1.1em;
-        min-width: 18px;
-        text-align: center;
-      }
+       .giveaway-profile-action-btn .btn-icon {
+         display: inline;
+         font-size: 1.1em;
+         min-width: 18px;
+         text-align: center;
+       }
 
-      /* Giveaway table responsive adjustments */
+       /* Mobile: Ensure btn-delete variant has same sizing as non-delete variant */
+       .giveaway-profile-action-btn.btn-delete {
+         padding: 0 6px;
+         min-width: 0;
+         width: 100%;
+         min-height: 40px;
+         gap: 0;
+         border-radius: 8px;
+         font-size: 11px;
+       }
+
+       /* Giveaway table responsive adjustments */
      .giveaway-players-table th:nth-child(1),
-     .giveaway-players-table td:nth-child(1) { width: 4%; min-width: 50px; }
+     .giveaway-players-table td:nth-child(1) { width: 4%; min-width: 50px; max-width: 50px; }
      .giveaway-players-table th:nth-child(2),
-     .giveaway-players-table td:nth-child(2) { width: 5%; min-width: 65px; }
+     .giveaway-players-table td:nth-child(2) { width: 13%; min-width: 220px; max-width: 220px; }
+     .giveaway-players-table th:nth-child(1) { width: 4%; min-width: 50px; max-width: 50px; }
+     .giveaway-players-table th:nth-child(2) { width: 13%; min-width: 220px; max-width: 220px; }
      .giveaway-players-table th:nth-child(3),
-     .giveaway-players-table td:nth-child(3) { width: 10%; min-width: 120px; }
+     .giveaway-players-table td:nth-child(3) { width: 9%; min-width: 120px; }
      .giveaway-players-table th:nth-child(4),
-     .giveaway-players-table td:nth-child(4) { width: 7%; min-width: 90px; }
+     .giveaway-players-table td:nth-child(4) { width: 8%; min-width: 100px; }
      .giveaway-players-table th:nth-child(5),
-     .giveaway-players-table td:nth-child(5) { width: 7%; min-width: 75px; }
+     .giveaway-players-table td:nth-child(5) { width: 7%; min-width: 80px; }
      .giveaway-players-table th:nth-child(6),
-     .giveaway-players-table td:nth-child(6) { width: 3%; min-width: 45px; }
+     .giveaway-players-table td:nth-child(6) { width: 7%; min-width: 80px; }
      .giveaway-players-table th:nth-child(7),
-     .giveaway-players-table td:nth-child(7) { width: 4%; min-width: 50px; }
+     .giveaway-players-table td:nth-child(7) { width: 8%; min-width: 100px; }
      .giveaway-players-table th:nth-child(8),
-     .giveaway-players-table td:nth-child(8) { width: 3%; min-width: 45px; }
+     .giveaway-players-table td:nth-child(8) { width: 8%; min-width: 120px; }
      .giveaway-players-table th:nth-child(9),
-     .giveaway-players-table td:nth-child(9) { width: 8%; min-width: 95px; }
+     .giveaway-players-table td:nth-child(9) { width: 6%; min-width: 80px; }
      .giveaway-players-table th:nth-child(10),
-     .giveaway-players-table td:nth-child(10) { width: 4%; min-width: 60px; }
+     .giveaway-players-table td:nth-child(10) { width: 18%; min-width: 360px; }
      .giveaway-players-table th:nth-child(11),
-     .giveaway-players-table td:nth-child(11) { width: 13%; min-width: 140px; }
+     .giveaway-players-table td:nth-child(11) { width: 7%; min-width: 100px; }
      .giveaway-players-table th:nth-child(12),
-     .giveaway-players-table td:nth-child(12) { width: 11%; min-width: 110px; }
+     .giveaway-players-table td:nth-child(12) { width: 6%; min-width: 80px; }
      .giveaway-players-table th:nth-child(13),
-     .giveaway-players-table td:nth-child(13) { width: 8%; min-width: 95px; }
-     .giveaway-players-table th:nth-child(14),
-     .giveaway-players-table td:nth-child(14) { width: 8%; min-width: 80px; }
-     .giveaway-players-table th:nth-child(15),
-     .giveaway-players-table td:nth-child(15) { width: 8%; min-width: 90px; }
+     .giveaway-players-table td:nth-child(13) { width: 9%; min-width: 110px; }
+
+     .giveaway-players-table th:nth-child(7) { width: 8%; min-width: 100px; }
+     .giveaway-players-table th:nth-child(8) { width: 8%; min-width: 120px; }
+     .giveaway-players-table th:nth-child(9) { width: 6%; min-width: 80px; }
+     .giveaway-players-table th:nth-child(10) { width: 18%; min-width: 360px; }
+     .giveaway-players-table th:nth-child(11) { width: 7%; min-width: 100px; }
+     .giveaway-players-table th:nth-child(12) { width: 6%; min-width: 80px; }
+     .giveaway-players-table th:nth-child(13) { width: 9%; min-width: 110px; }
 
     .giveaway-player-profile-image,
     .giveaway-player-profile-empty {
@@ -2617,4 +2916,119 @@ body.theme-dark .reservation-delete-btn {
   }
 
 
+  /* Giveaway Selector Navigation */
+ .giveaway-selector-container {
+   display: flex;
+   flex-direction: column;
+   gap: 12px;
+   margin-bottom: 20px;
+   padding-bottom: 12px;
+   border-bottom: 1px solid var(--border);
+ }
 
+ .giveaway-selector-nav {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 12px;
+   flex-wrap: wrap;
+ }
+
+ .giveaway-selector-tabs {
+   display: flex;
+   gap: 8px;
+   flex-wrap: wrap;
+   align-items: center;
+ }
+
+ .giveaway-selector-tab {
+   position: relative;
+   margin-top: 0;
+   padding: 8px 16px;
+   min-height: 38px;
+   border-radius: 8px;
+   border: 1px solid rgba(148, 163, 184, 0.3);
+   background: linear-gradient(180deg, var(--surface-raised), var(--surface-2));
+   color: var(--text-strong);
+   font-weight: 600;
+   font-size: 0.9rem;
+   cursor: pointer;
+   display: flex;
+   flex-direction: column;
+   align-items: flex-start;
+   justify-content: center;
+   gap: 2px;
+   transition: all 0.2s ease;
+   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+   white-space: nowrap;
+ }
+
+ .giveaway-selector-tab-label {
+   font-weight: 700;
+   font-size: 0.88rem;
+   display: block;
+ }
+
+ .giveaway-selector-tab-hint {
+   font-weight: 500;
+   font-size: 0.75rem;
+   color: var(--text-muted);
+   max-width: 140px;
+   white-space: normal;
+   line-height: 1.2;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   display: -webkit-box;
+   -webkit-line-clamp: 1;
+   -webkit-box-orient: vertical;
+ }
+
+ .giveaway-selector-tab:hover:not(.is-active) {
+   border-color: rgba(99, 102, 241, 0.4);
+   background: linear-gradient(180deg, var(--surface-2), var(--primary-soft));
+   transform: translateY(-1px);
+   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+ }
+
+ .giveaway-selector-tab.is-active {
+   border-color: var(--primary);
+   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
+   color: var(--on-primary-text);
+   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.22);
+ }
+
+ .giveaway-selector-tab.is-active .giveaway-selector-tab-hint {
+   color: rgba(255, 255, 255, 0.8);
+ }
+
+ .giveaway-selector-add-btn {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   gap: 6px;
+   min-height: 38px;
+   padding: 0 12px;
+   border-radius: 8px;
+   border: 1px solid rgba(34, 197, 94, 0.3);
+   background: rgba(34, 197, 94, 0.08);
+   color: #16a34a;
+   font-weight: 600;
+   font-size: 0.85rem;
+   cursor: pointer;
+   transition: all 0.2s ease;
+   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+   white-space: nowrap;
+   flex-shrink: 0;
+ }
+
+ .giveaway-selector-add-btn:hover {
+   border-color: rgba(34, 197, 94, 0.5);
+   background: rgba(34, 197, 94, 0.12);
+   color: #15803d;
+   transform: translateY(-1px);
+   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+ }
+
+ .giveaway-selector-add-btn:active {
+   transform: translateY(0);
+ }

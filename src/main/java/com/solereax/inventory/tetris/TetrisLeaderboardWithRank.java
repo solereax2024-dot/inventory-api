@@ -14,7 +14,10 @@ import java.time.LocalDateTime;
 public class TetrisLeaderboardWithRank {
     private Long id;
     private String playerName;
+    private Integer score;
+    private Integer bonusPoints;
     private Integer highestScore;
+    private Integer totalScore;
     private Integer highestLevel;
     private Integer totalGames;
     private Integer totalLinesCleared;
@@ -23,11 +26,17 @@ public class TetrisLeaderboardWithRank {
     private LocalDateTime updatedAt;
     private Integer rank;
 
-    public static TetrisLeaderboardWithRank fromEntity(TetrisLeaderboard leaderboard, Integer rank) {
+    public static TetrisLeaderboardWithRank fromEntity(TetrisLeaderboard leaderboard, Integer rank, Integer bonusPoints) {
+        int safeBonusPoints = bonusPoints != null ? Math.max(bonusPoints, 0) : 0;
+        int totalScore = leaderboard.getHighestScore() != null ? leaderboard.getHighestScore() : 0;
+        int baseScore = Math.max(totalScore - safeBonusPoints, 0);
         return TetrisLeaderboardWithRank.builder()
                 .id(leaderboard.getId())
                 .playerName(leaderboard.getPlayerName())
+                .score(baseScore)
+                .bonusPoints(safeBonusPoints)
                 .highestScore(leaderboard.getHighestScore())
+                .totalScore(totalScore)
                 .highestLevel(leaderboard.getHighestLevel())
                 .totalGames(leaderboard.getTotalGames())
                 .totalLinesCleared(leaderboard.getTotalLinesCleared())

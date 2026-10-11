@@ -1259,6 +1259,11 @@ body.theme-dark .reserve-success-ref strong {
   line-height: 1.5;
 }
 
+.confirm-action-body {
+  display: grid;
+  gap: 12px;
+}
+
 .confirm-action-target {
   margin: 0;
   display: inline-flex;
@@ -1270,6 +1275,36 @@ body.theme-dark .reserve-success-ref strong {
   color: #1e293b;
   font-weight: 600;
   font-size: 12px;
+}
+
+.confirm-action-field {
+  display: grid;
+  gap: 6px;
+}
+
+.confirm-action-field > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.confirm-action-textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.confirm-action-textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary) 64%, #6366f1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
 .confirm-action-footer {

@@ -491,6 +491,52 @@
     .tetris-mini-leaderboard-level {
         align-self: flex-end;
     }
+
+    .tetris-leaderboard-column .tetris-mini-leaderboard-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 8px 10px;
+        min-height: unset;
+    }
+
+    .tetris-leaderboard-column .tetris-mini-leaderboard-rank {
+        margin-top: 2px;
+    }
+
+    .tetris-leaderboard-column .tetris-mini-leaderboard-copy {
+        flex: 1 1 104px;
+        align-self: center;
+    }
+
+    .tetris-leaderboard-column .tetris-mini-leaderboard-player {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        overflow-wrap: anywhere;
+        line-height: 1.2;
+    }
+
+    .tetris-leaderboard-column .tetris-mini-leaderboard-subline {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        overflow-wrap: anywhere;
+        line-height: 1.35;
+    }
+
+    .tetris-leaderboard-column .tetris-mini-leaderboard-score-stack {
+        margin-left: auto;
+        min-width: fit-content;
+        max-width: 100%;
+    }
+
+    .tetris-leaderboard-column .tetris-mini-leaderboard-score-stack::before {
+        inset: -4px -5px;
+        background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(34, 211, 238, 0.04));
+        border-color: rgba(251, 191, 36, 0.08);
+        box-shadow: none;
+    }
 }
 
 /* ========================================

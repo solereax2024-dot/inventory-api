@@ -39,5 +39,13 @@ public class GiveawayBonusController {
     ) throws IOException {
         return ResponseEntity.ok(giveawayBonusService.uploadReviewProof(principal.getName(), file));
     }
+
+    @PostMapping("/me/comment-proof")
+    public ResponseEntity<GiveawayBonusUploadResponse> uploadCommentProof(
+            Principal principal,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        return ResponseEntity.ok(giveawayBonusService.uploadCommentProof(principal.getName(), file));
+    }
 }
 

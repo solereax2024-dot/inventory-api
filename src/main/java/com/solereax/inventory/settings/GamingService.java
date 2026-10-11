@@ -108,6 +108,9 @@ public class GamingService {
 
      private RegisteredPlayerResponse toRegisteredPlayerResponse(AppUser user, TetrisLeaderboard leaderboard, Integer rank) {
          GiveawayBonusStatusResponse bonusStatus = giveawayBonusService.getBonusStatus(user);
+         int activeBonusPoints = bonusStatus != null ? bonusStatus.totalBonusPoints() : 0;
+         int leaderboardScore = leaderboard != null && leaderboard.getHighestScore() != null ? leaderboard.getHighestScore() : 0;
+         int baseScore = Math.max(leaderboardScore - activeBonusPoints, 0);
          return new RegisteredPlayerResponse(
                  user.getId(),
                  user.getUsername(),
@@ -119,11 +122,12 @@ public class GamingService {
                  user.isEnabled(),
                  user.getCreatedAt(),
                  rank,
-                 leaderboard != null ? leaderboard.getHighestScore() : 0,
+                 baseScore,
+                 leaderboardScore,
                  leaderboard != null ? leaderboard.getHighestLevel() : 1,
                  leaderboard != null ? leaderboard.getTotalGames() : 0,
                  leaderboard != null ? leaderboard.getTotalLinesCleared() : 0,
-                 bonusStatus != null ? bonusStatus.totalBonusPoints() : 0,
+                 activeBonusPoints,
                  leaderboard != null ? leaderboard.getLastPlayed() : null,
                  bonusStatus
          );

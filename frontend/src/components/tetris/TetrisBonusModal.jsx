@@ -16,12 +16,24 @@ export default function TetrisBonusModal({
 }) {
   const followProofInputRef = useRef(null);
   const reviewProofInputRef = useRef(null);
+  const commentProofInputRef = useRef(null);
   const numberFormatter = useMemo(() => new Intl.NumberFormat("en-US"), []);
   const safeBonusStatus = bonusStatus || {};
   const totalBonusPoints = safeBonusStatus.totalBonusPoints || 0;
   const formatBonusPoints = (points) => `+${numberFormatter.format(points || 0)}`;
 
   const bonusItems = [
+    {
+      key: "comment",
+      label: "Comment Tag Proof",
+      description: "Required: upload a screenshot of your giveaway comment showing the friends you tagged on the giveaway post.",
+      uploaded: Boolean(safeBonusStatus.commentProofUploaded),
+      validated: Boolean(safeBonusStatus.commentProofValidated),
+      revoked: Boolean(safeBonusStatus.commentProofRevoked),
+      points: 0,
+      inputRef: commentProofInputRef,
+      isRequired: true,
+    },
     {
       key: "follow",
       label: "Follow Proof",
@@ -31,6 +43,7 @@ export default function TetrisBonusModal({
       revoked: Boolean(safeBonusStatus.followProofRevoked),
       points: FOLLOW_BONUS_POINTS,
       inputRef: followProofInputRef,
+      isRequired: false,
     },
     {
       key: "review",
@@ -41,6 +54,7 @@ export default function TetrisBonusModal({
       revoked: Boolean(safeBonusStatus.reviewProofRevoked),
       points: REVIEW_BONUS_POINTS,
       inputRef: reviewProofInputRef,
+      isRequired: false,
     },
   ];
 
@@ -89,7 +103,7 @@ export default function TetrisBonusModal({
               <div className="tetris-bonus-modal-title-stack">
                 <h2 id="tetris-bonus-modal-title">Bonus Rewards</h2>
                 <p className="tetris-bonus-modal-description">
-                  Upload proof for eligible actions to earn bonus points for your game account.
+                  Upload your required giveaway entry proof plus any optional bonus proofs for extra points.
                 </p>
               </div>
             </div>
@@ -106,7 +120,7 @@ export default function TetrisBonusModal({
 
         <div className="tetris-bonus-join-card">
           <h3>Earn Bonus Points</h3>
-          <p>Upload proof to earn bonus points for your account.</p>
+          <p>Comment tag proof is required. Follow and review proofs unlock extra bonus points.</p>
         </div>
 
         <div className="tetris-bonus-modal-summary">
@@ -131,7 +145,7 @@ export default function TetrisBonusModal({
                 <div className="tetris-bonus-item-copy">
                   <div className="tetris-bonus-item-heading">
                     <strong>{bonusItem.label}</strong>
-                    <span className="tetris-bonus-points">{formatBonusPoints(bonusItem.points)}</span>
+                    <span className="tetris-bonus-points">{bonusItem.isRequired ? "Required" : formatBonusPoints(bonusItem.points)}</span>
                   </div>
                   <span className="tetris-bonus-description">{bonusItem.description}</span>
                   <span className={[

@@ -61,7 +61,7 @@ public class TetrisGameController {
             // Add ranking to each entry
             List<TetrisLeaderboardWithRank> rankedLeaderboard = new java.util.ArrayList<>();
             for (int i = 0; i < leaderboard.size(); i++) {
-                rankedLeaderboard.add(TetrisLeaderboardWithRank.fromEntity(leaderboard.get(i), i + 1));
+                rankedLeaderboard.add(toRankedLeaderboardEntry(leaderboard.get(i), i + 1));
             }
 
             return ResponseEntity.ok(rankedLeaderboard);
@@ -79,7 +79,7 @@ public class TetrisGameController {
         try {
             TetrisLeaderboard stats = gameService.getPlayerStats(playerName);
             Integer playerRank = gameService.getPlayerRank(playerName);
-            TetrisLeaderboardWithRank rankedStats = TetrisLeaderboardWithRank.fromEntity(stats, playerRank);
+            TetrisLeaderboardWithRank rankedStats = toRankedLeaderboardEntry(stats, playerRank);
             return ResponseEntity.ok(rankedStats);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -98,13 +98,18 @@ public class TetrisGameController {
             // Add ranking to each entry
             List<TetrisLeaderboardWithRank> rankedLeaderboard = new java.util.ArrayList<>();
             for (int i = 0; i < leaderboard.size(); i++) {
-                rankedLeaderboard.add(TetrisLeaderboardWithRank.fromEntity(leaderboard.get(i), i + 1));
+                rankedLeaderboard.add(toRankedLeaderboardEntry(leaderboard.get(i), i + 1));
             }
 
             return ResponseEntity.ok(rankedLeaderboard);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    private TetrisLeaderboardWithRank toRankedLeaderboardEntry(TetrisLeaderboard leaderboard, Integer rank) {
+        int bonusPoints = giveawayBonusService.getActiveBonusPointsOrZero(leaderboard.getPlayerName());
+        return TetrisLeaderboardWithRank.fromEntity(leaderboard, rank, bonusPoints);
     }
 }
 

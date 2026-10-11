@@ -185,10 +185,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [newAdminModal, setNewAdminModal] = useState({ isOpen: false });
   const [newProductNameModal, setNewProductNameModal] = useState({ isOpen: false, productName: "" });
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
-   const [activeAdminSection, setActiveAdminSection] = useState("products");
-   const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
+  const [activeAdminSection, setActiveAdminSection] = useState("products");
+    const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
   const [gamingSettings, setGamingSettings] = useState({ gamingSectionVisible: false });
-  const [giveawaySettings, setGiveawaySettings] = useState(DEFAULT_GIVEAWAY_SETTINGS);
+  const [giveaways, setGiveaways] = useState([
+    { id: 1, title: "Main Giveaway", settings: DEFAULT_GIVEAWAY_SETTINGS },
+    { id: 2, title: "Future Giveaway", settings: DEFAULT_GIVEAWAY_SETTINGS }
+  ]);
+  const [selectedGiveawayId, setSelectedGiveawayId] = useState(1);
   const [isGamingSettingsSaving, setIsGamingSettingsSaving] = useState(false);
   const [isGiveawaySettingsSaving, setIsGiveawaySettingsSaving] = useState(false);
   const [isGiveawayPrizeUploading, setIsGiveawayPrizeUploading] = useState(false);
@@ -233,6 +237,16 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   const isLoggedIn = useMemo(() => token.length > 0, [token]);
   const isSuperAdmin = useMemo(() => adminRole === "SUPER_ADMIN", [adminRole]);
+
+  // Helper to get current giveaway settings
+  const getCurrentGiveaway = () => {
+    return giveaways.find(g => g.id === selectedGiveawayId) || giveaways[0];
+  };
+
+  const getCurrentGiveawaySettings = () => {
+    const current = getCurrentGiveaway();
+    return current?.settings || DEFAULT_GIVEAWAY_SETTINGS;
+  };
 
   const getPreferredStockSelection = (product, colorway, preferredSize = null, preferredGroup = null) => {
     const department = getDepartmentForColorway(product, colorway);
@@ -332,7 +346,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setSavedBrands(brandData);
       setSavedProductNames(productNameData);
       setGamingSettings({ gamingSectionVisible: Boolean(gamingSettingData?.gamingSectionVisible ?? false) });
-      setGiveawaySettings(normalizeGiveawaySettings(giveawaySettingData));
+      // Update the first giveaway with loaded settings
+      setGiveaways(prev => [
+        { ...prev[0], settings: normalizeGiveawaySettings(giveawaySettingData) },
+        ...prev.slice(1)
+      ]);
       setRegisteredPlayers(Array.isArray(playersData) ? playersData : []);
       setRegisteredPlayersCount(Number(playersCountData?.totalRegisteredPlayers) || 0);
       setEditProductId((prev) => prev || (productData[0]?.id?.toString() ?? ""));
@@ -382,9 +400,14 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         token
       );
       await refreshRegisteredPlayers();
+      const proofLabel = bonusType === "follow"
+        ? "Follow"
+        : bonusType === "review"
+          ? "Review"
+          : "Comment";
       setSuccessModal({
         isOpen: true,
-        message: `${bonusType === "follow" ? "Follow" : "Review"} proof ${action === "revoke" ? "revoked" : "validated"} successfully.`,
+        message: `${proofLabel} proof ${action === "revoke" ? "revoked" : "validated"} successfully.`,
       });
     } catch (err) {
       setMessage(err.message || "Unable to update giveaway bonus status.");
@@ -1917,32 +1940,49 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+
   const updateGiveawaySetting = (field, value) => {
-    setGiveawaySettings((prev) => ({ ...prev, [field]: value }));
+    setGiveaways(prev =>
+      prev.map(g =>
+        g.id === selectedGiveawayId
+          ? { ...g, settings: { ...g.settings, [field]: value } }
+          : g
+      )
+    );
   };
 
   const updateGiveawayPrizeImageCount = (nextCount) => {
-    setGiveawaySettings((prev) => {
-      const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(nextCount, 10) || 1));
-      const nextPrizeImageUrls = Array.isArray(prev.prizeImageUrls)
-        ? prev.prizeImageUrls.slice(0, normalizedCount)
-        : [];
+    setGiveaways(prev =>
+      prev.map(g => {
+        if (g.id !== selectedGiveawayId) return g;
+        const settings = g.settings;
+        const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(nextCount, 10) || 1));
+        const nextPrizeImageUrls = Array.isArray(settings.prizeImageUrls)
+          ? settings.prizeImageUrls.slice(0, normalizedCount)
+          : [];
 
-      return {
-        ...prev,
-        prizeImageCount: normalizedCount,
-        prizeImageUrls: nextPrizeImageUrls,
-        prizeImageUrl: nextPrizeImageUrls[0] || "",
-      };
-    });
+        return {
+          ...g,
+          settings: {
+            ...settings,
+            prizeImageCount: normalizedCount,
+            prizeImageUrls: nextPrizeImageUrls,
+            prizeImageUrl: nextPrizeImageUrls[0] || "",
+          }
+        };
+      })
+    );
   };
 
   const updateGiveawayStep = (index, value) => {
-    setGiveawaySettings((prev) => {
-      const nextSteps = [...(prev.steps || [])];
-      nextSteps[index] = value;
-      return { ...prev, steps: nextSteps };
-    });
+    setGiveaways(prev =>
+      prev.map(g => {
+        if (g.id !== selectedGiveawayId) return g;
+        const nextSteps = [...(g.settings.steps || [])];
+        nextSteps[index] = value;
+        return { ...g, settings: { ...g.settings, steps: nextSteps } };
+      })
+    );
   };
 
   const saveGiveawaySettings = async () => {
@@ -1950,14 +1990,21 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setMessage("");
 
     try {
+      const current = getCurrentGiveawaySettings();
       const updated = await apiRequest(
         "/api/admin/settings/gaming/giveaway",
         "PUT",
-        normalizeGiveawaySettings(giveawaySettings),
+        normalizeGiveawaySettings(current),
         token
       );
       const resolved = normalizeGiveawaySettings(updated);
-      setGiveawaySettings(resolved);
+      setGiveaways(prev =>
+        prev.map(g =>
+          g.id === selectedGiveawayId
+            ? { ...g, settings: resolved }
+            : g
+        )
+      );
       setSuccessModal({ isOpen: true, message: "Giveaway modal content updated." });
     } catch (err) {
       setMessage(err.message);
@@ -1977,18 +2024,25 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
     try {
       const data = await uploadImage("/api/admin/media/giveaway-prize", fileToUpload, token);
-      setGiveawaySettings((prev) => {
-        const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(prev.prizeImageCount, 10) || 1));
-        const nextPrizeImageUrls = Array.from({ length: normalizedCount }, (_, index) => prev.prizeImageUrls?.[index] || "");
-        nextPrizeImageUrls[slotIndex] = data.url || nextPrizeImageUrls[slotIndex] || "";
-        const normalizedPrizeImageUrls = nextPrizeImageUrls.filter(Boolean);
+      setGiveaways(prev =>
+        prev.map(g => {
+          if (g.id !== selectedGiveawayId) return g;
+          const settings = g.settings;
+          const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(settings.prizeImageCount, 10) || 1));
+          const nextPrizeImageUrls = Array.from({ length: normalizedCount }, (_, index) => settings.prizeImageUrls?.[index] || "");
+          nextPrizeImageUrls[slotIndex] = data.url || nextPrizeImageUrls[slotIndex] || "";
+          const normalizedPrizeImageUrls = nextPrizeImageUrls.filter(Boolean);
 
-        return {
-          ...prev,
-          prizeImageUrls: nextPrizeImageUrls,
-          prizeImageUrl: normalizedPrizeImageUrls[0] || "",
-        };
-      });
+          return {
+            ...g,
+            settings: {
+              ...settings,
+              prizeImageUrls: nextPrizeImageUrls,
+              prizeImageUrl: normalizedPrizeImageUrls[0] || "",
+            }
+          };
+        })
+      );
       setSuccessModal({ isOpen: true, message: `Giveaway image ${slotIndex + 1} uploaded.` });
     } finally {
       setIsGiveawayPrizeUploading(false);
@@ -2012,19 +2066,41 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   };
 
   const clearGiveawayPrizeImage = (slotIndex) => {
-    setGiveawaySettings((prev) => {
-      const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(prev.prizeImageCount, 10) || 1));
-      const nextPrizeImageUrls = Array.from({ length: normalizedCount }, (_, index) => prev.prizeImageUrls?.[index] || "");
-      nextPrizeImageUrls[slotIndex] = "";
-      const normalizedPrizeImageUrls = nextPrizeImageUrls.filter(Boolean);
+    setGiveaways(prev =>
+      prev.map(g => {
+        if (g.id !== selectedGiveawayId) return g;
+        const settings = g.settings;
+        const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(settings.prizeImageCount, 10) || 1));
+        const nextPrizeImageUrls = Array.from({ length: normalizedCount }, (_, index) => settings.prizeImageUrls?.[index] || "");
+        nextPrizeImageUrls[slotIndex] = "";
+        const normalizedPrizeImageUrls = nextPrizeImageUrls.filter(Boolean);
 
-      return {
-        ...prev,
-        prizeImageUrls: nextPrizeImageUrls,
-        prizeImageUrl: normalizedPrizeImageUrls[0] || "",
-      };
-    });
+        return {
+          ...g,
+          settings: {
+            ...settings,
+            prizeImageUrls: nextPrizeImageUrls,
+            prizeImageUrl: normalizedPrizeImageUrls[0] || "",
+          }
+        };
+      })
+    );
   };
+
+  const handleSelectGiveaway = (giveawayId) => {
+    setSelectedGiveawayId(giveawayId);
+  };
+
+  const handleAddGiveaway = () => {
+    const maxId = Math.max(...giveaways.map(g => g.id));
+    const newId = maxId + 1;
+    setGiveaways(prev => [
+      ...prev,
+      { id: newId, title: `Giveaway ${newId}`, settings: DEFAULT_GIVEAWAY_SETTINGS }
+    ]);
+    setSelectedGiveawayId(newId);
+  };
+
 
   const playGiveawayAsAdmin = () => {
     const popup = window.open("/giveaway-game", "_blank", "noopener,noreferrer");
@@ -2122,7 +2198,11 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
            isSaving={isGamingSettingsSaving}
            onToggleVisibility={toggleGamingSectionVisibility}
            onPlayAsAdmin={playGiveawayAsAdmin}
-           giveawaySettings={giveawaySettings}
+           giveaways={giveaways}
+           selectedGiveawayId={selectedGiveawayId}
+           onSelectGiveaway={handleSelectGiveaway}
+           onAddGiveaway={handleAddGiveaway}
+           giveawaySettings={getCurrentGiveawaySettings()}
            isGiveawaySettingsSaving={isGiveawaySettingsSaving}
            isGiveawayPrizeUploading={isGiveawayPrizeUploading}
            activeGiveawayPrizeUploadSlot={activeGiveawayPrizeUploadSlot}

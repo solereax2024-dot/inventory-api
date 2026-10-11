@@ -94,6 +94,8 @@ export default function TetrisLeaderboardPage() {
                     <th className="tetris-leaderboard-col-rank">Rank</th>
                     <th className="tetris-leaderboard-col-player">Player</th>
                     <th className="tetris-leaderboard-col-score">Score</th>
+                    <th className="tetris-leaderboard-col-bonus">Bonus</th>
+                    <th className="tetris-leaderboard-col-total-score">Total Score</th>
                     <th className="tetris-leaderboard-col-level">Level</th>
                     <th className="tetris-leaderboard-col-lines">Lines</th>
                   </tr>
@@ -113,7 +115,13 @@ export default function TetrisLeaderboardPage() {
                         <span className="tetris-leaderboard-player-name">{entry.username || entry.playerName || "Anonymous"}</span>
                       </td>
                       <td className="tetris-leaderboard-col-score">
-                        <span className="tetris-leaderboard-score">{entry.highestScore?.toLocaleString() || 0}</span>
+                        <span className="tetris-leaderboard-score-base">{(entry.score ?? 0).toLocaleString()}</span>
+                      </td>
+                      <td className="tetris-leaderboard-col-bonus">
+                        <span className="tetris-leaderboard-score-bonus">+{(entry.bonusPoints ?? 0).toLocaleString()}</span>
+                      </td>
+                      <td className="tetris-leaderboard-col-total-score">
+                        <span className="tetris-leaderboard-score">{(entry.totalScore ?? entry.highestScore ?? 0).toLocaleString()}</span>
                       </td>
                       <td className="tetris-leaderboard-col-level">
                         <span className="tetris-leaderboard-level">{entry.highestLevel || 1}</span>

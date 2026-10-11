@@ -31,14 +31,6 @@ export default function TetrisTouchControls({
     >
       <div className="tetris-mobile-controls-grid">
         <section className="tetris-mobile-control-cluster" aria-label={isLiveGame ? "Bonus controls" : "Player setup and session controls"}>
-          {!isLiveGame && (
-            <>
-              <div className="tetris-auth-summary-card" aria-label="Authenticated player">
-                <span className="tetris-live-summary-label">Signed in as</span>
-                <strong>{playerName || "Player"}</strong>
-              </div>
-            </>
-          )}
 
           <button
             type="button"

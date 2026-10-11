@@ -91,6 +91,10 @@ const EMPTY_BONUS_STATUS = {
   reviewProofValidated: false,
   reviewProofRevoked: false,
   reviewProofValidationMessage: "",
+  commentProofUploaded: false,
+  commentProofValidated: false,
+  commentProofRevoked: false,
+  commentProofValidationMessage: "",
   followBonusPoints: 0,
   reviewBonusPoints: 0,
   totalBonusPoints: 0,
@@ -135,7 +139,7 @@ function normalizePlayerNotification(notification) {
 }
 
 function getNoticeToneFromType(type) {
-  return ["PROFILE_IMAGE_REJECTED", "FOLLOW_PROOF_REJECTED", "REVIEW_PROOF_REJECTED"].includes(type)
+  return ["PROFILE_IMAGE_REJECTED", "FOLLOW_PROOF_REJECTED", "REVIEW_PROOF_REJECTED", "COMMENT_PROOF_REJECTED"].includes(type)
     ? "danger"
     : "info";
 }
@@ -151,6 +155,10 @@ function getNoticeHelperText(type) {
 
   if (type === "REVIEW_PROOF_REJECTED") {
     return "Open your bonus tasks and re-upload a valid review proof if you still want the review bonus points.";
+  }
+
+  if (type === "COMMENT_PROOF_REJECTED") {
+    return "Open your bonus tasks and upload a screenshot of your giveaway comment where you tagged your friends.";
   }
 
   if (type === "BROADCAST_MESSAGE") {
@@ -268,6 +276,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
    const [lastScoreSubmission, setLastScoreSubmission] = useState(null);
    const [playerProfile, setPlayerProfile] = useState(EMPTY_PLAYER_PROFILE);
    const [playerNotifications, setPlayerNotifications] = useState([]);
+    const [hasPromptedCommentProof, setHasPromptedCommentProof] = useState(false);
 
   const authenticatedPlayerName = useMemo(() => {
     return authenticatedUser?.username?.trim()
@@ -388,6 +397,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         setBonusUploadingType(null);
         setBonusError("");
         setBonusFeedback("");
+        setHasPromptedCommentProof(false);
         return undefined;
       }
 
@@ -420,6 +430,22 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         isCancelled = true;
       };
     }, [authenticatedToken]);
+
+    useEffect(() => {
+      if (!authenticatedToken || bonusLoading || hasPromptedCommentProof) {
+        return;
+      }
+
+      if (!bonusStatus.commentProofUploaded || bonusStatus.commentProofRevoked) {
+        setIsBonusModalOpen(true);
+        setHasPromptedCommentProof(true);
+        if (bonusStatus.commentProofRevoked) {
+          setBonusError(bonusStatus.commentProofValidationMessage || "Please re-upload your comment tag proof to keep your giveaway entry active.");
+        } else {
+          setBonusFeedback("Upload a screenshot of your giveaway comment where you tagged your friends to complete your entry.");
+        }
+      }
+    }, [authenticatedToken, bonusLoading, bonusStatus, hasPromptedCommentProof]);
 
     useEffect(() => {
       let isCancelled = false;
@@ -462,6 +488,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     const hasProfileRejectNotification = notices.some((notice) => notice.type === "PROFILE_IMAGE_REJECTED");
     const hasFollowRejectNotification = notices.some((notice) => notice.type === "FOLLOW_PROOF_REJECTED");
     const hasReviewRejectNotification = notices.some((notice) => notice.type === "REVIEW_PROOF_REJECTED");
+    const hasCommentRejectNotification = notices.some((notice) => notice.type === "COMMENT_PROOF_REJECTED");
     const validationMessage = playerProfile.profileImageValidationMessage?.trim();
 
     if (validationMessage && !hasProfileRejectNotification) {
@@ -514,6 +541,33 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         title: "Review proof needs re-upload",
         message: reviewProofMessage,
         helperText: getNoticeHelperText("REVIEW_PROOF_REJECTED"),
+        unread: false,
+        createdAt: "",
+        metaText: "",
+      });
+    }
+
+    const commentProofMessage = bonusStatus.commentProofValidationMessage?.trim();
+    if (bonusStatus.commentProofRevoked && commentProofMessage && !hasCommentRejectNotification) {
+      notices.push({
+        id: "legacy-comment-proof-rejected",
+        type: "COMMENT_PROOF_REJECTED",
+        tone: "danger",
+        title: "Giveaway comment proof needs re-upload",
+        message: commentProofMessage,
+        helperText: getNoticeHelperText("COMMENT_PROOF_REJECTED"),
+        unread: false,
+        createdAt: "",
+        metaText: "",
+      });
+    } else if (!bonusStatus.commentProofUploaded) {
+      notices.push({
+        id: "comment-proof-required",
+        type: "COMMENT_PROOF_REQUIRED",
+        tone: "info",
+        title: "Comment tag proof required",
+        message: "Upload a screenshot of your giveaway comment showing the friends you tagged on the giveaway post.",
+        helperText: "Open your bonus tasks to upload your required giveaway comment proof before starting a run.",
         unread: false,
         createdAt: "",
         metaText: "",
@@ -1160,7 +1214,9 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
     const endpoint = bonusType === "review"
       ? "/api/giveaway/bonus/me/review-proof"
-      : "/api/giveaway/bonus/me/follow-proof";
+      : bonusType === "comment"
+        ? "/api/giveaway/bonus/me/comment-proof"
+        : "/api/giveaway/bonus/me/follow-proof";
 
     setBonusUploadingType(bonusType);
     setBonusError("");
@@ -1169,7 +1225,10 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     try {
       const response = await uploadImage(endpoint, file, authenticatedToken);
       setBonusStatus(normalizeBonusStatus(response?.bonusStatus));
-      setBonusFeedback(response?.message || "Bonus proof uploaded successfully.");
+      setBonusFeedback(response?.message || "Proof uploaded successfully.");
+      if (bonusType === "comment") {
+        setBonusError("");
+      }
     } catch (error) {
       setBonusError(error?.message || "Unable to upload your bonus proof right now.");
     } finally {
@@ -1181,6 +1240,18 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       const trimmedPlayerName = authenticatedPlayerName.trim();
       if (!trimmedPlayerName) {
         setMessage("Unable to identify your account. Please log in again.");
+        emitSound("tap");
+        triggerHaptic('tap');
+        return false;
+      }
+
+      if (!bonusStatus.commentProofUploaded || bonusStatus.commentProofRevoked) {
+        setIsBonusModalOpen(true);
+        setBonusError(
+          bonusStatus.commentProofRevoked
+            ? (bonusStatus.commentProofValidationMessage || "Please re-upload your comment tag proof before starting the game.")
+            : "Upload your giveaway comment tag proof before starting the game."
+        );
         emitSound("tap");
         triggerHaptic('tap');
         return false;
@@ -1789,6 +1860,12 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                 <div className={`tetris-board-column-header is-${mobileBoardHeaderState}`} data-state={mobileBoardHeaderState}>
                   {isMobileViewport && (
                     <>
+                      {mobileBoardHeaderState === "prestart" && (
+                        <div className="tetris-auth-summary-card" aria-label="Authenticated player">
+                          <span className="tetris-live-summary-label">Signed in as</span>
+                          <strong>{(playerName || "Player").toUpperCase()}</strong>
+                        </div>
+                      )}
                       <button
                         type="button"
                         className="tetris-leaderboard-header-btn"

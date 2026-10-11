@@ -90,7 +90,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
   const totalPlayers = players.length;
   const totalRegisteredPlayers = Number.isFinite(totalRegisteredPlayersProp) ? totalRegisteredPlayersProp : totalPlayers;
   const consentedPlayers = players.filter((player) => player.facebookWinnerContactConsent).length;
-  const playersWithScores = players.filter((player) => (player.highestScore || 0) > 0).length;
+  const playersWithScores = players.filter((player) => (player.totalScore || 0) > 0).length;
 
   const openImageViewer = (imagePath, playerName, imageAlt = "") => {
     if (!imagePath) return;
@@ -266,9 +266,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                <th>Full Name</th>
                <th>Score</th>
                <th>Bonus Points</th>
-               <th>Level</th>
-               <th>Lines</th>
-               <th>Games</th>
+                <th>Total Score</th>
                <th>Last Played</th>
                <th>Consent</th>
                 <th>Proofs</th>
@@ -280,7 +278,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
             <tbody>
               {isLoading ? (
                 <tr>
-                   <td colSpan={15} style={{ textAlign: "center" }}>
+                   <td colSpan={13} style={{ textAlign: "center" }}>
                     Loading registered players...
                   </td>
                 </tr>
@@ -336,7 +334,15 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                       </span>
                     </td>
                     <td>
-                      <div className="giveaway-player-profile-cell is-detailed">
+                      <div className="giveaway-player-profile-cell is-detailed is-stacked">
+                        <span
+                          className="giveaway-player-proof-badge giveaway-player-profile-status"
+                          style={getBonusBadgeStyle(player.profileImageValidated ? "success" : player.profileImageValidationMessage ? "danger" : "info")}
+                          title={player.profileImageValidationMessage || "Profile image status"}
+                        >
+                          {player.profileImageValidated ? "Approved" : player.profileImageValidationMessage ? "Rejected" : "Pending"}
+                        </span>
+
                         {avatarSrc ? (
                           <button
                             type="button"
@@ -351,43 +357,33 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                             <span>{initials}</span>
                           </div>
                         )}
-                        <div className="giveaway-player-profile-meta">
-                          <span className="giveaway-player-proof-title">Profile</span>
-                          <span className="giveaway-player-proof-badge" style={getBonusBadgeStyle(player.profileImageValidated ? "success" : player.profileImageValidationMessage ? "danger" : "info")}>
-                            {player.profileImageValidated ? "Approved" : player.profileImageValidationMessage ? "Rejected" : "Pending"}
-                          </span>
-                             {player.profileImageValidationMessage ? (
-                               <span className="giveaway-player-muted-text" title={player.profileImageValidationMessage}>
-                                 {player.profileImageValidationMessage.substring(0, 28)}...
-                               </span>
-                             ) : null}
-                             <div className="giveaway-player-profile-actions">
-                               {onProfileImageAction ? (
-                                 <>
-                                   <button
-                                     type="button"
-                                     className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
-                                     onClick={() => handleValidateProfileImage(player.id)}
-                                     disabled={Boolean(profileImageActionKey) && profileImageActionKey !== `${player.id}:validate`}
-                                     style={{ opacity: profileImageActionKey === `${player.id}:validate` ? 0.72 : 1 }}
-                                     title="Approve this profile image"
-                                   >
-                                     <span className="btn-label">{profileImageActionKey === `${player.id}:validate` ? "Approving..." : "Approve"}</span>
-                                     <span className="btn-icon">✓</span>
-                                   </button>
-                                   <button
-                                     type="button"
-                                     className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn btn-delete"
-                                     onClick={() => requestRejectProfileImage(player)}
-                                     disabled={Boolean(profileImageActionKey)}
-                                     title="Reject this profile image"
-                                   >
-                                     <span className="btn-label">Reject</span>
-                                     <span className="btn-icon">✕</span>
-                                   </button>
-                                 </>
-                               ) : null}
-                             </div>
+
+                        <div className="giveaway-player-profile-actions">
+                          {onProfileImageAction ? (
+                            <>
+                              <button
+                                type="button"
+                                className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
+                                onClick={() => handleValidateProfileImage(player.id)}
+                                disabled={Boolean(profileImageActionKey) && profileImageActionKey !== `${player.id}:validate`}
+                                style={{ opacity: profileImageActionKey === `${player.id}:validate` ? 0.72 : 1 }}
+                                title="Approve this profile image"
+                              >
+                                <span className="btn-label">{profileImageActionKey === `${player.id}:validate` ? "Approving..." : "Approve"}</span>
+                                <span className="btn-icon">✓</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn btn-delete"
+                                onClick={() => requestRejectProfileImage(player)}
+                                disabled={Boolean(profileImageActionKey)}
+                                title="Reject this profile image"
+                              >
+                                <span className="btn-label">Reject</span>
+                                <span className="btn-icon">✕</span>
+                              </button>
+                            </>
+                          ) : null}
                         </div>
                       </div>
                     </td>
@@ -400,9 +396,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                     <td><span className="giveaway-player-strong-text">{player.fullName || "—"}</span></td>
                     <td><strong className="giveaway-player-strong-text">{(player.highestScore || 0).toLocaleString()}</strong></td>
                     <td><strong className="giveaway-player-strong-text">{(player.totalBonusPoints || 0).toLocaleString()}</strong></td>
-                    <td><strong className="giveaway-player-strong-text">{player.highestLevel || 1}</strong></td>
-                    <td><strong className="giveaway-player-strong-text">{(player.totalLinesCleared || 0).toLocaleString()}</strong></td>
-                    <td><strong className="giveaway-player-strong-text">{(player.totalGames || 0).toLocaleString()}</strong></td>
+                    <td><strong className="giveaway-player-strong-text">{(player.totalScore || 0).toLocaleString()}</strong></td>
                     <td>
                       <div className="giveaway-player-date-cell">
                         <span className="giveaway-player-strong-text">{formatDateTime(player.lastPlayed)}</span>
@@ -414,43 +408,69 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                         {player.facebookWinnerContactConsent ? "Yes" : "No"}
                       </span>
                     </td>
-                     <td>
-                       <div className="giveaway-player-proof-list">
-                         {[
-                           { key: "follow", state: followState, title: "Follow" },
-                           { key: "review", state: reviewState, title: "Review" }
-                         ].map(({ key, state, title }) => (
-                           <div key={key} className="giveaway-player-proof-row">
-                             <span className="giveaway-player-proof-title">{title}</span>
-                             <span className="giveaway-player-proof-badge" style={getBonusBadgeStyle(state.tone)}>{state.label}</span>
-                             <div className="giveaway-player-proof-actions">
-                               {state.imagePath ? (
-                                 <button
-                                   type="button"
-                                   className="giveaway-player-proof-thumbnail-button"
-                                   onClick={() => openImageViewer(state.imagePath, `${displayName} · ${title} proof`, `${title} proof for ${displayName}`)}
-                                   title={`View ${title.toLowerCase()} proof for ${displayName}`}
-                                 >
-                                   <img
-                                     src={state.imagePath}
-                                     alt={`${title} proof for ${displayName}`}
-                                     className="giveaway-player-proof-thumbnail"
-                                   />
-                                 </button>
-                               ) : (
-                                 <span className="giveaway-player-muted-text">No image</span>
-                               )}
-                               {state.validationMessage ? (
-                                 <span className="giveaway-player-muted-text" title={state.validationMessage}>
-                                   {state.validationMessage.substring(0, 20)}...
-                                 </span>
-                               ) : null}
-                               {state.action && onBonusAction ? renderActionButton(key, state) : null}
-                             </div>
-                           </div>
-                         ))}
-                       </div>
-                     </td>
+                      <td>
+                        <div className="giveaway-player-proof-list">
+                          {[
+                            { key: "comment", state: getBonusProofState(bonusStatus, "comment"), title: "Comment" },
+                            { key: "follow", state: followState, title: "Follow" },
+                            { key: "review", state: reviewState, title: "Review" }
+                          ].map(({ key, state, title }) => (
+                            <div key={key} className="giveaway-player-proof-row is-stacked">
+                              <span className="giveaway-player-proof-title">{title}</span>
+                              <span
+                                className="giveaway-player-proof-badge giveaway-player-proof-status"
+                                style={getBonusBadgeStyle(state.tone)}
+                                title={state.validationMessage || `${title} proof status`}
+                              >
+                                {state.label}
+                              </span>
+                              {state.imagePath ? (
+                                <button
+                                  type="button"
+                                  className="giveaway-player-proof-thumbnail-button"
+                                  onClick={() => openImageViewer(state.imagePath, `${displayName} · ${title} proof`, `${title} proof for ${displayName}`)}
+                                  title={`View ${title.toLowerCase()} proof for ${displayName}`}
+                                >
+                                  <img
+                                    src={state.imagePath}
+                                    alt={`${title} proof for ${displayName}`}
+                                    className="giveaway-player-proof-thumbnail"
+                                  />
+                                </button>
+                              ) : (
+                                <span className="giveaway-player-muted-text giveaway-player-proof-empty" title={`No ${title.toLowerCase()} proof uploaded`}>No image</span>
+                              )}
+                              <div className="giveaway-player-proof-actions giveaway-player-proof-actions-grid">
+                                {onBonusAction && state.uploaded ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
+                                      onClick={() => onBonusAction(player.id, key, "validate")}
+                                      disabled={Boolean(bonusActionKey) && bonusActionKey !== `${player.id}:${key}:validate`}
+                                      style={{ opacity: bonusActionKey === `${player.id}:${key}:validate` ? 0.72 : 1 }}
+                                      title="Approve this proof"
+                                    >
+                                      <span className="btn-label">{bonusActionKey === `${player.id}:${key}:validate` ? "Approving..." : "Approve"}</span>
+                                      <span className="btn-icon">✓</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn btn-delete"
+                                      onClick={() => requestRevokeProof(player, key)}
+                                      disabled={Boolean(bonusActionKey)}
+                                      title="Reject this proof"
+                                    >
+                                      <span className="btn-label">Reject</span>
+                                      <span className="btn-icon">✕</span>
+                                    </button>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
                      <td>
                        {onSendPlayerNotification ? (
                         <button
@@ -492,7 +512,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
               })
               ) : (
                 <tr>
-                   <td colSpan={15} style={{ textAlign: "center" }}>No registered players yet.</td>
+                     <td colSpan={13} style={{ textAlign: "center" }}>No registered players yet.</td>
                 </tr>
              )}
           </tbody>
@@ -502,7 +522,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
       {revokeConfirm.isOpen ? (
         <div className="modal-overlay" onClick={() => setRevokeConfirm({ isOpen: false, playerId: null, bonusType: "", label: "", message: "" })}>
           <div className="modal-panel confirm-action-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
+            <div className="confirm-action-head">
               <h3>Revoke Proof</h3>
               <button
                 type="button"
@@ -513,37 +533,30 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                 ✕
               </button>
             </div>
-            <div className="modal-body">
-              <p>
-                <strong>Target:</strong> {revokeConfirm.label}
-              </p>
-              <p>Explain why this proof was revoked so the player knows what to fix before re-uploading.</p>
+            <div className="confirm-action-body">
+              <p className="confirm-action-target">{revokeConfirm.label}</p>
+              <p className="confirm-action-copy">Explain why this proof was revoked so the player knows what to fix before re-uploading.</p>
+              <label className="confirm-action-field">
+                <span>Reason</span>
               <textarea
                 value={revokeConfirm.message}
                 onChange={(e) => setRevokeConfirm({ ...revokeConfirm, message: e.target.value })}
                 placeholder="Example: The screenshot does not clearly show your account follow status. Please upload a clearer image."
-                style={{
-                  width: "100%",
-                  minHeight: "100px",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  fontFamily: "inherit",
-                  fontSize: "14px"
-                }}
+                className="confirm-action-textarea"
               />
+              </label>
             </div>
-            <div className="modal-actions">
+            <div className="confirm-action-footer modal-sticky-footer">
               <button
                 type="button"
-                className="btn-secondary"
+                className="button-secondary"
                 onClick={() => setRevokeConfirm({ isOpen: false, playerId: null, bonusType: "", label: "", message: "" })}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="btn-delete"
+                className="confirm-action-danger-btn"
                 onClick={confirmRevokeProof}
                 disabled={Boolean(bonusActionKey) || !revokeConfirm.message.trim()}
               >
@@ -592,7 +605,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
        {profileImageReject.isOpen ? (
          <div className="modal-overlay" onClick={() => setProfileImageReject({ isOpen: false, playerId: null, message: "", playerName: "" })}>
            <div className="modal-panel confirm-action-modal" onClick={(e) => e.stopPropagation()}>
-             <div className="modal-head">
+             <div className="confirm-action-head">
                <h3>Reject Profile Image</h3>
                <button
                  type="button"
@@ -603,37 +616,30 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                  ✕
                </button>
              </div>
-             <div className="modal-body">
-               <p>
-                 <strong>Player:</strong> {profileImageReject.playerName}
-               </p>
-               <p>Send a message to the player explaining why their image was rejected:</p>
+              <div className="confirm-action-body">
+                <p className="confirm-action-target">{profileImageReject.playerName}</p>
+                <p className="confirm-action-copy">Send a message to the player explaining why their image was rejected.</p>
+                <label className="confirm-action-field">
+                  <span>Reason</span>
                <textarea
                  value={profileImageReject.message}
                  onChange={(e) => setProfileImageReject({ ...profileImageReject, message: e.target.value })}
                  placeholder="Example: The image is not clearly visible. Please upload a clearer photo of your Facebook profile."
-                 style={{
-                   width: "100%",
-                   minHeight: "100px",
-                   padding: "8px",
-                   borderRadius: "4px",
-                   border: "1px solid #ccc",
-                   fontFamily: "inherit",
-                   fontSize: "14px"
-                 }}
+                  className="confirm-action-textarea"
                />
+                </label>
              </div>
-             <div className="modal-actions">
+              <div className="confirm-action-footer modal-sticky-footer">
                <button
                  type="button"
-                 className="btn-secondary"
+                  className="button-secondary"
                  onClick={() => setProfileImageReject({ isOpen: false, playerId: null, message: "", playerName: "" })}
                >
                  Cancel
                </button>
                <button
                  type="button"
-                 className="btn-delete"
+                  className="confirm-action-danger-btn"
                  onClick={confirmRejectProfileImage}
                   disabled={Boolean(profileImageActionKey) || !profileImageReject.message.trim()}
                >

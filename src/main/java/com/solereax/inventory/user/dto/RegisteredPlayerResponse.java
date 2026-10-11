@@ -16,6 +16,7 @@ public record RegisteredPlayerResponse(
         Instant createdAt,
         Integer rank,
         Integer highestScore,
+        Integer totalScore,
         Integer highestLevel,
         Integer totalGames,
         Integer totalLinesCleared,

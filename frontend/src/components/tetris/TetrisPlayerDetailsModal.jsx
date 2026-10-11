@@ -73,7 +73,9 @@ export default function TetrisPlayerDetailsModal({
 
   const rank = activePlayerStats?.rank || selectedLeaderboardEntry.displayRank || 1;
   const playerName = activePlayerStats?.playerName || selectedLeaderboardEntry?.playerName || "Player details";
-  const bestScore = activePlayerStats?.highestScore || 0;
+  const bestScore = activePlayerStats?.totalScore ?? activePlayerStats?.highestScore ?? selectedLeaderboardEntry?.totalScore ?? selectedLeaderboardEntry?.highestScore ?? 0;
+  const baseScore = activePlayerStats?.score ?? selectedLeaderboardEntry?.score ?? Math.max(bestScore - (activePlayerStats?.bonusPoints ?? selectedLeaderboardEntry?.bonusPoints ?? 0), 0);
+  const bonusPoints = activePlayerStats?.bonusPoints ?? selectedLeaderboardEntry?.bonusPoints ?? 0;
   const highestLevel = activePlayerStats?.highestLevel || 1;
   const totalGames = activePlayerStats?.totalGames || 0;
   const totalLinesCleared = activePlayerStats?.totalLinesCleared || 0;
@@ -111,9 +113,9 @@ export default function TetrisPlayerDetailsModal({
           </div>
 
           <div className="tetris-player-modal-score-card" aria-label="Best score">
-            <span>Personal best</span>
+            <span>Total score</span>
             <strong>{bestScore.toLocaleString()}</strong>
-            <p>Top recorded run on the {leaderboardTimeFilter === "all" ? "all-time" : leaderboardTimeFilter} leaderboard.</p>
+            <p>Score {baseScore.toLocaleString()} + Bonus {bonusPoints.toLocaleString()} on the {leaderboardTimeFilter === "all" ? "all-time" : leaderboardTimeFilter} leaderboard.</p>
           </div>
 
           <div className="tetris-player-modal-microstats" aria-label="Quick stats">
