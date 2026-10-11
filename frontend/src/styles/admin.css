@@ -2103,18 +2103,29 @@
       width: 100%;
     }
 
-     .giveaway-player-action-btn,
-     .giveaway-player-proof-btn {
-       width: 100%;
-     }
+      .giveaway-player-proof-btn {
+        padding: 0 6px;
+        min-height: 54px;
+        min-width: 54px;
+        font-size: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1 1 auto;
+      }
 
-       /* Mobile: Show icons, hide labels in profile and proof action buttons */
-       .giveaway-profile-action-btn {
-         padding: 0 6px;
-         min-width: 54px;
-         min-height: 54px;
-         gap: 0;
-       }
+      .giveaway-player-action-btn {
+        width: 100%;
+      }
+
+
+        /* Mobile: Show icons, hide labels in profile and proof action buttons */
+        .giveaway-profile-action-btn {
+          padding: 0 6px;
+          min-width: 54px;
+          min-height: 54px;
+          gap: 0;
+        }
 
       .giveaway-profile-action-btn .btn-label {
         display: none;
