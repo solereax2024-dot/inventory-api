@@ -4,8 +4,6 @@ spring:
 
   jackson:
     time-zone: Asia/Singapore
-    serialization:
-      write-dates-as-timestamps: false
 
   servlet:
     multipart:
