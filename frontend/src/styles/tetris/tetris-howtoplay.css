@@ -102,6 +102,10 @@
   color: #ffffff;
   letter-spacing: 1px;
   text-transform: uppercase;
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .tetris-howtoplay-close {
@@ -253,10 +257,12 @@
   .tetris-howtoplay-header {
     margin-bottom: 20px;
     gap: 12px;
+    align-items: flex-start;
   }
 
   .tetris-howtoplay-header h2 {
     font-size: 1.5rem;
+    letter-spacing: 0.4px;
   }
 
   .tetris-howtoplay-close {
@@ -292,6 +298,7 @@
 
   .tetris-howtoplay-header h2 {
     font-size: 1.3rem;
+    letter-spacing: 0.2px;
   }
 
   .tetris-howtoplay-close {

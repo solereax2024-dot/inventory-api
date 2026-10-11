@@ -81,30 +81,24 @@ function getBonusBadgeStyle(tone) {
   };
 }
 
-export default function RegisteredPlayersTable({ players = [], isLoading = false, onBonusAction, bonusActionKey = "", onDeletePlayer, onDeleteAllPlayers, isDeletingPlayers = false, onProfileImageAction, profileImageActionKey = "", onSendPlayerNotification, onBroadcastNotification, notificationActionKey = "" }) {
+export default function RegisteredPlayersTable({ players = [], totalRegisteredPlayers: totalRegisteredPlayersProp, isLoading = false, onBonusAction, bonusActionKey = "", onDeletePlayer, onDeleteAllPlayers, isDeletingPlayers = false, onProfileImageAction, profileImageActionKey = "", onSendPlayerNotification, onBroadcastNotification, notificationActionKey = "" }) {
   const [revokeConfirm, setRevokeConfirm] = useState({ isOpen: false, playerId: null, bonusType: "", label: "", message: "" });
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, playerId: null, playerName: "" });
-  const [profileImageViewer, setProfileImageViewer] = useState({ isOpen: false, imageSrc: "", playerName: "" });
+  const [profileImageViewer, setProfileImageViewer] = useState({ isOpen: false, imageSrc: "", playerName: "", imageAlt: "" });
   const [profileImageReject, setProfileImageReject] = useState({ isOpen: false, playerId: null, message: "", playerName: "" });
   const [messageComposer, setMessageComposer] = useState({ isOpen: false, isBroadcast: false, playerId: null, playerName: "", title: "", message: "" });
   const totalPlayers = players.length;
+  const totalRegisteredPlayers = Number.isFinite(totalRegisteredPlayersProp) ? totalRegisteredPlayersProp : totalPlayers;
   const consentedPlayers = players.filter((player) => player.facebookWinnerContactConsent).length;
   const playersWithScores = players.filter((player) => (player.highestScore || 0) > 0).length;
 
-  const openProofImage = (imagePath) => {
+  const openImageViewer = (imagePath, playerName, imageAlt = "") => {
     if (!imagePath) return;
-    const popup = window.open(imagePath, "_blank", "noopener,noreferrer");
-    if (!popup) {
-      window.location.href = imagePath;
-    }
-  };
-
-  const openProfileImageViewer = (imageSrc, playerName) => {
-    if (!imageSrc) return;
     setProfileImageViewer({
       isOpen: true,
-      imageSrc,
-      playerName
+      imageSrc: imagePath,
+      playerName,
+      imageAlt: imageAlt || playerName,
     });
   };
 
@@ -218,7 +212,7 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
         <div className="giveaway-player-actions-head">
           <div className="giveaway-player-summary-row">
             <span className="giveaway-player-summary-chip is-total">
-              Total: {totalPlayers}
+              Registered: {totalRegisteredPlayers}
             </span>
             <span className="giveaway-player-summary-chip is-success">
               Consent given: {consentedPlayers}
@@ -226,6 +220,11 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
             <span className="giveaway-player-summary-chip is-accent">
               With scores: {playersWithScores}
             </span>
+            {totalRegisteredPlayers !== totalPlayers ? (
+              <span className="giveaway-player-summary-chip is-muted">
+                Top 10 shown: {totalPlayers}
+              </span>
+            ) : null}
           </div>
 
           {onBroadcastNotification || (onDeleteAllPlayers && totalPlayers > 0) ? (
@@ -272,7 +271,6 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
                <th>Games</th>
                <th>Last Played</th>
                <th>Consent</th>
-               <th>Profile Image</th>
                <th>Proofs</th>
                <th>Action</th>
                 <th>Notify</th>
@@ -283,7 +281,7 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
             <tbody>
              {isLoading ? (
                <tr>
-                  <td colSpan={17} style={{ textAlign: "center" }}>
+                  <td colSpan={16} style={{ textAlign: "center" }}>
                    Loading registered players...
                  </td>
                </tr>
@@ -339,12 +337,12 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
                       </span>
                     </td>
                     <td>
-                      <div className="giveaway-player-profile-cell">
+                      <div className="giveaway-player-profile-cell is-detailed">
                         {avatarSrc ? (
                           <button
                             type="button"
                             className="giveaway-player-profile-button"
-                            onClick={() => openProfileImageViewer(avatarSrc, displayName)}
+                            onClick={() => openImageViewer(avatarSrc, displayName, `${displayName} profile image`)}
                             title={`Click to view ${displayName}'s profile image`}
                           >
                             <img src={avatarSrc} alt={displayName} className="giveaway-player-profile-image" />
@@ -354,44 +352,17 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
                             <span>{initials}</span>
                           </div>
                         )}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="giveaway-player-user-cell">
-                        <span className="giveaway-player-user-name">{player.username}</span>
-                        <span className="giveaway-player-user-meta">ID #{player.id}</span>
-                      </div>
-                    </td>
-                    <td><span className="giveaway-player-strong-text">{player.fullName || "—"}</span></td>
-                    <td><strong className="giveaway-player-strong-text">{(player.highestScore || 0).toLocaleString()}</strong></td>
-                    <td><strong className="giveaway-player-strong-text">{(player.totalBonusPoints || 0).toLocaleString()}</strong></td>
-                    <td><strong className="giveaway-player-strong-text">{player.highestLevel || 1}</strong></td>
-                    <td><strong className="giveaway-player-strong-text">{(player.totalLinesCleared || 0).toLocaleString()}</strong></td>
-                    <td><strong className="giveaway-player-strong-text">{(player.totalGames || 0).toLocaleString()}</strong></td>
-                    <td>
-                      <div className="giveaway-player-date-cell">
-                        <span className="giveaway-player-strong-text">{formatDateTime(player.lastPlayed)}</span>
-                        <span className="giveaway-player-muted-text">Most recent run</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={["giveaway-player-consent-chip", player.facebookWinnerContactConsent ? "is-yes" : "is-no"].filter(Boolean).join(" ")}>
-                        {player.facebookWinnerContactConsent ? "Yes" : "No"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="giveaway-player-proof-list">
-                        <div className="giveaway-player-proof-row">
-                          <span className="giveaway-player-proof-title">Image</span>
+                        <div className="giveaway-player-profile-meta">
+                          <span className="giveaway-player-proof-title">Profile</span>
                           <span className="giveaway-player-proof-badge" style={getBonusBadgeStyle(player.profileImageValidated ? "success" : player.profileImageValidationMessage ? "danger" : "info")}>
                             {player.profileImageValidated ? "Approved" : player.profileImageValidationMessage ? "Rejected" : "Pending"}
                           </span>
-                          <div className="giveaway-player-proof-actions">
-                            {player.profileImageValidationMessage && (
-                              <span className="giveaway-player-muted-text" title={player.profileImageValidationMessage}>
-                                {player.profileImageValidationMessage.substring(0, 20)}...
-                              </span>
-                            )}
+                          {player.profileImageValidationMessage ? (
+                            <span className="giveaway-player-muted-text" title={player.profileImageValidationMessage}>
+                              {player.profileImageValidationMessage.substring(0, 28)}...
+                            </span>
+                          ) : null}
+                          <div className="giveaway-player-profile-actions">
                             {!player.profileImageValidated && !player.profileImageValidationMessage && onProfileImageAction ? (
                               <>
                                 <button
@@ -429,6 +400,29 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
                       </div>
                     </td>
                     <td>
+                      <div className="giveaway-player-user-cell">
+                        <span className="giveaway-player-user-name">{player.username}</span>
+                        <span className="giveaway-player-user-meta">ID #{player.id}</span>
+                      </div>
+                    </td>
+                    <td><span className="giveaway-player-strong-text">{player.fullName || "—"}</span></td>
+                    <td><strong className="giveaway-player-strong-text">{(player.highestScore || 0).toLocaleString()}</strong></td>
+                    <td><strong className="giveaway-player-strong-text">{(player.totalBonusPoints || 0).toLocaleString()}</strong></td>
+                    <td><strong className="giveaway-player-strong-text">{player.highestLevel || 1}</strong></td>
+                    <td><strong className="giveaway-player-strong-text">{(player.totalLinesCleared || 0).toLocaleString()}</strong></td>
+                    <td><strong className="giveaway-player-strong-text">{(player.totalGames || 0).toLocaleString()}</strong></td>
+                    <td>
+                      <div className="giveaway-player-date-cell">
+                        <span className="giveaway-player-strong-text">{formatDateTime(player.lastPlayed)}</span>
+                        <span className="giveaway-player-muted-text">Most recent run</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={["giveaway-player-consent-chip", player.facebookWinnerContactConsent ? "is-yes" : "is-no"].filter(Boolean).join(" ")}>
+                        {player.facebookWinnerContactConsent ? "Yes" : "No"}
+                      </span>
+                    </td>
+                    <td>
                       <div className="giveaway-player-proof-list">
                         {[
                           { key: "follow", state: followState, title: "Follow" },
@@ -441,10 +435,15 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
                               {state.imagePath ? (
                                 <button
                                   type="button"
-                                  className="button-secondary giveaway-player-proof-btn"
-                                  onClick={() => openProofImage(state.imagePath, title)}
+                                  className="giveaway-player-proof-thumbnail-button"
+                                  onClick={() => openImageViewer(state.imagePath, `${displayName} · ${title} proof`, `${title} proof for ${displayName}`)}
+                                  title={`View ${title.toLowerCase()} proof for ${displayName}`}
                                 >
-                                  View
+                                  <img
+                                    src={state.imagePath}
+                                    alt={`${title} proof for ${displayName}`}
+                                    className="giveaway-player-proof-thumbnail"
+                                  />
                                 </button>
                               ) : (
                                 <span className="giveaway-player-muted-text">No image</span>
@@ -506,7 +505,7 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
               })
              ) : (
                <tr>
-                  <td colSpan={17} style={{ textAlign: "center" }}>No registered players yet.</td>
+                  <td colSpan={16} style={{ textAlign: "center" }}>No registered players yet.</td>
                </tr>
              )}
           </tbody>
@@ -579,14 +578,14 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
       />
 
        {profileImageViewer.isOpen ? (
-         <div className="modal-overlay" onClick={() => setProfileImageViewer({ isOpen: false, imageSrc: "", playerName: "" })}>
+         <div className="modal-overlay" onClick={() => setProfileImageViewer({ isOpen: false, imageSrc: "", playerName: "", imageAlt: "" })}>
            <div className="modal-panel profile-image-viewer-modal" onClick={(e) => e.stopPropagation()}>
              <div className="profile-image-viewer-head">
                <h3>{profileImageViewer.playerName}</h3>
                <button
                  type="button"
                  className="modal-close-btn"
-                 onClick={() => setProfileImageViewer({ isOpen: false, imageSrc: "", playerName: "" })}
+                  onClick={() => setProfileImageViewer({ isOpen: false, imageSrc: "", playerName: "", imageAlt: "" })}
                  aria-label="Close profile image"
                >
                  ✕
@@ -595,7 +594,7 @@ export default function RegisteredPlayersTable({ players = [], isLoading = false
              <div className="profile-image-viewer-body">
                <img
                  src={profileImageViewer.imageSrc}
-                 alt={profileImageViewer.playerName}
+                  alt={profileImageViewer.imageAlt || profileImageViewer.playerName}
                  className="profile-image-viewer-image"
                />
              </div>

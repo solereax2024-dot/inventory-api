@@ -57,6 +57,15 @@ public class AdminGamingSettingsController {
                 .body(gamingService.listRegisteredPlayers());
     }
 
+    @GetMapping("/players/count")
+    public ResponseEntity<Map<String, Long>> getRegisteredPlayerCount() {
+        Map<String, Long> response = new HashMap<>();
+        response.put("totalRegisteredPlayers", gamingService.countRegisteredPlayers());
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(response);
+    }
+
     @GetMapping("/giveaway")
     public ResponseEntity<GiveawaySettingsResponse> getGiveawaySettings() {
         return ResponseEntity.ok()

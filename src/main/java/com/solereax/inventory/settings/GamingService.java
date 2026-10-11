@@ -99,6 +99,13 @@ public class GamingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public long countRegisteredPlayers() {
+        return appUserRepository.findAll().stream()
+                .filter(user -> user.getRole() == UserRole.CUSTOMER)
+                .count();
+    }
+
      private RegisteredPlayerResponse toRegisteredPlayerResponse(AppUser user, TetrisLeaderboard leaderboard, Integer rank) {
          GiveawayBonusStatusResponse bonusStatus = giveawayBonusService.getBonusStatus(user);
          return new RegisteredPlayerResponse(

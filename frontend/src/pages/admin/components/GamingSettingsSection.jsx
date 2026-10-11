@@ -19,6 +19,7 @@ export default function GamingSettingsSection({
   onGiveawayPrizeImageChange,
   onClearGiveawayPrizeImage,
   registeredPlayers = [],
+  totalRegisteredPlayers = 0,
   isLoadingPlayers = false,
   onBonusAction,
   bonusActionKey,
@@ -76,6 +77,7 @@ export default function GamingSettingsSection({
 
        <RegisteredPlayersTable
          players={registeredPlayers}
+          totalRegisteredPlayers={totalRegisteredPlayers}
          isLoading={isLoadingPlayers}
          onBonusAction={onBonusAction}
          bonusActionKey={bonusActionKey}

@@ -194,6 +194,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [isGiveawayPrizeUploading, setIsGiveawayPrizeUploading] = useState(false);
   const [activeGiveawayPrizeUploadSlot, setActiveGiveawayPrizeUploadSlot] = useState(null);
   const [registeredPlayers, setRegisteredPlayers] = useState([]);
+  const [registeredPlayersCount, setRegisteredPlayersCount] = useState(0);
   const [isRegisteredPlayersLoading, setIsRegisteredPlayersLoading] = useState(false);
   const [bonusActionKey, setBonusActionKey] = useState("");
   const [profileImageActionKey, setProfileImageActionKey] = useState("");
@@ -316,14 +317,15 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setIsAdminLoading(true);
     setIsRegisteredPlayersLoading(true);
     try {
-      const [productData, orderData, brandData, productNameData, gamingSettingData, giveawaySettingData, playersData] = await Promise.all([
+      const [productData, orderData, brandData, productNameData, gamingSettingData, giveawaySettingData, playersData, playersCountData] = await Promise.all([
         apiRequest("/api/admin/products", "GET", undefined, authToken),
         apiRequest("/api/admin/orders", "GET", undefined, authToken),
         apiRequest("/api/admin/brands", "GET", undefined, authToken),
         apiRequest("/api/admin/product-names", "GET", undefined, authToken),
         apiRequest("/api/admin/settings/gaming", "GET", undefined, authToken),
         apiRequest("/api/admin/settings/gaming/giveaway", "GET", undefined, authToken),
-        apiRequest("/api/admin/settings/gaming/players", "GET", undefined, authToken)
+        apiRequest("/api/admin/settings/gaming/players", "GET", undefined, authToken),
+        apiRequest("/api/admin/settings/gaming/players/count", "GET", undefined, authToken),
       ]);
       setProducts(productData);
       setOrders(orderData);
@@ -332,6 +334,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setGamingSettings({ gamingSectionVisible: Boolean(gamingSettingData?.gamingSectionVisible ?? false) });
       setGiveawaySettings(normalizeGiveawaySettings(giveawaySettingData));
       setRegisteredPlayers(Array.isArray(playersData) ? playersData : []);
+      setRegisteredPlayersCount(Number(playersCountData?.totalRegisteredPlayers) || 0);
       setEditProductId((prev) => prev || (productData[0]?.id?.toString() ?? ""));
       setStockForm((prev) => ({ ...prev, productId: prev.productId || (productData[0]?.id?.toString() ?? "") }));
       if (role === "SUPER_ADMIN") {
@@ -351,8 +354,12 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
     setIsRegisteredPlayersLoading(true);
     try {
-      const playersData = await apiRequest("/api/admin/settings/gaming/players", "GET", undefined, token);
+      const [playersData, playersCountData] = await Promise.all([
+        apiRequest("/api/admin/settings/gaming/players", "GET", undefined, token),
+        apiRequest("/api/admin/settings/gaming/players/count", "GET", undefined, token),
+      ]);
       setRegisteredPlayers(Array.isArray(playersData) ? playersData : []);
+      setRegisteredPlayersCount(Number(playersCountData?.totalRegisteredPlayers) || 0);
     } catch (err) {
       setMessage(err.message || "Unable to refresh giveaway players.");
     } finally {
@@ -2126,6 +2133,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
            onGiveawayPrizeImageChange={handleGiveawayPrizeImageChange}
            onClearGiveawayPrizeImage={clearGiveawayPrizeImage}
            registeredPlayers={registeredPlayers}
+           totalRegisteredPlayers={registeredPlayersCount}
            isLoadingPlayers={isRegisteredPlayersLoading || isAdminLoading}
            onBonusAction={handleBonusProofAction}
            bonusActionKey={bonusActionKey}
