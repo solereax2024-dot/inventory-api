@@ -2108,13 +2108,13 @@
        width: 100%;
      }
 
-      /* Mobile: Show icons, hide labels in profile and proof action buttons */
-      .giveaway-profile-action-btn {
-        padding: 0 6px;
-        min-width: 36px;
-        min-height: 32px;
-        gap: 0;
-      }
+       /* Mobile: Show icons, hide labels in profile and proof action buttons */
+       .giveaway-profile-action-btn {
+         padding: 0 6px;
+         min-width: 54px;
+         min-height: 54px;
+         gap: 0;
+       }
 
       .giveaway-profile-action-btn .btn-label {
         display: none;
@@ -2161,8 +2161,8 @@
 
     .giveaway-player-profile-image,
     .giveaway-player-profile-empty {
-      width: 34px;
-      height: 34px;
+      width: 54px;
+      height: 54px;
     }
 
     .profile-image-viewer-modal {
