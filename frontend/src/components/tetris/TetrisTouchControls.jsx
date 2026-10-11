@@ -20,9 +20,14 @@ export default function TetrisTouchControls({
 }) {
   const isLiveGame = gameStarted && !gameOver;
   const mobileStateClassName = isLiveGame ? "is-gameplay" : gameOver ? "is-postgame" : "is-prestart";
-  const startButtonLabel = gameOver ? "Play Again" : "Start Game";
   const totalBonusPoints = bonusStatus?.totalBonusPoints || 0;
   const formattedBonusPoints = new Intl.NumberFormat("en-US").format(totalBonusPoints);
+  const commentProofRequired = !bonusStatus?.commentProofUploaded || bonusStatus?.commentProofRevoked;
+  const startButtonLabel = commentProofRequired
+    ? "Upload Comment Proof First"
+    : gameOver
+      ? "Play Again"
+      : "Start Game";
 
   return (
     <aside
@@ -69,8 +74,9 @@ export default function TetrisTouchControls({
           <button
             type="button"
             onClick={onStartGame}
-            disabled={loading}
+            disabled={loading || commentProofRequired}
             className="tetris-button tetris-button-primary tetris-start-game-button tetris-mobile-sticky-cta-btn"
+            title={commentProofRequired ? "Upload your comment proof first to unlock gameplay." : "Start a new Tetris run"}
           >
             <Play size={16} aria-hidden="true" />
             {startButtonLabel}

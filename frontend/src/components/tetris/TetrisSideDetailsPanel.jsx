@@ -34,6 +34,8 @@ export default function TetrisSideDetailsPanel({
     : "Waiting";
   const totalBonusPoints = bonusStatus?.totalBonusPoints || 0;
   const formattedBonusPoints = new Intl.NumberFormat("en-US").format(totalBonusPoints);
+  const commentProofRequired = !bonusStatus?.commentProofUploaded || bonusStatus?.commentProofRevoked;
+  const startButtonLabel = commentProofRequired ? "Upload Comment Proof First" : "Start Game";
   return (
     <aside className="tetris-layout-column tetris-side-details" aria-label="Game details" data-state={startState}>
 
@@ -105,17 +107,22 @@ export default function TetrisSideDetailsPanel({
                 <div className="tetris-start-hero-copy">
                   <span className="tetris-start-hero-eyebrow">Ready to play?</span>
                   <strong className="tetris-start-hero-title">Start your run</strong>
-                  <p className="tetris-start-hero-text">Jump in now and chase the top spot on the leaderboard.</p>
+                  <p className="tetris-start-hero-text">
+                    {commentProofRequired
+                      ? "Upload your giveaway comment proof first before you can start a run."
+                      : "Jump in now and chase the top spot on the leaderboard."}
+                  </p>
                 </div>
                 <div className="tetris-action-row tetris-start-hero-actions">
                   <button
                     type="button"
                     onClick={onStartGame}
-                    disabled={loading}
+                    disabled={loading || commentProofRequired}
                     className="tetris-button tetris-button-primary tetris-start-game-button"
+                    title={commentProofRequired ? "Upload your comment proof first to unlock gameplay." : "Start a new Tetris run"}
                   >
                     <Play size={16} aria-hidden="true" />
-                    Start Game
+                    {startButtonLabel}
                   </button>
                 </div>
               </div>

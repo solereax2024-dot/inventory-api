@@ -581,6 +581,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const unreadPlayerNoticeCount = playerNotifications.filter((notification) => notification.unread).length;
   const primaryPlayerNotice = playerNotices[0] || null;
   const playerNoticeTone = primaryPlayerNotice?.tone === "danger" ? "danger" : "info";
+  const commentProofRequired = !bonusStatus.commentProofUploaded || bonusStatus.commentProofRevoked;
   const openPlayerNotices = useCallback(() => {
     setIsPlayerNoticesOpen(true);
 
@@ -1245,7 +1246,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         return false;
       }
 
-      if (!bonusStatus.commentProofUploaded || bonusStatus.commentProofRevoked) {
+      if (commentProofRequired) {
         setIsBonusModalOpen(true);
         setBonusError(
           bonusStatus.commentProofRevoked
@@ -1301,7 +1302,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         gameSurfaceRef.current.focus();
       }
       return true;
-    }, [authenticatedPlayerName, clearScheduledTimeouts, clearTransientEffects, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
+    }, [authenticatedPlayerName, bonusStatus.commentProofRevoked, bonusStatus.commentProofValidationMessage, clearScheduledTimeouts, clearTransientEffects, commentProofRequired, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
 
     const resetGame = useCallback(() => {
       clearScheduledTimeouts();
