@@ -883,6 +883,7 @@
     width: min(92vw, 700px);
     max-height: min(88dvh, 780px);
     overflow-y: auto;
+    overflow-x: hidden;
     display: grid;
     gap: 16px;
     padding: clamp(20px, 3vw, 30px);
@@ -1107,6 +1108,7 @@
     z-index: 1;
     display: grid;
     gap: 10px;
+    min-width: 0;
 }
 
 .tetris-bonus-modal .tetris-bonus-item {
@@ -1118,6 +1120,7 @@
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.74));
     border: 1px solid rgba(148, 163, 184, 0.14);
     box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.06), 0 10px 24px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    min-width: 0;
 }
 
 .tetris-bonus-modal .tetris-bonus-item.is-active {
@@ -1167,11 +1170,13 @@
 
 .tetris-bonus-modal .tetris-bonus-status {
     width: fit-content;
+    max-width: 100%;
     padding: 4px 8px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--tetris-text-secondary);
+    overflow-wrap: anywhere;
 }
 
 .tetris-bonus-modal .tetris-bonus-item.is-active .tetris-bonus-status {
@@ -1204,6 +1209,7 @@
         padding: 16px 14px;
         border-radius: 18px;
         gap: 12px;
+        max-width: 100%;
     }
 
     .tetris-bonus-modal-header {
@@ -1252,6 +1258,15 @@
     .tetris-bonus-modal .tetris-bonus-item {
         grid-template-columns: 1fr;
         align-items: stretch;
+    }
+
+    .tetris-bonus-modal .tetris-bonus-item-heading {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .tetris-bonus-modal .tetris-bonus-status {
+        width: 100%;
     }
 
     .tetris-bonus-modal .tetris-bonus-upload-btn {
