@@ -539,18 +539,23 @@
    align-items: center;
    justify-content: center;
    gap: 4px;
-   padding: 0 8px;
-   min-height: 26px;
+   padding: 0 10px;
+   min-height: 28px;
+   min-width: 70px;
 }
 
 .giveaway-profile-action-btn .btn-label {
    display: inline;
+   white-space: nowrap;
+   font-weight: 500;
 }
 
 .giveaway-profile-action-btn .btn-icon {
    display: none;
    font-weight: 700;
-   font-size: 0.9em;
+   font-size: 1em;
+   min-width: 16px;
+   text-align: center;
 }
 
 .giveaway-player-action-btn {
@@ -2103,20 +2108,24 @@
        width: 100%;
      }
 
-     /* Mobile: Show icons, hide labels in profile and proof action buttons */
-     .giveaway-profile-action-btn {
-       padding: 0 6px;
-       min-width: 32px;
-       min-height: 28px;
-     }
+      /* Mobile: Show icons, hide labels in profile and proof action buttons */
+      .giveaway-profile-action-btn {
+        padding: 0 6px;
+        min-width: 36px;
+        min-height: 32px;
+        gap: 0;
+      }
 
-     .giveaway-profile-action-btn .btn-label {
-       display: none;
-     }
+      .giveaway-profile-action-btn .btn-label {
+        display: none;
+      }
 
-     .giveaway-profile-action-btn .btn-icon {
-       display: inline;
-     }
+      .giveaway-profile-action-btn .btn-icon {
+        display: inline;
+        font-size: 1.1em;
+        min-width: 18px;
+        text-align: center;
+      }
 
       /* Giveaway table responsive adjustments */
      .giveaway-players-table th:nth-child(1),
