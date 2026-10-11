@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -62,7 +63,7 @@ public class TetrisGameService {
 
         leaderboard.setTotalGames(leaderboard.getTotalGames() + 1);
         leaderboard.setTotalLinesCleared(leaderboard.getTotalLinesCleared() + safeLinesCleared);
-        leaderboard.setLastPlayed(LocalDateTime.now());
+        leaderboard.setLastPlayed(LocalDateTime.now(ZoneId.of("Asia/Singapore")));
 
         String normalizedPlayerName = normalizePlayerName(playerName);
         List<TetrisLeaderboard> projectedLeaderboard = new ArrayList<>(getSortedLeaderboardEntries().stream()

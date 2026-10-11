@@ -16,7 +16,12 @@ export function formatRelativeTime(value) {
   if (diffHours < 24) return `${diffHours} hr${diffHours !== 1 ? "s" : ""} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
 
-  return parsedDate.toLocaleDateString();
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Singapore",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(parsedDate);
 }
 
 export function formatDateTime(value) {
@@ -25,13 +30,15 @@ export function formatDateTime(value) {
   const parsedDate = new Date(value);
   if (Number.isNaN(parsedDate.getTime())) return "—";
 
-  return parsedDate.toLocaleString(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Singapore",
     month: "short",
     day: "numeric",
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  });
+    hour12: true,
+  }).format(parsedDate);
 }
 
 export function matchesLeaderboardTimeFilter(entry, filter) {
