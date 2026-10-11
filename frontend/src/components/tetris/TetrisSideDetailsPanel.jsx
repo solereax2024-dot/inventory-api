@@ -35,7 +35,7 @@ export default function TetrisSideDetailsPanel({
   const totalBonusPoints = bonusStatus?.totalBonusPoints || 0;
   const formattedBonusPoints = new Intl.NumberFormat("en-US").format(totalBonusPoints);
   const commentProofRequired = !bonusStatus?.commentProofUploaded || bonusStatus?.commentProofRevoked;
-  const startButtonLabel = commentProofRequired ? "Upload Comment Proof First" : "Start Game";
+  const startButtonLabel = gameOver ? "Play Again" : "Start Game";
   return (
     <aside className="tetris-layout-column tetris-side-details" aria-label="Game details" data-state={startState}>
 
@@ -109,7 +109,7 @@ export default function TetrisSideDetailsPanel({
                   <strong className="tetris-start-hero-title">Start your run</strong>
                   <p className="tetris-start-hero-text">
                     {commentProofRequired
-                      ? "Upload your giveaway comment proof first before you can start a run."
+                      ? "Tap Start Game to open your bonus tasks, then upload your giveaway comment proof before starting a run."
                       : "Jump in now and chase the top spot on the leaderboard."}
                   </p>
                 </div>
@@ -117,9 +117,9 @@ export default function TetrisSideDetailsPanel({
                   <button
                     type="button"
                     onClick={onStartGame}
-                    disabled={loading || commentProofRequired}
+                    disabled={loading}
                     className="tetris-button tetris-button-primary tetris-start-game-button"
-                    title={commentProofRequired ? "Upload your comment proof first to unlock gameplay." : "Start a new Tetris run"}
+                    title={commentProofRequired ? "Open your bonus tasks and upload your comment proof first." : "Start a new Tetris run"}
                   >
                     <Play size={16} aria-hidden="true" />
                     {startButtonLabel}
