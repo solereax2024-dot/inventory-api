@@ -423,11 +423,23 @@
 .tetris-bonus-trigger.is-mobile {
     padding: 12px 14px;
     letter-spacing: 0.06em;
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(103, 232, 249, 0.2);
+    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.12),
+                0 0 16px rgba(103, 232, 249, 0.08);
+    animation: tetris-bonus-trigger-pulse 3s ease-in-out infinite;
 }
 
 
 .tetris-bonus-trigger.is-mobile strong {
     font-size: 1rem;
+}
+
+.tetris-bonus-trigger.is-mobile .tetris-bonus-trigger-icon {
+    background: rgba(34, 211, 238, 0.18);
+    border-color: rgba(103, 232, 249, 0.3);
+    box-shadow: 0 0 12px rgba(103, 232, 249, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 @media (min-width: 769px) {
@@ -641,6 +653,19 @@
     50% {
         opacity: 0.95;
         filter: blur(18px) brightness(1.08);
+    }
+}
+
+@keyframes tetris-bonus-trigger-pulse {
+    0%, 100% {
+        border-color: rgba(103, 232, 249, 0.2);
+        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.12),
+                    0 0 16px rgba(103, 232, 249, 0.08);
+    }
+    50% {
+        border-color: rgba(103, 232, 249, 0.4);
+        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.12),
+                    0 0 28px rgba(103, 232, 249, 0.16);
     }
 }
 
