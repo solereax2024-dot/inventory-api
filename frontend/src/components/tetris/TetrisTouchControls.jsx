@@ -24,6 +24,7 @@ export default function TetrisTouchControls({
   const formattedBonusPoints = new Intl.NumberFormat("en-US").format(totalBonusPoints);
   const commentProofRequired = !bonusStatus?.commentProofUploaded || bonusStatus?.commentProofRevoked;
   const startButtonLabel = gameOver ? "Play Again" : "Start Game";
+  const resetButtonLabel = gameOver ? "Play Again" : "Restart";
 
   return (
     <aside
@@ -56,7 +57,7 @@ export default function TetrisTouchControls({
                   onClick={onResetGame}
                   className="tetris-button tetris-button-secondary"
                 >
-                  <RotateCcw size={16} /> Reset
+                  <RotateCcw size={16} /> {resetButtonLabel}
                 </button>
               )}
             </div>

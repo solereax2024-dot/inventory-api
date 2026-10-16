@@ -1337,10 +1337,16 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       triggerHaptic('tap');
     }, [clearScheduledTimeouts, clearTransientEffects, emitSound, scheduleUiTimeout, triggerHaptic]);
 
+    const restartGame = useCallback(() => {
+      fullscreenOptionsPausedRef.current = false;
+      setIsFullscreenOptionsOpen(false);
+      return startGame();
+    }, [startGame]);
+
     const handleFullscreenReset = useCallback(() => {
       closeFullscreenOptions({ resumeGameplay: false });
-      resetGame();
-    }, [closeFullscreenOptions, resetGame]);
+      restartGame();
+    }, [closeFullscreenOptions, restartGame]);
 
    const togglePauseGame = useCallback(() => {
      if (gameStarted && !gameOver) {
@@ -1901,7 +1907,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                       onOpenHowToPlay={openHowToPlay}
                       onOpenProfileUpdate={() => setIsProfileUpdateModalOpen(true)}
                       onOpenPlayerNotices={openPlayerNotices}
-                      onReset={resetGame}
+                      onReset={restartGame}
                       onToggleFullscreen={toggleFullscreen}
                       onTogglePause={togglePauseGame}
                       onSignOut={handleSignOut}
@@ -1979,7 +1985,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                 linesCleared={linesCleared}
                 playerRank={gameOverPlayerRank}
                 isInTop10={gameOverPlayerInTop10}
-                onPlayAgain={resetGame}
+                onPlayAgain={startGame}
                 onOpenLeaderboard={undefined}
                 onClose={resetGame}
               />
@@ -1991,7 +1997,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                     loading={loading}
                     playerName={playerName}
                     onStartGame={startGame}
-                    onResetGame={resetGame}
+                    onResetGame={restartGame}
                     isPaused={isPaused}
                     togglePauseGame={togglePauseGame}
                     canResetGame={gameStarted || gameOver || score !== 0 || linesCleared !== 0}
@@ -2033,7 +2039,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                onOpenHowToPlay={openHowToPlay}
                onOpenProfileUpdate={() => setIsProfileUpdateModalOpen(true)}
                onOpenPlayerNotices={openPlayerNotices}
-               onReset={resetGame}
+               onReset={restartGame}
                onSignOut={handleSignOut}
                bonusStatus={bonusStatus}
                bonusLoading={bonusLoading}

@@ -181,7 +181,7 @@ export default function TetrisOptionsMenu({
                   role="menuitem"
                 >
                   <RotateCcw size={16} />
-                  <span>Reset Game</span>
+                  <span>Restart Game</span>
                 </button>
               )}
 
@@ -212,9 +212,9 @@ export default function TetrisOptionsMenu({
 
        <TetrisConfirmModal
          isVisible={showResetConfirm}
-         title="Reset Game?"
-         message="Are you sure you want to reset the game? Your progress will be lost."
-         confirmText="Reset"
+         title="Restart Game?"
+         message="Are you sure you want to start a new game? Your current progress will be lost."
+         confirmText="Restart"
          cancelText="Cancel"
          isDanger={true}
          icon={RotateCcw}
