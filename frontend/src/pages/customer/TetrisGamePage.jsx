@@ -117,6 +117,8 @@ const EMPTY_PLAYER_NOTIFICATION = {
   createdAt: "",
 };
 
+const INACTIVITY_LOGOUT_MS = 10 * 60 * 1000;
+
 function normalizeBonusStatus(status) {
   return {
     ...EMPTY_BONUS_STATUS,
@@ -191,6 +193,8 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const scoreSubmittedRef = useRef(false);
   const timeoutIdsRef = useRef([]);
   const fullscreenOptionsPausedRef = useRef(false);
+  const inactivityTimeoutRef = useRef(null);
+  const inactivityLogoutTriggeredRef = useRef(false);
 
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -742,9 +746,69 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     timeoutIdsRef.current = [];
   }, []);
 
+  const clearInactivityLogoutTimer = useCallback(() => {
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleInactivityLogout = useCallback(() => {
+    if (inactivityLogoutTriggeredRef.current) {
+      return;
+    }
+
+    inactivityLogoutTriggeredRef.current = true;
+    clearInactivityLogoutTimer();
+    clearScheduledTimeouts();
+    logout();
+    navigate("/", { replace: true });
+  }, [clearInactivityLogoutTimer, clearScheduledTimeouts, logout, navigate]);
+
+  const resetInactivityLogoutTimer = useCallback(() => {
+    if (!authenticatedToken || inactivityLogoutTriggeredRef.current) {
+      return;
+    }
+
+    clearInactivityLogoutTimer();
+    inactivityTimeoutRef.current = window.setTimeout(() => {
+      handleInactivityLogout();
+    }, INACTIVITY_LOGOUT_MS);
+  }, [authenticatedToken, clearInactivityLogoutTimer, handleInactivityLogout]);
+
   useEffect(() => () => {
     clearScheduledTimeouts();
   }, [clearScheduledTimeouts]);
+
+  useEffect(() => () => {
+    clearInactivityLogoutTimer();
+  }, [clearInactivityLogoutTimer]);
+
+  useEffect(() => {
+    inactivityLogoutTriggeredRef.current = false;
+
+    if (!authenticatedToken || typeof window === "undefined") {
+      clearInactivityLogoutTimer();
+      return undefined;
+    }
+
+    const registerActivity = () => {
+      resetInactivityLogoutTimer();
+    };
+
+    registerActivity();
+
+    window.addEventListener("pointerdown", registerActivity, { passive: true });
+    window.addEventListener("keydown", registerActivity);
+    window.addEventListener("touchstart", registerActivity, { passive: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", registerActivity);
+      window.removeEventListener("keydown", registerActivity);
+      window.removeEventListener("touchstart", registerActivity);
+      clearInactivityLogoutTimer();
+    };
+  }, [authenticatedToken, clearInactivityLogoutTimer, resetInactivityLogoutTimer]);
 
 
   useEffect(() => {
@@ -1225,10 +1289,29 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
     try {
       const response = await uploadImage(endpoint, file, authenticatedToken);
-      setBonusStatus(normalizeBonusStatus(response?.bonusStatus));
+      setBonusStatus((previousStatus) => {
+        const normalizedResponseStatus = normalizeBonusStatus(response?.bonusStatus);
+
+        if (bonusType === "comment") {
+          return normalizeBonusStatus({
+            ...previousStatus,
+            ...normalizedResponseStatus,
+            commentProofUploaded: true,
+            commentProofValidated: true,
+            commentProofRevoked: false,
+            commentProofValidationMessage: "",
+          });
+        }
+
+        return normalizeBonusStatus({
+          ...previousStatus,
+          ...normalizedResponseStatus,
+        });
+      });
       setBonusFeedback(response?.message || "Proof uploaded successfully.");
       if (bonusType === "comment") {
         setBonusError("");
+        setIsBonusModalOpen(false);
       }
     } catch (error) {
       setBonusError(error?.message || "Unable to upload your bonus proof right now.");
@@ -1259,6 +1342,8 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       }
 
       setPlayerName(trimmedPlayerName);
+      setIsBonusModalOpen(false);
+      setBonusError("");
 
       const openingEntry = createUpcomingEntry();
       const queuedEntries = ensureUpcomingQueue([
@@ -1358,9 +1443,11 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
    }, [gameStarted, gameOver, isPaused, emitSound, isMobileViewport, triggerHaptic]);
 
    const handleSignOut = useCallback(() => {
+     inactivityLogoutTriggeredRef.current = true;
+     clearInactivityLogoutTimer();
      logout();
-     navigate("/");
-   }, [logout, navigate]);
+     navigate("/", { replace: true });
+   }, [clearInactivityLogoutTimer, logout, navigate]);
 
    const openLeaderboard = useCallback(() => {
      setIsLeaderboardModalOpen(true);
