@@ -270,6 +270,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const [viewportSize, setViewportSize] = useState(getViewportMetrics);
   const [bonusStatus, setBonusStatus] = useState(EMPTY_BONUS_STATUS);
   const [bonusLoading, setBonusLoading] = useState(false);
+  const [hasLoadedBonusStatus, setHasLoadedBonusStatus] = useState(false);
   const [bonusUploadingType, setBonusUploadingType] = useState(null);
    const [bonusError, setBonusError] = useState("");
    const [bonusFeedback, setBonusFeedback] = useState("");
@@ -398,6 +399,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       if (!authenticatedToken) {
         setBonusStatus(EMPTY_BONUS_STATUS);
         setBonusLoading(false);
+        setHasLoadedBonusStatus(false);
         setBonusUploadingType(null);
         setBonusError("");
         setBonusFeedback("");
@@ -409,6 +411,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
       const fetchBonusStatus = async () => {
         setBonusLoading(true);
+        setHasLoadedBonusStatus(false);
         setBonusError("");
 
         try {
@@ -424,6 +427,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         } finally {
           if (!isCancelled) {
             setBonusLoading(false);
+            setHasLoadedBonusStatus(true);
           }
         }
       };
@@ -436,7 +440,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     }, [authenticatedToken]);
 
     useEffect(() => {
-      if (!authenticatedToken || bonusLoading || hasPromptedCommentProof) {
+      if (!authenticatedToken || bonusLoading || !hasLoadedBonusStatus || hasPromptedCommentProof) {
         return;
       }
 
@@ -449,7 +453,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
           setBonusFeedback("Upload a screenshot of your giveaway comment where you tagged your friends to complete your entry.");
         }
       }
-    }, [authenticatedToken, bonusLoading, bonusStatus, hasPromptedCommentProof]);
+    }, [authenticatedToken, bonusLoading, bonusStatus, hasLoadedBonusStatus, hasPromptedCommentProof]);
 
     useEffect(() => {
       let isCancelled = false;
@@ -586,6 +590,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const primaryPlayerNotice = playerNotices[0] || null;
   const playerNoticeTone = primaryPlayerNotice?.tone === "danger" ? "danger" : "info";
   const commentProofRequired = !bonusStatus.commentProofUploaded || bonusStatus.commentProofRevoked;
+  const startActionLoading = loading || bonusLoading || !hasLoadedBonusStatus;
   const openPlayerNotices = useCallback(() => {
     setIsPlayerNoticesOpen(true);
 
@@ -785,30 +790,25 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   }, [clearInactivityLogoutTimer]);
 
   useEffect(() => {
+    if (!authenticatedToken) {
+      clearInactivityLogoutTimer();
+      inactivityLogoutTriggeredRef.current = false;
+      return;
+    }
+
     inactivityLogoutTriggeredRef.current = false;
 
-    if (!authenticatedToken || typeof window === "undefined") {
+    if (!gameStarted) {
       clearInactivityLogoutTimer();
       return undefined;
     }
 
-    const registerActivity = () => {
-      resetInactivityLogoutTimer();
-    };
-
-    registerActivity();
-
-    window.addEventListener("pointerdown", registerActivity, { passive: true });
-    window.addEventListener("keydown", registerActivity);
-    window.addEventListener("touchstart", registerActivity, { passive: true });
+    resetInactivityLogoutTimer();
 
     return () => {
-      window.removeEventListener("pointerdown", registerActivity);
-      window.removeEventListener("keydown", registerActivity);
-      window.removeEventListener("touchstart", registerActivity);
       clearInactivityLogoutTimer();
     };
-  }, [authenticatedToken, clearInactivityLogoutTimer, resetInactivityLogoutTimer]);
+  }, [authenticatedToken, clearInactivityLogoutTimer, gameStarted, resetInactivityLogoutTimer]);
 
 
   useEffect(() => {
@@ -1308,6 +1308,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
           ...normalizedResponseStatus,
         });
       });
+      setHasLoadedBonusStatus(true);
       setBonusFeedback(response?.message || "Proof uploaded successfully.");
       if (bonusType === "comment") {
         setBonusError("");
@@ -1324,6 +1325,13 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       const trimmedPlayerName = authenticatedPlayerName.trim();
       if (!trimmedPlayerName) {
         setMessage("Unable to identify your account. Please log in again.");
+        emitSound("tap");
+        triggerHaptic('tap');
+        return false;
+      }
+
+      if (bonusLoading || !hasLoadedBonusStatus) {
+        setMessage("Checking your giveaway requirements. Please wait a moment.");
         emitSound("tap");
         triggerHaptic('tap');
         return false;
@@ -1375,6 +1383,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       setHoldPiece(null);
       setHoldPieceKey(null);
       setHoldTileId(null);
+      resetInactivityLogoutTimer();
       triggerPulseEffect(setRestartPulse, 240);
       triggerPulseEffect(setPieceSpawnPulse, 180);
       emitSound("start");
@@ -1387,7 +1396,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         gameSurfaceRef.current.focus();
       }
       return true;
-    }, [authenticatedPlayerName, bonusStatus.commentProofRevoked, bonusStatus.commentProofValidationMessage, clearScheduledTimeouts, clearTransientEffects, commentProofRequired, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
+    }, [authenticatedPlayerName, bonusLoading, bonusStatus.commentProofRevoked, bonusStatus.commentProofValidationMessage, clearScheduledTimeouts, clearTransientEffects, commentProofRequired, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, hasLoadedBonusStatus, resetInactivityLogoutTimer, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
 
     const resetGame = useCallback(() => {
       clearScheduledTimeouts();
@@ -1435,12 +1444,13 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
    const togglePauseGame = useCallback(() => {
      if (gameStarted && !gameOver) {
+       resetInactivityLogoutTimer();
        setIsPaused(!isPaused);
        setMessage(isPaused ? "Resumed!" : (isMobileViewport ? "Paused — tap the board to resume." : "Paused"));
        emitSound(isPaused ? "resume" : "pause");
        triggerHaptic('pause');
      }
-   }, [gameStarted, gameOver, isPaused, emitSound, isMobileViewport, triggerHaptic]);
+   }, [gameStarted, gameOver, isPaused, emitSound, isMobileViewport, resetInactivityLogoutTimer, triggerHaptic]);
 
    const handleSignOut = useCallback(() => {
      inactivityLogoutTriggeredRef.current = true;
@@ -1463,13 +1473,14 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
        const newCol = currentPieceCol + direction;
        if (canPlacePiece(grid, currentPiece, currentPieceRow, newCol)) {
+         resetInactivityLogoutTimer();
          setCurrentPieceCol(newCol);
          lastMoveWasRotateRef.current = false;
          emitSound("move");
          triggerHaptic('move');
        }
      },
-     [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, emitSound, triggerHaptic]
+     [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, emitSound, resetInactivityLogoutTimer, triggerHaptic]
    );
 
    const softDropCurrentPiece = useCallback(() => {
@@ -1477,6 +1488,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
      const newRow = currentPieceRow + 1;
      if (canPlacePiece(grid, currentPiece, newRow, currentPieceCol)) {
+       resetInactivityLogoutTimer();
        setCurrentPieceRow(newRow);
        setScore((prev) => prev + 1);
        triggerPulseEffect(setSoftDropPulse, 90);
@@ -1487,11 +1499,12 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
      }
 
      lockCurrentPiece(currentPieceRow, { source: "lock" });
-   }, [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, emitSound, lockCurrentPiece, triggerHaptic, triggerPulseEffect]);
+   }, [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, emitSound, lockCurrentPiece, resetInactivityLogoutTimer, triggerHaptic, triggerPulseEffect]);
 
   const hardDropCurrentPiece = useCallback(() => {
     if (isActivePieceActionBlocked({ gameStarted, gameOver, isPaused, currentPiece })) return;
 
+    resetInactivityLogoutTimer();
     const dropRow = getDropRow(grid, currentPiece, currentPieceRow, currentPieceCol);
     const dropDistance = dropRow - currentPieceRow;
     setScore((prev) => prev + dropDistance * 2);
@@ -1520,7 +1533,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
      triggerHaptic('hardDrop');
      lastMoveWasRotateRef.current = false;
      lockCurrentPiece(dropRow, { source: "hard-drop", dropDistance });
-   }, [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, currentTileId, emitSound, lockCurrentPiece, scheduleUiTimeout, triggerHaptic, triggerPulseEffect]);
+   }, [gameStarted, gameOver, isPaused, grid, currentPiece, currentPieceRow, currentPieceCol, currentTileId, emitSound, lockCurrentPiece, resetInactivityLogoutTimer, scheduleUiTimeout, triggerHaptic, triggerPulseEffect]);
 
   const applyRotationWithKick = useCallback((rotatedPiece) => {
     const kickOffsets = [
@@ -1541,6 +1554,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
        if (!canPlacePiece(grid, rotatedPiece, nextRow, nextCol)) continue;
 
+        resetInactivityLogoutTimer();
        setCurrentPiece(rotatedPiece);
        setCurrentPieceRow(nextRow);
        setCurrentPieceCol(nextCol);
@@ -1552,7 +1566,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
      }
 
      return false;
-   }, [currentPieceCol, currentPieceRow, emitSound, grid, triggerHaptic, triggerPulseEffect]);
+   }, [currentPieceCol, currentPieceRow, emitSound, grid, resetInactivityLogoutTimer, triggerHaptic, triggerPulseEffect]);
 
   const rotateCurrentPiece = useCallback(() => {
     if (isActivePieceActionBlocked({ gameStarted, gameOver, isPaused, currentPiece })) return;
@@ -1602,6 +1616,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     setHoldPiece(newHold);
     setHoldPieceKey(newHoldKey);
     setHoldTileId(newHoldTileId);
+    resetInactivityLogoutTimer();
      setCanHoldPiece(false);
      triggerPulseEffect(setPieceSpawnPulse, 180);
      lastMoveWasRotateRef.current = false;
@@ -1612,7 +1627,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
 
      emitSound("hold");
      triggerHaptic('hold');
-   }, [gameStarted, gameOver, isPaused, currentPiece, currentPieceKey, holdPiece, holdPieceKey, nextPiece, nextPieceKey, currentTileId, holdTileId, nextQueue, nextTileId, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, triggerHaptic, triggerPulseEffect, syncUpcomingQueue]);
+   }, [gameStarted, gameOver, isPaused, currentPiece, currentPieceKey, holdPiece, holdPieceKey, nextPiece, nextPieceKey, currentTileId, holdTileId, nextQueue, nextTileId, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, resetInactivityLogoutTimer, triggerHaptic, triggerPulseEffect, syncUpcomingQueue]);
   const applyLockEffects = useTetrisLockEffects({
     comboChainRef,
     previousClearWasTetrisRef,
@@ -2081,7 +2096,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
                   <TetrisTouchControls
                     gameStarted={gameStarted}
                     gameOver={gameOver}
-                    loading={loading}
+                    loading={startActionLoading}
                     playerName={playerName}
                     onStartGame={startGame}
                     onResetGame={restartGame}
@@ -2101,7 +2116,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
             <TetrisSideDetailsPanel
               gameStarted={gameStarted}
               gameOver={gameOver}
-              loading={loading}
+              loading={startActionLoading}
               message={message}
               playerName={playerName}
               score={score}
