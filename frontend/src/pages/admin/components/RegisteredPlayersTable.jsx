@@ -581,7 +581,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                         </div>
                       </td>
                      <td>
-                       <div className="giveaway-player-proof-list">
+                       <div className="giveaway-player-proof-list tetris-player-action-list">
                          <div className="giveaway-player-proof-row is-stacked">
                            <span className="giveaway-player-proof-title">Status</span>
                            <span
@@ -591,63 +591,44 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                            >
                              {moderationLabel}
                            </span>
-                           <div className="giveaway-player-proof-actions giveaway-player-proof-actions-grid">
+                            <div className="giveaway-player-proof-actions giveaway-player-proof-actions-grid tetris-player-action-grid">
                              {onModerationAction ? (
                                <>
                                   <button
                                    type="button"
-                                   className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
+                                    className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn tetris-player-action-btn"
                                     onClick={() => requestModerationAction(player, "ANOMALY_REVIEW")}
                                     disabled={Boolean(moderationActionKey) || moderationStatus === "ANOMALY_REVIEW"}
                                     title="Flag player for anomaly review"
                                  >
                                     <span className="btn-label">Flag</span>
+                                    <span className="btn-icon" aria-hidden="true">⚑</span>
                                  </button>
-                                  {moderationStatus === "ANOMALY_REVIEW" ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
-                                        onClick={() => requestModerationAction(player, "ANOMALY_DETECTED")}
-                                        disabled={Boolean(moderationActionKey)}
-                                        title="Yes: confirm anomaly after admin review"
-                                      >
-                                        <span className="btn-label">Yes</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
-                                        onClick={() => requestModerationAction(player, "NORMAL")}
-                                        disabled={Boolean(moderationActionKey)}
-                                        title="No: clear anomaly flag"
-                                      >
-                                        <span className="btn-label">No</span>
-                                      </button>
-                                    </>
-                                  ) : null}
                                  <button
                                    type="button"
-                                   className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn btn-delete"
+                                    className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn btn-delete tetris-player-action-btn"
                                    onClick={() => requestModerationAction(player, "DISQUALIFIED")}
                                    disabled={Boolean(moderationActionKey) || moderationStatus === "DISQUALIFIED"}
                                    title="Disqualify player from Tetris"
                                  >
                                    <span className="btn-label">Disqualify</span>
+                                    <span className="btn-icon" aria-hidden="true">⛔</span>
                                  </button>
                                  <button
                                    type="button"
-                                   className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
+                                    className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn tetris-player-action-btn"
                                    onClick={() => requestModerationAction(player, "NORMAL")}
-                                    disabled={Boolean(moderationActionKey) || moderationStatus === "NORMAL" || moderationStatus === "ANOMALY_REVIEW"}
+                                    disabled={Boolean(moderationActionKey) || moderationStatus === "NORMAL"}
                                    title="Restore player access"
                                  >
                                    <span className="btn-label">Restore</span>
+                                    <span className="btn-icon" aria-hidden="true">↺</span>
                                  </button>
                                </>
                              ) : null}
                            </div>
                            {moderationReason ? (
-                             <span className="giveaway-player-muted-text" title={moderationReason}>{moderationReason}</span>
+                              <span className="giveaway-player-muted-text tetris-player-action-reason" title={moderationReason}>{moderationReason}</span>
                            ) : null}
                          </div>
                        </div>

@@ -3,7 +3,7 @@ import { Trophy } from "lucide-react";
 function getModerationBadgeLabel(status) {
   const normalizedStatus = String(status || "NORMAL").toUpperCase();
   if (normalizedStatus === "ANOMALY_REVIEW") {
-    return "FLAGGED FOR REVIEW";
+    return "UNUSUAL GAMEPLAY DETECTED";
   }
   if (normalizedStatus === "ANOMALY_DETECTED") {
     return "ANOMALY DETECTED";
@@ -44,7 +44,11 @@ export function TetrisLeaderboardList({
               <span className="tetris-mini-leaderboard-rank">{getMedalIcon(entry.displayRank) || `#${entry.displayRank}`}</span>
               <div className="tetris-mini-leaderboard-copy">
                 <span className="tetris-mini-leaderboard-player">{entry.playerName || "Anonymous"}</span>
-                {moderationBadge && <span className="tetris-mini-leaderboard-anomaly-badge">{moderationBadge}</span>}
+                {moderationBadge && (
+                  <span className="tetris-mini-leaderboard-flagline">
+                    <span className="tetris-mini-leaderboard-anomaly-badge" title={moderationBadge}>{moderationBadge}</span>
+                  </span>
+                )}
                 <span className="tetris-mini-leaderboard-subline">
                   Score {((entry.score ?? 0)).toLocaleString()} • <span className="is-bonus">Bonus +{((entry.bonusPoints ?? 0)).toLocaleString()}</span>
                 </span>

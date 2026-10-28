@@ -383,7 +383,7 @@
 .tetris-mini-leaderboard-copy {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     flex: 1;
     min-width: 0;
 }
@@ -400,8 +400,9 @@
 .tetris-mini-leaderboard-anomaly-badge {
     display: inline-flex;
     align-items: center;
-    width: fit-content;
-    font-size: 0.62rem;
+    width: auto;
+    max-width: 100%;
+    font-size: 0.58rem;
     font-weight: var(--font-weight-bold);
     letter-spacing: 0.08em;
     color: #fecaca;
@@ -409,6 +410,9 @@
     border: 1px solid rgba(248, 113, 113, 0.4);
     border-radius: 999px;
     padding: 2px 7px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tetris-mini-leaderboard-row.is-medal .tetris-mini-leaderboard-player {
@@ -422,6 +426,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.tetris-mini-leaderboard-flagline {
+    display: flex;
+    min-width: 0;
 }
 
 .tetris-mini-leaderboard-row.is-medal .tetris-mini-leaderboard-subline {

@@ -141,6 +141,11 @@ function isTetrisAccessBlocked(profile) {
 }
 
 function getTetrisModerationMessage(profile) {
+  const status = String(profile?.tetrisModerationStatus || "NORMAL").toUpperCase();
+  if (status === "ANOMALY_REVIEW") {
+    return "Unusual gameplay patterns were detected. Your run is under admin investigation.";
+  }
+
   const reason = String(profile?.tetrisModerationReason || "").trim();
   if (reason) {
     return reason;

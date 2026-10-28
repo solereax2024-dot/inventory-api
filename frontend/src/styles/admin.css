@@ -4,6 +4,38 @@
   gap: 6px;
 }
 
+.tetris-player-action-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tetris-player-action-btn {
+  min-height: 34px;
+  font-size: 12px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tetris-player-action-btn .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  min-width: 14px;
+}
+
+.tetris-player-action-reason {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.35;
+}
+
 .tetris-moderation-history-btn {
   border-color: rgba(59, 130, 246, 0.35);
   color: #1d4ed8;
@@ -667,9 +699,18 @@
   grid-template-rows: auto auto auto auto;
   justify-items: center;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 10px;
+  padding: 12px;
+}
+
+.tetris-player-action-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.tetris-player-action-list .giveaway-player-proof-row.is-stacked {
+  min-height: 188px;
+  align-content: start;
 }
 
 .giveaway-player-proof-title {
@@ -927,7 +968,7 @@
 .giveaway-players-table th:nth-child(10),
 .giveaway-players-table td:nth-child(10) { width: 18%; min-width: 420px; }
 .giveaway-players-table th:nth-child(11),
-.giveaway-players-table td:nth-child(11) { width: 6%; min-width: 110px; }
+.giveaway-players-table td:nth-child(11) { width: 11%; min-width: 220px; }
 .giveaway-players-table th:nth-child(12),
 .giveaway-players-table td:nth-child(12) { width: 5%; min-width: 90px; }
 .giveaway-players-table th:nth-child(12) { width: 5%; min-width: 90px; }
