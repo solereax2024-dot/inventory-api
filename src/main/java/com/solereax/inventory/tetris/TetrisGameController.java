@@ -88,7 +88,10 @@ public class TetrisGameController {
                             : 0,
                     request.containsKey("inputs") && request.get("inputs") instanceof Number
                             ? ((Number) request.get("inputs")).intValue()
-                            : 0
+                            : 0,
+                    request.containsKey("clientAlertCode") && request.get("clientAlertCode") instanceof String
+                            ? ((String) request.get("clientAlertCode")).trim()
+                            : null
             );
 
             TetrisGameService.HeartbeatAssessment finalRunAssessment = gameService.finalizeRunSession(user.getUsername(), runId, telemetry);
@@ -205,7 +208,10 @@ public class TetrisGameController {
                             : 0,
                     request.containsKey("inputs") && request.get("inputs") instanceof Number
                             ? ((Number) request.get("inputs")).intValue()
-                            : 0
+                            : 0,
+                    request.containsKey("clientAlertCode") && request.get("clientAlertCode") instanceof String
+                            ? ((String) request.get("clientAlertCode")).trim()
+                            : null
             );
 
             TetrisGameService.HeartbeatAssessment heartbeatAssessment = gameService.assessRunHeartbeat(user.getUsername(), runId, telemetry);

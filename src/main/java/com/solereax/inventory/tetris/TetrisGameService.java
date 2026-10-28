@@ -47,7 +47,8 @@ public class TetrisGameService {
             Integer piecesLocked,
             Integer hardDrops,
             Integer softDrops,
-            Integer inputs
+            Integer inputs,
+            String clientAlertCode
     ) {
     }
 
@@ -332,6 +333,12 @@ public class TetrisGameService {
 
         int suspiciousSignals = Math.max(session.getSuspiciousSignalCount() != null ? session.getSuspiciousSignalCount() : 0, 0);
         String reason = "";
+
+        String clientAlertCode = telemetry.clientAlertCode() == null ? "" : telemetry.clientAlertCode().trim();
+        if (!clientAlertCode.isEmpty()) {
+            suspiciousSignals += 2;
+            reason = "Run blocked: client integrity alert detected (" + clientAlertCode + ").";
+        }
 
         if (deltaElapsed <= 0L) {
             suspiciousSignals += 2;

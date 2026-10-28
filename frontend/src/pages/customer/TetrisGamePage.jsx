@@ -232,6 +232,13 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const hardDropCountRef = useRef(0);
   const softDropCountRef = useRef(0);
   const inputsCountRef = useRef(0);
+  const nativeSetTimeoutRef = useRef(null);
+  const nativeClearTimeoutRef = useRef(null);
+  const nativeDateNowRef = useRef(null);
+  const nativeMathRandomRef = useRef(null);
+  const runStartPerfNowRef = useRef(null);
+  const runStartEpochOffsetRef = useRef(null);
+  const integrityAlertSentRef = useRef(false);
 
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -810,6 +817,17 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     }
   }, []);
 
+  const forceStopForAnomalyReview = useCallback((messageText) => {
+    blockedByModerationRef.current = true;
+    scoreSubmittedRef.current = true;
+    setIsPaused(true);
+    setGameOver(true);
+    setMessage(messageText || "Unusual gameplay patterns were detected. Your run is under admin investigation.");
+    setIsPlayerNoticesOpen(true);
+    void refreshPlayerProfile();
+    void refreshPlayerNotifications();
+  }, [refreshPlayerNotifications, refreshPlayerProfile]);
+
   const handleInactivityLogout = useCallback(() => {
     if (inactivityLogoutTriggeredRef.current) {
       return;
@@ -1339,6 +1357,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         ? Math.max(1000, Number(response.heartbeatIntervalMs))
         : 2000;
       blockedByModerationRef.current = false;
+      integrityAlertSentRef.current = false;
     } catch (error) {
       activeRunIdRef.current = null;
       blockedByModerationRef.current = true;
@@ -1350,6 +1369,45 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       void refreshPlayerNotifications();
     }
   }, [authenticatedToken, refreshPlayerNotifications, refreshPlayerProfile]);
+
+  const reportClientIntegrityAlert = useCallback(async (alertCode, fallbackMessage) => {
+    if (!authenticatedToken || !activeRunIdRef.current || !runStartedAtRef.current || integrityAlertSentRef.current) {
+      forceStopForAnomalyReview(fallbackMessage);
+      return;
+    }
+
+    integrityAlertSentRef.current = true;
+
+    try {
+      const response = await apiRequest(`/api/public/games/tetris/run/${encodeURIComponent(activeRunIdRef.current)}/heartbeat`, "POST", {
+        elapsedMs: Math.max(Date.now() - runStartedAtRef.current, 0),
+        score,
+        level,
+        linesCleared,
+        piecesLocked: piecesLockedRef.current,
+        hardDrops: hardDropCountRef.current,
+        softDrops: softDropCountRef.current,
+        inputs: inputsCountRef.current,
+        clientAlertCode: alertCode,
+      }, authenticatedToken);
+
+      const moderationStatus = String(response?.moderationStatus || "").toUpperCase();
+      if (["ANOMALY_REVIEW", "ANOMALY_DETECTED", "DISQUALIFIED"].includes(moderationStatus)) {
+        forceStopForAnomalyReview(response?.message || fallbackMessage);
+        return;
+      }
+
+      forceStopForAnomalyReview(fallbackMessage);
+    } catch (error) {
+      const moderationStatus = String(error?.moderationStatus || "").toUpperCase();
+      if (["ANOMALY_REVIEW", "ANOMALY_DETECTED", "DISQUALIFIED"].includes(moderationStatus)) {
+        forceStopForAnomalyReview(error?.message || fallbackMessage);
+        return;
+      }
+
+      forceStopForAnomalyReview(fallbackMessage);
+    }
+  }, [authenticatedToken, forceStopForAnomalyReview, level, linesCleared, score]);
 
   useEffect(() => {
     if (!gameStarted || gameOver || isPaused || blockedByModerationRef.current) {
@@ -1370,7 +1428,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       }
 
       try {
-        await apiRequest(`/api/public/games/tetris/run/${encodeURIComponent(activeRunIdRef.current)}/heartbeat`, "POST", {
+        const response = await apiRequest(`/api/public/games/tetris/run/${encodeURIComponent(activeRunIdRef.current)}/heartbeat`, "POST", {
           elapsedMs: Math.max(Date.now() - runStartedAtRef.current, 0),
           score,
           level,
@@ -1380,17 +1438,15 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
           softDrops: softDropCountRef.current,
           inputs: inputsCountRef.current,
         }, authenticatedToken);
+
+        const moderationStatus = String(response?.moderationStatus || "").toUpperCase();
+        if (["ANOMALY_REVIEW", "ANOMALY_DETECTED", "DISQUALIFIED"].includes(moderationStatus)) {
+          forceStopForAnomalyReview(response?.message);
+        }
       } catch (error) {
         const moderationStatus = String(error?.moderationStatus || "").toUpperCase();
-        if (moderationStatus === "ANOMALY_DETECTED" || moderationStatus === "DISQUALIFIED") {
-          blockedByModerationRef.current = true;
-          scoreSubmittedRef.current = true;
-          setIsPaused(true);
-          setGameOver(true);
-          setMessage(error?.message || "Anomaly detected during run verification.");
-          setIsPlayerNoticesOpen(true);
-          void refreshPlayerProfile();
-          void refreshPlayerNotifications();
+        if (["ANOMALY_REVIEW", "ANOMALY_DETECTED", "DISQUALIFIED"].includes(moderationStatus)) {
+          forceStopForAnomalyReview(error?.message || "Anomaly detected during run verification.");
         }
       }
     };
@@ -1405,7 +1461,38 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         heartbeatTimerRef.current = null;
       }
     };
-  }, [authenticatedToken, gameOver, gameStarted, isPaused, level, linesCleared, refreshPlayerNotifications, refreshPlayerProfile, score]);
+  }, [authenticatedToken, forceStopForAnomalyReview, gameOver, gameStarted, isPaused, level, linesCleared, score]);
+
+  useEffect(() => {
+    if (!gameStarted || gameOver || isPaused || blockedByModerationRef.current) {
+      return undefined;
+    }
+
+    const validateIntegrity = () => {
+      const nativeTimerChanged = nativeSetTimeoutRef.current && window.setTimeout !== nativeSetTimeoutRef.current;
+      const nativeClearChanged = nativeClearTimeoutRef.current && window.clearTimeout !== nativeClearTimeoutRef.current;
+      const dateNowChanged = nativeDateNowRef.current && Date.now !== nativeDateNowRef.current;
+      const randomChanged = nativeMathRandomRef.current && Math.random !== nativeMathRandomRef.current;
+
+      if (nativeTimerChanged || nativeClearChanged || dateNowChanged || randomChanged) {
+        void reportClientIntegrityAlert("NATIVE_PATCH_DETECTED", "Unusual gameplay patterns were detected. Your run is under admin investigation.");
+        return;
+      }
+
+      if (runStartPerfNowRef.current != null && runStartEpochOffsetRef.current != null && typeof performance !== "undefined") {
+        const expectedEpochNow = performance.now() + runStartEpochOffsetRef.current;
+        const drift = Math.abs(Date.now() - expectedEpochNow);
+        if (drift > 15000) {
+          void reportClientIntegrityAlert("CLOCK_DRIFT_DETECTED", "Unusual gameplay patterns were detected. Your run is under admin investigation.");
+        }
+      }
+    };
+
+    const integrityTimer = window.setInterval(validateIntegrity, 1200);
+    return () => {
+      window.clearInterval(integrityTimer);
+    };
+  }, [gameOver, gameStarted, isPaused, reportClientIntegrityAlert]);
 
   const handleBonusProofSelected = useCallback(async (bonusType, file) => {
     if (!authenticatedToken) {
@@ -1523,12 +1610,19 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       clearTransientEffects();
       scoreSubmittedRef.current = false;
       blockedByModerationRef.current = false;
+      integrityAlertSentRef.current = false;
       setLastScoreSubmission(null);
       piecesLockedRef.current = 0;
       hardDropCountRef.current = 0;
       softDropCountRef.current = 0;
       inputsCountRef.current = 0;
       activeRunIdRef.current = null;
+      nativeSetTimeoutRef.current = window.setTimeout;
+      nativeClearTimeoutRef.current = window.clearTimeout;
+      nativeDateNowRef.current = Date.now;
+      nativeMathRandomRef.current = Math.random;
+      runStartPerfNowRef.current = typeof performance !== "undefined" ? performance.now() : null;
+      runStartEpochOffsetRef.current = typeof performance !== "undefined" ? Date.now() - performance.now() : null;
 
       setGameStarted(true);
       setGameOver(false);
@@ -1596,6 +1690,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       runStartedAtRef.current = null;
       activeRunIdRef.current = null;
       blockedByModerationRef.current = false;
+      integrityAlertSentRef.current = false;
       piecesLockedRef.current = 0;
       hardDropCountRef.current = 0;
       softDropCountRef.current = 0;
@@ -1604,6 +1699,12 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         clearInterval(heartbeatTimerRef.current);
         heartbeatTimerRef.current = null;
       }
+      nativeSetTimeoutRef.current = null;
+      nativeClearTimeoutRef.current = null;
+      nativeDateNowRef.current = null;
+      nativeMathRandomRef.current = null;
+      runStartPerfNowRef.current = null;
+      runStartEpochOffsetRef.current = null;
       triggerPulseEffect(setRestartPulse, 240);
       emitSound("reset");
       triggerHaptic('tap');
