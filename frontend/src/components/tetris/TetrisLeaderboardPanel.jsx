@@ -1,5 +1,16 @@
 import { Trophy } from "lucide-react";
 
+function getModerationBadgeLabel(status) {
+  const normalizedStatus = String(status || "NORMAL").toUpperCase();
+  if (normalizedStatus === "ANOMALY_DETECTED") {
+    return "ANOMALY DETECTED";
+  }
+  if (normalizedStatus === "DISQUALIFIED") {
+    return "DISQUALIFIED";
+  }
+  return "";
+}
+
 export function TetrisLeaderboardList({
   leaderboardLoading,
   leaderboardError,
@@ -17,7 +28,9 @@ export function TetrisLeaderboardList({
 
       {!leaderboardLoading && !leaderboardError && filteredLeaderboard.length > 0 && (
         <div className="tetris-mini-leaderboard" aria-label={`Top Tetris scores - ${leaderboardTimeFilter} - sorted by ${leaderboardSortBy}`}>
-          {filteredLeaderboard.map((entry, index) => (
+          {filteredLeaderboard.map((entry, index) => {
+            const moderationBadge = getModerationBadgeLabel(entry?.moderationStatus);
+            return (
             <button
               key={entry.id || `${entry.playerName}-${index}`}
               type="button"
@@ -28,6 +41,7 @@ export function TetrisLeaderboardList({
               <span className="tetris-mini-leaderboard-rank">{getMedalIcon(entry.displayRank) || `#${entry.displayRank}`}</span>
               <div className="tetris-mini-leaderboard-copy">
                 <span className="tetris-mini-leaderboard-player">{entry.playerName || "Anonymous"}</span>
+                {moderationBadge && <span className="tetris-mini-leaderboard-anomaly-badge">{moderationBadge}</span>}
                 <span className="tetris-mini-leaderboard-subline">
                   Score {((entry.score ?? 0)).toLocaleString()} • <span className="is-bonus">Bonus +{((entry.bonusPoints ?? 0)).toLocaleString()}</span>
                 </span>
@@ -38,7 +52,8 @@ export function TetrisLeaderboardList({
                 <span className="tetris-mini-leaderboard-total-label">Total</span>
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
     </>
@@ -54,7 +69,6 @@ export default function TetrisLeaderboardPanel({
   leaderboardSortBy,
   openPlayerModal,
   getMedalIcon,
-  formatRelativeTime,
 }) {
   return (
     <aside className="tetris-layout-column tetris-leaderboard-column" aria-label="Leaderboard column">

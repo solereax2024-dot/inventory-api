@@ -73,10 +73,45 @@ if [ -z "$TOKEN" ]; then
 fi
 
 echo "[verify-anomaly] submitting suspicious tetris score"
+run_start_code=$(curl -s -o /tmp/verify_anomaly_run_start.json -w "%{http_code}" -X POST "$APP_URL/api/public/games/tetris/run/start" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}')
+
+if [ "$run_start_code" != "201" ]; then
+  echo "[verify-anomaly] run start failed (HTTP $run_start_code)"
+  cat /tmp/verify_anomaly_run_start.json
+  exit 1
+fi
+
+RUN_ID=$(python3 - <<'PY'
+import json
+with open('/tmp/verify_anomaly_run_start.json', encoding='utf-8') as fh:
+    print(json.load(fh).get('runId', ''))
+PY
+)
+
+if [ -z "$RUN_ID" ]; then
+  echo "[verify-anomaly] no runId returned"
+  cat /tmp/verify_anomaly_run_start.json
+  exit 1
+fi
+
+heartbeat_code=$(curl -s -o /tmp/verify_anomaly_heartbeat.json -w "%{http_code}" -X POST "$APP_URL/api/public/games/tetris/run/${RUN_ID}/heartbeat" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"elapsedMs":12000,"score":35000,"level":8,"linesCleared":10,"piecesLocked":30,"hardDrops":6,"softDrops":18,"inputs":160}')
+
+if [ "$heartbeat_code" != "200" ]; then
+  echo "[verify-anomaly] heartbeat failed (HTTP $heartbeat_code)"
+  cat /tmp/verify_anomaly_heartbeat.json
+  exit 1
+fi
+
 submit_code=$(curl -s -o /tmp/verify_anomaly_submit.json -w "%{http_code}" -X POST "$APP_URL/api/public/games/tetris/scores" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{"score":120000,"level":10,"linesCleared":20,"durationMs":30000}')
+  -d "{\"score\":120000,\"level\":10,\"linesCleared\":20,\"durationMs\":30000,\"runId\":\"${RUN_ID}\",\"piecesLocked\":52,\"hardDrops\":10,\"softDrops\":22,\"inputs\":260}")
 
 submit_status=$(python3 - <<'PY'
 import json

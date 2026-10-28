@@ -6,6 +6,17 @@ import TetrisLeaderboardPrizeBanner from "../../components/tetris/TetrisLeaderbo
 import { DEFAULT_GIVEAWAY_SETTINGS, normalizeGiveawaySettings } from "../../constants/giveaway";
 import "../../styles/tetris-leaderboard.css";
 
+function getModerationLabel(status) {
+  const normalizedStatus = String(status || "NORMAL").toUpperCase();
+  if (normalizedStatus === "ANOMALY_DETECTED") {
+    return "ANOMALY DETECTED";
+  }
+  if (normalizedStatus === "DISQUALIFIED") {
+    return "DISQUALIFIED";
+  }
+  return "";
+}
+
 export default function TetrisLeaderboardPage() {
   const navigate = useNavigate();
   const [leaderboard, setLeaderboard] = useState([]);
@@ -93,6 +104,7 @@ export default function TetrisLeaderboardPage() {
                   <tr>
                     <th className="tetris-leaderboard-col-rank">Rank</th>
                     <th className="tetris-leaderboard-col-player">Player</th>
+                    <th className="tetris-leaderboard-col-status">Status</th>
                     <th className="tetris-leaderboard-col-score">Score</th>
                     <th className="tetris-leaderboard-col-bonus">Bonus</th>
                     <th className="tetris-leaderboard-col-total-score">Total Score</th>
@@ -101,7 +113,9 @@ export default function TetrisLeaderboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map((entry, index) => (
+                  {leaderboard.map((entry, index) => {
+                    const moderationLabel = getModerationLabel(entry?.moderationStatus);
+                    return (
                     <tr
                       key={entry.id || index}
                       className={`tetris-leaderboard-row ${index === 0 ? "is-top" : ""} ${index < 3 ? "is-medal" : ""}`}
@@ -113,6 +127,9 @@ export default function TetrisLeaderboardPage() {
                       </td>
                       <td className="tetris-leaderboard-col-player">
                         <span className="tetris-leaderboard-player-name">{entry.username || entry.playerName || "Anonymous"}</span>
+                      </td>
+                      <td className="tetris-leaderboard-col-status">
+                        {moderationLabel ? <span className="tetris-leaderboard-status-badge">{moderationLabel}</span> : <span className="tetris-leaderboard-status-normal">NORMAL</span>}
                       </td>
                       <td className="tetris-leaderboard-col-score">
                         <span className="tetris-leaderboard-score-base">{(entry.score ?? 0).toLocaleString()}</span>
@@ -130,7 +147,8 @@ export default function TetrisLeaderboardPage() {
                         <span className="tetris-leaderboard-lines">{entry.totalLinesCleared?.toLocaleString() || 0}</span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

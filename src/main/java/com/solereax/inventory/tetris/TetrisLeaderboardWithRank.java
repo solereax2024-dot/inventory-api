@@ -25,8 +25,13 @@ public class TetrisLeaderboardWithRank {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer rank;
+    private String moderationStatus;
 
     public static TetrisLeaderboardWithRank fromEntity(TetrisLeaderboard leaderboard, Integer rank, Integer bonusPoints) {
+        return fromEntity(leaderboard, rank, bonusPoints, "NORMAL");
+    }
+
+    public static TetrisLeaderboardWithRank fromEntity(TetrisLeaderboard leaderboard, Integer rank, Integer bonusPoints, String moderationStatus) {
         int safeBonusPoints = bonusPoints != null ? Math.max(bonusPoints, 0) : 0;
         int totalScore = leaderboard.getHighestScore() != null ? leaderboard.getHighestScore() : 0;
         int baseScore = Math.max(totalScore - safeBonusPoints, 0);
@@ -44,6 +49,7 @@ public class TetrisLeaderboardWithRank {
                 .createdAt(leaderboard.getCreatedAt())
                 .updatedAt(leaderboard.getUpdatedAt())
                 .rank(rank)
+                .moderationStatus(moderationStatus)
                 .build();
     }
 }

@@ -216,6 +216,14 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const fullscreenOptionsPausedRef = useRef(false);
   const inactivityTimeoutRef = useRef(null);
   const inactivityLogoutTriggeredRef = useRef(false);
+  const activeRunIdRef = useRef(null);
+  const heartbeatIntervalMsRef = useRef(2000);
+  const heartbeatTimerRef = useRef(null);
+  const blockedByModerationRef = useRef(false);
+  const piecesLockedRef = useRef(0);
+  const hardDropCountRef = useRef(0);
+  const softDropCountRef = useRef(0);
+  const inputsCountRef = useRef(0);
 
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -1284,6 +1292,11 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         level: finalLevel,
         linesCleared: finalLinesCleared,
         durationMs: runStartedAtRef.current ? Math.max(Date.now() - runStartedAtRef.current, 0) : null,
+        runId: activeRunIdRef.current,
+        piecesLocked: piecesLockedRef.current,
+        hardDrops: hardDropCountRef.current,
+        softDrops: softDropCountRef.current,
+        inputs: inputsCountRef.current,
       }, authenticatedToken);
 
       setLastScoreSubmission(scoreResponse || null);
@@ -1300,6 +1313,86 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       setLoading(false);
     }
   }, [authenticatedPlayerName, authenticatedToken, playerProfile]);
+
+  const startRealtimeRun = useCallback(async () => {
+    if (!authenticatedToken) {
+      return;
+    }
+
+    try {
+      const response = await apiRequest("/api/public/games/tetris/run/start", "POST", {}, authenticatedToken);
+      activeRunIdRef.current = typeof response?.runId === "string" ? response.runId : null;
+      heartbeatIntervalMsRef.current = Number.isFinite(response?.heartbeatIntervalMs)
+        ? Math.max(1000, Number(response.heartbeatIntervalMs))
+        : 2000;
+      blockedByModerationRef.current = false;
+    } catch (error) {
+      activeRunIdRef.current = null;
+      blockedByModerationRef.current = true;
+      setIsPaused(true);
+      setGameOver(true);
+      setMessage(error?.message || "Unable to start verified run session. Please try again.");
+      setIsPlayerNoticesOpen(true);
+      void refreshPlayerProfile();
+      void refreshPlayerNotifications();
+    }
+  }, [authenticatedToken, refreshPlayerNotifications, refreshPlayerProfile]);
+
+  useEffect(() => {
+    if (!gameStarted || gameOver || isPaused || blockedByModerationRef.current) {
+      if (heartbeatTimerRef.current) {
+        window.clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
+      return undefined;
+    }
+
+    if (!authenticatedToken || !activeRunIdRef.current || !runStartedAtRef.current) {
+      return undefined;
+    }
+
+    const sendHeartbeat = async () => {
+      if (!activeRunIdRef.current) {
+        return;
+      }
+
+      try {
+        await apiRequest(`/api/public/games/tetris/run/${encodeURIComponent(activeRunIdRef.current)}/heartbeat`, "POST", {
+          elapsedMs: Math.max(Date.now() - runStartedAtRef.current, 0),
+          score,
+          level,
+          linesCleared,
+          piecesLocked: piecesLockedRef.current,
+          hardDrops: hardDropCountRef.current,
+          softDrops: softDropCountRef.current,
+          inputs: inputsCountRef.current,
+        }, authenticatedToken);
+      } catch (error) {
+        const moderationStatus = String(error?.moderationStatus || "").toUpperCase();
+        if (moderationStatus === "ANOMALY_DETECTED" || moderationStatus === "DISQUALIFIED") {
+          blockedByModerationRef.current = true;
+          scoreSubmittedRef.current = true;
+          setIsPaused(true);
+          setGameOver(true);
+          setMessage(error?.message || "Anomaly detected during run verification.");
+          setIsPlayerNoticesOpen(true);
+          void refreshPlayerProfile();
+          void refreshPlayerNotifications();
+        }
+      }
+    };
+
+    heartbeatTimerRef.current = window.setInterval(() => {
+      void sendHeartbeat();
+    }, heartbeatIntervalMsRef.current);
+
+    return () => {
+      if (heartbeatTimerRef.current) {
+        window.clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
+    };
+  }, [authenticatedToken, gameOver, gameStarted, isPaused, level, linesCleared, refreshPlayerNotifications, refreshPlayerProfile, score]);
 
   const handleBonusProofSelected = useCallback(async (bonusType, file) => {
     if (!authenticatedToken) {
@@ -1416,7 +1509,13 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       clearScheduledTimeouts();
       clearTransientEffects();
       scoreSubmittedRef.current = false;
+      blockedByModerationRef.current = false;
       setLastScoreSubmission(null);
+      piecesLockedRef.current = 0;
+      hardDropCountRef.current = 0;
+      softDropCountRef.current = 0;
+      inputsCountRef.current = 0;
+      activeRunIdRef.current = null;
 
       setGameStarted(true);
       setGameOver(false);
@@ -1427,6 +1526,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       setGrid(createEmptyGrid());
       setMessage("Game Started! Use arrows on desktop or swipe/tap on mobile.");
       runStartedAtRef.current = Date.now();
+      void startRealtimeRun();
       setCurrentPiece(openingEntry.piece);
       setCurrentPieceKey(openingEntry.pieceKey);
       setCurrentTileId(openingEntry.tileId);
@@ -1450,7 +1550,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         gameSurfaceRef.current.focus();
       }
       return true;
-    }, [authenticatedPlayerName, bonusLoading, bonusStatus.commentProofRevoked, bonusStatus.commentProofValidationMessage, clearScheduledTimeouts, clearTransientEffects, commentProofRequired, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, hasLoadedBonusStatus, playerProfile, refreshPlayerNotifications, refreshPlayerProfile, resetInactivityLogoutTimer, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
+    }, [authenticatedPlayerName, bonusLoading, bonusStatus.commentProofRevoked, bonusStatus.commentProofValidationMessage, clearScheduledTimeouts, clearTransientEffects, commentProofRequired, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, hasLoadedBonusStatus, playerProfile, refreshPlayerNotifications, refreshPlayerProfile, resetInactivityLogoutTimer, scheduleUiTimeout, startRealtimeRun, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
 
     const resetGame = useCallback(() => {
       clearScheduledTimeouts();
@@ -1481,6 +1581,16 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       setCanHoldPiece(true);
       setMessage("Game reset. Ready to play?");
       runStartedAtRef.current = null;
+      activeRunIdRef.current = null;
+      blockedByModerationRef.current = false;
+      piecesLockedRef.current = 0;
+      hardDropCountRef.current = 0;
+      softDropCountRef.current = 0;
+      inputsCountRef.current = 0;
+      if (heartbeatTimerRef.current) {
+        clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
       triggerPulseEffect(setRestartPulse, 240);
       emitSound("reset");
       triggerHaptic('tap');
@@ -1530,6 +1640,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
        if (canPlacePiece(grid, currentPiece, currentPieceRow, newCol)) {
          resetInactivityLogoutTimer();
          setCurrentPieceCol(newCol);
+          inputsCountRef.current += 1;
          lastMoveWasRotateRef.current = false;
          emitSound("move");
          triggerHaptic('move');
@@ -1546,6 +1657,8 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
        resetInactivityLogoutTimer();
        setCurrentPieceRow(newRow);
        setScore((prev) => prev + 1);
+        softDropCountRef.current += 1;
+        inputsCountRef.current += 1;
        triggerPulseEffect(setSoftDropPulse, 90);
        emitSound("softDrop");
        triggerHaptic('softDrop');
@@ -1562,6 +1675,8 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     resetInactivityLogoutTimer();
     const dropRow = getDropRow(grid, currentPiece, currentPieceRow, currentPieceCol);
     const dropDistance = dropRow - currentPieceRow;
+    hardDropCountRef.current += 1;
+    inputsCountRef.current += 1;
     setScore((prev) => prev + dropDistance * 2);
     const trailCells = [];
     for (let travelRow = currentPieceRow; travelRow <= dropRow; travelRow += 1) {
@@ -1613,6 +1728,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
        setCurrentPiece(rotatedPiece);
        setCurrentPieceRow(nextRow);
        setCurrentPieceCol(nextCol);
+       inputsCountRef.current += 1;
        emitSound(offset.row === 0 && offset.col === 0 ? "rotate" : "wallKick");
        triggerHaptic(offset.row === 0 && offset.col === 0 ? 'rotate' : 'move');
        triggerPulseEffect(setRotatePulse, 110);
@@ -1673,6 +1789,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     setHoldTileId(newHoldTileId);
     resetInactivityLogoutTimer();
      setCanHoldPiece(false);
+      inputsCountRef.current += 1;
      triggerPulseEffect(setPieceSpawnPulse, 180);
      lastMoveWasRotateRef.current = false;
 
@@ -1778,6 +1895,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     });
 
     setGrid(settledGrid);
+    piecesLockedRef.current += 1;
     setLinesCleared(nextLinesClearedTotal);
     setLevel(nextLevel);
     setCanHoldPiece(true);
@@ -1848,7 +1966,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   });
 
   useEffect(() => {
-    if (!gameOver || !gameStarted || scoreSubmittedRef.current) return;
+    if (!gameOver || !gameStarted || scoreSubmittedRef.current || blockedByModerationRef.current) return;
 
     scoreSubmittedRef.current = true;
     void submitScore(score, level, linesCleared);

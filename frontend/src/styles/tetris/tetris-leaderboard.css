@@ -397,6 +397,20 @@
     text-overflow: ellipsis;
 }
 
+.tetris-mini-leaderboard-anomaly-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    font-size: 0.62rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    color: #fecaca;
+    background: rgba(220, 38, 38, 0.22);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    border-radius: 999px;
+    padding: 2px 7px;
+}
+
 .tetris-mini-leaderboard-row.is-medal .tetris-mini-leaderboard-player {
     color: #fef3c7;
     text-shadow: 0 0 8px rgba(251, 191, 36, 0.2);

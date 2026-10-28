@@ -6,14 +6,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,8 +28,27 @@ public class TetrisGameService {
 
     private final TetrisLeaderboardRepository leaderboardRepository;
     private final AppUserRepository appUserRepository;
+    private final TetrisRunSessionRepository runSessionRepository;
 
     public record AnomalyAssessment(boolean suspicious, String reason) {
+    }
+
+    public record RunSessionStart(String runId, Long heartbeatIntervalMs) {
+    }
+
+    public record HeartbeatAssessment(boolean suspicious, String reason) {
+    }
+
+    public record RealtimeTelemetry(
+            Long elapsedMs,
+            Integer score,
+            Integer level,
+            Integer linesCleared,
+            Integer piecesLocked,
+            Integer hardDrops,
+            Integer softDrops,
+            Integer inputs
+    ) {
     }
 
     /**
@@ -129,6 +148,88 @@ public class TetrisGameService {
         return new AnomalyAssessment(false, "");
     }
 
+    @Transactional
+    public RunSessionStart startRunSession(String username) {
+        String normalizedUsername = normalizePlayerName(username);
+        if (normalizedUsername.isBlank()) {
+            throw new IllegalArgumentException("User is required to start a run.");
+        }
+
+        cleanupExpiredRunSessions();
+
+        Instant now = Instant.now();
+        String runId = UUID.randomUUID().toString();
+        TetrisRunSession session = TetrisRunSession.builder()
+                .runId(runId)
+                .username(username.trim())
+                .startedAt(now)
+                .lastHeartbeatAt(now)
+                .lastElapsedMs(0L)
+                .lastScore(0)
+                .lastLevel(1)
+                .lastLinesCleared(0)
+                .lastPiecesLocked(0)
+                .heartbeatCount(0)
+                .suspiciousSignalCount(0)
+                .blocked(false)
+                .blockReason(null)
+                .ended(false)
+                .build();
+
+        runSessionRepository.save(session);
+        return new RunSessionStart(runId, 2000L);
+    }
+
+    @Transactional
+    public HeartbeatAssessment assessRunHeartbeat(String username, String runId, RealtimeTelemetry telemetry) {
+        TetrisRunSession session = getActiveRunSessionOrThrow(username, runId);
+        if (session.isBlocked()) {
+            return new HeartbeatAssessment(true, session.getBlockReason());
+        }
+
+        HeartbeatAssessment assessment = evaluateRealtimeSignals(session, telemetry, false);
+        if (assessment.suspicious()) {
+            session.setBlocked(true);
+            session.setBlockReason(assessment.reason());
+        }
+
+        runSessionRepository.save(session);
+        return assessment;
+    }
+
+    @Transactional
+    public HeartbeatAssessment finalizeRunSession(String username, String runId, RealtimeTelemetry telemetry) {
+        TetrisRunSession session = getActiveRunSessionOrThrow(username, runId);
+
+        if (session.isBlocked()) {
+            session.setEnded(true);
+            runSessionRepository.save(session);
+            return new HeartbeatAssessment(true, session.getBlockReason());
+        }
+
+        HeartbeatAssessment heartbeatAssessment = evaluateRealtimeSignals(session, telemetry, true);
+        if (heartbeatAssessment.suspicious()) {
+            session.setBlocked(true);
+            session.setBlockReason(heartbeatAssessment.reason());
+            session.setEnded(true);
+            runSessionRepository.save(session);
+            return heartbeatAssessment;
+        }
+
+        int heartbeatCount = session.getHeartbeatCount() != null ? session.getHeartbeatCount() : 0;
+        if (heartbeatCount < 3) {
+            session.setBlocked(true);
+            session.setBlockReason("Run blocked: realtime telemetry was incomplete for this attempt.");
+            session.setEnded(true);
+            runSessionRepository.save(session);
+            return new HeartbeatAssessment(true, session.getBlockReason());
+        }
+
+        session.setEnded(true);
+        runSessionRepository.save(session);
+        return new HeartbeatAssessment(false, "");
+    }
+
     /**
      * Get top players
      */
@@ -188,18 +289,113 @@ public class TetrisGameService {
     }
 
     private List<TetrisLeaderboard> getSortedLeaderboardEntries() {
-        Set<String> blockedPlayerKeys = new HashSet<>(appUserRepository.findAll().stream()
-                .filter(user -> {
-                    TetrisModerationStatus status = user.getTetrisModerationStatus();
-                    return status != null && status.blocksGameplay();
-                })
-                .map(user -> normalizePlayerName(user.getUsername()))
-                .toList());
-
         return leaderboardRepository.findAll().stream()
-                .filter(entry -> !blockedPlayerKeys.contains(normalizePlayerName(entry.getPlayerName())))
                 .sorted(LEADERBOARD_COMPARATOR)
                 .toList();
+    }
+
+    public TetrisModerationStatus getPlayerModerationStatus(String playerName) {
+        return appUserRepository.findByUsernameIgnoreCase(playerName)
+                .map(user -> user.getTetrisModerationStatus() != null ? user.getTetrisModerationStatus() : TetrisModerationStatus.NORMAL)
+                .orElse(TetrisModerationStatus.NORMAL);
+    }
+
+    private TetrisRunSession getActiveRunSessionOrThrow(String username, String runId) {
+        if (runId == null || runId.isBlank()) {
+            throw new IllegalArgumentException("Run session is missing.");
+        }
+
+        String safeUsername = username == null ? "" : username.trim();
+        return runSessionRepository.findByRunIdAndUsernameIgnoreCaseAndEndedFalse(runId.trim(), safeUsername)
+                .orElseThrow(() -> new IllegalArgumentException("Run session is not active. Please start a new game."));
+    }
+
+    private HeartbeatAssessment evaluateRealtimeSignals(TetrisRunSession session, RealtimeTelemetry telemetry, boolean includeFinalChecks) {
+        long elapsedMs = Math.max(telemetry.elapsedMs() != null ? telemetry.elapsedMs() : 0L, 0L);
+        int score = Math.max(telemetry.score() != null ? telemetry.score() : 0, 0);
+        int level = Math.max(telemetry.level() != null ? telemetry.level() : 1, 1);
+        int lines = Math.max(telemetry.linesCleared() != null ? telemetry.linesCleared() : 0, 0);
+        int piecesLocked = Math.max(telemetry.piecesLocked() != null ? telemetry.piecesLocked() : 0, 0);
+
+        Instant now = Instant.now();
+        long previousElapsed = Math.max(session.getLastElapsedMs() != null ? session.getLastElapsedMs() : 0L, 0L);
+        long deltaElapsed = elapsedMs - previousElapsed;
+        long deltaWallClock = Math.max(now.toEpochMilli() - session.getLastHeartbeatAt().toEpochMilli(), 1L);
+
+        int previousScore = Math.max(session.getLastScore() != null ? session.getLastScore() : 0, 0);
+        int previousLines = Math.max(session.getLastLinesCleared() != null ? session.getLastLinesCleared() : 0, 0);
+        int previousLockedPieces = Math.max(session.getLastPiecesLocked() != null ? session.getLastPiecesLocked() : 0, 0);
+
+        int deltaScore = score - previousScore;
+        int deltaLines = lines - previousLines;
+        int deltaLockedPieces = piecesLocked - previousLockedPieces;
+
+        int suspiciousSignals = Math.max(session.getSuspiciousSignalCount() != null ? session.getSuspiciousSignalCount() : 0, 0);
+        String reason = "";
+
+        if (deltaElapsed <= 0L) {
+            suspiciousSignals += 2;
+            reason = "Run blocked: invalid telemetry timeline detected.";
+        }
+
+        long driftMs = Math.abs(deltaElapsed - deltaWallClock);
+        if (driftMs > 7000L) {
+            suspiciousSignals += 1;
+            reason = "Run blocked: realtime timer drift exceeded fair-play limits.";
+        }
+
+        double seconds = Math.max(deltaElapsed / 1000.0, 0.001);
+        double scorePerSecond = Math.max(deltaScore, 0) / seconds;
+        double linesPerSecond = Math.max(deltaLines, 0) / seconds;
+
+        if (scorePerSecond > 4500.0) {
+            suspiciousSignals += 1;
+            reason = "Run blocked: score throughput exceeded fair-play limits.";
+        }
+
+        if (linesPerSecond > 9.0) {
+            suspiciousSignals += 1;
+            reason = "Run blocked: line clear rate exceeded fair-play limits.";
+        }
+
+        if (deltaLines >= 4 && deltaLockedPieces <= 0) {
+            suspiciousSignals += 1;
+            reason = "Run blocked: telemetry mismatch detected between line clears and piece locks.";
+        }
+
+        if (includeFinalChecks) {
+            if (elapsedMs < 20_000L && score >= 80_000) {
+                suspiciousSignals += 2;
+                reason = "Run blocked: impossible score acceleration detected for run duration.";
+            }
+            if (level > 30) {
+                suspiciousSignals += 2;
+                reason = "Run blocked: reached an unsupported level threshold for this build.";
+            }
+        }
+
+        session.setLastHeartbeatAt(now);
+        session.setLastElapsedMs(elapsedMs);
+        session.setLastScore(score);
+        session.setLastLevel(level);
+        session.setLastLinesCleared(lines);
+        session.setLastPiecesLocked(piecesLocked);
+        session.setHeartbeatCount(Math.max(session.getHeartbeatCount() != null ? session.getHeartbeatCount() : 0, 0) + 1);
+        session.setSuspiciousSignalCount(suspiciousSignals);
+
+        if (suspiciousSignals >= 2) {
+            String finalReason = reason == null || reason.isBlank()
+                    ? "Run blocked: realtime telemetry indicates probable gameplay manipulation."
+                    : reason;
+            return new HeartbeatAssessment(true, finalReason);
+        }
+
+        return new HeartbeatAssessment(false, "");
+    }
+
+    private void cleanupExpiredRunSessions() {
+        Instant cutoff = Instant.now().minusSeconds(60L * 60L * 3L);
+        runSessionRepository.deleteByEndedTrueOrUpdatedAtBefore(cutoff);
     }
 
     private int findRank(List<TetrisLeaderboard> leaderboard, String playerName) {

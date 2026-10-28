@@ -63,6 +63,42 @@ public class TetrisGameController {
             Long durationMs = request.containsKey("durationMs") && request.get("durationMs") instanceof Number
                     ? ((Number) request.get("durationMs")).longValue()
                     : null;
+            String runId = request.containsKey("runId") && request.get("runId") instanceof String
+                    ? ((String) request.get("runId")).trim()
+                    : "";
+
+            TetrisGameService.RealtimeTelemetry telemetry = new TetrisGameService.RealtimeTelemetry(
+                    durationMs,
+                    score,
+                    level,
+                    linesCleared,
+                    request.containsKey("piecesLocked") && request.get("piecesLocked") instanceof Number
+                            ? ((Number) request.get("piecesLocked")).intValue()
+                            : 0,
+                    request.containsKey("hardDrops") && request.get("hardDrops") instanceof Number
+                            ? ((Number) request.get("hardDrops")).intValue()
+                            : 0,
+                    request.containsKey("softDrops") && request.get("softDrops") instanceof Number
+                            ? ((Number) request.get("softDrops")).intValue()
+                            : 0,
+                    request.containsKey("inputs") && request.get("inputs") instanceof Number
+                            ? ((Number) request.get("inputs")).intValue()
+                            : 0
+            );
+
+            TetrisGameService.HeartbeatAssessment finalRunAssessment = gameService.finalizeRunSession(user.getUsername(), runId, telemetry);
+            if (finalRunAssessment.suspicious()) {
+                gamingService.updatePlayerModerationStatus(
+                        user.getId(),
+                        TetrisModerationStatus.ANOMALY_DETECTED,
+                        finalRunAssessment.reason(),
+                        "SYSTEM_AUTO_DETECT"
+                );
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "message", finalRunAssessment.reason(),
+                        "moderationStatus", TetrisModerationStatus.ANOMALY_DETECTED.name()
+                ));
+            }
 
             TetrisGameService.AnomalyAssessment anomalyAssessment = gameService.assessAnomaly(score, level, linesCleared, durationMs);
             if (anomalyAssessment.suspicious()) {
@@ -86,6 +122,97 @@ public class TetrisGameController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Invalid score submission payload."));
+        }
+    }
+
+    @PostMapping("/run/start")
+    public ResponseEntity<?> startRun(Principal principal) {
+        if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Please sign in to start a run."));
+        }
+
+        try {
+            AppUser user = appUserRepository.findByUsernameIgnoreCase(principal.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found."));
+
+            TetrisModerationStatus moderationStatus = user.getTetrisModerationStatus() != null
+                    ? user.getTetrisModerationStatus()
+                    : TetrisModerationStatus.NORMAL;
+            if (moderationStatus.blocksGameplay()) {
+                String moderationReason = user.getTetrisModerationReason();
+                String defaultMessage = moderationStatus == TetrisModerationStatus.ANOMALY_DETECTED
+                        ? "Your account is temporarily blocked from Tetris while we review an anomaly."
+                        : "Your account is disqualified from Tetris leaderboard submissions.";
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "message", moderationReason != null && !moderationReason.isBlank() ? moderationReason : defaultMessage,
+                        "moderationStatus", moderationStatus.name()
+                ));
+            }
+
+            TetrisGameService.RunSessionStart runSession = gameService.startRunSession(user.getUsername());
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                    "runId", runSession.runId(),
+                    "heartbeatIntervalMs", runSession.heartbeatIntervalMs()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/run/{runId}/heartbeat")
+    public ResponseEntity<?> heartbeat(@PathVariable String runId, @RequestBody Map<String, Object> request, Principal principal) {
+        if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Please sign in to continue this run."));
+        }
+
+        try {
+            AppUser user = appUserRepository.findByUsernameIgnoreCase(principal.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found."));
+
+            TetrisGameService.RealtimeTelemetry telemetry = new TetrisGameService.RealtimeTelemetry(
+                    request.containsKey("elapsedMs") && request.get("elapsedMs") instanceof Number
+                            ? ((Number) request.get("elapsedMs")).longValue()
+                            : null,
+                    request.containsKey("score") && request.get("score") instanceof Number
+                            ? ((Number) request.get("score")).intValue()
+                            : 0,
+                    request.containsKey("level") && request.get("level") instanceof Number
+                            ? ((Number) request.get("level")).intValue()
+                            : 1,
+                    request.containsKey("linesCleared") && request.get("linesCleared") instanceof Number
+                            ? ((Number) request.get("linesCleared")).intValue()
+                            : 0,
+                    request.containsKey("piecesLocked") && request.get("piecesLocked") instanceof Number
+                            ? ((Number) request.get("piecesLocked")).intValue()
+                            : 0,
+                    request.containsKey("hardDrops") && request.get("hardDrops") instanceof Number
+                            ? ((Number) request.get("hardDrops")).intValue()
+                            : 0,
+                    request.containsKey("softDrops") && request.get("softDrops") instanceof Number
+                            ? ((Number) request.get("softDrops")).intValue()
+                            : 0,
+                    request.containsKey("inputs") && request.get("inputs") instanceof Number
+                            ? ((Number) request.get("inputs")).intValue()
+                            : 0
+            );
+
+            TetrisGameService.HeartbeatAssessment heartbeatAssessment = gameService.assessRunHeartbeat(user.getUsername(), runId, telemetry);
+            if (heartbeatAssessment.suspicious()) {
+                gamingService.updatePlayerModerationStatus(
+                        user.getId(),
+                        TetrisModerationStatus.ANOMALY_DETECTED,
+                        heartbeatAssessment.reason(),
+                        "SYSTEM_AUTO_DETECT"
+                );
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "message", heartbeatAssessment.reason(),
+                        "moderationStatus", TetrisModerationStatus.ANOMALY_DETECTED.name()
+                ));
+            }
+
+            return ResponseEntity.ok(Map.of("status", "ok"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -155,7 +282,8 @@ public class TetrisGameController {
 
     private TetrisLeaderboardWithRank toRankedLeaderboardEntry(TetrisLeaderboard leaderboard, Integer rank) {
         int bonusPoints = giveawayBonusService.getActiveBonusPointsOrZero(leaderboard.getPlayerName());
-        return TetrisLeaderboardWithRank.fromEntity(leaderboard, rank, bonusPoints);
+        TetrisModerationStatus moderationStatus = gameService.getPlayerModerationStatus(leaderboard.getPlayerName());
+        return TetrisLeaderboardWithRank.fromEntity(leaderboard, rank, bonusPoints, moderationStatus.name());
     }
 }
 

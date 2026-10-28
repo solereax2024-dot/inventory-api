@@ -35,13 +35,16 @@ class TetrisGameServiceTest {
     @Mock
     private AppUserRepository appUserRepository;
 
+    @Mock
+    private TetrisRunSessionRepository runSessionRepository;
+
     private TetrisGameService gameService;
     private List<TetrisLeaderboard> storedEntries;
     private AtomicLong nextId;
 
     @BeforeEach
     void setUp() {
-        gameService = new TetrisGameService(leaderboardRepository, appUserRepository);
+        gameService = new TetrisGameService(leaderboardRepository, appUserRepository, runSessionRepository);
         storedEntries = new ArrayList<>();
         nextId = new AtomicLong(1L);
 
