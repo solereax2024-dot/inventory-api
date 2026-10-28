@@ -5,7 +5,9 @@ public record AuthenticatedPlayerProfileResponse(
         String fullName,
         String profileImagePath,
         boolean profileImageValidated,
-        String profileImageValidationMessage
+        String profileImageValidationMessage,
+        String tetrisModerationStatus,
+        String tetrisModerationReason
 ) {
 }
 

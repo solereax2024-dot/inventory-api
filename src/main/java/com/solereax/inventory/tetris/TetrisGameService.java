@@ -1,5 +1,7 @@
 package com.solereax.inventory.tetris;
 
+import com.solereax.inventory.user.AppUserRepository;
+import com.solereax.inventory.user.TetrisModerationStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,8 +10,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +27,10 @@ public class TetrisGameService {
             .thenComparing(entry -> normalizePlayerName(entry.getPlayerName()));
 
     private final TetrisLeaderboardRepository leaderboardRepository;
+    private final AppUserRepository appUserRepository;
+
+    public record AnomalyAssessment(boolean suspicious, String reason) {
+    }
 
     /**
      * Record a Tetris game score
@@ -89,6 +97,38 @@ public class TetrisGameService {
         return buildSubmissionResponse(savedLeaderboard, savedRank, true);
     }
 
+    public AnomalyAssessment assessAnomaly(Integer score, Integer level, Integer linesCleared, Long durationMs) {
+        int safeScore = Math.max(score != null ? score : 0, 0);
+        int safeLevel = Math.max(level != null ? level : 1, 1);
+        int safeLines = Math.max(linesCleared != null ? linesCleared : 0, 0);
+
+        if (safeLevel > 30) {
+            return new AnomalyAssessment(true, "Run blocked: reached an unsupported level threshold for this build.");
+        }
+
+        if (durationMs == null || durationMs <= 0L) {
+            return new AnomalyAssessment(false, "");
+        }
+
+        double minutes = durationMs / 60000.0;
+        double linesPerMinute = minutes > 0 ? safeLines / minutes : 0;
+        double scorePerMinute = minutes > 0 ? safeScore / minutes : 0;
+
+        if (safeScore >= 100_000 && durationMs < 45_000L) {
+            return new AnomalyAssessment(true, "Run blocked: score acceleration is outside fair-play limits.");
+        }
+
+        if (safeLevel >= 20 && safeScore >= 300_000 && (durationMs > 35L * 60L * 1000L || linesPerMinute < 8.0)) {
+            return new AnomalyAssessment(true, "Run blocked: gameplay timing pattern indicates possible gravity slowdown manipulation.");
+        }
+
+        if (safeLevel >= 18 && scorePerMinute > 120_000.0) {
+            return new AnomalyAssessment(true, "Run blocked: score throughput is outside expected fair-play range.");
+        }
+
+        return new AnomalyAssessment(false, "");
+    }
+
     /**
      * Get top players
      */
@@ -148,7 +188,16 @@ public class TetrisGameService {
     }
 
     private List<TetrisLeaderboard> getSortedLeaderboardEntries() {
+        Set<String> blockedPlayerKeys = new HashSet<>(appUserRepository.findAll().stream()
+                .filter(user -> {
+                    TetrisModerationStatus status = user.getTetrisModerationStatus();
+                    return status != null && status.blocksGameplay();
+                })
+                .map(user -> normalizePlayerName(user.getUsername()))
+                .toList());
+
         return leaderboardRepository.findAll().stream()
+                .filter(entry -> !blockedPlayerKeys.contains(normalizePlayerName(entry.getPlayerName())))
                 .sorted(LEADERBOARD_COMPARATOR)
                 .toList();
     }

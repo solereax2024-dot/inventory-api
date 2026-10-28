@@ -97,6 +97,16 @@ public class AppUser {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tetris_moderation_status", nullable = false, length = 32)
+    private TetrisModerationStatus tetrisModerationStatus = TetrisModerationStatus.NORMAL;
+
+    @Column(name = "tetris_moderation_reason", nullable = true, length = 1000)
+    private String tetrisModerationReason;
+
+    @Column(name = "tetris_moderated_at", nullable = true)
+    private Instant tetrisModeratedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

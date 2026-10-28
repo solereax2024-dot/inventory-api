@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.security.Principal;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +46,19 @@ public class AdminGamingSettingsController {
     public ResponseEntity<Map<String, Boolean>> getGamingSettings() {
         Map<String, Boolean> response = new HashMap<>();
         response.put("gamingSectionVisible", gamingService.isGamingSectionVisible());
+        response.put("giveawayOneVisible", gamingService.isGiveawayOneVisible());
+        response.put("giveawayTwoVisible", gamingService.isGiveawayTwoVisible());
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(response);
+    }
+
+    @GetMapping("/visibility/{giveawayId}")
+    public ResponseEntity<Map<String, Object>> getGiveawayVisibility(@PathVariable Long giveawayId) {
+        boolean visible = gamingService.isGiveawayVisible(giveawayId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("giveawayId", giveawayId);
+        response.put("visible", visible);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(response);
@@ -73,6 +87,13 @@ public class AdminGamingSettingsController {
                 .body(giveawaySettingsService.getSettings());
     }
 
+    @GetMapping("/giveaway/{giveawayId}")
+    public ResponseEntity<GiveawaySettingsResponse> getGiveawaySettingsById(@PathVariable Long giveawayId) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(giveawaySettingsService.getSettings(giveawayId));
+    }
+
     @GetMapping("/giveaway-settings")
     public ResponseEntity<GiveawaySettingsResponse> getGiveawaySettingsAlias() {
         return getGiveawaySettings();
@@ -81,6 +102,14 @@ public class AdminGamingSettingsController {
     @PutMapping("/giveaway")
     public ResponseEntity<GiveawaySettingsResponse> updateGiveawaySettings(@RequestBody GiveawaySettingsUpdateRequest request) {
         return ResponseEntity.ok(giveawaySettingsService.updateSettings(request));
+    }
+
+    @PutMapping("/giveaway/{giveawayId}")
+    public ResponseEntity<GiveawaySettingsResponse> updateGiveawaySettingsById(
+            @PathVariable Long giveawayId,
+            @RequestBody GiveawaySettingsUpdateRequest request
+    ) {
+        return ResponseEntity.ok(giveawaySettingsService.updateSettings(giveawayId, request));
     }
 
     @PutMapping("/giveaway-settings")
@@ -134,12 +163,60 @@ public class AdminGamingSettingsController {
         return ResponseEntity.ok(playerNotificationService.sendBroadcastMessage(request.title(), request.message()));
     }
 
+    @PatchMapping("/players/{userId}/moderation")
+    public ResponseEntity<?> updatePlayerModerationStatus(
+            @PathVariable Long userId,
+            @RequestBody AdminPlayerModerationRequest request,
+            Principal principal
+    ) {
+        try {
+            String actedBy = principal != null ? principal.getName() : "SYSTEM";
+            return ResponseEntity.ok(gamingService.updatePlayerModerationStatus(
+                    userId,
+                    request != null ? request.status() : null,
+                    request != null ? request.reason() : null,
+                    actedBy
+            ));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(Map.of("message", exception.getMessage()));
+        }
+    }
+
+    @GetMapping("/players/{userId}/moderation-history")
+    public ResponseEntity<List<TetrisModerationAuditLogResponse>> getPlayerModerationHistory(@PathVariable Long userId) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(gamingService.getModerationHistory(userId));
+    }
+
     @PutMapping
     public ResponseEntity<Map<String, Boolean>> updateGamingSettings(@RequestBody Map<String, Object> body) {
         Object rawValue = body != null ? body.get("gamingSectionVisible") : null;
         boolean visible = rawValue == null || (rawValue instanceof Boolean ? (Boolean) rawValue : Boolean.parseBoolean(String.valueOf(rawValue)));
         Map<String, Boolean> response = new HashMap<>();
         response.put("gamingSectionVisible", gamingService.updateGamingSectionVisible(visible));
+        response.put("giveawayOneVisible", gamingService.isGiveawayOneVisible());
+        response.put("giveawayTwoVisible", gamingService.isGiveawayTwoVisible());
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/visibility/{giveawayId}")
+    public ResponseEntity<Map<String, Object>> updateGiveawayVisibility(
+            @PathVariable Long giveawayId,
+            @RequestBody Map<String, Object> body
+    ) {
+        Object explicitVisible = body != null ? body.get("visible") : null;
+        Object legacyVisible = body != null ? body.get("gamingSectionVisible") : null;
+        Object rawValue = explicitVisible != null ? explicitVisible : legacyVisible;
+        boolean visible = rawValue == null || (rawValue instanceof Boolean ? (Boolean) rawValue : Boolean.parseBoolean(String.valueOf(rawValue)));
+        boolean updatedVisible = gamingService.updateGiveawayVisibility(giveawayId, visible);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("giveawayId", giveawayId);
+        response.put("visible", updatedVisible);
+        response.put("giveawayOneVisible", gamingService.isGiveawayOneVisible());
+        response.put("giveawayTwoVisible", gamingService.isGiveawayTwoVisible());
+        response.put("gamingSectionVisible", gamingService.isGamingSectionVisible());
         return ResponseEntity.ok(response);
     }
 

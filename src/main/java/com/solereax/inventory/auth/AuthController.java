@@ -217,7 +217,9 @@ public class AuthController {
                 user.getFullName(),
                 user.getProfileImagePath(),
                 user.isProfileImageValidated(),
-                user.getProfileImageValidationMessage()
+                user.getProfileImageValidationMessage(),
+                user.getTetrisModerationStatus() != null ? user.getTetrisModerationStatus().name() : null,
+                user.getTetrisModerationReason()
         );
     }
 

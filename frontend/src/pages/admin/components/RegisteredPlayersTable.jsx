@@ -81,12 +81,41 @@ function getBonusBadgeStyle(tone) {
   };
 }
 
-export default function RegisteredPlayersTable({ players = [], totalRegisteredPlayers: totalRegisteredPlayersProp, isLoading = false, onBonusAction, bonusActionKey = "", onDeletePlayer, onDeleteAllPlayers, isDeletingPlayers = false, onProfileImageAction, profileImageActionKey = "", onSendPlayerNotification, onBroadcastNotification, notificationActionKey = "" }) {
+function getModerationTone(status) {
+  const normalizedStatus = String(status || "NORMAL").toUpperCase();
+  if (normalizedStatus === "DISQUALIFIED") return "danger";
+  if (normalizedStatus === "ANOMALY_DETECTED") return "info";
+  return "success";
+}
+
+function getModerationLabel(status) {
+  const normalizedStatus = String(status || "NORMAL").toUpperCase();
+  if (normalizedStatus === "DISQUALIFIED") return "Disqualified";
+  if (normalizedStatus === "ANOMALY_DETECTED") return "Anomaly Detected";
+  return "Normal";
+}
+
+export default function RegisteredPlayersTable({ players = [], totalRegisteredPlayers: totalRegisteredPlayersProp, isLoading = false, onBonusAction, bonusActionKey = "", onDeletePlayer, onDeleteAllPlayers, isDeletingPlayers = false, onProfileImageAction, profileImageActionKey = "", onSendPlayerNotification, onBroadcastNotification, notificationActionKey = "", onModerationAction, moderationActionKey = "", onLoadModerationHistory }) {
   const [revokeConfirm, setRevokeConfirm] = useState({ isOpen: false, playerId: null, bonusType: "", label: "", message: "" });
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, playerId: null, playerName: "" });
   const [profileImageViewer, setProfileImageViewer] = useState({ isOpen: false, imageSrc: "", playerName: "", imageAlt: "" });
   const [profileImageReject, setProfileImageReject] = useState({ isOpen: false, playerId: null, message: "", playerName: "" });
   const [messageComposer, setMessageComposer] = useState({ isOpen: false, isBroadcast: false, playerId: null, playerName: "", title: "", message: "" });
+  const [moderationConfirm, setModerationConfirm] = useState({
+    isOpen: false,
+    playerId: null,
+    playerName: "",
+    status: "NORMAL",
+    reason: "",
+    requiresReason: false,
+  });
+  const [moderationHistoryModal, setModerationHistoryModal] = useState({
+    isOpen: false,
+    playerName: "",
+    loading: false,
+    entries: [],
+    error: "",
+  });
   const totalPlayers = players.length;
   const totalRegisteredPlayers = Number.isFinite(totalRegisteredPlayersProp) ? totalRegisteredPlayersProp : totalPlayers;
   const consentedPlayers = players.filter((player) => player.facebookWinnerContactConsent).length;
@@ -199,6 +228,61 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
      setMessageComposer({ isOpen: false, isBroadcast: false, playerId: null, playerName: "", title: "", message: "" });
    };
 
+  const requestModerationAction = (player, status) => {
+    if (!onModerationAction) return;
+    const normalizedStatus = String(status || "NORMAL").toUpperCase();
+    const requiresReason = normalizedStatus !== "NORMAL";
+    setModerationConfirm({
+      isOpen: true,
+      playerId: player.id,
+      playerName: player.username || player.fullName || `#${player.id}`,
+      status: normalizedStatus,
+      reason: "",
+      requiresReason,
+    });
+  };
+
+  const confirmModerationAction = async () => {
+    if (!moderationConfirm.playerId || !onModerationAction) return;
+    const { playerId, status, reason, requiresReason } = moderationConfirm;
+    if (requiresReason && !reason.trim()) return;
+
+    setModerationConfirm({ isOpen: false, playerId: null, playerName: "", status: "NORMAL", reason: "", requiresReason: false });
+    await onModerationAction(playerId, status, reason);
+  };
+
+  const openModerationHistory = async (player) => {
+    if (!onLoadModerationHistory) return;
+
+    const playerName = player.username || player.fullName || `#${player.id}`;
+    setModerationHistoryModal({
+      isOpen: true,
+      playerName,
+      loading: true,
+      entries: [],
+      error: "",
+    });
+
+    try {
+      const data = await onLoadModerationHistory(player.id);
+      setModerationHistoryModal({
+        isOpen: true,
+        playerName,
+        loading: false,
+        entries: Array.isArray(data) ? data : [],
+        error: "",
+      });
+    } catch (error) {
+      setModerationHistoryModal({
+        isOpen: true,
+        playerName,
+        loading: false,
+        entries: [],
+        error: error?.message || "Unable to load moderation history.",
+      });
+    }
+  };
+
   return (
     <section className="admin-subsection">
       <div className="section-head">
@@ -270,6 +354,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                <th>Last Played</th>
                <th>Consent</th>
                 <th>Proofs</th>
+                   <th>Action</th>
                  <th>Notify</th>
                <th>Delete</th>
                <th>Registered</th>
@@ -278,7 +363,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
             <tbody>
               {isLoading ? (
                 <tr>
-                   <td colSpan={13} style={{ textAlign: "center" }}>
+                   <td colSpan={14} style={{ textAlign: "center" }}>
                     Loading registered players...
                   </td>
                 </tr>
@@ -291,6 +376,10 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                 const followState = getBonusProofState(bonusStatus, "follow");
                 const reviewState = getBonusProofState(bonusStatus, "review");
                 const isRevokedRow = followState.revoked || reviewState.revoked;
+                const moderationStatus = String(player.tetrisModerationStatus || "NORMAL").toUpperCase();
+                const moderationLabel = getModerationLabel(moderationStatus);
+                const moderationTone = getModerationTone(moderationStatus);
+                const moderationReason = String(player.tetrisModerationReason || "").trim();
 
                 const renderActionButton = (bonusType, state) => {
                   if (!state.action || !onBonusAction) return null;
@@ -440,7 +529,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                               ) : (
                                 <span className="giveaway-player-muted-text giveaway-player-proof-empty" title={`No ${title.toLowerCase()} proof uploaded`}>No image</span>
                               )}
-                              <div className="giveaway-player-proof-actions giveaway-player-proof-actions-grid">
+                                <div className="giveaway-player-proof-actions giveaway-player-proof-actions-grid tetris-moderation-actions">
                                 {onBonusAction && state.uploaded ? (
                                   <>
                                     <button
@@ -466,11 +555,71 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                                     </button>
                                   </>
                                 ) : null}
+                                  {onLoadModerationHistory ? (
+                                    <button
+                                      type="button"
+                                      className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn tetris-moderation-history-btn"
+                                      onClick={() => openModerationHistory(player)}
+                                      title="View moderation history"
+                                    >
+                                      <span className="btn-label">History</span>
+                                    </button>
+                                  ) : null}
                               </div>
                             </div>
                           ))}
                         </div>
                       </td>
+                     <td>
+                       <div className="giveaway-player-proof-list">
+                         <div className="giveaway-player-proof-row is-stacked">
+                           <span className="giveaway-player-proof-title">Status</span>
+                           <span
+                             className="giveaway-player-proof-badge giveaway-player-proof-status"
+                             style={getBonusBadgeStyle(moderationTone)}
+                             title={moderationReason || "Tetris moderation status"}
+                           >
+                             {moderationLabel}
+                           </span>
+                           <div className="giveaway-player-proof-actions giveaway-player-proof-actions-grid">
+                             {onModerationAction ? (
+                               <>
+                                 <button
+                                   type="button"
+                                   className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
+                                   onClick={() => requestModerationAction(player, "ANOMALY_DETECTED")}
+                                   disabled={Boolean(moderationActionKey) || moderationStatus === "ANOMALY_DETECTED"}
+                                   title="Mark player as anomaly detected"
+                                 >
+                                   <span className="btn-label">Anomaly</span>
+                                 </button>
+                                 <button
+                                   type="button"
+                                   className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn btn-delete"
+                                   onClick={() => requestModerationAction(player, "DISQUALIFIED")}
+                                   disabled={Boolean(moderationActionKey) || moderationStatus === "DISQUALIFIED"}
+                                   title="Disqualify player from Tetris"
+                                 >
+                                   <span className="btn-label">Disqualify</span>
+                                 </button>
+                                 <button
+                                   type="button"
+                                   className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
+                                   onClick={() => requestModerationAction(player, "NORMAL")}
+                                   disabled={Boolean(moderationActionKey) || moderationStatus === "NORMAL"}
+                                   title="Restore player access"
+                                 >
+                                   <span className="btn-label">Restore</span>
+                                 </button>
+                               </>
+                             ) : null}
+                           </div>
+                           {moderationReason ? (
+                             <span className="giveaway-player-muted-text" title={moderationReason}>{moderationReason}</span>
+                           ) : null}
+                         </div>
+                       </div>
+                     </td>
                      <td>
                        {onSendPlayerNotification ? (
                         <button
@@ -512,7 +661,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
               })
               ) : (
                 <tr>
-                     <td colSpan={13} style={{ textAlign: "center" }}>No registered players yet.</td>
+                      <td colSpan={14} style={{ textAlign: "center" }}>No registered players yet.</td>
                 </tr>
              )}
           </tbody>
@@ -710,6 +859,103 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                  {notificationActionKey === (messageComposer.isBroadcast ? "broadcast" : `player:${messageComposer.playerId}`)
                    ? "Sending..."
                    : messageComposer.isBroadcast ? "Send Broadcast" : "Send Message"}
+               </button>
+             </div>
+           </div>
+         </div>
+       ) : null}
+
+       {moderationConfirm.isOpen ? (
+         <div className="modal-overlay" onClick={() => setModerationConfirm({ isOpen: false, playerId: null, playerName: "", status: "NORMAL", reason: "", requiresReason: false })}>
+           <div className="modal-panel confirm-action-modal" onClick={(e) => e.stopPropagation()}>
+             <div className="confirm-action-head">
+               <h3>Update Player Action</h3>
+               <button
+                 type="button"
+                 className="modal-close-btn"
+                 onClick={() => setModerationConfirm({ isOpen: false, playerId: null, playerName: "", status: "NORMAL", reason: "", requiresReason: false })}
+                 aria-label="Close modal"
+               >
+                 ✕
+               </button>
+             </div>
+             <div className="confirm-action-body">
+               <p className="confirm-action-target">{moderationConfirm.playerName}</p>
+               <p className="confirm-action-copy">Set status to <strong>{getModerationLabel(moderationConfirm.status)}</strong>.</p>
+               <label className="confirm-action-field">
+                 <span>{moderationConfirm.requiresReason ? "Reason (required)" : "Reason (optional)"}</span>
+                 <textarea
+                   value={moderationConfirm.reason}
+                   onChange={(e) => setModerationConfirm({ ...moderationConfirm, reason: e.target.value })}
+                   placeholder="Example: Run timing and gravity cadence indicates scripted slowdown."
+                   className="confirm-action-textarea"
+                 />
+               </label>
+             </div>
+             <div className="confirm-action-footer modal-sticky-footer">
+               <button
+                 type="button"
+                 className="button-secondary"
+                 onClick={() => setModerationConfirm({ isOpen: false, playerId: null, playerName: "", status: "NORMAL", reason: "", requiresReason: false })}
+               >
+                 Cancel
+               </button>
+               <button
+                 type="button"
+                 className={moderationConfirm.status === "NORMAL" ? "btn-primary" : "confirm-action-danger-btn"}
+                 onClick={confirmModerationAction}
+                 disabled={Boolean(moderationActionKey) || (moderationConfirm.requiresReason && !moderationConfirm.reason.trim())}
+               >
+                 {moderationActionKey === `${moderationConfirm.playerId}:${moderationConfirm.status}` ? "Saving..." : "Save Action"}
+               </button>
+             </div>
+           </div>
+         </div>
+       ) : null}
+
+       {moderationHistoryModal.isOpen ? (
+         <div className="modal-overlay" onClick={() => setModerationHistoryModal({ isOpen: false, playerName: "", loading: false, entries: [], error: "" })}>
+           <div className="modal-panel confirm-action-modal tetris-moderation-history-modal" onClick={(e) => e.stopPropagation()}>
+             <div className="confirm-action-head">
+               <h3>Moderation History</h3>
+               <button
+                 type="button"
+                 className="modal-close-btn"
+                 onClick={() => setModerationHistoryModal({ isOpen: false, playerName: "", loading: false, entries: [], error: "" })}
+                 aria-label="Close modal"
+               >
+                 ✕
+               </button>
+             </div>
+             <div className="confirm-action-body">
+               <p className="confirm-action-target">{moderationHistoryModal.playerName}</p>
+               {moderationHistoryModal.loading ? <p className="giveaway-player-muted-text">Loading history...</p> : null}
+               {!moderationHistoryModal.loading && moderationHistoryModal.error ? <p className="giveaway-player-muted-text is-danger">{moderationHistoryModal.error}</p> : null}
+               {!moderationHistoryModal.loading && !moderationHistoryModal.error && moderationHistoryModal.entries.length === 0 ? (
+                 <p className="giveaway-player-muted-text">No moderation actions recorded yet.</p>
+               ) : null}
+               {!moderationHistoryModal.loading && moderationHistoryModal.entries.length > 0 ? (
+                 <div className="tetris-moderation-history-list">
+                   {moderationHistoryModal.entries.map((entry) => (
+                     <div key={entry.id} className="tetris-moderation-history-item">
+                       <div className="tetris-moderation-history-row">
+                         <strong>{entry.previousStatus || "NORMAL"} → {entry.newStatus || "NORMAL"}</strong>
+                         <span>{formatDateTime(entry.actedAt)}</span>
+                       </div>
+                       <p>{entry.reason || "No reason provided."}</p>
+                       <small>By: {entry.actedBy || "SYSTEM"}</small>
+                     </div>
+                   ))}
+                 </div>
+               ) : null}
+             </div>
+             <div className="confirm-action-footer modal-sticky-footer">
+               <button
+                 type="button"
+                 className="button-secondary"
+                 onClick={() => setModerationHistoryModal({ isOpen: false, playerName: "", loading: false, entries: [], error: "" })}
+               >
+                 Close
                </button>
              </div>
            </div>

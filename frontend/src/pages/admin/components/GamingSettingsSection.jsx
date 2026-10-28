@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { ImagePlus, Trash2 } from "lucide-react";
+import { GripVertical, ImagePlus, Trash2 } from "lucide-react";
 import RegisteredPlayersTable from "./RegisteredPlayersTable.jsx";
 import GiveawaySelector from "./GiveawaySelector.jsx";
+import GiveawayWheelEntriesTable from "./GiveawayWheelEntriesTable.jsx";
 import { DEFAULT_GIVEAWAY_SETTINGS, giveawayImageSrc, normalizeGiveawaySettings } from "../../../constants/giveaway";
 
 export default function GamingSettingsSection({
-  gamingSectionVisible,
+  giveawayOneVisible,
+  giveawayTwoVisible,
   isSaving,
   onToggleVisibility,
   onPlayAsAdmin,
@@ -23,6 +25,7 @@ export default function GamingSettingsSection({
   onSaveGiveawaySettings,
   onGiveawayPrizeImageChange,
   onClearGiveawayPrizeImage,
+  onReorderGiveawayPrizeImages,
   registeredPlayers = [],
   totalRegisteredPlayers = 0,
   isLoadingPlayers = false,
@@ -33,13 +36,23 @@ export default function GamingSettingsSection({
   onSendPlayerNotification,
   onBroadcastNotification,
   notificationActionKey,
+  onModerationAction,
+  moderationActionKey,
+  onLoadModerationHistory,
   onDeletePlayer,
   onDeleteAllPlayers,
   isDeletingPlayers = false,
+  giveawayWheelEntries = [],
+  isLoadingGiveawayWheelEntries = false,
+  giveawayWheelEntryActionKey = "",
+  onApproveGiveawayWheelProof,
+  onRejectGiveawayWheelProof,
 }) {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState({ isOpen: false });
+  const [draggedPrizeImageIndex, setDraggedPrizeImageIndex] = useState(null);
   const safeGiveawaySettings = normalizeGiveawaySettings(giveawaySettings || DEFAULT_GIVEAWAY_SETTINGS);
+  const isWheelGiveaway = selectedGiveawayId === 2;
   const prizeImageSlots = Array.from(
     { length: Math.max(1, Math.min(10, Number.parseInt(safeGiveawaySettings.prizeImageCount, 10) || 1)) },
     (_, index) => giveawayImageSrc(safeGiveawaySettings.prizeImageUrls?.[index])
@@ -67,8 +80,8 @@ export default function GamingSettingsSection({
                 <button type="button" className="button-secondary" onClick={onPlayAsAdmin}>
                   Play as Admin
                 </button>
-                <button type="button" className="btn-primary" onClick={onToggleVisibility} disabled={isSaving}>
-                  {gamingSectionVisible ? "Hide from customers" : "Show to customers"}
+                <button type="button" className="btn-primary" onClick={() => onToggleVisibility(1)} disabled={isSaving}>
+                  {giveawayOneVisible ? "Hide from customers" : "Show to customers"}
                 </button>
               </div>
             </div>
@@ -101,9 +114,57 @@ export default function GamingSettingsSection({
                 onSendPlayerNotification={onSendPlayerNotification}
                 onBroadcastNotification={onBroadcastNotification}
                 notificationActionKey={notificationActionKey}
+                onModerationAction={onModerationAction}
+                moderationActionKey={moderationActionKey}
+                onLoadModerationHistory={onLoadModerationHistory}
                 onDeletePlayer={onDeletePlayer}
                 onDeleteAllPlayers={() => setDeleteAllConfirm({ isOpen: true })}
                 isDeletingPlayers={isDeletingPlayers}
+              />
+            </div>
+          </>
+        ) : selectedGiveawayId === 2 ? (
+          <>
+            <div className="section-head giveaway-section-head">
+              <div className="admin-section-heading-copy">
+                <h2>Giveaway 2</h2>
+                <p className="field-hint" style={{ margin: 0 }}>
+                  Public spin-the-wheel giveaway with weighted entries based on uploaded social proof.
+                </p>
+              </div>
+              <div className="giveaway-visibility-actions">
+                <button type="button" className="btn-primary" onClick={onPlayAsAdmin}>
+                  Open Public View
+                </button>
+                <button type="button" className="btn-primary" onClick={() => onToggleVisibility(2)} disabled={isSaving}>
+                  {giveawayTwoVisible ? "Hide from customers" : "Show to customers"}
+                </button>
+              </div>
+            </div>
+
+            <div className="giveaway-content-card">
+              <div className="giveaway-settings-editor">
+                <div className="giveaway-settings-card">
+                  <div className="giveaway-settings-card-head">
+                    <div>
+                      <h3>Giveaway Settings</h3>
+                      <p className="field-hint" style={{ margin: 0 }}>
+                        Configure Giveaway 2 content and prize images shown on the wheel page.
+                      </p>
+                    </div>
+                    <button type="button" className="btn-primary" onClick={() => setIsSettingsModalOpen(true)}>
+                      Edit Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <GiveawayWheelEntriesTable
+                entries={giveawayWheelEntries}
+                isLoading={isLoadingGiveawayWheelEntries}
+                actionKey={giveawayWheelEntryActionKey}
+                onApproveProof={onApproveGiveawayWheelProof}
+                onRejectProof={onRejectGiveawayWheelProof}
               />
             </div>
           </>
@@ -164,110 +225,210 @@ export default function GamingSettingsSection({
             <div className="giveaway-settings-modal-body">
               <div className="giveaway-settings-section">
                 <h4>Setup & Content</h4>
-                <div className="giveaway-settings-grid">
-                  <label className="giveaway-settings-field">
-                    <span>Title</span>
-                    <input
-                      type="text"
-                      value={safeGiveawaySettings.title}
-                      onChange={(event) => onGiveawaySettingChange("title", event.target.value)}
-                      placeholder="Join the Giveaway"
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field">
-                    <span>Heading</span>
-                    <input
-                      type="text"
-                      value={safeGiveawaySettings.howToJoinTitle}
-                      onChange={(event) => onGiveawaySettingChange("howToJoinTitle", event.target.value)}
-                      placeholder="How to Join"
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field giveaway-settings-field-wide">
-                    <span>Intro</span>
-                    <textarea
-                      rows={3}
-                      value={safeGiveawaySettings.intro}
-                      onChange={(event) => onGiveawaySettingChange("intro", event.target.value)}
-                      placeholder="Play the Giveaway challenge for a chance to win..."
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field">
-                    <span>Prize Image Alt Text</span>
-                    <input
-                      type="text"
-                      value={safeGiveawaySettings.prizeImageAlt}
-                      onChange={(event) => onGiveawaySettingChange("prizeImageAlt", event.target.value)}
-                      placeholder="Featured giveaway prize"
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field">
-                    <span>Leaderboard Prize Eyebrow</span>
-                    <input
-                      type="text"
-                      value={safeGiveawaySettings.leaderboardPrizeEyebrow}
-                      onChange={(event) => onGiveawaySettingChange("leaderboardPrizeEyebrow", event.target.value)}
-                      placeholder="Prize to Win"
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field">
-                    <span>Leaderboard Prize Title</span>
-                    <input
-                      type="text"
-                      value={safeGiveawaySettings.prizeLabel}
-                      onChange={(event) => onGiveawaySettingChange("prizeLabel", event.target.value)}
-                      placeholder="Featured Prize"
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field giveaway-settings-field-wide">
-                    <span>Leaderboard Prize Note</span>
-                    <textarea
-                      rows={2}
-                      value={safeGiveawaySettings.leaderboardPrizeNote}
-                      onChange={(event) => onGiveawaySettingChange("leaderboardPrizeNote", event.target.value)}
-                      placeholder="Climb to No. 1 to claim this prize."
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field giveaway-settings-field-wide">
-                    <span>Leaderboard Goal Message</span>
-                    <textarea
-                      rows={2}
-                      value={safeGiveawaySettings.leaderboardGoalMessage}
-                      onChange={(event) => onGiveawaySettingChange("leaderboardGoalMessage", event.target.value)}
-                      placeholder="Win by reaching No. 1 on the leaderboard!"
-                    />
-                  </label>
-
-                  <label className="giveaway-settings-field giveaway-settings-field-wide">
-                    <span>Account Deletion Note</span>
-                    <textarea
-                      rows={3}
-                      value={safeGiveawaySettings.accountDeletionNote}
-                      onChange={(event) => onGiveawaySettingChange("accountDeletionNote", event.target.value)}
-                      placeholder="After the giveaway ends, giveaway accounts will be deleted..."
-                    />
-                  </label>
-                </div>
-
-                <div className="giveaway-settings-steps">
-                  {safeGiveawaySettings.steps.map((step, index) => (
-                    <label key={index} className="giveaway-settings-field giveaway-settings-field-wide">
-                      <span>Step {index + 1}</span>
-                      <textarea
-                        rows={2}
-                        value={step}
-                        onChange={(event) => onGiveawayStepChange(index, event.target.value)}
+                {isWheelGiveaway ? (
+                  <div className="giveaway-settings-grid">
+                    <label className="giveaway-settings-field">
+                      <span>Prize Kicker</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.leaderboardPrizeEyebrow}
+                        onChange={(event) => onGiveawaySettingChange("leaderboardPrizeEyebrow", event.target.value)}
+                        placeholder="Prize"
                       />
                     </label>
-                  ))}
-                </div>
+                    <label className="giveaway-settings-field">
+                      <span>Prize Title</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.prizeLabel}
+                        onChange={(event) => onGiveawaySettingChange("prizeLabel", event.target.value)}
+                        placeholder="Prize"
+                      />
+                    </label>
+                    <label className="giveaway-settings-field giveaway-settings-field-wide">
+                      <span>Prize Description</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.leaderboardPrizeNote}
+                        onChange={(event) => onGiveawaySettingChange("leaderboardPrizeNote", event.target.value)}
+                        placeholder="Featured Prize"
+                      />
+                    </label>
+
+                    <label className="giveaway-settings-field">
+                      <span>Join Kicker</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.title}
+                        onChange={(event) => onGiveawaySettingChange("title", event.target.value)}
+                        placeholder="Join"
+                      />
+                    </label>
+                    <label className="giveaway-settings-field">
+                      <span>Join Title</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.howToJoinTitle}
+                        onChange={(event) => onGiveawaySettingChange("howToJoinTitle", event.target.value)}
+                        placeholder="Join"
+                      />
+                    </label>
+                    <label className="giveaway-settings-field giveaway-settings-field-wide">
+                      <span>Join Description</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.intro}
+                        onChange={(event) => onGiveawaySettingChange("intro", event.target.value)}
+                        placeholder="Submit your entry."
+                      />
+                    </label>
+
+                    <label className="giveaway-settings-field">
+                      <span>Search Kicker</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.leaderboardGoalMessage}
+                        onChange={(event) => onGiveawaySettingChange("leaderboardGoalMessage", event.target.value)}
+                        placeholder="Search"
+                      />
+                    </label>
+                    <label className="giveaway-settings-field">
+                      <span>Search Title</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.accountDeletionNote}
+                        onChange={(event) => onGiveawaySettingChange("accountDeletionNote", event.target.value)}
+                        placeholder="Search"
+                      />
+                    </label>
+                    <label className="giveaway-settings-field giveaway-settings-field-wide">
+                      <span>Search Description</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.steps?.[0] || ""}
+                        onChange={(event) => onGiveawayStepChange(0, event.target.value)}
+                        placeholder="Check your status."
+                      />
+                    </label>
+
+                    <label className="giveaway-settings-field giveaway-settings-field-wide">
+                      <span>Prize Image Alt Text</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.prizeImageAlt}
+                        onChange={(event) => onGiveawaySettingChange("prizeImageAlt", event.target.value)}
+                        placeholder="Featured giveaway prize"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <>
+                    <div className="giveaway-settings-grid">
+                      <label className="giveaway-settings-field">
+                        <span>Title</span>
+                        <input
+                          type="text"
+                          value={safeGiveawaySettings.title}
+                          onChange={(event) => onGiveawaySettingChange("title", event.target.value)}
+                          placeholder="Join the Giveaway"
+                        />
+                      </label>
+
+                      <label className="giveaway-settings-field">
+                        <span>Heading</span>
+                        <input
+                          type="text"
+                          value={safeGiveawaySettings.howToJoinTitle}
+                          onChange={(event) => onGiveawaySettingChange("howToJoinTitle", event.target.value)}
+                          placeholder="How to Join"
+                        />
+                      </label>
+
+                      <label className="giveaway-settings-field giveaway-settings-field-wide">
+                        <span>Intro</span>
+                        <textarea
+                          rows={3}
+                          value={safeGiveawaySettings.intro}
+                          onChange={(event) => onGiveawaySettingChange("intro", event.target.value)}
+                          placeholder="Play the Giveaway challenge for a chance to win..."
+                        />
+                      </label>
+
+                      <label className="giveaway-settings-field">
+                        <span>Prize Image Alt Text</span>
+                        <input
+                          type="text"
+                          value={safeGiveawaySettings.prizeImageAlt}
+                          onChange={(event) => onGiveawaySettingChange("prizeImageAlt", event.target.value)}
+                          placeholder="Featured giveaway prize"
+                        />
+                      </label>
+
+                      <label className="giveaway-settings-field">
+                        <span>Leaderboard Prize Eyebrow</span>
+                        <input
+                          type="text"
+                          value={safeGiveawaySettings.leaderboardPrizeEyebrow}
+                          onChange={(event) => onGiveawaySettingChange("leaderboardPrizeEyebrow", event.target.value)}
+                          placeholder="Prize to Win"
+                        />
+                      </label>
+
+                      <label className="giveaway-settings-field">
+                        <span>Leaderboard Prize Title</span>
+                        <input
+                          type="text"
+                          value={safeGiveawaySettings.prizeLabel}
+                          onChange={(event) => onGiveawaySettingChange("prizeLabel", event.target.value)}
+                          placeholder="Featured Prize"
+                        />
+                      </label>
+
+                      <label className="giveaway-settings-field giveaway-settings-field-wide">
+                        <span>Leaderboard Prize Note</span>
+                        <textarea
+                          rows={2}
+                          value={safeGiveawaySettings.leaderboardPrizeNote}
+                          onChange={(event) => onGiveawaySettingChange("leaderboardPrizeNote", event.target.value)}
+                          placeholder="Climb to No. 1 to claim this prize."
+                        />
+                      </label>
+
+                      <label className="giveaway-settings-field giveaway-settings-field-wide">
+                        <span>Leaderboard Goal Message</span>
+                        <textarea
+                          rows={2}
+                          value={safeGiveawaySettings.leaderboardGoalMessage}
+                          onChange={(event) => onGiveawaySettingChange("leaderboardGoalMessage", event.target.value)}
+                          placeholder="Win by reaching No. 1 on the leaderboard!"
+                        />
+                      </label>
+
+                      <label className="giveaway-settings-field giveaway-settings-field-wide">
+                        <span>Account Deletion Note</span>
+                        <textarea
+                          rows={3}
+                          value={safeGiveawaySettings.accountDeletionNote}
+                          onChange={(event) => onGiveawaySettingChange("accountDeletionNote", event.target.value)}
+                          placeholder="After the giveaway ends, giveaway accounts will be deleted..."
+                        />
+                      </label>
+                    </div>
+
+                    <div className="giveaway-settings-steps">
+                      {safeGiveawaySettings.steps.map((step, index) => (
+                        <label key={index} className="giveaway-settings-field giveaway-settings-field-wide">
+                          <span>Step {index + 1}</span>
+                          <textarea
+                            rows={2}
+                            value={step}
+                            onChange={(event) => onGiveawayStepChange(index, event.target.value)}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="giveaway-settings-section">
@@ -275,7 +436,9 @@ export default function GamingSettingsSection({
                   <div className="giveaway-prize-panel-copy">
                     <h4>Prize Images</h4>
                     <p className="field-hint" style={{ margin: 0 }}>
-                      Upload one or more prize images here. The leaderboard will display every uploaded image based on how many the admin adds.
+                      {isWheelGiveaway
+                        ? "Upload one or more prize images for the giveaway wheel preview."
+                        : "Upload one or more prize images here. The leaderboard will display every uploaded image based on how many the admin adds."}
                     </p>
                   </div>
                   <label className="giveaway-settings-field giveaway-image-count-field">
@@ -294,7 +457,7 @@ export default function GamingSettingsSection({
                 <div className="giveaway-prize-upload-summary">
                   <span className="giveaway-settings-badge">{prizeImageSlots.length} slot{prizeImageSlots.length === 1 ? "" : "s"} active</span>
                   <small className="field-hint image-upload-note">
-                    Recommended: use the same image ratio for a cleaner gallery layout. Max 10 images.
+                    Recommended: use the same image ratio for a cleaner gallery layout. Max 10 images. Drag cards to reorder.
                   </small>
                 </div>
 
@@ -304,7 +467,26 @@ export default function GamingSettingsSection({
                     const isUploadingCurrentSlot = isGiveawayPrizeUploading && activeGiveawayPrizeUploadSlot === index;
 
                     return (
-                      <div key={inputId} className="giveaway-prize-upload-card">
+                      <div
+                        key={inputId}
+                        className="giveaway-prize-upload-card"
+                        draggable={Boolean(prizeImageSrc)}
+                        onDragStart={() => setDraggedPrizeImageIndex(index)}
+                        onDragOver={(event) => {
+                          if (draggedPrizeImageIndex === null) return;
+                          event.preventDefault();
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (draggedPrizeImageIndex === null || draggedPrizeImageIndex === index || !onReorderGiveawayPrizeImages) {
+                            setDraggedPrizeImageIndex(null);
+                            return;
+                          }
+                          onReorderGiveawayPrizeImages(draggedPrizeImageIndex, index);
+                          setDraggedPrizeImageIndex(null);
+                        }}
+                        onDragEnd={() => setDraggedPrizeImageIndex(null)}
+                      >
                         <input
                           id={inputId}
                           className="sr-only-file-input"
@@ -317,6 +499,11 @@ export default function GamingSettingsSection({
                             <strong>Image {index + 1}</strong>
                             <small className="field-hint">{prizeImageSrc ? "Ready for display" : "Waiting for upload"}</small>
                           </div>
+                          {prizeImageSrc ? (
+                            <span className="giveaway-prize-drag-handle" title="Drag to reorder" aria-hidden="true">
+                              <GripVertical size={14} />
+                            </span>
+                          ) : null}
                           {prizeImageSrc ? (
                             <button
                               type="button"

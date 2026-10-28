@@ -22,7 +22,10 @@ public record RegisteredPlayerResponse(
         Integer totalLinesCleared,
         Integer totalBonusPoints,
         LocalDateTime lastPlayed,
-        GiveawayBonusStatusResponse bonusStatus
+        GiveawayBonusStatusResponse bonusStatus,
+        String tetrisModerationStatus,
+        String tetrisModerationReason,
+        Instant tetrisModeratedAt
 ) {
 }
 

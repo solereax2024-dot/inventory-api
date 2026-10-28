@@ -17,7 +17,7 @@ import { aggregateStockSummaryTotals, filterStockSummaryRows, sortStockSummaryRo
 import { buildSizeSections, getDefaultSizeGroup, getDepartmentForColorway, isUnisexDepartment } from "../../utils/sizePresentation";
 import { buildDefaultProductDescription } from "../../utils/productDescription";
 import { CUSTOMER_MARKUP } from "../../utils/price";
-import { DEFAULT_GIVEAWAY_SETTINGS, normalizeGiveawaySettings } from "../../constants/giveaway";
+import { DEFAULT_GIVEAWAY_SETTINGS, DEFAULT_GIVEAWAY_WHEEL_SETTINGS, normalizeGiveawaySettings } from "../../constants/giveaway";
 import {
   decodeRoleFromToken,
   formatFileSize,
@@ -187,10 +187,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
   const [activeAdminSection, setActiveAdminSection] = useState("products");
     const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
-  const [gamingSettings, setGamingSettings] = useState({ gamingSectionVisible: false });
+  const [gamingSettings, setGamingSettings] = useState({ giveawayOneVisible: false, giveawayTwoVisible: false });
   const [giveaways, setGiveaways] = useState([
     { id: 1, title: "Main Giveaway", settings: DEFAULT_GIVEAWAY_SETTINGS },
-    { id: 2, title: "Future Giveaway", settings: DEFAULT_GIVEAWAY_SETTINGS }
+    { id: 2, title: "Spin the Wheel", settings: DEFAULT_GIVEAWAY_WHEEL_SETTINGS }
   ]);
   const [selectedGiveawayId, setSelectedGiveawayId] = useState(1);
   const [isGamingSettingsSaving, setIsGamingSettingsSaving] = useState(false);
@@ -200,9 +200,13 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [registeredPlayers, setRegisteredPlayers] = useState([]);
   const [registeredPlayersCount, setRegisteredPlayersCount] = useState(0);
   const [isRegisteredPlayersLoading, setIsRegisteredPlayersLoading] = useState(false);
+  const [giveawayWheelEntries, setGiveawayWheelEntries] = useState([]);
+  const [isGiveawayWheelEntriesLoading, setIsGiveawayWheelEntriesLoading] = useState(false);
+  const [giveawayWheelEntryActionKey, setGiveawayWheelEntryActionKey] = useState("");
   const [bonusActionKey, setBonusActionKey] = useState("");
   const [profileImageActionKey, setProfileImageActionKey] = useState("");
   const [notificationActionKey, setNotificationActionKey] = useState("");
+  const [moderationActionKey, setModerationActionKey] = useState("");
   const [isDeletingPlayers, setIsDeletingPlayers] = useState(false);
   const [deleteAllPlayersConfirm, setDeleteAllPlayersConfirm] = useState({ isOpen: false });
   const {
@@ -330,29 +334,43 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const loadAdminData = async (authToken, role = adminRole) => {
     setIsAdminLoading(true);
     setIsRegisteredPlayersLoading(true);
+    setIsGiveawayWheelEntriesLoading(true);
     try {
-      const [productData, orderData, brandData, productNameData, gamingSettingData, giveawaySettingData, playersData, playersCountData] = await Promise.all([
+      const [productData, orderData, brandData, productNameData, gamingSettingData, giveawayOneSettingData, giveawayTwoSettingData, playersData, playersCountData, giveawayWheelEntriesData] = await Promise.all([
         apiRequest("/api/admin/products", "GET", undefined, authToken),
         apiRequest("/api/admin/orders", "GET", undefined, authToken),
         apiRequest("/api/admin/brands", "GET", undefined, authToken),
         apiRequest("/api/admin/product-names", "GET", undefined, authToken),
         apiRequest("/api/admin/settings/gaming", "GET", undefined, authToken),
-        apiRequest("/api/admin/settings/gaming/giveaway", "GET", undefined, authToken),
+        apiRequest("/api/admin/settings/gaming/giveaway/1", "GET", undefined, authToken),
+        apiRequest("/api/admin/settings/gaming/giveaway/2", "GET", undefined, authToken),
         apiRequest("/api/admin/settings/gaming/players", "GET", undefined, authToken),
         apiRequest("/api/admin/settings/gaming/players/count", "GET", undefined, authToken),
+        apiRequest("/api/admin/settings/gaming/giveaway-wheel/entries", "GET", undefined, authToken),
       ]);
       setProducts(productData);
       setOrders(orderData);
       setSavedBrands(brandData);
       setSavedProductNames(productNameData);
-      setGamingSettings({ gamingSectionVisible: Boolean(gamingSettingData?.gamingSectionVisible ?? false) });
-      // Update the first giveaway with loaded settings
+      setGamingSettings({
+        giveawayOneVisible: Boolean(gamingSettingData?.giveawayOneVisible ?? gamingSettingData?.gamingSectionVisible ?? false),
+        giveawayTwoVisible: Boolean(gamingSettingData?.giveawayTwoVisible ?? gamingSettingData?.gamingSectionVisible ?? false),
+      });
+      // Load dedicated settings for Giveaway 1 and Giveaway 2.
       setGiveaways(prev => [
-        { ...prev[0], settings: normalizeGiveawaySettings(giveawaySettingData) },
-        ...prev.slice(1)
+        {
+          ...(prev.find((g) => g.id === 1) || { id: 1, title: "Main Giveaway", settings: DEFAULT_GIVEAWAY_SETTINGS }),
+          settings: normalizeGiveawaySettings(giveawayOneSettingData),
+        },
+        {
+          ...(prev.find((g) => g.id === 2) || { id: 2, title: "Spin the Wheel", settings: DEFAULT_GIVEAWAY_WHEEL_SETTINGS }),
+          settings: normalizeGiveawaySettings(giveawayTwoSettingData),
+        },
+        ...prev.filter((g) => g.id !== 1 && g.id !== 2)
       ]);
       setRegisteredPlayers(Array.isArray(playersData) ? playersData : []);
       setRegisteredPlayersCount(Number(playersCountData?.totalRegisteredPlayers) || 0);
+      setGiveawayWheelEntries(Array.isArray(giveawayWheelEntriesData) ? giveawayWheelEntriesData : []);
       setEditProductId((prev) => prev || (productData[0]?.id?.toString() ?? ""));
       setStockForm((prev) => ({ ...prev, productId: prev.productId || (productData[0]?.id?.toString() ?? "") }));
       if (role === "SUPER_ADMIN") {
@@ -364,6 +382,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     } finally {
       setIsAdminLoading(false);
       setIsRegisteredPlayersLoading(false);
+      setIsGiveawayWheelEntriesLoading(false);
     }
   };
 
@@ -382,6 +401,54 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       setMessage(err.message || "Unable to refresh giveaway players.");
     } finally {
       setIsRegisteredPlayersLoading(false);
+    }
+  };
+
+  const refreshGiveawayWheelEntries = async () => {
+    if (!token) return;
+
+    setIsGiveawayWheelEntriesLoading(true);
+    try {
+      const data = await apiRequest("/api/admin/settings/gaming/giveaway-wheel/entries", "GET", undefined, token);
+      setGiveawayWheelEntries(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setMessage(err.message || "Unable to refresh spin wheel entries.");
+    } finally {
+      setIsGiveawayWheelEntriesLoading(false);
+    }
+  };
+
+  const handleApproveGiveawayWheelProof = async (entryId, proofType) => {
+    if (!token) return;
+
+    setGiveawayWheelEntryActionKey(`approve-${entryId}-${proofType}`);
+    setMessage("");
+
+    try {
+      await apiRequest(`/api/admin/settings/gaming/giveaway-wheel/entries/${entryId}/proofs/${encodeURIComponent(proofType)}/validate`, "PATCH", undefined, token);
+      await refreshGiveawayWheelEntries();
+      setSuccessModal({ isOpen: true, message: "Proof approved successfully." });
+    } catch (err) {
+      setMessage(err.message || "Unable to approve giveaway proof.");
+    } finally {
+      setGiveawayWheelEntryActionKey("");
+    }
+  };
+
+  const handleRejectGiveawayWheelProof = async (entryId, proofType, message) => {
+    if (!token) return;
+
+    setGiveawayWheelEntryActionKey(`reject-${entryId}-${proofType}`);
+    setMessage("");
+
+    try {
+      await apiRequest(`/api/admin/settings/gaming/giveaway-wheel/entries/${entryId}/proofs/${encodeURIComponent(proofType)}/revoke`, "PATCH", { message }, token);
+      await refreshGiveawayWheelEntries();
+      setSuccessModal({ isOpen: true, message: "Proof rejected and returned for correction." });
+    } catch (err) {
+      setMessage(err.message || "Unable to reject giveaway proof.");
+    } finally {
+      setGiveawayWheelEntryActionKey("");
     }
   };
 
@@ -498,6 +565,47 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     } finally {
       setProfileImageActionKey("");
     }
+  };
+
+  const handlePlayerModerationAction = async (userId, status, reason = "") => {
+    if (!token) return;
+
+    const actionKey = `${userId}:${status}`;
+    setModerationActionKey(actionKey);
+    setMessage("");
+
+    try {
+      await apiRequest(
+        `/api/admin/settings/gaming/players/${userId}/moderation`,
+        "PATCH",
+        { status, reason },
+        token
+      );
+      await refreshRegisteredPlayers();
+      const actionLabel = status === "NORMAL"
+        ? "restored"
+        : status === "ANOMALY_DETECTED"
+          ? "marked as anomaly detected"
+          : "disqualified";
+      setSuccessModal({
+        isOpen: true,
+        message: `Player ${actionLabel} successfully.`,
+      });
+    } catch (err) {
+      setMessage(err.message || "Unable to update player moderation status.");
+    } finally {
+      setModerationActionKey("");
+    }
+  };
+
+  const loadPlayerModerationHistory = async (userId) => {
+    if (!token) return [];
+    return apiRequest(
+      `/api/admin/settings/gaming/players/${userId}/moderation-history`,
+      "GET",
+      undefined,
+      token
+    );
   };
 
   const deletePlayer = async (playerId) => {
@@ -1913,25 +2021,42 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     setTableFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  const toggleGamingSectionVisibility = async () => {
-    const nextVisible = !gamingSettings.gamingSectionVisible;
+  const toggleGiveawayVisibility = async (giveawayId) => {
+    const isGiveawayTwo = Number(giveawayId) === 2;
+    const currentVisible = isGiveawayTwo
+      ? gamingSettings.giveawayTwoVisible
+      : gamingSettings.giveawayOneVisible;
+    const nextVisible = !currentVisible;
     setIsGamingSettingsSaving(true);
 
     try {
       const updated = await apiRequest(
-        "/api/admin/settings/gaming",
+        `/api/admin/settings/gaming/visibility/${giveawayId}`,
         "PUT",
-        { gamingSectionVisible: nextVisible },
+        { visible: nextVisible },
         token
       );
-      const resolvedVisible = Boolean(updated?.gamingSectionVisible ?? nextVisible);
-      setGamingSettings({ gamingSectionVisible: resolvedVisible });
-      window.dispatchEvent(new CustomEvent("site-settings-changed", { detail: { gamingSectionVisible: resolvedVisible } }));
+      const resolvedGiveawayOneVisible = Boolean(updated?.giveawayOneVisible ?? (!isGiveawayTwo ? nextVisible : gamingSettings.giveawayOneVisible));
+      const resolvedGiveawayTwoVisible = Boolean(updated?.giveawayTwoVisible ?? (isGiveawayTwo ? nextVisible : gamingSettings.giveawayTwoVisible));
+
+      setGamingSettings({
+        giveawayOneVisible: resolvedGiveawayOneVisible,
+        giveawayTwoVisible: resolvedGiveawayTwoVisible,
+      });
+
+      window.dispatchEvent(new CustomEvent("site-settings-changed", {
+        detail: {
+          giveawayOneVisible: resolvedGiveawayOneVisible,
+          giveawayTwoVisible: resolvedGiveawayTwoVisible,
+          gamingSectionVisible: resolvedGiveawayOneVisible || resolvedGiveawayTwoVisible,
+        }
+      }));
+
       setSuccessModal({
         isOpen: true,
-        message: resolvedVisible
-          ? "Giveaway is now visible to customers."
-          : "Giveaway is now hidden from customers."
+        message: nextVisible
+          ? `Giveaway ${giveawayId} is now visible to customers.`
+          : `Giveaway ${giveawayId} is now hidden from customers.`
       });
     } catch (err) {
       setMessage(err.message);
@@ -1992,7 +2117,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     try {
       const current = getCurrentGiveawaySettings();
       const updated = await apiRequest(
-        "/api/admin/settings/gaming/giveaway",
+        `/api/admin/settings/gaming/giveaway/${selectedGiveawayId}`,
         "PUT",
         normalizeGiveawaySettings(current),
         token
@@ -2087,6 +2212,34 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     );
   };
 
+  const reorderGiveawayPrizeImages = (fromIndex, toIndex) => {
+    setGiveaways(prev =>
+      prev.map(g => {
+        if (g.id !== selectedGiveawayId) return g;
+        const settings = g.settings;
+        const normalizedCount = Math.max(1, Math.min(10, Number.parseInt(settings.prizeImageCount, 10) || 1));
+        const nextPrizeImageUrls = Array.from({ length: normalizedCount }, (_, index) => settings.prizeImageUrls?.[index] || "");
+
+        const from = Math.max(0, Math.min(nextPrizeImageUrls.length - 1, fromIndex));
+        const to = Math.max(0, Math.min(nextPrizeImageUrls.length - 1, toIndex));
+        if (from === to) return g;
+
+        const [moved] = nextPrizeImageUrls.splice(from, 1);
+        nextPrizeImageUrls.splice(to, 0, moved || "");
+        const normalizedPrizeImageUrls = nextPrizeImageUrls.filter(Boolean);
+
+        return {
+          ...g,
+          settings: {
+            ...settings,
+            prizeImageUrls: nextPrizeImageUrls,
+            prizeImageUrl: normalizedPrizeImageUrls[0] || "",
+          }
+        };
+      })
+    );
+  };
+
   const handleSelectGiveaway = (giveawayId) => {
     setSelectedGiveawayId(giveawayId);
   };
@@ -2103,9 +2256,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
 
   const playGiveawayAsAdmin = () => {
-    const popup = window.open("/giveaway-game", "_blank", "noopener,noreferrer");
+    const targetRoute = selectedGiveawayId === 2 ? "/giveaway-wheel" : "/giveaway-game";
+    const popup = window.open(targetRoute, "_blank", "noopener,noreferrer");
     if (!popup) {
-      navigate("/giveaway-game");
+      navigate(targetRoute);
     }
   };
 
@@ -2194,9 +2348,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
       {activeAdminSection === "gaming" ? (
          <GamingSettingsSection
-           gamingSectionVisible={gamingSettings.gamingSectionVisible !== false}
+           giveawayOneVisible={gamingSettings.giveawayOneVisible === true}
+           giveawayTwoVisible={gamingSettings.giveawayTwoVisible === true}
            isSaving={isGamingSettingsSaving}
-           onToggleVisibility={toggleGamingSectionVisibility}
+           onToggleVisibility={toggleGiveawayVisibility}
            onPlayAsAdmin={playGiveawayAsAdmin}
            giveaways={giveaways}
            selectedGiveawayId={selectedGiveawayId}
@@ -2212,6 +2367,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
            onSaveGiveawaySettings={saveGiveawaySettings}
            onGiveawayPrizeImageChange={handleGiveawayPrizeImageChange}
            onClearGiveawayPrizeImage={clearGiveawayPrizeImage}
+           onReorderGiveawayPrizeImages={reorderGiveawayPrizeImages}
            registeredPlayers={registeredPlayers}
            totalRegisteredPlayers={registeredPlayersCount}
            isLoadingPlayers={isRegisteredPlayersLoading || isAdminLoading}
@@ -2222,9 +2378,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
            onSendPlayerNotification={handleSendPlayerNotification}
            onBroadcastNotification={handleBroadcastNotification}
            notificationActionKey={notificationActionKey}
+           onModerationAction={handlePlayerModerationAction}
+           moderationActionKey={moderationActionKey}
+           onLoadModerationHistory={loadPlayerModerationHistory}
            onDeletePlayer={deletePlayer}
            onDeleteAllPlayers={confirmDeleteAllPlayers}
            isDeletingPlayers={isDeletingPlayers}
+           giveawayWheelEntries={giveawayWheelEntries}
+           isLoadingGiveawayWheelEntries={isGiveawayWheelEntriesLoading || isAdminLoading}
+           giveawayWheelEntryActionKey={giveawayWheelEntryActionKey}
+           onApproveGiveawayWheelProof={handleApproveGiveawayWheelProof}
+           onRejectGiveawayWheelProof={handleRejectGiveawayWheelProof}
          />
       ) : null}
 

@@ -1,5 +1,6 @@
 package com.solereax.inventory.tetris;
 
+import com.solereax.inventory.user.AppUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,15 +32,20 @@ class TetrisGameServiceTest {
     @Mock
     private TetrisLeaderboardRepository leaderboardRepository;
 
+    @Mock
+    private AppUserRepository appUserRepository;
+
     private TetrisGameService gameService;
     private List<TetrisLeaderboard> storedEntries;
     private AtomicLong nextId;
 
     @BeforeEach
     void setUp() {
-        gameService = new TetrisGameService(leaderboardRepository);
+        gameService = new TetrisGameService(leaderboardRepository, appUserRepository);
         storedEntries = new ArrayList<>();
         nextId = new AtomicLong(1L);
+
+        when(appUserRepository.findAll()).thenReturn(List.of());
 
         when(leaderboardRepository.findAll()).thenAnswer(invocation -> new ArrayList<>(storedEntries));
         when(leaderboardRepository.findByPlayerNameIgnoreCase(any())).thenAnswer(invocation -> {

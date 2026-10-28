@@ -4,10 +4,13 @@ import com.solereax.inventory.notification.PlayerNotificationService;
 import com.solereax.inventory.notification.PlayerNotificationType;
 import com.solereax.inventory.tetris.TetrisLeaderboard;
 import com.solereax.inventory.tetris.TetrisLeaderboardRepository;
+import com.solereax.inventory.tetris.TetrisModerationAuditLog;
+import com.solereax.inventory.tetris.TetrisModerationAuditLogRepository;
 import com.solereax.inventory.tetris.GiveawayBonusService;
 import com.solereax.inventory.tetris.GiveawayBonusStatusResponse;
 import com.solereax.inventory.user.AppUser;
 import com.solereax.inventory.user.AppUserRepository;
+import com.solereax.inventory.user.TetrisModerationStatus;
 import com.solereax.inventory.user.UserRole;
 import com.solereax.inventory.user.dto.RegisteredPlayerResponse;
 import java.time.Instant;
@@ -22,10 +25,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GamingService {
     public static final String GAMING_SECTION_VISIBLE_KEY = "GAMING_SECTION_VISIBLE";
+    public static final String GIVEAWAY_ONE_VISIBLE_KEY = "GIVEAWAY_1_VISIBLE";
+    public static final String GIVEAWAY_TWO_VISIBLE_KEY = "GIVEAWAY_2_VISIBLE";
 
     private final AppSettingRepository appSettingRepository;
     private final AppUserRepository appUserRepository;
     private final TetrisLeaderboardRepository tetrisLeaderboardRepository;
+    private final TetrisModerationAuditLogRepository tetrisModerationAuditLogRepository;
     private final GiveawayBonusService giveawayBonusService;
     private final PlayerNotificationService playerNotificationService;
 
@@ -33,36 +39,100 @@ public class GamingService {
             AppSettingRepository appSettingRepository,
             AppUserRepository appUserRepository,
             TetrisLeaderboardRepository tetrisLeaderboardRepository,
+            TetrisModerationAuditLogRepository tetrisModerationAuditLogRepository,
             GiveawayBonusService giveawayBonusService,
             PlayerNotificationService playerNotificationService
     ) {
         this.appSettingRepository = appSettingRepository;
         this.appUserRepository = appUserRepository;
         this.tetrisLeaderboardRepository = tetrisLeaderboardRepository;
+        this.tetrisModerationAuditLogRepository = tetrisModerationAuditLogRepository;
         this.giveawayBonusService = giveawayBonusService;
         this.playerNotificationService = playerNotificationService;
     }
 
     @Transactional(readOnly = true)
     public boolean isGamingSectionVisible() {
-        return appSettingRepository.findById(GAMING_SECTION_VISIBLE_KEY)
-                .map(AppSetting::getSettingValue)
-                .map(value -> !"false".equalsIgnoreCase(value.trim()))
-                .orElse(false);
+        return isGiveawayOneVisible() || isGiveawayTwoVisible();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isGiveawayOneVisible() {
+        return readVisibilitySetting(GIVEAWAY_ONE_VISIBLE_KEY, GAMING_SECTION_VISIBLE_KEY);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isGiveawayTwoVisible() {
+        return readVisibilitySetting(GIVEAWAY_TWO_VISIBLE_KEY, null);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isGiveawayVisible(Long giveawayId) {
+        long normalizedGiveawayId = normalizeGiveawayId(giveawayId);
+        if (normalizedGiveawayId == 2L) {
+            return isGiveawayTwoVisible();
+        }
+        return isGiveawayOneVisible();
     }
 
     @Transactional
     public boolean updateGamingSectionVisible(boolean visible) {
-        AppSetting setting = appSettingRepository.findById(GAMING_SECTION_VISIBLE_KEY)
+        // Keep legacy endpoint behavior by updating both giveaways together.
+        saveVisibilitySetting(GAMING_SECTION_VISIBLE_KEY, visible);
+        saveVisibilitySetting(GIVEAWAY_ONE_VISIBLE_KEY, visible);
+        saveVisibilitySetting(GIVEAWAY_TWO_VISIBLE_KEY, visible);
+        return visible;
+    }
+
+    @Transactional
+    public boolean updateGiveawayVisibility(Long giveawayId, boolean visible) {
+        long normalizedGiveawayId = normalizeGiveawayId(giveawayId);
+        if (normalizedGiveawayId == 2L) {
+            saveVisibilitySetting(GIVEAWAY_TWO_VISIBLE_KEY, visible);
+            return visible;
+        }
+
+        saveVisibilitySetting(GIVEAWAY_ONE_VISIBLE_KEY, visible);
+        return visible;
+    }
+
+    private boolean readVisibilitySetting(String key, String fallbackKey) {
+        Boolean primary = appSettingRepository.findById(key)
+                .map(AppSetting::getSettingValue)
+                .map(this::parseVisibilityValue)
+                .orElse(null);
+        if (primary != null) {
+            return primary;
+        }
+
+        if (fallbackKey == null) {
+            return false;
+        }
+
+        return appSettingRepository.findById(fallbackKey)
+                .map(AppSetting::getSettingValue)
+                .map(this::parseVisibilityValue)
+                .orElse(false);
+    }
+
+    private boolean parseVisibilityValue(String value) {
+        return !"false".equalsIgnoreCase(value == null ? "" : value.trim());
+    }
+
+    private void saveVisibilitySetting(String key, boolean visible) {
+        AppSetting setting = appSettingRepository.findById(key)
                 .orElseGet(() -> {
                     AppSetting created = new AppSetting();
-                    created.setSettingKey(GAMING_SECTION_VISIBLE_KEY);
+                    created.setSettingKey(key);
                     return created;
                 });
         setting.setSettingValue(Boolean.toString(visible));
         setting.setUpdatedAt(Instant.now());
         appSettingRepository.save(setting);
-        return visible;
+    }
+
+    private long normalizeGiveawayId(Long giveawayId) {
+        return giveawayId == null || giveawayId < 1 ? 1L : giveawayId;
     }
 
     @Transactional(readOnly = true)
@@ -88,14 +158,18 @@ public class GamingService {
                         leaderboardByPlayerKey.get(normalizeKey(user.getUsername())),
                         rankByPlayerKey.get(normalizeKey(user.getUsername()))
                 ))
-                .filter(player -> player.rank() != null && player.rank() > 0 && player.rank() <= 10)
+                .filter(player -> {
+                    String status = player.tetrisModerationStatus() == null ? TetrisModerationStatus.NORMAL.name() : player.tetrisModerationStatus();
+                    boolean isModerated = !TetrisModerationStatus.NORMAL.name().equalsIgnoreCase(status);
+                    boolean inTop10 = player.rank() != null && player.rank() > 0 && player.rank() <= 10;
+                    return inTop10 || isModerated;
+                })
                 .sorted(Comparator
                         .comparing((RegisteredPlayerResponse player) -> player.rank() == null ? Integer.MAX_VALUE : player.rank())
                         .thenComparing((RegisteredPlayerResponse player) -> player.highestScore() == null ? 0 : player.highestScore(), Comparator.reverseOrder())
                         .thenComparing((RegisteredPlayerResponse player) -> player.totalLinesCleared() == null ? 0 : player.totalLinesCleared(), Comparator.reverseOrder())
                         .thenComparing((RegisteredPlayerResponse player) -> player.createdAt(), Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing((RegisteredPlayerResponse player) -> player.username() == null ? "" : player.username(), String.CASE_INSENSITIVE_ORDER))
-                .limit(10) // Limit to top 10 players
                 .toList();
     }
 
@@ -129,9 +203,106 @@ public class GamingService {
                  leaderboard != null ? leaderboard.getTotalLinesCleared() : 0,
                  activeBonusPoints,
                  leaderboard != null ? leaderboard.getLastPlayed() : null,
-                 bonusStatus
+                 bonusStatus,
+                 user.getTetrisModerationStatus() != null ? user.getTetrisModerationStatus().name() : TetrisModerationStatus.NORMAL.name(),
+                 user.getTetrisModerationReason(),
+                 user.getTetrisModeratedAt()
          );
      }
+
+    @Transactional
+    public RegisteredPlayerResponse updatePlayerModerationStatus(Long userId, TetrisModerationStatus status, String reason, String actedBy) {
+        AppUser user = appUserRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (user.getRole() != UserRole.CUSTOMER) {
+            throw new IllegalArgumentException("Only customer accounts can be moderated for Tetris gameplay.");
+        }
+
+        TetrisModerationStatus nextStatus = status == null ? TetrisModerationStatus.NORMAL : status;
+        String sanitizedReason = reason == null ? "" : reason.trim();
+
+        if (nextStatus != TetrisModerationStatus.NORMAL && sanitizedReason.isEmpty()) {
+            throw new IllegalArgumentException("A moderation reason is required for anomaly/disqualification.");
+        }
+
+        TetrisModerationStatus previousStatus = user.getTetrisModerationStatus() == null
+                ? TetrisModerationStatus.NORMAL
+                : user.getTetrisModerationStatus();
+
+        if (previousStatus == nextStatus
+                && ((user.getTetrisModerationReason() == null ? "" : user.getTetrisModerationReason().trim())
+                .equals(nextStatus == TetrisModerationStatus.NORMAL ? "" : sanitizedReason))) {
+            TetrisLeaderboard existingLeaderboard = tetrisLeaderboardRepository.findByPlayerNameIgnoreCase(user.getUsername()).orElse(null);
+            Integer existingRank = existingLeaderboard == null ? null : rankByPlayerKey(user.getUsername());
+            return toRegisteredPlayerResponse(user, existingLeaderboard, existingRank);
+        }
+
+        user.setTetrisModerationStatus(nextStatus);
+        user.setTetrisModerationReason(nextStatus == TetrisModerationStatus.NORMAL ? null : sanitizedReason);
+        user.setTetrisModeratedAt(nextStatus == TetrisModerationStatus.NORMAL ? null : Instant.now());
+
+        AppUser savedUser = appUserRepository.save(user);
+
+        String normalizedActor = actedBy == null || actedBy.trim().isEmpty() ? "SYSTEM" : actedBy.trim();
+        TetrisModerationAuditLog auditLog = new TetrisModerationAuditLog();
+        auditLog.setUserId(savedUser.getId());
+        auditLog.setUsername(savedUser.getUsername());
+        auditLog.setPreviousStatus(previousStatus);
+        auditLog.setNewStatus(nextStatus);
+        auditLog.setReason(nextStatus == TetrisModerationStatus.NORMAL ? (sanitizedReason.isEmpty() ? "Status restored to normal." : sanitizedReason) : sanitizedReason);
+        auditLog.setActedBy(normalizedActor);
+        auditLog.setActedAt(Instant.now());
+        tetrisModerationAuditLogRepository.save(auditLog);
+
+        if (nextStatus.blocksGameplay()) {
+            tetrisLeaderboardRepository.deleteByPlayerNameIgnoreCase(savedUser.getUsername());
+            playerNotificationService.sendSystemNotification(
+                    savedUser.getId(),
+                    PlayerNotificationType.CUSTOM_MESSAGE,
+                    "Tetris gameplay restricted",
+                    sanitizedReason
+            );
+        } else {
+            playerNotificationService.sendSystemNotification(
+                    savedUser.getId(),
+                    PlayerNotificationType.CUSTOM_MESSAGE,
+                    "Tetris gameplay restored",
+                    "Your account can access Tetris again. Please keep gameplay fair."
+            );
+        }
+
+        TetrisLeaderboard leaderboard = tetrisLeaderboardRepository.findByPlayerNameIgnoreCase(savedUser.getUsername()).orElse(null);
+        Integer rank = leaderboard == null ? null : rankByPlayerKey(savedUser.getUsername());
+        return toRegisteredPlayerResponse(savedUser, leaderboard, rank);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TetrisModerationAuditLogResponse> getModerationHistory(Long userId) {
+        return tetrisModerationAuditLogRepository.findByUserIdOrderByActedAtDesc(userId).stream()
+                .map(log -> new TetrisModerationAuditLogResponse(
+                        log.getId(),
+                        log.getUserId(),
+                        log.getUsername(),
+                        log.getPreviousStatus() != null ? log.getPreviousStatus().name() : TetrisModerationStatus.NORMAL.name(),
+                        log.getNewStatus() != null ? log.getNewStatus().name() : TetrisModerationStatus.NORMAL.name(),
+                        log.getReason(),
+                        log.getActedBy(),
+                        log.getActedAt()
+                ))
+                .toList();
+    }
+
+    private Integer rankByPlayerKey(String username) {
+        List<TetrisLeaderboard> leaderboardEntries = tetrisLeaderboardRepository.findAllByOrderByHighestScoreDesc();
+        String key = normalizeKey(username);
+        for (int index = 0; index < leaderboardEntries.size(); index++) {
+            if (normalizeKey(leaderboardEntries.get(index).getPlayerName()).equals(key)) {
+                return index + 1;
+            }
+        }
+        return null;
+    }
 
     private String normalizeKey(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
