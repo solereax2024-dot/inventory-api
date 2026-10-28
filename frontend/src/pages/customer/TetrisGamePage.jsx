@@ -106,6 +106,8 @@ const EMPTY_PLAYER_PROFILE = {
   profileImagePath: "",
   profileImageValidated: false,
   profileImageValidationMessage: "",
+  tetrisModerationStatus: "NORMAL",
+  tetrisModerationReason: "",
 };
 
 const EMPTY_PLAYER_NOTIFICATION = {
@@ -131,6 +133,24 @@ function normalizePlayerProfile(profile) {
     ...EMPTY_PLAYER_PROFILE,
     ...(profile || {}),
   };
+}
+
+function isTetrisAccessBlocked(profile) {
+  const status = String(profile?.tetrisModerationStatus || "NORMAL").toUpperCase();
+  return status === "ANOMALY_DETECTED" || status === "DISQUALIFIED";
+}
+
+function getTetrisModerationMessage(profile) {
+  const reason = String(profile?.tetrisModerationReason || "").trim();
+  if (reason) {
+    return reason;
+  }
+  return "Your Tetris access is currently restricted by the admin team.";
+}
+
+function getTetrisModerationTitle(profile) {
+  const status = String(profile?.tetrisModerationStatus || "NORMAL").toUpperCase();
+  return status === "ANOMALY_DETECTED" ? "Anomaly detected" : "Tetris access restricted";
 }
 
 function normalizePlayerNotification(notification) {
@@ -191,6 +211,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
   const boardFrameRef = useRef(null);
   const audioContextRef = useRef(null);
   const scoreSubmittedRef = useRef(false);
+  const runStartedAtRef = useRef(null);
   const timeoutIdsRef = useRef([]);
   const fullscreenOptionsPausedRef = useRef(false);
   const inactivityTimeoutRef = useRef(null);
@@ -493,11 +514,26 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       createdAt: notification.createdAt,
       metaText: notification.createdAt ? formatRelativeTime(notification.createdAt) : "",
     }));
+    const isModerationBlocked = isTetrisAccessBlocked(playerProfile);
     const hasProfileRejectNotification = notices.some((notice) => notice.type === "PROFILE_IMAGE_REJECTED");
     const hasFollowRejectNotification = notices.some((notice) => notice.type === "FOLLOW_PROOF_REJECTED");
     const hasReviewRejectNotification = notices.some((notice) => notice.type === "REVIEW_PROOF_REJECTED");
     const hasCommentRejectNotification = notices.some((notice) => notice.type === "COMMENT_PROOF_REJECTED");
     const validationMessage = playerProfile.profileImageValidationMessage?.trim();
+
+    if (isModerationBlocked) {
+      notices.unshift({
+        id: "tetris-access-blocked",
+        type: "TETRIS_ACCESS_BLOCKED",
+        tone: "danger",
+        title: getTetrisModerationTitle(playerProfile),
+        message: getTetrisModerationMessage(playerProfile),
+        helperText: "You can still log in and view the game page, but new runs are blocked until your account is restored.",
+        unread: false,
+        createdAt: "",
+        metaText: "",
+      });
+    }
 
     if (validationMessage && !hasProfileRejectNotification) {
       notices.push({
@@ -1233,6 +1269,12 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     const trimmedPlayerName = authenticatedPlayerName.trim();
     if (!trimmedPlayerName) return;
 
+    if (isTetrisAccessBlocked(playerProfile)) {
+      setLeaderboardError(getTetrisModerationMessage(playerProfile));
+      setLastScoreSubmission(null);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -1241,6 +1283,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         score: finalScore,
         level: finalLevel,
         linesCleared: finalLinesCleared,
+        durationMs: runStartedAtRef.current ? Math.max(Date.now() - runStartedAtRef.current, 0) : null,
       }, authenticatedToken);
 
       setLastScoreSubmission(scoreResponse || null);
@@ -1252,11 +1295,11 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
     } catch (error) {
       console.error("Failed to submit Tetris score:", error);
       setLastScoreSubmission(null);
-      setLeaderboardError("Score submission failed. Please try another run.");
+      setLeaderboardError(error?.message || "Score submission failed. Please try another run.");
     } finally {
       setLoading(false);
     }
-  }, [authenticatedPlayerName, authenticatedToken]);
+  }, [authenticatedPlayerName, authenticatedToken, playerProfile]);
 
   const handleBonusProofSelected = useCallback(async (bonusType, file) => {
     if (!authenticatedToken) {
@@ -1349,6 +1392,16 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         return false;
       }
 
+      if (isTetrisAccessBlocked(playerProfile)) {
+        setMessage(getTetrisModerationMessage(playerProfile));
+        setIsPlayerNoticesOpen(true);
+        void refreshPlayerProfile();
+        void refreshPlayerNotifications();
+        emitSound("tap");
+        triggerHaptic('tap');
+        return false;
+      }
+
       setPlayerName(trimmedPlayerName);
       setIsBonusModalOpen(false);
       setBonusError("");
@@ -1373,6 +1426,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       setLinesCleared(0);
       setGrid(createEmptyGrid());
       setMessage("Game Started! Use arrows on desktop or swipe/tap on mobile.");
+      runStartedAtRef.current = Date.now();
       setCurrentPiece(openingEntry.piece);
       setCurrentPieceKey(openingEntry.pieceKey);
       setCurrentTileId(openingEntry.tileId);
@@ -1396,7 +1450,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         gameSurfaceRef.current.focus();
       }
       return true;
-    }, [authenticatedPlayerName, bonusLoading, bonusStatus.commentProofRevoked, bonusStatus.commentProofValidationMessage, clearScheduledTimeouts, clearTransientEffects, commentProofRequired, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, hasLoadedBonusStatus, resetInactivityLogoutTimer, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
+    }, [authenticatedPlayerName, bonusLoading, bonusStatus.commentProofRevoked, bonusStatus.commentProofValidationMessage, clearScheduledTimeouts, clearTransientEffects, commentProofRequired, createUpcomingEntry, emitSound, ensureUpcomingQueue, getSpawnColumn, hasLoadedBonusStatus, playerProfile, refreshPlayerNotifications, refreshPlayerProfile, resetInactivityLogoutTimer, scheduleUiTimeout, syncUpcomingQueue, triggerHaptic, requestFullscreenMode]);
 
     const resetGame = useCallback(() => {
       clearScheduledTimeouts();
@@ -1426,6 +1480,7 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
       setHoldTileId(null);
       setCanHoldPiece(true);
       setMessage("Game reset. Ready to play?");
+      runStartedAtRef.current = null;
       triggerPulseEffect(setRestartPulse, 240);
       emitSound("reset");
       triggerHaptic('tap');
