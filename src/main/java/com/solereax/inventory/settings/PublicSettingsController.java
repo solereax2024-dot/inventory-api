@@ -5,6 +5,7 @@ import java.util.Map;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,6 +27,8 @@ public class PublicSettingsController {
         Map<String, Object> response = new HashMap<>();
         response.put("logoUrl", brandingService.getLogoUrl());
         response.put("logoDarkUrl", brandingService.getLogoDarkUrl());
+        response.put("giveawayOneVisible", gamingService.isGiveawayOneVisible());
+        response.put("giveawayTwoVisible", gamingService.isGiveawayTwoVisible());
         response.put("gamingSectionVisible", gamingService.isGamingSectionVisible());
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
@@ -37,5 +40,12 @@ public class PublicSettingsController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(giveawaySettingsService.getSettings());
+    }
+
+    @GetMapping("/giveaway/{giveawayId}")
+    public ResponseEntity<GiveawaySettingsResponse> giveawayById(@PathVariable Long giveawayId) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(giveawaySettingsService.getSettings(giveawayId));
     }
 }

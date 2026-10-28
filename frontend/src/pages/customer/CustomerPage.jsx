@@ -12,7 +12,7 @@ import "../../styles/popular-rail.css";
 
 const SALE_BANNER_VARIANT = "luxe";
 
-export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {}, isGamingSectionVisible = true }) {
+export default function CustomerPage({ searchText, setSearchText, onCatalogNavChange = () => {} }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [catalogProducts, setCatalogProducts] = useState([]);

@@ -21,6 +21,19 @@ export const DEFAULT_GIVEAWAY_SETTINGS = {
   prizeImageAlt: "Featured giveaway prize",
 };
 
+export const DEFAULT_GIVEAWAY_WHEEL_SETTINGS = {
+  ...DEFAULT_GIVEAWAY_SETTINGS,
+  title: "Join",
+  intro: "Submit your entry.",
+  howToJoinTitle: "Join",
+  steps: ["Check your status.", "", "", ""],
+  accountDeletionNote: "Search",
+  leaderboardPrizeEyebrow: "Prize",
+  prizeLabel: "Prize",
+  leaderboardPrizeNote: "Featured Prize",
+  leaderboardGoalMessage: "Search",
+};
+
 export function normalizeGiveawaySettings(settings = {}) {
   const sourceSteps = Array.isArray(settings.steps) ? settings.steps : [];
   const prizeImageUrls = normalizePrizeImageUrls(settings.prizeImageUrls, settings.prizeImageUrl);
@@ -46,6 +59,7 @@ export function normalizeGiveawaySettings(settings = {}) {
 export function giveawayImageSrc(imageUrl) {
   const value = String(imageUrl || "").trim();
   if (!value) return "";
+  if (/^(https?:|blob:|data:|\/\/)/i.test(value)) return value;
   return value.startsWith("/") ? value : `/${value}`;
 }
 
@@ -55,8 +69,7 @@ export function giveawayImageList(settings = {}) {
 }
 
 function cleanText(value) {
-  const trimmed = String(value ?? "").trim();
-  return trimmed;
+  return String(value ?? "").trim();
 }
 
 function cleanOptionalUrl(value) {

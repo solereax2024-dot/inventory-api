@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GiveawaySettingsService {
     private static final int MAX_PRIZE_IMAGES = 10;
+    private static final long DEFAULT_GIVEAWAY_ID = 1L;
     public static final String GIVEAWAY_MODAL_TITLE_KEY = "GIVEAWAY_MODAL_TITLE";
     public static final String GIVEAWAY_MODAL_INTRO_KEY = "GIVEAWAY_MODAL_INTRO";
     public static final String GIVEAWAY_MODAL_HOW_TO_JOIN_TITLE_KEY = "GIVEAWAY_MODAL_HOW_TO_JOIN_TITLE";
@@ -41,6 +42,20 @@ public class GiveawaySettingsService {
             "You will upload a screenshot showing that you follow us.",
             "If you win, we may contact you using the follower details shown in your submitted screenshot."
     );
+    private static final String WHEEL_DEFAULT_TITLE = "Join";
+    private static final String WHEEL_DEFAULT_HOW_TO_JOIN_TITLE = "Join";
+    private static final String WHEEL_DEFAULT_INTRO = "Submit your entry.";
+    private static final String WHEEL_DEFAULT_ACCOUNT_DELETION_NOTE = "Search";
+    private static final String WHEEL_DEFAULT_PRIZE_EYEBROW = "Prize";
+    private static final String WHEEL_DEFAULT_PRIZE_LABEL = "Prize";
+    private static final String WHEEL_DEFAULT_PRIZE_NOTE = "Featured Prize";
+    private static final String WHEEL_DEFAULT_GOAL_MESSAGE = "Search";
+    private static final List<String> WHEEL_DEFAULT_STEPS = List.of(
+            "Check your status.",
+            "",
+            "",
+            ""
+    );
 
     private final AppSettingRepository appSettingRepository;
 
@@ -50,33 +65,46 @@ public class GiveawaySettingsService {
 
     @Transactional(readOnly = true)
     public GiveawaySettingsResponse getSettings() {
-        String primaryPrizeImageUrl = getSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_URL_KEY, "");
-        List<String> prizeImageUrls = normalizePrizeImageUrls(getOptionalListSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_URLS_KEY), primaryPrizeImageUrl);
-        int prizeImageCount = normalizePrizeImageCount(getOptionalIntegerSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY), prizeImageUrls.size());
+        return getSettings(DEFAULT_GIVEAWAY_ID);
+    }
+
+    @Transactional(readOnly = true)
+    public GiveawaySettingsResponse getSettings(Long giveawayId) {
+        long normalizedGiveawayId = normalizeGiveawayId(giveawayId);
+        String primaryPrizeImageUrl = getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_URL_KEY, "");
+        List<String> prizeImageUrls = normalizePrizeImageUrls(getOptionalListSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_URLS_KEY), primaryPrizeImageUrl);
+        int prizeImageCount = normalizePrizeImageCount(getOptionalIntegerSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY), prizeImageUrls.size());
+        List<String> defaultSteps = defaultStepsForGiveaway(normalizedGiveawayId);
         return new GiveawaySettingsResponse(
-                getSetting(GIVEAWAY_MODAL_TITLE_KEY, DEFAULT_TITLE),
-                getSetting(GIVEAWAY_MODAL_INTRO_KEY, DEFAULT_INTRO),
-                getSetting(GIVEAWAY_MODAL_HOW_TO_JOIN_TITLE_KEY, DEFAULT_HOW_TO_JOIN_TITLE),
+                getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_TITLE_KEY, defaultTitleForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_INTRO_KEY, defaultIntroForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_HOW_TO_JOIN_TITLE_KEY, defaultHowToJoinTitleForGiveaway(normalizedGiveawayId)),
                 List.of(
-                        getSetting(GIVEAWAY_MODAL_STEP_1_KEY, DEFAULT_STEPS.get(0)),
-                        getSetting(GIVEAWAY_MODAL_STEP_2_KEY, DEFAULT_STEPS.get(1)),
-                        getSetting(GIVEAWAY_MODAL_STEP_3_KEY, DEFAULT_STEPS.get(2)),
-                        getSetting(GIVEAWAY_MODAL_STEP_4_KEY, DEFAULT_STEPS.get(3))
+                        getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_STEP_1_KEY, defaultSteps.get(0)),
+                        getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_STEP_2_KEY, defaultSteps.get(1)),
+                        getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_STEP_3_KEY, defaultSteps.get(2)),
+                        getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_STEP_4_KEY, defaultSteps.get(3))
                 ),
-                getSetting(GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY, DEFAULT_ACCOUNT_DELETION_NOTE),
-                getSetting(GIVEAWAY_LEADERBOARD_PRIZE_EYEBROW_KEY, DEFAULT_LEADERBOARD_PRIZE_EYEBROW),
-                getSetting(GIVEAWAY_MODAL_PRIZE_LABEL_KEY, DEFAULT_PRIZE_LABEL),
-                getSetting(GIVEAWAY_LEADERBOARD_PRIZE_NOTE_KEY, DEFAULT_LEADERBOARD_PRIZE_NOTE),
-                getSetting(GIVEAWAY_LEADERBOARD_GOAL_MESSAGE_KEY, DEFAULT_LEADERBOARD_GOAL_MESSAGE),
+                getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY, defaultAccountDeletionNoteForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_LEADERBOARD_PRIZE_EYEBROW_KEY, defaultPrizeEyebrowForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_LABEL_KEY, defaultPrizeLabelForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_LEADERBOARD_PRIZE_NOTE_KEY, defaultPrizeNoteForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_LEADERBOARD_GOAL_MESSAGE_KEY, defaultGoalMessageForGiveaway(normalizedGiveawayId)),
                 prizeImageUrls.isEmpty() ? primaryPrizeImageUrl : prizeImageUrls.getFirst(),
                 prizeImageUrls,
                 prizeImageCount,
-                getSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, DEFAULT_PRIZE_IMAGE_ALT)
+                getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, DEFAULT_PRIZE_IMAGE_ALT)
         );
     }
 
     @Transactional
     public GiveawaySettingsResponse updateSettings(GiveawaySettingsUpdateRequest request) {
+        return updateSettings(DEFAULT_GIVEAWAY_ID, request);
+    }
+
+    @Transactional
+    public GiveawaySettingsResponse updateSettings(Long giveawayId, GiveawaySettingsUpdateRequest request) {
+        long normalizedGiveawayId = normalizeGiveawayId(giveawayId);
         GiveawaySettingsUpdateRequest safeRequest = request == null
                 ? new GiveawaySettingsUpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null)
                 : request;
@@ -87,23 +115,23 @@ public class GiveawaySettingsService {
                 .limit(prizeImageCount)
                 .toList();
 
-        saveSetting(GIVEAWAY_MODAL_TITLE_KEY, normalizeText(safeRequest.title()));
-        saveSetting(GIVEAWAY_MODAL_INTRO_KEY, normalizeText(safeRequest.intro()));
-        saveSetting(GIVEAWAY_MODAL_HOW_TO_JOIN_TITLE_KEY, normalizeText(safeRequest.howToJoinTitle()));
-        saveSetting(GIVEAWAY_MODAL_STEP_1_KEY, steps.get(0));
-        saveSetting(GIVEAWAY_MODAL_STEP_2_KEY, steps.get(1));
-        saveSetting(GIVEAWAY_MODAL_STEP_3_KEY, steps.get(2));
-        saveSetting(GIVEAWAY_MODAL_STEP_4_KEY, steps.get(3));
-        saveSetting(GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY, normalizeText(safeRequest.accountDeletionNote()));
-        saveSetting(GIVEAWAY_LEADERBOARD_PRIZE_EYEBROW_KEY, normalizeText(safeRequest.leaderboardPrizeEyebrow()));
-        saveSetting(GIVEAWAY_MODAL_PRIZE_LABEL_KEY, normalizeText(safeRequest.prizeLabel()));
-        saveSetting(GIVEAWAY_LEADERBOARD_PRIZE_NOTE_KEY, normalizeText(safeRequest.leaderboardPrizeNote()));
-        saveSetting(GIVEAWAY_LEADERBOARD_GOAL_MESSAGE_KEY, normalizeText(safeRequest.leaderboardGoalMessage()));
-        saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_URL_KEY, prizeImageUrls.isEmpty() ? "" : prizeImageUrls.getFirst());
-        saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_URLS_KEY, serializeList(prizeImageUrls));
-        saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY, String.valueOf(prizeImageCount));
-        saveSetting(GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, normalizeText(safeRequest.prizeImageAlt()));
-        return getSettings();
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_TITLE_KEY, normalizeText(safeRequest.title()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_INTRO_KEY, normalizeText(safeRequest.intro()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_HOW_TO_JOIN_TITLE_KEY, normalizeText(safeRequest.howToJoinTitle()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_STEP_1_KEY, steps.get(0));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_STEP_2_KEY, steps.get(1));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_STEP_3_KEY, steps.get(2));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_STEP_4_KEY, steps.get(3));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_ACCOUNT_DELETION_NOTE_KEY, normalizeText(safeRequest.accountDeletionNote()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_LEADERBOARD_PRIZE_EYEBROW_KEY, normalizeText(safeRequest.leaderboardPrizeEyebrow()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_LABEL_KEY, normalizeText(safeRequest.prizeLabel()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_LEADERBOARD_PRIZE_NOTE_KEY, normalizeText(safeRequest.leaderboardPrizeNote()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_LEADERBOARD_GOAL_MESSAGE_KEY, normalizeText(safeRequest.leaderboardGoalMessage()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_URL_KEY, prizeImageUrls.isEmpty() ? "" : prizeImageUrls.getFirst());
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_URLS_KEY, serializeList(prizeImageUrls));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY, String.valueOf(prizeImageCount));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, normalizeText(safeRequest.prizeImageAlt()));
+        return getSettings(normalizedGiveawayId);
     }
 
     private List<String> normalizeSteps(List<String> steps) {
@@ -145,8 +173,8 @@ public class GiveawaySettingsService {
         return Math.max(1, Math.min(MAX_PRIZE_IMAGES, resolved));
     }
 
-    private List<String> getOptionalListSetting(String key) {
-        String rawValue = appSettingRepository.findById(key)
+    private List<String> getOptionalListSetting(long giveawayId, String key) {
+        String rawValue = appSettingRepository.findById(keyForGiveaway(giveawayId, key))
                 .map(AppSetting::getSettingValue)
                 .orElse("");
         if (rawValue == null || rawValue.isBlank()) {
@@ -160,8 +188,8 @@ public class GiveawaySettingsService {
                 .toList();
     }
 
-    private Integer getOptionalIntegerSetting(String key) {
-        String rawValue = appSettingRepository.findById(key)
+    private Integer getOptionalIntegerSetting(long giveawayId, String key) {
+        String rawValue = appSettingRepository.findById(keyForGiveaway(giveawayId, key))
                 .map(AppSetting::getSettingValue)
                 .orElse("");
         if (rawValue == null || rawValue.isBlank()) {
@@ -184,18 +212,19 @@ public class GiveawaySettingsService {
                 .orElse("");
     }
 
-    private String getSetting(String key, String fallback) {
-        return appSettingRepository.findById(key)
+    private String getSetting(long giveawayId, String key, String fallback) {
+        return appSettingRepository.findById(keyForGiveaway(giveawayId, key))
                 .map(AppSetting::getSettingValue)
                 .map(value -> value == null ? "" : value.trim())
                 .orElse(fallback);
     }
 
-    private String saveSetting(String key, String value) {
-        AppSetting setting = appSettingRepository.findById(key)
+    private String saveSetting(long giveawayId, String key, String value) {
+        String namespacedKey = keyForGiveaway(giveawayId, key);
+        AppSetting setting = appSettingRepository.findById(namespacedKey)
                 .orElseGet(() -> {
                     AppSetting created = new AppSetting();
-                    created.setSettingKey(key);
+                    created.setSettingKey(namespacedKey);
                     return created;
                 });
         setting.setSettingValue(value == null ? "" : value.trim());
@@ -210,6 +239,53 @@ public class GiveawaySettingsService {
 
     private String normalizeOptional(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private long normalizeGiveawayId(Long giveawayId) {
+        return giveawayId == null || giveawayId < 1 ? DEFAULT_GIVEAWAY_ID : giveawayId;
+    }
+
+    private String keyForGiveaway(long giveawayId, String key) {
+        if (giveawayId <= DEFAULT_GIVEAWAY_ID) {
+            return key;
+        }
+        return "G" + giveawayId + "_" + key;
+    }
+
+    private String defaultTitleForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_TITLE : DEFAULT_TITLE;
+    }
+
+    private String defaultIntroForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_INTRO : DEFAULT_INTRO;
+    }
+
+    private String defaultHowToJoinTitleForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_HOW_TO_JOIN_TITLE : DEFAULT_HOW_TO_JOIN_TITLE;
+    }
+
+    private String defaultAccountDeletionNoteForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_ACCOUNT_DELETION_NOTE : DEFAULT_ACCOUNT_DELETION_NOTE;
+    }
+
+    private String defaultPrizeEyebrowForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_PRIZE_EYEBROW : DEFAULT_LEADERBOARD_PRIZE_EYEBROW;
+    }
+
+    private String defaultPrizeLabelForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_PRIZE_LABEL : DEFAULT_PRIZE_LABEL;
+    }
+
+    private String defaultPrizeNoteForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_PRIZE_NOTE : DEFAULT_LEADERBOARD_PRIZE_NOTE;
+    }
+
+    private String defaultGoalMessageForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_GOAL_MESSAGE : DEFAULT_LEADERBOARD_GOAL_MESSAGE;
+    }
+
+    private List<String> defaultStepsForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_STEPS : DEFAULT_STEPS;
     }
 }
 

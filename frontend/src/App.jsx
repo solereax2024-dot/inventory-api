@@ -10,6 +10,7 @@ import BrandsPage from "./pages/customer/BrandsPage";
 import ReservePage from "./pages/customer/ReservePage";
 import TetrisGamePage from "./pages/customer/TetrisGamePage";
 import TetrisLeaderboardPage from "./pages/customer/TetrisLeaderboardPage";
+import GiveawayWheelPage from "./pages/customer/GiveawayWheelPage";
 import AdminPage from "./pages/admin/AdminPage";
 import { DEFAULT_THEME, THEMES } from "./constants/themes";
 import { trackMetaEvent } from "./utils/tracking";
@@ -63,7 +64,13 @@ const MODAL_SCROLL_LOCK_SELECTOR = [
 export default function App() {
   const location = useLocation();
   const isThemeCustomizationEnabled = false;
-  const [branding, setBranding] = useState({ logoUrl: null, logoDarkUrl: null, gamingSectionVisible: false });
+  const [branding, setBranding] = useState({
+    logoUrl: null,
+    logoDarkUrl: null,
+    giveawayOneVisible: false,
+    giveawayTwoVisible: false,
+    gamingSectionVisible: false,
+  });
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
@@ -184,15 +191,29 @@ export default function App() {
       .then((data) => setBranding({
         logoUrl: data.logoUrl || null,
         logoDarkUrl: data.logoDarkUrl || null,
+        giveawayOneVisible: Boolean(data?.giveawayOneVisible ?? data?.gamingSectionVisible ?? false),
+        giveawayTwoVisible: Boolean(data?.giveawayTwoVisible ?? data?.gamingSectionVisible ?? false),
         gamingSectionVisible: data.gamingSectionVisible === true,
       }))
-      .catch(() => setBranding({ logoUrl: null, logoDarkUrl: null, gamingSectionVisible: false }));
+      .catch(() => setBranding({
+        logoUrl: null,
+        logoDarkUrl: null,
+        giveawayOneVisible: false,
+        giveawayTwoVisible: false,
+        gamingSectionVisible: false,
+      }));
   }, []);
 
   useEffect(() => {
     const syncGamingVisibility = (event) => {
-      const nextVisible = Boolean(event?.detail?.gamingSectionVisible);
-      setBranding((prev) => ({ ...prev, gamingSectionVisible: nextVisible }));
+      const nextGiveawayOneVisible = Boolean(event?.detail?.giveawayOneVisible ?? event?.detail?.gamingSectionVisible);
+      const nextGiveawayTwoVisible = Boolean(event?.detail?.giveawayTwoVisible ?? event?.detail?.gamingSectionVisible);
+      setBranding((prev) => ({
+        ...prev,
+        giveawayOneVisible: nextGiveawayOneVisible,
+        giveawayTwoVisible: nextGiveawayTwoVisible,
+        gamingSectionVisible: nextGiveawayOneVisible || nextGiveawayTwoVisible,
+      }));
     };
 
     window.addEventListener("site-settings-changed", syncGamingVisibility);
@@ -364,7 +385,8 @@ export default function App() {
       <SiteHeader
         logoUrl={activeLogoUrl}
         isAdminLoggedIn={Boolean(adminToken)}
-        isGamingSectionVisible={branding.gamingSectionVisible !== false}
+        isGiveawayGameVisible={branding.giveawayOneVisible === true}
+        isGiveawayWheelVisible={branding.giveawayTwoVisible === true}
         catalogNav={catalogNav}
         onLogoClick={() => {
           setLogoFile(null);
@@ -380,7 +402,7 @@ export default function App() {
       />
       <Routes>
         <Route path="/" element={<Navigate to="/collections" replace />} />
-        <Route path="/collections" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} isGamingSectionVisible={branding.gamingSectionVisible !== false} />} />
+        <Route path="/collections" element={<CustomerPage searchText={searchText} setSearchText={setSearchText} onCatalogNavChange={setCatalogNav} />} />
         <Route path="/featured" element={<FeaturedPage onCatalogNavChange={setCatalogNav} />} />
         <Route path="/feature" element={<Navigate to="/featured" replace />} />
         <Route path="/collection" element={<Navigate to="/collections" replace />} />
@@ -388,7 +410,9 @@ export default function App() {
         <Route path="/shop" element={<Navigate to="/collections" replace />} />
          <Route path="/reserve" element={<Navigate to="/collections" replace />} />
          <Route path="/reserve/:productId" element={<ReservePage />} />
-         <Route path="/giveaway-game" element={<TetrisGamePage />} />
+         <Route path="/giveaway-game" element={branding.giveawayOneVisible ? <TetrisGamePage /> : <Navigate to="/collections" replace />} />
+         <Route path="/giveaway-wheel" element={branding.giveawayTwoVisible ? <GiveawayWheelPage /> : <Navigate to="/collections" replace />} />
+         <Route path="/giveaway-2" element={<Navigate to="/giveaway-wheel" replace />} />
          <Route path="/tetris-game" element={<Navigate to="/giveaway-game" replace />} />
          <Route path="/tetris-leaderboard" element={<TetrisLeaderboardPage />} />
         <Route

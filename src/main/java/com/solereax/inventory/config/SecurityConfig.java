@@ -51,6 +51,12 @@ public class SecurityConfig {
                                 "/giveaway-game",
                                 "/giveaway-game/",
                                 "/giveaway-game/**",
+                                 "/giveaway-wheel",
+                                 "/giveaway-wheel/",
+                                 "/giveaway-wheel/**",
+                                 "/giveaway-2",
+                                 "/giveaway-2/",
+                                 "/giveaway-2/**",
                                 "/tetris-game",
                                 "/tetris-game/",
                                 "/tetris-game/**",
@@ -70,6 +76,7 @@ public class SecurityConfig {
                                 "/site.webmanifest",
                                 "/logo.png",
                                 "/api/public/**",
+                                 "/api/public/giveaway-wheel/**",
                                 "/api/auth/login",
                                 "/api/auth/register"
                         ).permitAll()

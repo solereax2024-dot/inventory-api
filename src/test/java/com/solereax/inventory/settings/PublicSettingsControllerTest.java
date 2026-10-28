@@ -17,6 +17,8 @@ class PublicSettingsControllerTest {
         when(brandingService.getLogoUrl()).thenReturn("/uploads/branding/day-logo.png");
         when(brandingService.getLogoDarkUrl()).thenReturn("/uploads/branding/night-logo.png");
         when(gamingService.isGamingSectionVisible()).thenReturn(false);
+        when(gamingService.isGiveawayOneVisible()).thenReturn(false);
+        when(gamingService.isGiveawayTwoVisible()).thenReturn(true);
 
         PublicSettingsController controller = new PublicSettingsController(brandingService, gamingService, giveawaySettingsService);
 
@@ -26,6 +28,8 @@ class PublicSettingsControllerTest {
         assertEquals(Map.of(
                 "logoUrl", "/uploads/branding/day-logo.png",
                 "logoDarkUrl", "/uploads/branding/night-logo.png",
+                "giveawayOneVisible", false,
+                "giveawayTwoVisible", true,
                 "gamingSectionVisible", false
         ), response.getBody());
         assertEquals("no-store", response.getHeaders().getCacheControl());

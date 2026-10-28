@@ -21,7 +21,8 @@ export default function SiteHeader({
   searchValue,
   onSearchChange,
   isAdminLoggedIn,
-  isGamingSectionVisible = true,
+  isGiveawayGameVisible = true,
+  isGiveawayWheelVisible = true,
   onAdminSignOut,
   onThemeColorClick,
   catalogNav = { brandOptions: ["ALL"], brandFilter: "ALL", onBrandChange: () => {} }
@@ -60,7 +61,12 @@ export default function SiteHeader({
     { label: "Kids", to: "/collections?q=kids", isActive: isCatalogPath && activeKeyword === "kids" },
     { label: "Sale", to: "/collections?sale=true", isActive: isCatalogPath && activeSale === "true" },
     { label: "Featured", to: "/featured", isActive: isFeaturedPath || (isCatalogPath && activeStock === "IN_STOCK") },
-    ...(isGamingSectionVisible ? [{ label: "Giveaway", to: "/giveaway-game", isActive: location.pathname.startsWith("/giveaway-game") || location.pathname.startsWith("/tetris-game") }] : []),
+    ...(isGiveawayGameVisible ? [
+      { label: "Giveaway", to: "/giveaway-game", isActive: location.pathname.startsWith("/giveaway-game") || location.pathname.startsWith("/tetris-game") },
+    ] : []),
+    ...(isGiveawayWheelVisible ? [
+      { label: "Spin Wheel", to: "/giveaway-wheel", isActive: location.pathname.startsWith("/giveaway-wheel") || location.pathname.startsWith("/giveaway-2") },
+    ] : []),
   ];
   const quickBrandOptions = (catalogNav.brandOptions || []).filter((brand) => brand && brand !== "ALL").slice(0, 6);
 
