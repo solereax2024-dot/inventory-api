@@ -8,6 +8,9 @@ import "../../styles/tetris-leaderboard.css";
 
 function getModerationLabel(status) {
   const normalizedStatus = String(status || "NORMAL").toUpperCase();
+  if (normalizedStatus === "ANOMALY_REVIEW") {
+    return "FLAGGED FOR REVIEW";
+  }
   if (normalizedStatus === "ANOMALY_DETECTED") {
     return "ANOMALY DETECTED";
   }

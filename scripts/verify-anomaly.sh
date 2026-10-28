@@ -121,8 +121,8 @@ print(body.get('moderationStatus', ''))
 PY
 )
 
-if [ "$submit_code" != "403" ] || [ "$submit_status" != "ANOMALY_DETECTED" ]; then
-  echo "[verify-anomaly] expected HTTP 403 with moderationStatus=ANOMALY_DETECTED"
+if [ "$submit_code" != "201" ] || [ "$submit_status" != "ANOMALY_REVIEW" ]; then
+  echo "[verify-anomaly] expected HTTP 201 with moderationStatus=ANOMALY_REVIEW"
   echo "[verify-anomaly] got HTTP $submit_code status=$submit_status"
   cat /tmp/verify_anomaly_submit.json
   exit 1
@@ -131,12 +131,12 @@ fi
 status_row=$(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At -c "select coalesce(tetris_moderation_status,'NORMAL') from app_users where username='${TEST_USERNAME}' limit 1;" | tr -d '[:space:]')
 audit_row=$(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At -c "select previous_status || '|' || new_status || '|' || acted_by from tetris_moderation_audit_log where username='${TEST_USERNAME}' order by acted_at desc limit 1;" | tr -d '\r')
 
-if [ "$status_row" != "ANOMALY_DETECTED" ]; then
+if [ "$status_row" != "ANOMALY_REVIEW" ]; then
   echo "[verify-anomaly] user status check failed: $status_row"
   exit 1
 fi
 
-if [ "$audit_row" != "NORMAL|ANOMALY_DETECTED|SYSTEM_AUTO_DETECT" ]; then
+if [ "$audit_row" != "NORMAL|ANOMALY_REVIEW|SYSTEM_AUTO_DETECT" ]; then
   echo "[verify-anomaly] audit log check failed: $audit_row"
   exit 1
 fi

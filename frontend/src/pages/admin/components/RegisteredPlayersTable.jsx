@@ -74,6 +74,14 @@ function getBonusBadgeStyle(tone) {
     };
   }
 
+  if (tone === "warning") {
+    return {
+      background: "rgba(245, 158, 11, 0.14)",
+      border: "1px solid rgba(245, 158, 11, 0.24)",
+      color: "#92400e",
+    };
+  }
+
   return {
     background: "rgba(148, 163, 184, 0.16)",
     border: "1px solid rgba(148, 163, 184, 0.2)",
@@ -84,6 +92,7 @@ function getBonusBadgeStyle(tone) {
 function getModerationTone(status) {
   const normalizedStatus = String(status || "NORMAL").toUpperCase();
   if (normalizedStatus === "DISQUALIFIED") return "danger";
+  if (normalizedStatus === "ANOMALY_REVIEW") return "warning";
   if (normalizedStatus === "ANOMALY_DETECTED") return "info";
   return "success";
 }
@@ -91,6 +100,7 @@ function getModerationTone(status) {
 function getModerationLabel(status) {
   const normalizedStatus = String(status || "NORMAL").toUpperCase();
   if (normalizedStatus === "DISQUALIFIED") return "Disqualified";
+  if (normalizedStatus === "ANOMALY_REVIEW") return "Anomaly Review";
   if (normalizedStatus === "ANOMALY_DETECTED") return "Anomaly Detected";
   return "Normal";
 }
@@ -584,15 +594,37 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                            <div className="giveaway-player-proof-actions giveaway-player-proof-actions-grid">
                              {onModerationAction ? (
                                <>
-                                 <button
+                                  <button
                                    type="button"
                                    className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
-                                   onClick={() => requestModerationAction(player, "ANOMALY_DETECTED")}
-                                   disabled={Boolean(moderationActionKey) || moderationStatus === "ANOMALY_DETECTED"}
-                                   title="Mark player as anomaly detected"
+                                    onClick={() => requestModerationAction(player, "ANOMALY_REVIEW")}
+                                    disabled={Boolean(moderationActionKey) || moderationStatus === "ANOMALY_REVIEW"}
+                                    title="Flag player for anomaly review"
                                  >
-                                   <span className="btn-label">Anomaly</span>
+                                    <span className="btn-label">Flag</span>
                                  </button>
+                                  {moderationStatus === "ANOMALY_REVIEW" ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
+                                        onClick={() => requestModerationAction(player, "ANOMALY_DETECTED")}
+                                        disabled={Boolean(moderationActionKey)}
+                                        title="Yes: confirm anomaly after admin review"
+                                      >
+                                        <span className="btn-label">Yes</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
+                                        onClick={() => requestModerationAction(player, "NORMAL")}
+                                        disabled={Boolean(moderationActionKey)}
+                                        title="No: clear anomaly flag"
+                                      >
+                                        <span className="btn-label">No</span>
+                                      </button>
+                                    </>
+                                  ) : null}
                                  <button
                                    type="button"
                                    className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn btn-delete"
@@ -606,7 +638,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                                    type="button"
                                    className="button-secondary giveaway-player-proof-btn giveaway-profile-action-btn"
                                    onClick={() => requestModerationAction(player, "NORMAL")}
-                                   disabled={Boolean(moderationActionKey) || moderationStatus === "NORMAL"}
+                                    disabled={Boolean(moderationActionKey) || moderationStatus === "NORMAL" || moderationStatus === "ANOMALY_REVIEW"}
                                    title="Restore player access"
                                  >
                                    <span className="btn-label">Restore</span>

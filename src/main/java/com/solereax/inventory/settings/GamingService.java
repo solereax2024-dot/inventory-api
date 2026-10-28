@@ -223,7 +223,7 @@ public class GamingService {
         String sanitizedReason = reason == null ? "" : reason.trim();
 
         if (nextStatus != TetrisModerationStatus.NORMAL && sanitizedReason.isEmpty()) {
-            throw new IllegalArgumentException("A moderation reason is required for anomaly/disqualification.");
+            throw new IllegalArgumentException("A moderation reason is required for anomaly review/disqualification.");
         }
 
         TetrisModerationStatus previousStatus = user.getTetrisModerationStatus() == null
@@ -255,8 +255,14 @@ public class GamingService {
         auditLog.setActedAt(Instant.now());
         tetrisModerationAuditLogRepository.save(auditLog);
 
-        if (nextStatus.blocksGameplay()) {
-            tetrisLeaderboardRepository.deleteByPlayerNameIgnoreCase(savedUser.getUsername());
+        if (nextStatus == TetrisModerationStatus.ANOMALY_REVIEW) {
+            playerNotificationService.sendSystemNotification(
+                    savedUser.getId(),
+                    PlayerNotificationType.CUSTOM_MESSAGE,
+                    "Tetris run flagged for review",
+                    sanitizedReason
+            );
+        } else if (nextStatus.blocksGameplay()) {
             playerNotificationService.sendSystemNotification(
                     savedUser.getId(),
                     PlayerNotificationType.CUSTOM_MESSAGE,

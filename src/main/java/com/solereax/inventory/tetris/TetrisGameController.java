@@ -43,9 +43,14 @@ public class TetrisGameController {
 
             if (moderationStatus.blocksGameplay()) {
                 String moderationReason = user.getTetrisModerationReason();
-                String defaultMessage = moderationStatus == TetrisModerationStatus.ANOMALY_DETECTED
-                        ? "Your account is temporarily blocked from Tetris while we review an anomaly."
-                        : "Your account is disqualified from Tetris leaderboard submissions.";
+                String defaultMessage;
+                if (moderationStatus == TetrisModerationStatus.ANOMALY_REVIEW) {
+                    defaultMessage = "Your account is flagged for anomaly review. Gameplay is paused until admin confirms your status.";
+                } else if (moderationStatus == TetrisModerationStatus.ANOMALY_DETECTED) {
+                    defaultMessage = "Your account is temporarily blocked from Tetris while we review an anomaly.";
+                } else {
+                    defaultMessage = "Your account is disqualified from Tetris leaderboard submissions.";
+                }
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                         "message",
                         moderationReason != null && !moderationReason.isBlank() ? moderationReason : defaultMessage,
@@ -90,33 +95,35 @@ public class TetrisGameController {
             if (finalRunAssessment.suspicious()) {
                 gamingService.updatePlayerModerationStatus(
                         user.getId(),
-                        TetrisModerationStatus.ANOMALY_DETECTED,
+                        TetrisModerationStatus.ANOMALY_REVIEW,
                         finalRunAssessment.reason(),
                         "SYSTEM_AUTO_DETECT"
                 );
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                        "message", finalRunAssessment.reason(),
-                        "moderationStatus", TetrisModerationStatus.ANOMALY_DETECTED.name()
-                ));
             }
 
             TetrisGameService.AnomalyAssessment anomalyAssessment = gameService.assessAnomaly(score, level, linesCleared, durationMs);
             if (anomalyAssessment.suspicious()) {
                 gamingService.updatePlayerModerationStatus(
                         user.getId(),
-                        TetrisModerationStatus.ANOMALY_DETECTED,
+                        TetrisModerationStatus.ANOMALY_REVIEW,
                         anomalyAssessment.reason(),
                         "SYSTEM_AUTO_DETECT"
                 );
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                        "message", anomalyAssessment.reason(),
-                        "moderationStatus", TetrisModerationStatus.ANOMALY_DETECTED.name()
-                ));
             }
 
             Integer bonusPoints = giveawayBonusService.getActiveBonusPoints(user.getUsername());
 
             TetrisScoreSubmissionResponse result = gameService.recordScore(playerName, score, level, linesCleared, bonusPoints);
+            TetrisModerationStatus latestStatus = appUserRepository.findById(user.getId())
+                    .map(AppUser::getTetrisModerationStatus)
+                    .orElse(TetrisModerationStatus.NORMAL);
+            if (latestStatus == TetrisModerationStatus.ANOMALY_REVIEW) {
+                return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                        "result", result,
+                        "moderationStatus", TetrisModerationStatus.ANOMALY_REVIEW.name(),
+                        "message", "Your run is flagged for admin review."
+                ));
+            }
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
@@ -140,9 +147,14 @@ public class TetrisGameController {
                     : TetrisModerationStatus.NORMAL;
             if (moderationStatus.blocksGameplay()) {
                 String moderationReason = user.getTetrisModerationReason();
-                String defaultMessage = moderationStatus == TetrisModerationStatus.ANOMALY_DETECTED
-                        ? "Your account is temporarily blocked from Tetris while we review an anomaly."
-                        : "Your account is disqualified from Tetris leaderboard submissions.";
+                String defaultMessage;
+                if (moderationStatus == TetrisModerationStatus.ANOMALY_REVIEW) {
+                    defaultMessage = "Your account is flagged for anomaly review. Gameplay is paused until admin confirms your status.";
+                } else if (moderationStatus == TetrisModerationStatus.ANOMALY_DETECTED) {
+                    defaultMessage = "Your account is temporarily blocked from Tetris while we review an anomaly.";
+                } else {
+                    defaultMessage = "Your account is disqualified from Tetris leaderboard submissions.";
+                }
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                         "message", moderationReason != null && !moderationReason.isBlank() ? moderationReason : defaultMessage,
                         "moderationStatus", moderationStatus.name()
@@ -200,13 +212,13 @@ public class TetrisGameController {
             if (heartbeatAssessment.suspicious()) {
                 gamingService.updatePlayerModerationStatus(
                         user.getId(),
-                        TetrisModerationStatus.ANOMALY_DETECTED,
+                        TetrisModerationStatus.ANOMALY_REVIEW,
                         heartbeatAssessment.reason(),
                         "SYSTEM_AUTO_DETECT"
                 );
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                return ResponseEntity.accepted().body(Map.of(
                         "message", heartbeatAssessment.reason(),
-                        "moderationStatus", TetrisModerationStatus.ANOMALY_DETECTED.name()
+                        "moderationStatus", TetrisModerationStatus.ANOMALY_REVIEW.name()
                 ));
             }
 

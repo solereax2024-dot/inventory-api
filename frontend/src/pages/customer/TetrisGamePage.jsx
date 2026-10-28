@@ -137,7 +137,7 @@ function normalizePlayerProfile(profile) {
 
 function isTetrisAccessBlocked(profile) {
   const status = String(profile?.tetrisModerationStatus || "NORMAL").toUpperCase();
-  return status === "ANOMALY_DETECTED" || status === "DISQUALIFIED";
+  return status === "ANOMALY_REVIEW" || status === "ANOMALY_DETECTED" || status === "DISQUALIFIED";
 }
 
 function getTetrisModerationMessage(profile) {
@@ -150,6 +150,9 @@ function getTetrisModerationMessage(profile) {
 
 function getTetrisModerationTitle(profile) {
   const status = String(profile?.tetrisModerationStatus || "NORMAL").toUpperCase();
+  if (status === "ANOMALY_REVIEW") {
+    return "Anomaly review in progress";
+  }
   return status === "ANOMALY_DETECTED" ? "Anomaly detected" : "Tetris access restricted";
 }
 
@@ -1299,7 +1302,12 @@ function TetrisGamePageContent({ authenticatedUser, authenticatedToken }) {
         inputs: inputsCountRef.current,
       }, authenticatedToken);
 
-      setLastScoreSubmission(scoreResponse || null);
+      const normalizedScoreResponse = scoreResponse?.result ? scoreResponse.result : scoreResponse;
+      setLastScoreSubmission(normalizedScoreResponse || null);
+
+      if (String(scoreResponse?.moderationStatus || "").toUpperCase() === "ANOMALY_REVIEW") {
+        setMessage(scoreResponse?.message || "Your run has been flagged for admin review.");
+      }
 
       const refreshedLeaderboard = await apiRequest("/api/public/games/tetris/leaderboard/all", "GET");
       if (Array.isArray(refreshedLeaderboard)) {
