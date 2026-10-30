@@ -104,6 +104,9 @@ public class AppUser {
     @Column(name = "tetris_moderation_reason", nullable = true, length = 1000)
     private String tetrisModerationReason;
 
+    @Column(name = "tetris_moderation_evidence", nullable = true, length = 4000)
+    private String tetrisModerationEvidence;
+
     @Column(name = "tetris_moderated_at", nullable = true)
     private Instant tetrisModeratedAt;
 

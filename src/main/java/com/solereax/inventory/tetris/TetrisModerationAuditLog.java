@@ -39,6 +39,9 @@ public class TetrisModerationAuditLog {
     @Column(name = "reason", nullable = true, length = 1000)
     private String reason;
 
+    @Column(name = "evidence_snapshot", nullable = true, length = 4000)
+    private String evidenceSnapshot;
+
     @Column(name = "acted_by", nullable = false, length = 100)
     private String actedBy;
 

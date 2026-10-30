@@ -25,6 +25,7 @@ public record RegisteredPlayerResponse(
         GiveawayBonusStatusResponse bonusStatus,
         String tetrisModerationStatus,
         String tetrisModerationReason,
+        String tetrisModerationEvidence,
         Instant tetrisModeratedAt
 ) {
 }

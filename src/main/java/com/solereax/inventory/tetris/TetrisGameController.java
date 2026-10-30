@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -100,7 +101,8 @@ public class TetrisGameController {
                         user.getId(),
                         TetrisModerationStatus.ANOMALY_REVIEW,
                         finalRunAssessment.reason(),
-                        "SYSTEM_AUTO_DETECT"
+                        "SYSTEM_AUTO_DETECT",
+                        buildModerationEvidence("RUN_FINALIZE", runId, telemetry, finalRunAssessment.reason())
                 );
             }
 
@@ -110,7 +112,8 @@ public class TetrisGameController {
                         user.getId(),
                         TetrisModerationStatus.ANOMALY_REVIEW,
                         anomalyAssessment.reason(),
-                        "SYSTEM_AUTO_DETECT"
+                        "SYSTEM_AUTO_DETECT",
+                        buildModerationEvidence("SCORE_SUBMIT", runId, telemetry, anomalyAssessment.reason())
                 );
             }
 
@@ -220,7 +223,8 @@ public class TetrisGameController {
                         user.getId(),
                         TetrisModerationStatus.ANOMALY_REVIEW,
                         heartbeatAssessment.reason(),
-                        "SYSTEM_AUTO_DETECT"
+                        "SYSTEM_AUTO_DETECT",
+                        buildModerationEvidence("RUN_HEARTBEAT", runId, telemetry, heartbeatAssessment.reason())
                 );
                 return ResponseEntity.accepted().body(Map.of(
                         "message", heartbeatAssessment.reason(),
@@ -302,6 +306,36 @@ public class TetrisGameController {
         int bonusPoints = giveawayBonusService.getActiveBonusPointsOrZero(leaderboard.getPlayerName());
         TetrisModerationStatus moderationStatus = gameService.getPlayerModerationStatus(leaderboard.getPlayerName());
         return TetrisLeaderboardWithRank.fromEntity(leaderboard, rank, bonusPoints, moderationStatus.name());
+    }
+
+    private Map<String, Object> buildModerationEvidence(
+            String source,
+            String runId,
+            TetrisGameService.RealtimeTelemetry telemetry,
+            String reason
+    ) {
+        Map<String, Object> evidence = new LinkedHashMap<>();
+        evidence.put("source", source);
+        evidence.put("runId", runId == null || runId.isBlank() ? null : runId.trim());
+        evidence.put("reason", reason);
+        evidence.put("elapsedMs", telemetry.elapsedMs());
+        evidence.put("score", telemetry.score());
+        evidence.put("level", telemetry.level());
+        evidence.put("linesCleared", telemetry.linesCleared());
+        evidence.put("piecesLocked", telemetry.piecesLocked());
+        evidence.put("hardDrops", telemetry.hardDrops());
+        evidence.put("softDrops", telemetry.softDrops());
+        evidence.put("inputs", telemetry.inputs());
+        evidence.put("clientAlertCode", telemetry.clientAlertCode());
+
+        if (telemetry.elapsedMs() != null && telemetry.elapsedMs() > 0L) {
+            double minutes = telemetry.elapsedMs() / 60000.0;
+            if (minutes > 0) {
+                evidence.put("scorePerMinute", Math.round((Math.max(telemetry.score() != null ? telemetry.score() : 0, 0) / minutes) * 100.0) / 100.0);
+                evidence.put("linesPerMinute", Math.round((Math.max(telemetry.linesCleared() != null ? telemetry.linesCleared() : 0, 0) / minutes) * 100.0) / 100.0);
+            }
+        }
+        return evidence;
     }
 }
 

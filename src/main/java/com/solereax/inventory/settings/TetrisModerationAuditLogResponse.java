@@ -9,6 +9,7 @@ public record TetrisModerationAuditLogResponse(
         String previousStatus,
         String newStatus,
         String reason,
+        String evidenceSnapshot,
         String actedBy,
         Instant actedAt
 ) {

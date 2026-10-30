@@ -206,12 +206,24 @@ public class GamingService {
                  bonusStatus,
                  user.getTetrisModerationStatus() != null ? user.getTetrisModerationStatus().name() : TetrisModerationStatus.NORMAL.name(),
                  user.getTetrisModerationReason(),
+                 user.getTetrisModerationEvidence(),
                  user.getTetrisModeratedAt()
          );
      }
 
     @Transactional
     public RegisteredPlayerResponse updatePlayerModerationStatus(Long userId, TetrisModerationStatus status, String reason, String actedBy) {
+        return updatePlayerModerationStatus(userId, status, reason, actedBy, null);
+    }
+
+    @Transactional
+    public RegisteredPlayerResponse updatePlayerModerationStatus(
+            Long userId,
+            TetrisModerationStatus status,
+            String reason,
+            String actedBy,
+            Map<String, Object> evidence
+    ) {
         AppUser user = appUserRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -221,6 +233,7 @@ public class GamingService {
 
         TetrisModerationStatus nextStatus = status == null ? TetrisModerationStatus.NORMAL : status;
         String sanitizedReason = reason == null ? "" : reason.trim();
+        String serializedEvidence = serializeEvidence(evidence);
 
         if (nextStatus != TetrisModerationStatus.NORMAL && sanitizedReason.isEmpty()) {
             throw new IllegalArgumentException("A moderation reason is required for anomaly review/disqualification.");
@@ -232,7 +245,9 @@ public class GamingService {
 
         if (previousStatus == nextStatus
                 && ((user.getTetrisModerationReason() == null ? "" : user.getTetrisModerationReason().trim())
-                .equals(nextStatus == TetrisModerationStatus.NORMAL ? "" : sanitizedReason))) {
+                .equals(nextStatus == TetrisModerationStatus.NORMAL ? "" : sanitizedReason))
+                && ((user.getTetrisModerationEvidence() == null ? "" : user.getTetrisModerationEvidence().trim())
+                .equals(nextStatus == TetrisModerationStatus.NORMAL ? "" : (serializedEvidence == null ? "" : serializedEvidence)))) {
             TetrisLeaderboard existingLeaderboard = tetrisLeaderboardRepository.findByPlayerNameIgnoreCase(user.getUsername()).orElse(null);
             Integer existingRank = existingLeaderboard == null ? null : rankByPlayerKey(user.getUsername());
             return toRegisteredPlayerResponse(user, existingLeaderboard, existingRank);
@@ -240,6 +255,7 @@ public class GamingService {
 
         user.setTetrisModerationStatus(nextStatus);
         user.setTetrisModerationReason(nextStatus == TetrisModerationStatus.NORMAL ? null : sanitizedReason);
+        user.setTetrisModerationEvidence(nextStatus == TetrisModerationStatus.NORMAL ? null : serializedEvidence);
         user.setTetrisModeratedAt(nextStatus == TetrisModerationStatus.NORMAL ? null : Instant.now());
 
         AppUser savedUser = appUserRepository.save(user);
@@ -251,6 +267,7 @@ public class GamingService {
         auditLog.setPreviousStatus(previousStatus);
         auditLog.setNewStatus(nextStatus);
         auditLog.setReason(nextStatus == TetrisModerationStatus.NORMAL ? (sanitizedReason.isEmpty() ? "Status restored to normal." : sanitizedReason) : sanitizedReason);
+        auditLog.setEvidenceSnapshot(nextStatus == TetrisModerationStatus.NORMAL ? null : serializedEvidence);
         auditLog.setActedBy(normalizedActor);
         auditLog.setActedAt(Instant.now());
         tetrisModerationAuditLogRepository.save(auditLog);
@@ -293,10 +310,53 @@ public class GamingService {
                         log.getPreviousStatus() != null ? log.getPreviousStatus().name() : TetrisModerationStatus.NORMAL.name(),
                         log.getNewStatus() != null ? log.getNewStatus().name() : TetrisModerationStatus.NORMAL.name(),
                         log.getReason(),
+                        log.getEvidenceSnapshot(),
                         log.getActedBy(),
                         log.getActedAt()
                 ))
                 .toList();
+    }
+
+    private String serializeEvidence(Map<String, Object> evidence) {
+        if (evidence == null || evidence.isEmpty()) {
+            return null;
+        }
+        StringBuilder builder = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : evidence.entrySet()) {
+            if (!first) {
+                builder.append(',');
+            }
+            first = false;
+            builder.append('"').append(escapeJson(entry.getKey())).append('"').append(':');
+            Object value = entry.getValue();
+            if (value == null) {
+                builder.append("null");
+            } else if (value instanceof Number || value instanceof Boolean) {
+                builder.append(value);
+            } else {
+                builder.append('"').append(escapeJson(String.valueOf(value))).append('"');
+            }
+        }
+        builder.append('}');
+        return truncateEvidence(builder.toString());
+    }
+
+    private String truncateEvidence(String evidenceText) {
+        if (evidenceText == null) {
+            return null;
+        }
+        String normalized = evidenceText.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return normalized.length() <= 4000 ? normalized : normalized.substring(0, 4000);
+    }
+
+    private String escapeJson(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
     }
 
     private Integer rankByPlayerKey(String username) {
