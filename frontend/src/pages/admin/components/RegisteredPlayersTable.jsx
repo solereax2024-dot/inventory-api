@@ -105,6 +105,17 @@ function getModerationLabel(status) {
   return "Normal";
 }
 
+function formatModerationEvidence(evidence) {
+  const raw = String(evidence || "").trim();
+  if (!raw) return "";
+
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return raw;
+  }
+}
+
 export default function RegisteredPlayersTable({ players = [], totalRegisteredPlayers: totalRegisteredPlayersProp, isLoading = false, onBonusAction, bonusActionKey = "", onDeletePlayer, onDeleteAllPlayers, isDeletingPlayers = false, onProfileImageAction, profileImageActionKey = "", onSendPlayerNotification, onBroadcastNotification, notificationActionKey = "", onModerationAction, moderationActionKey = "", onLoadModerationHistory }) {
   const [revokeConfirm, setRevokeConfirm] = useState({ isOpen: false, playerId: null, bonusType: "", label: "", message: "" });
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, playerId: null, playerName: "" });
@@ -390,6 +401,7 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                 const moderationLabel = getModerationLabel(moderationStatus);
                 const moderationTone = getModerationTone(moderationStatus);
                 const moderationReason = String(player.tetrisModerationReason || "").trim();
+                const moderationEvidence = formatModerationEvidence(player.tetrisModerationEvidence);
 
                 const renderActionButton = (bonusType, state) => {
                   if (!state.action || !onBonusAction) return null;
@@ -630,6 +642,12 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                            {moderationReason ? (
                               <span className="giveaway-player-muted-text tetris-player-action-reason" title={moderationReason}>{moderationReason}</span>
                            ) : null}
+                            {moderationEvidence ? (
+                              <details className="tetris-player-evidence-block">
+                                <summary className="giveaway-player-muted-text">Evidence snapshot</summary>
+                                <pre className="tetris-player-evidence-pre">{moderationEvidence}</pre>
+                              </details>
+                            ) : null}
                          </div>
                        </div>
                      </td>
@@ -949,16 +967,25 @@ export default function RegisteredPlayersTable({ players = [], totalRegisteredPl
                ) : null}
                {!moderationHistoryModal.loading && moderationHistoryModal.entries.length > 0 ? (
                  <div className="tetris-moderation-history-list">
-                   {moderationHistoryModal.entries.map((entry) => (
-                     <div key={entry.id} className="tetris-moderation-history-item">
-                       <div className="tetris-moderation-history-row">
-                         <strong>{entry.previousStatus || "NORMAL"} → {entry.newStatus || "NORMAL"}</strong>
-                         <span>{formatDateTime(entry.actedAt)}</span>
-                       </div>
-                       <p>{entry.reason || "No reason provided."}</p>
-                       <small>By: {entry.actedBy || "SYSTEM"}</small>
-                     </div>
-                   ))}
+                    {moderationHistoryModal.entries.map((entry) => {
+                      const evidenceSnapshot = formatModerationEvidence(entry.evidenceSnapshot);
+                      return (
+                        <div key={entry.id} className="tetris-moderation-history-item">
+                          <div className="tetris-moderation-history-row">
+                            <strong>{entry.previousStatus || "NORMAL"} → {entry.newStatus || "NORMAL"}</strong>
+                            <span>{formatDateTime(entry.actedAt)}</span>
+                          </div>
+                          <p>{entry.reason || "No reason provided."}</p>
+                          {evidenceSnapshot ? (
+                            <details className="tetris-player-evidence-block">
+                              <summary className="giveaway-player-muted-text">Evidence snapshot</summary>
+                              <pre className="tetris-player-evidence-pre">{evidenceSnapshot}</pre>
+                            </details>
+                          ) : null}
+                          <small>By: {entry.actedBy || "SYSTEM"}</small>
+                        </div>
+                      );
+                    })}
                  </div>
                ) : null}
              </div>
