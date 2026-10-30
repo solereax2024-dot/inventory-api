@@ -11,5 +11,9 @@ public interface GiveawayWheelEntryRepository extends JpaRepository<GiveawayWhee
     List<GiveawayWheelEntry> findAllByStatusOrderByUpdatedAtDesc(GiveawayWheelEntryStatus status);
 
     List<GiveawayWheelEntry> findTop20ByFullNameContainingIgnoreCaseOrderByUpdatedAtDesc(String fullName);
+
+    boolean existsByFullNameIgnoreCase(String fullName);
+
+    boolean existsByFullNameIgnoreCaseAndIdNot(String fullName, Long id);
 }
 

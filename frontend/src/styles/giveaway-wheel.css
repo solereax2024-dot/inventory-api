@@ -9,7 +9,7 @@
 .giveaway-wheel-layout,
 .giveaway-wheel-info-strip {
   width: min(1200px, calc(100vw - 32px));
-  width: min(920px, calc(100vw - 24px));
+  margin-inline: auto;
 }
 
 .giveaway-wheel-hero {
@@ -17,6 +17,95 @@
   grid-template-columns: minmax(0, 1.05fr) minmax(360px, 520px);
   gap: 24px;
   align-items: stretch;
+}
+
+.giveaway-wheel-hero-compact {
+  display: block;
+  width: min(1440px, calc(100vw - 32px));
+  border-radius: 24px;
+  border: 1px solid #e5ebf3;
+  background: #ffffff;
+  box-shadow: 0 24px 58px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.giveaway-wheel-hero-shell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 34px;
+  border-bottom: 1px solid #ebf1f7;
+}
+
+.giveaway-wheel-hero-shell-head h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(2.2rem, 2.6vw, 3rem);
+  line-height: 1;
+}
+
+.giveaway-wheel-hero-close-btn {
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 999px;
+  border: 1px solid #e5ebf3;
+  background: #f6f8fc;
+  color: #1e293b;
+  box-shadow: none;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-hero-panel-compact {
+  background: #ffffff;
+  border: 0;
+  box-shadow: none;
+  color: #0f172a;
+  grid-template-columns: minmax(0, 1.02fr) minmax(430px, 0.98fr);
+  gap: 26px;
+  padding: 20px 20px 24px;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-stage-compact {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0;
+  min-height: auto;
+  padding: 12px 10px;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+}
+
+.giveaway-wheel-stage-copy {
+  display: none;
+}
+
+.giveaway-wheel-stage-copy span {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.giveaway-wheel-stage-copy h3 {
+  margin: 0 0 8px;
+  color: #f8fafc;
+  font-size: clamp(1.9rem, 2vw, 2.25rem);
+  line-height: 1.1;
+}
+
+.giveaway-wheel-stage-copy p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.97rem;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-sidebar {
+  gap: 0;
 }
 
 .giveaway-wheel-hero-copy,
@@ -109,6 +198,348 @@
   padding: 24px;
   display: grid;
   gap: 18px;
+}
+
+.giveaway-wheel-hero-panel-compact {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  align-items: start;
+  gap: 20px;
+}
+
+.giveaway-wheel-stage-compact {
+  min-height: auto;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.giveaway-wheel-wheel-wrap {
+  width: min(100%, 700px);
+  margin: 0 auto;
+}
+
+.giveaway-wheel-svg-shell-compact {
+  width: min(100%, 700px);
+  margin: 0 auto;
+}
+
+.giveaway-wheel-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.giveaway-wheel-side-card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.56);
+}
+
+.giveaway-wheel-status-panel {
+  display: grid;
+  gap: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-side-card {
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid #e8eef5;
+  border-radius: 0;
+  background: transparent;
+  color: #0f172a;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-side-card:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-side-kicker {
+  display: none;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-side-card h2 {
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: clamp(1.95rem, 2.1vw, 2.55rem);
+  line-height: 1.12;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-side-card p {
+  color: #64748b;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-prize-panel h2,
+.giveaway-wheel-hero-compact .giveaway-wheel-search-panel h2 {
+  font-size: clamp(2rem, 2.15vw, 2.7rem);
+}
+
+.giveaway-wheel-prize-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.giveaway-wheel-prize-strip-shell {
+  position: relative;
+}
+
+.giveaway-wheel-prize-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.giveaway-wheel-prize-visual {
+  width: 100%;
+  aspect-ratio: 1.18 / 1;
+  border-radius: 14px;
+  border: 1px solid #edf2f8;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.giveaway-wheel-prize-visual-btn {
+  cursor: pointer;
+  padding: 0;
+}
+
+.giveaway-wheel-prize-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.giveaway-wheel-prize-visual.is-empty {
+  min-height: 100px;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.giveaway-wheel-prize-meta {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.giveaway-wheel-prize-lightbox-panel {
+  width: min(1060px, 100%);
+}
+
+.giveaway-wheel-prize-lightbox-body {
+  min-height: 320px;
+  max-height: 72svh;
+  display: grid;
+  place-items: center;
+  position: relative;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.giveaway-wheel-prize-lightbox-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.giveaway-wheel-prize-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid #d9e3ee;
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.giveaway-wheel-prize-lightbox-nav.is-prev {
+  left: 10px;
+}
+
+.giveaway-wheel-prize-lightbox-nav.is-next {
+  right: 10px;
+}
+
+.giveaway-wheel-prize-lightbox-counter {
+  text-align: center;
+  padding: 0 0 10px;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-prize-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-prize-visual-btn {
+  min-height: 92px;
+  border-radius: 14px;
+  border: 1px solid #edf2f8;
+  background: #ffffff;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-search-form-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-search-input {
+  border: 1px solid #d9e4ef;
+  background: #ffffff;
+  border-radius: 13px;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-search-input input {
+  color: #0f172a;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-search-input svg {
+  color: #94a3b8;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-search-form-compact .btn-primary {
+  min-width: 154px;
+  min-height: 54px;
+  border-radius: 13px;
+  background: #1f2937;
+  border-color: #1f2937;
+  color: #ffffff;
+}
+
+.giveaway-wheel-inline-results {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.giveaway-wheel-inline-result-row {
+  border: 1px solid #edf2f8;
+  background: #ffffff;
+  border-radius: 13px;
+  min-height: 54px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.giveaway-wheel-inline-result-user,
+.giveaway-wheel-inline-result-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.giveaway-wheel-inline-result-user {
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.giveaway-wheel-inline-result-user svg {
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.giveaway-wheel-inline-result-action {
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-search-results-trigger {
+  margin-top: 8px;
+  border-radius: 12px;
+  min-height: 48px;
+  border: 1px solid #edf2f8;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-search-panel {
+  padding-bottom: 18px;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-join-panel {
+  padding-top: 20px;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-action-row-sidebar {
+  margin-top: 0;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-action-row-sidebar .btn-primary {
+  min-height: 70px;
+  border-radius: 16px;
+  font-size: 1.05rem;
+  background: #1f2937;
+  border-color: #1f2937;
+  color: #ffffff;
+}
+
+.giveaway-wheel-hero-compact .giveaway-wheel-prize-panel p,
+.giveaway-wheel-hero-compact .giveaway-wheel-search-panel p,
+.giveaway-wheel-hero-compact .giveaway-wheel-join-panel h2,
+.giveaway-wheel-hero-compact .giveaway-wheel-join-panel p {
+  display: none;
+}
+
+.giveaway-wheel-side-kicker {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #93c5fd;
+}
+
+.giveaway-wheel-side-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.65rem;
+  line-height: 1.1;
+}
+
+.giveaway-wheel-side-card p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.giveaway-wheel-action-row-sidebar,
+.giveaway-wheel-search-form-compact {
+  margin-top: 14px;
+}
+
+.giveaway-wheel-action-row-sidebar .btn-primary {
+  width: 100%;
 }
 
 .giveaway-wheel-stage {
@@ -440,6 +871,35 @@
   margin: 0;
 }
 
+.giveaway-wheel-alert-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.giveaway-wheel-alert-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.giveaway-wheel-alert-toggle {
+  border: 0;
+  background: transparent;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.giveaway-wheel-form-alert p.is-collapsed {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .giveaway-wheel-form-alert.is-danger {
   background: rgba(127, 29, 29, 0.38);
   border-color: rgba(248, 113, 113, 0.28);
@@ -532,13 +992,17 @@
 }
 
 .giveaway-wheel-proof-preview img {
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: #ffffff;
 }
 
 .giveaway-wheel-proof-preview--post img {
-  object-position: center center;
+  object-position: center top;
 }
 
 .giveaway-wheel-proof-preview--profile img {
@@ -650,1214 +1114,6 @@
   max-height: min(92svh, 860px);
   overflow: hidden;
   display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 26px 68px rgba(15, 23, 42, 0.36);
-  color: #e2e8f0;
-}
-
-
-.giveaway-wheel-modal-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.giveaway-wheel-modal-titleblock { display: grid; gap: 0; }
-
-.giveaway-wheel-modal-head h2 {
-  margin: 0;
-  font-size: clamp(1.1rem, 1.8vw, 1.52rem);
-  line-height: 1.05;
-}
-
-.giveaway-wheel-modal-scroll {
-  overflow: auto;
-  padding-right: 2px;
-  max-height: calc(92svh - 100px);
-}
-
-.giveaway-wheel-modal-surface {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
-}
-
-.giveaway-wheel-modal-scroll {
-  display: grid;
-  gap: 12px;
-}
-
-.giveaway-wheel-modal-section {
-  border-radius: 18px;
-  padding: 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
-}
-
-.giveaway-wheel-modal-section-head {
-  display: grid;
-  gap: 2px;
-  margin-bottom: 6px;
-}
-
-.giveaway-wheel-modal-section-head h3 {
-  margin: 0;
-  font-size: 0.86rem;
-  color: #f8fafc;
-}
-
-.giveaway-wheel-modal-section-head p {
-  margin: 0;
-  color: rgba(226, 232, 240, 0.46);
-  font-size: 0.76rem;
-  line-height: 1.28;
-}
-
-.giveaway-wheel-modal-section-head-compact {
-  margin-bottom: 8px;
-}
-
-.giveaway-wheel-section-copy {
-  display: grid;
-  gap: 4px;
-}
-
-.giveaway-wheel-modal-helper {
-  margin: 0;
-  color: rgba(226, 232, 240, 0.74);
-}
-
-.giveaway-wheel-info-strip-compact {
-  margin-bottom: 0;
-  grid-template-columns: 1fr;
-  gap: 5px;
-}
-
-.giveaway-wheel-roster-mini-list {
-  display: grid;
-  gap: 5px;
-}
-
-.giveaway-wheel-search-results-block {
-  display: grid;
-  gap: 6px;
-}
-
-.giveaway-wheel-search-card-compact,
-.giveaway-wheel-form-card-compact {
-  width: 100%;
-}
-
-.giveaway-wheel-search-card-compact p,
-.giveaway-wheel-form-card-compact p {
-  font-size: 0.82rem;
-}
-
-.giveaway-wheel-search-form-compact {
-  margin-top: 8px;
-}
-
-.giveaway-wheel-search-form-compact .giveaway-wheel-search-input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.giveaway-wheel-search-form-compact .giveaway-wheel-search-input input {
-  min-width: 0;
-}
-
-@media (min-width: 901px) {
-  .giveaway-wheel-search-form-compact {
-    flex-wrap: nowrap;
-  }
-
-  .giveaway-wheel-search-form-compact .giveaway-wheel-search-input {
-    min-width: 140px;
-  }
-
-  .giveaway-wheel-search-form-compact .btn-primary {
-    flex: 0 0 auto;
-    width: auto;
-    min-width: 104px;
-    margin-top: 0;
-    white-space: nowrap;
-  }
-}
-
-.giveaway-wheel-form-compact {
-  gap: 8px;
-}
-
-.giveaway-wheel-form-compact .giveaway-wheel-field-wide {
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #edf2f7;
-}
-
-.giveaway-wheel-form-compact .giveaway-wheel-field-wide > span {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-transform: none;
-  color: #475569;
-}
-
-.giveaway-wheel-form-compact .giveaway-wheel-field-wide .giveaway-wheel-input-shell {
-  display: flex;
-  align-items: center;
-  padding: 0;
-  border-radius: 10px;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow: visible;
-}
-
-.giveaway-wheel-form-compact .giveaway-wheel-field-wide .giveaway-wheel-input-shell:focus-within {
-  box-shadow: none;
-}
-
-.giveaway-wheel-form-compact .giveaway-wheel-field-wide input {
-  min-height: 42px;
-  width: 100%;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid #d6e0eb;
-  background: #ffffff;
-  font-size: 0.94rem;
-  line-height: 1.25;
-}
-
-.giveaway-wheel-form-compact .giveaway-wheel-field-wide input:focus {
-  border-color: #b8c8db;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.08);
-}
-
-.giveaway-wheel-form-compact .giveaway-wheel-field-wide input::placeholder {
-  color: #94a3b8;
-}
-
-.giveaway-wheel-form-topbar {
-  align-items: flex-start;
-}
-
-.giveaway-wheel-form-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.giveaway-wheel-inline-stat {
-  min-width: 96px;
-  padding: 7px 9px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: grid;
-  gap: 2px;
-}
-
-.giveaway-wheel-inline-stat small {
-  color: #64748b;
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.giveaway-wheel-inline-stat strong {
-  color: #0f172a;
-  font-size: 0.88rem;
-}
-
-.giveaway-wheel-inline-stat.is-approved {
-  border-color: rgba(168, 85, 247, 0.28);
-}
-
-.giveaway-wheel-inline-stat.is-rejected {
-  border-color: rgba(248, 113, 113, 0.24);
-}
-
-.giveaway-wheel-inline-stat.is-pending {
-  border-color: rgba(250, 204, 21, 0.24);
-}
-
-.giveaway-wheel-proof-grid-compact {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.giveaway-wheel-proof-card-compact {
-  min-height: 0;
-  padding: 8px;
-  background: rgba(15, 23, 42, 0.28);
-  border-color: rgba(255, 255, 255, 0.05);
-  gap: 6px;
-}
-
-.giveaway-wheel-proof-footnote {
-  color: rgba(226, 232, 240, 0.46);
-  font-size: 0.7rem;
-}
-
-.giveaway-wheel-proof-preview-compact {
-  min-height: 64px;
-}
-
-.giveaway-wheel-form-footer-compact {
-  justify-content: flex-start;
-  padding-top: 2px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-@media (max-width: 1100px) {
-  .giveaway-wheel-hero,
-  .giveaway-wheel-controls,
-  .giveaway-wheel-layout,
-  .giveaway-wheel-info-strip {
-    width: min(100vw - 24px, 1000px);
-  }
-
-  .giveaway-wheel-hero,
-  .giveaway-wheel-controls,
-  .giveaway-wheel-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .giveaway-wheel-cta-card {
-    position: static;
-  }
-}
-
-@media (max-width: 720px) {
-  .giveaway-wheel-page {
-    gap: 18px;
-    padding-top: 16px;
-  }
-
-  .giveaway-wheel-hero,
-  .giveaway-wheel-controls,
-  .giveaway-wheel-layout,
-  .giveaway-wheel-info-strip {
-    width: calc(100vw - 16px);
-  }
-
-  .giveaway-wheel-hero-copy,
-  .giveaway-wheel-hero-panel,
-  .giveaway-wheel-search-card,
-  .giveaway-wheel-cta-card,
-  .giveaway-wheel-roster-card,
-  .giveaway-wheel-form-card {
-    padding: 18px;
-    border-radius: 24px;
-  }
-
-  .giveaway-wheel-stat-row,
-  .giveaway-wheel-info-strip,
-  .giveaway-wheel-proof-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .giveaway-wheel-section-head,
-  .giveaway-wheel-proof-head,
-  .giveaway-wheel-search-form,
-  .giveaway-wheel-form-footer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .giveaway-wheel-search-form .button-secondary,
-  .giveaway-wheel-form-footer > * {
-    width: 100%;
-  }
-
-  .giveaway-wheel-mobile-cta {
-    display: flex;
-  }
-}
-
-/* Minimalist redesign overrides */
-.giveaway-wheel-page {
-  min-height: 100svh;
-  padding: 24px 0 32px;
-  gap: 18px;
-  overflow: auto;
-  background:
-    radial-gradient(circle at top, rgba(99, 102, 241, 0.06), transparent 30%),
-    linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
-  color: #0f172a;
-}
-
-.giveaway-wheel-hero,
-.giveaway-wheel-controls,
-.giveaway-wheel-layout,
-.giveaway-wheel-info-strip,
-.giveaway-wheel-hero-compact {
-  width: min(1120px, calc(100vw - 32px));
-}
-
-.giveaway-wheel-hero-compact {
-  min-height: calc(100svh - 72px);
-  align-items: center;
-}
-
-.giveaway-wheel-hero-panel-compact {
-  min-height: min(820px, calc(100svh - 72px));
-  padding: 0;
-  gap: 20px;
-  grid-template-columns: minmax(0, 1fr) minmax(332px, 368px);
-  align-items: stretch;
-  border-radius: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-
-.giveaway-wheel-hero-copy {
-  display: grid;
-  gap: 0;
-  color: #0f172a;
-  justify-items: center;
-  text-align: center;
-}
-
-.giveaway-wheel-hero-copy h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 1.9vw, 1.75rem);
-  line-height: 1.06;
-  letter-spacing: -0.04em;
-  color: #0f172a;
-  max-width: 12ch;
-}
-
-.giveaway-wheel-stat-row-compact {
-  margin-top: 4px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.giveaway-wheel-stat-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  box-shadow: none;
-  border-radius: 20px;
-}
-
-.giveaway-wheel-stat-card strong {
-  color: #0f172a;
-}
-
-.giveaway-wheel-stat-card.is-approved strong {
-  color: #4f46e5;
-}
-
-.giveaway-wheel-stat-card.is-pending strong {
-  color: #ca8a04;
-}
-
-.giveaway-wheel-stage-compact {
-  width: min(100%, 760px);
-  min-height: 100%;
-  padding: 22px;
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05);
-  align-self: stretch;
-}
-
-.giveaway-wheel-svg-shell-compact {
-  width: min(90vw, 760px);
-  margin: 0 auto;
-}
-
-.giveaway-wheel-sidebar {
-  display: grid;
-  gap: 16px;
-  align-content: stretch;
-  grid-template-rows: minmax(0, 1fr) auto;
-  position: sticky;
-  top: 24px;
-  align-self: stretch;
-  min-height: 100%;
-}
-
-.giveaway-wheel-side-card {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.07);
-}
-
-.giveaway-wheel-side-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.giveaway-wheel-side-kicker {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #64748b;
-}
-
-.giveaway-wheel-side-total {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #475569;
-  font-size: 0.78rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.giveaway-wheel-side-card h2 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 1rem;
-  letter-spacing: -0.03em;
-}
-
-.giveaway-wheel-side-card p {
-  margin: -2px 0 0;
-  color: #64748b;
-  line-height: 1.4;
-  font-size: 0.88rem;
-}
-
-.giveaway-wheel-status-grid {
-  display: grid;
-  gap: 8px;
-}
-
-.giveaway-wheel-status-stat {
-  min-width: 0;
-  padding: 10px 12px;
-  border-radius: 16px;
-}
-
-.giveaway-wheel-status-stat-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.giveaway-wheel-status-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-}
-
-.giveaway-wheel-status-icon.is-approved {
-  background: rgba(79, 70, 229, 0.08);
-  border-color: rgba(79, 70, 229, 0.14);
-  color: #4f46e5;
-}
-
-.giveaway-wheel-status-icon.is-pending {
-  background: rgba(202, 138, 4, 0.08);
-  border-color: rgba(202, 138, 4, 0.16);
-  color: #b45309;
-}
-
-.giveaway-wheel-status-icon.is-rejected {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.14);
-  color: #dc2626;
-}
-
-.giveaway-wheel-status-stat small {
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.giveaway-wheel-status-stat strong {
-  font-size: 1.2rem;
-}
-
-.giveaway-wheel-status-panel {
-  gap: 8px;
-  align-content: start;
-}
-
-.giveaway-wheel-search-panel {
-  gap: 8px;
-  align-content: start;
-}
-
-.giveaway-wheel-prize-panel {
-  gap: 6px;
-  align-content: start;
-}
-
-.giveaway-wheel-prize-grid {
-  display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  gap: 6px;
-}
-
-.giveaway-wheel-prize-grid::-webkit-scrollbar {
-  display: none;
-}
-
-.giveaway-wheel-prize-strip-shell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.giveaway-wheel-prize-strip-nav {
-  width: 26px;
-  min-width: 26px;
-  height: 26px;
-  padding: 0;
-  margin-top: 0;
-  border-radius: 999px;
-  border: 1px solid #dbe5ef;
-  background: #ffffff;
-  color: #475569;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-
-.giveaway-wheel-prize-visual {
-  aspect-ratio: 1;
-  width: 72px;
-  min-width: 72px;
-  min-height: 64px;
-  border-radius: 10px;
-  border: 1px solid #dbe5ef;
-  background: #f8fafc;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  scroll-snap-align: start;
-}
-
-.giveaway-wheel-prize-visual-btn {
-  width: 100%;
-  padding: 0;
-  cursor: zoom-in;
-}
-
-.giveaway-wheel-prize-visual img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.giveaway-wheel-prize-visual.is-empty {
-  border-style: dashed;
-}
-
-.giveaway-wheel-prize-visual.is-empty span {
-  color: #94a3b8;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.giveaway-wheel-prize-meta {
-  color: #64748b;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.giveaway-wheel-prize-lightbox-panel {
-  width: min(760px, 100%);
-  max-height: min(88svh, 760px);
-}
-
-.giveaway-wheel-prize-lightbox-body {
-  position: relative;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #0f172a;
-}
-
-.giveaway-wheel-prize-lightbox-image {
-  width: 100%;
-  max-height: min(70svh, 620px);
-  object-fit: contain;
-  display: block;
-}
-
-.giveaway-wheel-prize-lightbox-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  background: rgba(15, 23, 42, 0.72);
-  color: #ffffff;
-  font-size: 1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.giveaway-wheel-prize-lightbox-nav.is-prev {
-  left: 10px;
-}
-
-.giveaway-wheel-prize-lightbox-nav.is-next {
-  right: 10px;
-}
-
-.giveaway-wheel-prize-lightbox-counter {
-  margin-top: 8px;
-  color: #64748b;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-align: center;
-}
-
-.giveaway-wheel-status-panel .giveaway-wheel-inline-stat strong {
-  color: #0f172a;
-}
-
-.giveaway-wheel-join-panel {
-  gap: 8px;
-  margin-top: 2px;
-  background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
-  border-color: rgba(99, 102, 241, 0.18);
-  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.18);
-  align-content: start;
-}
-
-.giveaway-wheel-join-panel .giveaway-wheel-side-kicker,
-.giveaway-wheel-join-panel p {
-  color: rgba(226, 232, 240, 0.78);
-}
-
-.giveaway-wheel-join-panel h2 {
-  color: #ffffff;
-}
-
-.giveaway-wheel-pointer {
-  top: -2px;
-  border-top-color: #0f172a;
-  filter: none;
-}
-
-.giveaway-wheel-center-cta {
-  display: none;
-  width: clamp(126px, 15vw, 164px);
-}
-
-.giveaway-wheel-modal-overlay {
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px) saturate(120%);
-}
-
-.giveaway-wheel-modal-panel {
-  background: rgba(255, 255, 255, 0.96);
-  border-color: rgba(148, 163, 184, 0.18);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
-  color: #0f172a;
-}
-
-.giveaway-wheel-modal-head h2,
-.giveaway-wheel-modal-section-head h3,
-.giveaway-wheel-summary-pill,
-.giveaway-wheel-entry-chip {
-  color: #0f172a;
-}
-
-.giveaway-wheel-modal-section {
-  background: #f8fafc;
-  border-color: #e2e8f0;
-  box-shadow: none;
-}
-
-.giveaway-wheel-modal-section-head p,
-.giveaway-wheel-modal-helper,
-.giveaway-wheel-proof-head p,
-.giveaway-wheel-proof-card small,
-.giveaway-wheel-search-result small,
-.giveaway-wheel-roster-item small {
-  color: #64748b;
-}
-
-.giveaway-wheel-modal-surface {
-  color: inherit;
-}
-
-.giveaway-wheel-search-input,
-.giveaway-wheel-field input,
-.giveaway-wheel-input-shell {
-  border-color: #dbe2ea;
-  background: #ffffff;
-}
-
-.giveaway-wheel-search-input input,
-.giveaway-wheel-field input {
-  color: #0f172a;
-}
-
-.giveaway-wheel-field span {
-  color: #0f172a;
-}
-
-.giveaway-wheel-search-input svg {
-  color: #94a3b8;
-}
-
-.giveaway-wheel-search-result,
-.giveaway-wheel-roster-item,
-.giveaway-wheel-proof-card,
-.giveaway-wheel-empty-state {
-  background: #ffffff;
-  border-color: #e2e8f0;
-  color: #0f172a;
-  box-shadow: none;
-}
-
-.giveaway-wheel-search-result strong,
-.giveaway-wheel-roster-item strong,
-.giveaway-wheel-proof-head strong {
-  color: #0f172a;
-}
-
-.giveaway-wheel-search-result-status {
-  color: #475569;
-}
-
-.giveaway-wheel-search-result-message {
-  color: #334155;
-}
-
-.giveaway-wheel-search-result.is-approved,
-.giveaway-wheel-roster-item.is-approved,
-.giveaway-wheel-inline-stat.is-approved {
-  border-color: rgba(79, 70, 229, 0.24);
-}
-
-.giveaway-wheel-search-result.is-pending,
-.giveaway-wheel-roster-item.is-pending,
-.giveaway-wheel-inline-stat.is-pending {
-  border-color: rgba(202, 138, 4, 0.26);
-}
-
-.giveaway-wheel-search-result.is-rejected,
-.giveaway-wheel-roster-item.is-rejected {
-  opacity: 0.6;
-}
-
-.giveaway-wheel-proof-card-compact,
-.giveaway-wheel-form-alert,
-.giveaway-wheel-inline-stat {
-  border-color: #e2e8f0;
-}
-
-.giveaway-wheel-proof-card-compact {
-  background: #ffffff;
-}
-
-.giveaway-wheel-proof-preview {
-  background: #f8fafc;
-  border-color: #dbe2ea;
-}
-
-.giveaway-wheel-proof-preview svg {
-  color: #94a3b8;
-}
-
-.giveaway-wheel-mini-link {
-  background: #0f172a;
-  color: #ffffff;
-  border-color: #0f172a;
-  box-shadow: none;
-}
-
-.giveaway-wheel-mini-link:hover {
-  background: #1e293b;
-}
-
-.giveaway-wheel-form-alert.is-danger {
-  background: rgba(254, 242, 242, 0.92);
-  border-color: rgba(248, 113, 113, 0.24);
-}
-
-.giveaway-wheel-form-alert.is-success {
-  background: rgba(240, 253, 244, 0.96);
-  border-color: rgba(74, 222, 128, 0.22);
-}
-
-.giveaway-wheel-summary-pill,
-.giveaway-wheel-entry-chip,
-.giveaway-wheel-inline-stat {
-  background: #f8fafc;
-}
-
-.giveaway-wheel-summary-pill.is-approved,
-.giveaway-wheel-entry-chip.is-approved {
-  background: rgba(79, 70, 229, 0.08);
-  border-color: rgba(79, 70, 229, 0.18);
-}
-
-.giveaway-wheel-summary-pill.is-pending {
-  background: rgba(202, 138, 4, 0.08);
-  border-color: rgba(202, 138, 4, 0.18);
-  color: #92400e;
-}
-
-.giveaway-wheel-summary-pill.is-rejected,
-.giveaway-wheel-entry-chip.is-required {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.16);
-  color: #991b1b;
-}
-
-.giveaway-wheel-info-card {
-  background: #ffffff;
-  border-color: #e2e8f0;
-  color: #0f172a;
-}
-
-.giveaway-wheel-info-card svg {
-  color: #4f46e5;
-}
-
-@media (max-width: 720px) {
-  .giveaway-wheel-page {
-    padding: 14px 0 22px;
-  }
-
-  .giveaway-wheel-hero,
-  .giveaway-wheel-controls,
-  .giveaway-wheel-layout,
-  .giveaway-wheel-info-strip,
-  .giveaway-wheel-hero-compact {
-    width: calc(100vw - 16px);
-  }
-
-  .giveaway-wheel-hero-panel-compact {
-    min-height: auto;
-    padding: 0;
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .giveaway-wheel-stage-compact {
-    width: min(100%, 92vw);
-    padding: 18px;
-    border-radius: 22px;
-  }
-
-
-  .giveaway-wheel-action-row {
-    width: fit-content;
-  }
-
-  .giveaway-wheel-action-row-sidebar {
-    width: 100%;
-  }
-
-  .giveaway-wheel-sidebar {
-    position: static;
-    gap: 12px;
-    grid-template-rows: none;
-    min-height: auto;
-  }
-
-  .giveaway-wheel-side-card {
-    padding: 16px;
-    border-radius: 20px;
-  }
-
-  .giveaway-wheel-prize-visual {
-    width: 64px;
-    min-width: 64px;
-  }
-
-  .giveaway-wheel-side-card h2 {
-    font-size: 1rem;
-  }
-
-  .giveaway-wheel-side-header {
-    align-items: center;
-  }
-
-
-  .giveaway-wheel-modal-panel {
-    padding: 14px;
-    border-radius: 22px;
-  }
-}
-
-/* Final giveaway wheel layout cleanup */
-.giveaway-wheel-page {
-  min-height: 100svh;
-  padding: 0;
-  gap: 12px;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.giveaway-wheel-hero,
-.giveaway-wheel-controls,
-.giveaway-wheel-layout,
-.giveaway-wheel-info-strip,
-.giveaway-wheel-hero-compact {
-  width: min(1320px, calc(100vw - 16px));
-  margin: 0 auto;
-}
-
-.giveaway-wheel-hero-compact {
-  min-height: calc(100svh - 64px);
-  grid-template-columns: 1fr;
-  align-items: start;
-}
-
-.giveaway-wheel-hero-panel-compact {
-  display: grid;
-  width: 100%;
-  max-width: none;
-  grid-template-columns: minmax(0, 1.15fr) minmax(356px, 460px);
-  gap: 14px;
-  align-items: stretch;
-  min-height: min(820px, calc(100svh - 64px));
-  padding: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-
-.giveaway-wheel-stage-compact {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  max-width: none;
-  min-height: 100%;
-  aspect-ratio: 1;
-  margin: 0 auto;
-  padding: 20px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
-  box-sizing: border-box;
-}
-
-.giveaway-wheel-wheel-wrap {
-  position: relative;
-  width: 100%;
-  max-width: 820px;
-  margin: 0 auto;
-  display: grid;
-  place-items: center;
-}
-
-.giveaway-wheel-svg-shell-compact {
-  width: 100%;
-  max-width: 820px;
-  margin: 0 auto;
-}
-
-.giveaway-wheel-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 16px 30px rgba(15, 23, 42, 0.12));
-}
-
-.giveaway-wheel-pointer {
-  top: 0;
-  left: 50%;
-  transform: translate(-50%, -42%);
-  border-left-width: 18px;
-  border-right-width: 18px;
-  border-top-width: 30px;
-  border-top-color: #0f172a;
-  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.12));
-}
-
-.giveaway-wheel-sidebar {
-  display: grid;
-  gap: 12px;
-  width: 100%;
-  max-width: 460px;
-  grid-template-rows: minmax(0, 1fr) auto;
-  align-content: stretch;
-  align-self: stretch;
-  position: sticky;
-  top: 12px;
-}
-
-.giveaway-wheel-side-card {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  min-height: 0;
-}
-
-.giveaway-wheel-status-panel {
-  height: 100%;
-}
-
-.giveaway-wheel-status-grid {
-  display: grid;
-  gap: 8px;
-}
-
-.giveaway-wheel-status-stat {
-  min-width: 0;
-  padding: 10px 12px;
-}
-
-.giveaway-wheel-action-row-sidebar {
-  width: 100%;
-}
-
-.giveaway-wheel-action-row-sidebar .giveaway-wheel-action-primary {
-  width: 100%;
-}
-
-@media (max-width: 980px) {
-  .giveaway-wheel-hero,
-  .giveaway-wheel-controls,
-  .giveaway-wheel-layout,
-  .giveaway-wheel-info-strip,
-  .giveaway-wheel-hero-compact {
-    width: min(100vw - 16px, 960px);
-  }
-
-  .giveaway-wheel-hero-panel-compact {
-    min-height: auto;
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .giveaway-wheel-stage-compact {
-    max-width: 760px;
-    min-height: auto;
-    padding: 18px;
-  }
-
-  .giveaway-wheel-wheel-wrap {
-    max-width: 640px;
-  }
-
-  .giveaway-wheel-svg-shell-compact {
-    max-width: 640px;
-  }
-
-  .giveaway-wheel-sidebar {
-    position: static;
-    max-width: none;
-    gap: 12px;
-    grid-template-rows: none;
-  }
-}
-
-@media (max-width: 720px) {
-  .giveaway-wheel-page {
-    padding: 0;
-    gap: 12px;
-  }
-
-  .giveaway-wheel-hero,
-  .giveaway-wheel-controls,
-  .giveaway-wheel-layout,
-  .giveaway-wheel-info-strip,
-  .giveaway-wheel-hero-compact {
-    width: calc(100vw - 12px);
-  }
-
-  .giveaway-wheel-hero-panel-compact {
-    min-height: auto;
-    gap: 12px;
-  }
-
-  .giveaway-wheel-stage-compact {
-    max-width: none;
-    width: 100%;
-    min-height: auto;
-    padding: 14px;
-    border-radius: 22px;
-  }
-
-  .giveaway-wheel-wheel-wrap {
-    max-width: none;
-  }
-
-  .giveaway-wheel-svg-shell-compact {
-    max-width: none;
-  }
-
-  .giveaway-wheel-pointer {
-    border-left-width: 14px;
-    border-right-width: 14px;
-    border-top-width: 24px;
-  }
-
-  .giveaway-wheel-sidebar {
-    gap: 12px;
-    grid-template-rows: none;
-  }
-
-  .giveaway-wheel-side-card {
-    padding: 16px;
-    border-radius: 20px;
-  }
-
-  .giveaway-wheel-side-header {
-    align-items: center;
-  }
-
-  .giveaway-wheel-search-result,
-  .giveaway-wheel-roster-item {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .giveaway-wheel-search-result-meta {
-    justify-items: start;
-    text-align: left;
-  }
-}
-
-.giveaway-wheel-modal-panel {
-  width: min(900px, 100%);
-  max-height: min(88svh, 860px);
-  display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 10px;
   padding: 12px;
@@ -1946,6 +1202,21 @@
   gap: 10px;
 }
 
+.giveaway-wheel-entry-modal {
+  width: min(1120px, 100%);
+  max-height: min(92svh, 840px);
+  padding: 12px;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.giveaway-wheel-entry-modal-scroll {
+  min-height: 0;
+  overflow: auto;
+  max-height: calc(92svh - 124px);
+  padding-right: 4px;
+}
+
 .giveaway-wheel-search-results-modal {
   width: min(760px, 100%);
   max-height: min(82svh, 720px);
@@ -1955,24 +1226,23 @@
   background: transparent;
   border: 0;
   box-shadow: none;
-  gap: 8px;
+  gap: 10px;
 }
 
 .giveaway-wheel-form-compact {
-  gap: 8px;
+  gap: 12px;
 }
 
 .giveaway-wheel-proof-grid-compact {
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 14px;
 }
 
 .giveaway-wheel-proof-card-compact {
-  padding: 6px 0;
-  gap: 6px;
-  border-radius: 10px;
-  background: transparent;
-  border: 0;
+  padding: 10px;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid #e6edf5;
   box-shadow: none;
 }
 
@@ -1984,7 +1254,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
 }
 
 .giveaway-wheel-proof-head > div {
@@ -1997,20 +1267,20 @@
 .giveaway-wheel-proof-head .giveaway-wheel-entry-chip {
   margin-left: 0;
   align-self: center;
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-radius: 999px;
   border-color: #e5ecf3;
   background: #f8fafc;
   color: #64748b;
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
 
 .giveaway-wheel-proof-title-row {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -2028,16 +1298,16 @@
 
 .giveaway-wheel-proof-head strong {
   margin-bottom: 2px;
-  font-size: 0.84rem;
-  line-height: 1.1;
+  font-size: 1rem;
+  line-height: 1.15;
 }
 
 .giveaway-wheel-proof-head small {
   display: block;
   margin: 0;
   color: #64748b;
-  font-size: 0.72rem;
-  line-height: 1.25;
+  font-size: 0.82rem;
+  line-height: 1.3;
 }
 
 .giveaway-wheel-proof-rejection {
@@ -2047,8 +1317,14 @@
 }
 
 .giveaway-wheel-proof-preview-compact {
-  height: 72px;
-  min-height: 72px;
+  height: auto;
+  min-height: 126px;
+  aspect-ratio: var(--proof-aspect-ratio, 1 / 1);
+  width: clamp(128px, 16vw, 176px);
+  max-width: 100%;
+  padding: 4px;
+  align-items: center;
+  justify-items: center;
 }
 
 .giveaway-wheel-proof-preview.is-empty {
@@ -2067,14 +1343,23 @@
   align-items: center;
   gap: 6px;
   color: #64748b;
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
 
 .giveaway-wheel-form-footer-compact {
-  border-top: 0;
-  padding-top: 4px;
+  border-top: 1px solid #edf2f7;
+  padding-top: 10px;
+}
+
+.giveaway-wheel-form-footer-compact .btn-primary {
+  width: auto;
+  min-width: 196px;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 0.9rem;
 }
 
 .giveaway-wheel-readonly-note {
@@ -2095,6 +1380,12 @@
     border-radius: 14px;
   }
 
+  .giveaway-wheel-entry-modal {
+    width: min(100%, 760px);
+    max-height: min(94svh, 820px);
+    padding: 10px;
+  }
+
   .giveaway-wheel-modal-head-actions {
     width: 100%;
     justify-content: flex-start;
@@ -2104,19 +1395,1163 @@
 @media (min-width: 901px) {
   .giveaway-wheel-proof-grid-compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+  }
+}
+
+@media (min-width: 1260px) {
+  .giveaway-wheel-proof-grid-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .giveaway-wheel-proof-preview-compact {
+    min-height: 134px;
+    width: clamp(136px, 11vw, 170px);
+  }
+}
+
+@media (max-width: 1080px) {
+  .giveaway-wheel-hero-shell-head {
+    padding: 16px 18px;
+  }
+
+  .giveaway-wheel-hero-close-btn {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-hero-panel-compact {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .giveaway-wheel-wheel-wrap,
+  .giveaway-wheel-svg-shell-compact {
+    width: min(100%, 480px);
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-prize-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
-  .giveaway-wheel-modal-head {
+  .giveaway-wheel-page {
+    padding: 0;
+    gap: 12px;
+  }
+
+  .giveaway-wheel-hero,
+  .giveaway-wheel-controls,
+  .giveaway-wheel-layout,
+  .giveaway-wheel-info-strip,
+  .giveaway-wheel-hero-compact {
+    width: calc(100vw - 16px);
+  }
+
+  .giveaway-wheel-hero-compact {
+    border-radius: 20px;
+  }
+
+  .giveaway-wheel-hero-shell-head {
+    padding: 14px 14px;
+  }
+
+  .giveaway-wheel-hero-shell-head h1 {
+    font-size: 2.25rem;
+  }
+
+  .giveaway-wheel-hero-close-btn {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-hero-panel-compact {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-stage-compact {
+    max-width: none;
+    width: 100%;
+    min-height: auto;
+    padding: 4px 0 0;
+    border-radius: 0;
+    display: grid;
+    justify-items: center;
+    gap: 0;
+    overflow: visible;
+  }
+
+  .giveaway-wheel-wheel-wrap {
+    width: min(80vw, 330px);
+    max-width: 330px;
+    margin-inline: auto;
+  }
+
+  .giveaway-wheel-svg-shell-compact {
+    width: min(80vw, 330px);
+    max-width: 330px;
+    margin-inline: auto;
+  }
+
+  .giveaway-wheel-pointer {
+    border-left-width: 14px;
+    border-right-width: 14px;
+    border-top-width: 20px;
+    top: -1px;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-sidebar {
+    gap: 12px;
+    grid-template-rows: none;
+  }
+
+  .giveaway-wheel-side-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-side-card {
+    padding: 14px 0 16px;
+    border-radius: 0;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-side-card h2 {
+    font-size: clamp(1.9rem, 6.6vw, 2.4rem);
+    margin-bottom: 8px;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-prize-grid {
+    display: flex;
+    grid-template-columns: none;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scroll-snap-type: x proximity;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-prize-visual-btn {
+    min-height: 72px;
+    min-width: 86px;
+    flex: 0 0 86px;
+    scroll-snap-align: start;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-side-card h2 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-search-form-compact {
+    grid-template-columns: minmax(0, 1fr) 108px;
+    gap: 8px;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-search-form-compact .btn-primary {
+    min-width: 108px;
+    min-height: 46px;
+    font-size: 0.95rem;
+  }
+
+  .giveaway-wheel-inline-result-row {
+    min-height: 50px;
+    padding: 0 10px;
+    border-radius: 12px;
+  }
+
+  .giveaway-wheel-inline-result-user {
+    font-size: 0.95rem;
+  }
+
+  .giveaway-wheel-inline-result-action {
+    font-size: 0.9rem;
+  }
+
+  .giveaway-wheel-hero-compact .giveaway-wheel-action-row-sidebar .btn-primary {
+    min-height: 58px;
+    border-radius: 14px;
+    font-size: 1rem;
+  }
+
+  .giveaway-wheel-side-header {
+    align-items: center;
+  }
+
+  .giveaway-wheel-search-result,
+  .giveaway-wheel-roster-item {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .giveaway-wheel-search-result-meta {
+    justify-items: start;
+    text-align: left;
+  }
+}
+
+.giveaway-wheel-modal-panel {
+  width: min(900px, 100%);
+  max-height: min(88svh, 860px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e8eef5;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1);
+  color: #0f172a;
+}
+
+.giveaway-wheel-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.giveaway-wheel-modal-titleblock {
+  display: grid;
+  gap: 2px;
+}
+
+.giveaway-wheel-modal-titleblock h2 {
+  margin: 0;
+  font-size: clamp(1.16rem, 1.4vw, 1.55rem);
+  line-height: 1.15;
+}
+
+.giveaway-wheel-modal-head-actions {
+  align-items: center;
+  gap: 10px;
+}
+
+.giveaway-wheel-modal-total-chip,
+.giveaway-wheel-modal-status-chip {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.8rem;
+}
+
+.giveaway-wheel-entry-modal-scroll-v3 {
+  min-height: 0;
+  overflow: auto;
+  max-height: calc(92svh - 138px);
+  padding-right: 4px;
+  padding-bottom: 2px;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-form-card-compact {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-form-compact {
+  gap: 14px;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-field-wide {
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-field-wide > span {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-field-wide input {
+  min-height: 46px;
+  border-radius: 12px;
+  border: 1px solid #d6e0eb;
+  background: #ffffff;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-grid-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-card-compact {
+  padding: 10px;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid #e6edf5;
+  background: #ffffff;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-head {
+  gap: 8px;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-title-row {
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-head strong {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-head small {
+  font-size: 0.82rem;
+  line-height: 1.3;
+  color: #64748b;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-entry-chip {
+  padding: 3px 8px;
+  font-size: 0.72rem;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-preview-compact {
+  width: clamp(134px, 16vw, 184px);
+  min-height: 118px;
+  padding: 4px;
+  border-radius: 14px;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-empty-state {
+  font-size: 0.82rem;
+  gap: 7px;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-form-footer-compact {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid #edf2f7;
+}
+
+.giveaway-wheel-entry-modal-v3 .giveaway-wheel-form-footer-compact .btn-primary {
+  min-height: 40px;
+  min-width: 200px;
+  width: auto;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 980px) {
+  .giveaway-wheel-entry-modal-v3 {
+    width: min(100vw - 18px, 820px);
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-grid-compact {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-preview-compact {
+    width: clamp(118px, 34vw, 166px);
+    min-height: 106px;
+  }
+}
+
+@media (max-width: 720px) {
+  .giveaway-wheel-entry-modal-v3 {
+    width: calc(100vw - 12px);
+    max-height: min(96svh, 900px);
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-modal-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-modal-head-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .giveaway-wheel-entry-modal-scroll-v3 {
+    max-height: calc(96svh - 122px);
+    padding-right: 0;
+    padding-bottom: 90px;
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-title-row {
     gap: 6px;
   }
 
-  .giveaway-wheel-proof-preview-compact {
-    height: 64px;
-    min-height: 64px;
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-head strong {
+    font-size: 0.95rem;
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-head small {
+    font-size: 0.74rem;
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-proof-preview-compact {
+    width: clamp(110px, 40vw, 152px);
+    min-height: 100px;
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-form-footer-compact {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    margin-top: 6px;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.96) 34%, #ffffff);
+  }
+
+  .giveaway-wheel-entry-modal-v3 .giveaway-wheel-form-footer-compact .btn-primary {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    font-size: 0.92rem;
+  }
+}
+
+/* Entry modal V4 reset namespace */
+.giveaway-entry-modal-v4 {
+  width: min(980px, calc(100vw - 28px));
+  max-height: min(92svh, 880px);
+  border-radius: 20px;
+  border: 1px solid #e5ebf3;
+  background: #ffffff;
+  box-shadow: 0 26px 64px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.giveaway-entry-modal-v4 .sr-only-file-input {
+  display: none !important;
+}
+
+.giveaway-entry-modal-v4-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #ebf1f7;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: saturate(120%) blur(8px);
+}
+
+.giveaway-entry-modal-v4-titleblock h2 {
+  margin: 0;
+  font-size: clamp(1.52rem, 1.9vw, 2.05rem);
+  line-height: 1.15;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.giveaway-entry-modal-v4-head-actions {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.giveaway-entry-modal-v4-chip-total {
+  background: #eaf2ff;
+  border-color: #d7e6ff;
+  color: #1e3a8a;
+  margin-top: 10px;
+}
+
+.giveaway-entry-modal-v4-keyboard-hint {
+  display: block;
+  margin: 0;
+  padding: 6px 20px 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.giveaway-entry-modal-v4-head-actions .modal-close-btn {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  flex: 0 0 38px;
+  border-radius: 999px;
+  border: 1px solid #dbe6f1;
+  background: #ffffff;
+  color: #64748b;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.giveaway-entry-modal-v4-head-actions .modal-close-btn:hover {
+  background: #f8fbff;
+  color: #334155;
+  transform: none;
+}
+
+.giveaway-entry-modal-v4-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  max-width: 100%;
+  border-radius: 999px;
+  border: 1px solid #dbe6f1;
+  background: #f8fbff;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.giveaway-entry-modal-v4-chip-status.is-approved {
+  border-color: rgba(79, 70, 229, 0.24);
+  background: rgba(79, 70, 229, 0.08);
+  color: #4338ca;
+}
+
+.giveaway-entry-modal-v4-scroll {
+  min-height: 0;
+  overflow: auto;
+  max-height: calc(92svh - 82px);
+  padding: 18px 20px 18px;
+}
+
+.giveaway-entry-modal-v4-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.giveaway-entry-modal-v4-alert {
+  margin-bottom: 0;
+  border-radius: 14px;
+}
+
+.giveaway-entry-modal-v4-feedback-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.giveaway-entry-modal-v4-feedback-list li {
+  color: #7f1d1d;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.giveaway-entry-modal-v4-form {
+  display: grid;
+  gap: 14px;
+}
+
+.giveaway-entry-modal-v4-upload-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.giveaway-entry-modal-v4-upload-meta small {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.giveaway-entry-modal-v4-upload-meta .is-validating {
+  color: #475569;
+}
+
+.giveaway-entry-modal-v4-upload-meta .is-ready {
+  color: #166534;
+}
+
+.giveaway-entry-modal-v4-upload-error-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.giveaway-entry-modal-v4-upload-meta .is-error {
+  color: #b91c1c;
+}
+
+.giveaway-entry-modal-v4-retry-btn {
+  border: 1px solid #f1c3c3;
+  background: #fff5f5;
+  color: #991b1b;
+  border-radius: 999px;
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.giveaway-entry-modal-v4-retry-btn:hover {
+  background: #fee2e2;
+}
+
+.giveaway-entry-modal-v4-field {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.giveaway-entry-modal-v4-field > span {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.giveaway-entry-modal-v4-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.giveaway-entry-modal-v4-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "head actions"
+    "meta actions";
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px;
+  border-radius: 14px;
+  border: 1px solid #e6edf5;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.giveaway-entry-modal-v4-card.is-rejected,
+.giveaway-entry-modal-v4-card.has-error {
+  border-color: rgba(239, 68, 68, 0.28);
+  background: linear-gradient(180deg, #fff9f9, #ffffff);
+}
+
+.giveaway-entry-modal-v4-card.is-readonly {
+  cursor: default;
+}
+
+.giveaway-entry-modal-v4-card.is-required {
+  border-color: #e6edf5;
+  background: #ffffff;
+}
+
+.giveaway-entry-modal-v4-card-head {
+  grid-area: head;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.giveaway-entry-modal-v4-card-head > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.giveaway-entry-modal-v4-card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5edf7;
+  color: #2563eb;
+  background: linear-gradient(180deg, #eff6ff, #dbeafe);
+  flex: 0 0 52px;
+}
+
+.giveaway-entry-modal-v4-card-icon.is-followProof {
+  color: #e11d48;
+  background: linear-gradient(180deg, #fff1f2, #ffe4e6);
+}
+
+.giveaway-entry-modal-v4-card-icon.is-commentProof {
+  color: #ea580c;
+  background: linear-gradient(180deg, #fff7ed, #ffedd5);
+}
+
+.giveaway-entry-modal-v4-card-icon.is-shareProof {
+  color: #15803d;
+  background: linear-gradient(180deg, #f0fdf4, #dcfce7);
+}
+
+.giveaway-entry-modal-v4-card-icon.is-reviewProof {
+  color: #7c3aed;
+  background: linear-gradient(180deg, #f5f3ff, #ede9fe);
+}
+
+.giveaway-entry-modal-v4-title-row {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.giveaway-entry-modal-v4-title-row strong {
+  margin: 0;
+  font-size: 1.18rem;
+  line-height: 1.2;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.giveaway-entry-modal-v4-proof-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.giveaway-entry-modal-v4-proof-status .status-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.giveaway-entry-modal-v4-proof-status.is-completed {
+  color: #16a34a;
+}
+
+.giveaway-entry-modal-v4-proof-status.is-completed .status-dot {
+  background: #16a34a;
+}
+
+.giveaway-entry-modal-v4-proof-status.is-rejected {
+  color: #ef4444;
+}
+
+.giveaway-entry-modal-v4-proof-status.is-rejected .status-dot {
+  background: #ef4444;
+}
+
+.giveaway-entry-modal-v4-proof-status.is-pending {
+  color: #64748b;
+}
+
+.giveaway-entry-modal-v4-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid #e4edf6;
+  background: #fbfdff;
+  color: #64748b;
+  font-size: 0.64rem;
+  font-weight: 600;
+}
+
+.giveaway-entry-modal-v4-status-pill .status-icon {
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.giveaway-entry-modal-v4-status-pill.is-ready {
+  border-color: rgba(22, 163, 74, 0.24);
+  background: rgba(22, 163, 74, 0.1);
+  color: #166534;
+}
+
+.giveaway-entry-modal-v4-status-pill.is-rejected,
+.giveaway-entry-modal-v4-status-pill.is-error {
+  border-color: rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.1);
+  color: #991b1b;
+}
+
+.giveaway-entry-modal-v4-status-pill.is-validating {
+  border-color: rgba(59, 130, 246, 0.26);
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+
+.giveaway-entry-modal-v4-status-pill.is-missing {
+  border-color: #e4edf6;
+  background: #fbfdff;
+  color: #64748b;
+}
+
+.giveaway-entry-modal-v4-card-head small {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.3;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.giveaway-entry-modal-v4 .giveaway-wheel-proof-rejection {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  color: #ef4444;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.giveaway-entry-modal-v4 .giveaway-wheel-proof-rejection svg {
+  flex: 0 0 auto;
+}
+
+.giveaway-entry-modal-v4-upload-meta {
+  grid-area: meta;
+  min-height: 0;
+}
+
+.giveaway-entry-modal-v4-file-pill {
+  display: none;
+}
+
+.giveaway-entry-modal-v4-file-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.giveaway-entry-modal-v4-file-copy strong,
+.giveaway-entry-modal-v4-file-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.giveaway-entry-modal-v4-file-copy strong {
+  font-size: 0.84rem;
+  color: #0f172a;
+}
+
+.giveaway-entry-modal-v4-file-copy small {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.giveaway-entry-modal-v4-file-clear {
+  border: 0;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+.giveaway-entry-modal-v4-file-clear:hover {
+  background: #f1f5f9;
+}
+
+.giveaway-entry-modal-v4-entry-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #dce7f2;
+  background: #f8fbff;
+  color: #5f7188;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.giveaway-entry-modal-v4-entry-chip.is-required,
+.giveaway-entry-modal-v4-entry-chip.is-reupload {
+  border-color: rgba(239, 68, 68, 0.16);
+  background: rgba(239, 68, 68, 0.08);
+  color: #991b1b;
+}
+
+.giveaway-entry-modal-v4-entry-chip.is-ready {
+  border-color: rgba(22, 163, 74, 0.26);
+  background: rgba(22, 163, 74, 0.1);
+  color: #166534;
+}
+
+.giveaway-entry-modal-v4-actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-height: 44px;
+}
+
+.giveaway-entry-modal-v4-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 188px;
+  min-height: 56px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid #dbe4ee;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 1.08rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.giveaway-entry-modal-v4-action-btn.is-upload {
+  border-color: #bfdbfe;
+  background: #ffffff;
+  color: #2563eb;
+}
+
+.giveaway-entry-modal-v4-action-btn.is-upload.is-emphasis {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.giveaway-entry-modal-v4-action-btn.is-view {
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.giveaway-entry-modal-v4-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.giveaway-entry-modal-v4-action-empty {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.giveaway-entry-modal-v4-file-meta {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.giveaway-entry-modal-v4-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid #edf2f7;
+}
+
+.giveaway-entry-modal-v4-cancel {
+  min-width: 220px;
+  min-height: 64px;
+  border-radius: 12px;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 1.06rem;
+  font-weight: 700;
+}
+
+.giveaway-entry-modal-v4-submit {
+  min-width: 272px;
+  min-height: 64px;
+  width: auto;
+  border-radius: 12px;
+  padding: 0 18px;
+  font-size: 1.06rem;
+  font-weight: 700;
+  border-color: #1e293b;
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+@media (max-width: 980px) {
+  .giveaway-entry-modal-v4 {
+    width: min(100vw - 16px, 820px);
+    border-radius: 14px;
+  }
+
+  .giveaway-entry-modal-v4-scroll {
+    max-height: calc(94svh - 82px);
+    padding: 12px;
+  }
+
+  .giveaway-entry-modal-v4-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .giveaway-entry-modal-v4-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "head"
+      "meta"
+      "actions";
+    align-items: stretch;
+  }
+
+  .giveaway-entry-modal-v4-actions {
+    min-height: 36px;
+    flex-wrap: wrap;
+  }
+
+  .giveaway-entry-modal-v4-action-btn {
+    min-width: 148px;
+    min-height: 46px;
+    font-size: 0.94rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .giveaway-entry-modal-v4 {
+    width: calc(100vw - 10px);
+    max-height: min(96svh, 920px);
+    border-radius: 12px;
+    position: relative;
+  }
+
+  .giveaway-entry-modal-v4::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 54px;
+    height: 4px;
+    border-radius: 999px;
+    background: #dbe5f2;
+    z-index: 6;
+  }
+
+  .giveaway-entry-modal-v4-head {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 24px 12px 12px;
+    position: relative;
+  }
+
+  .giveaway-entry-modal-v4-keyboard-hint {
+    padding: 4px 12px 0;
+    font-size: 0.7rem;
+  }
+
+  .giveaway-entry-modal-v4-head-actions {
+    width: auto;
+    align-items: flex-start;
+    justify-content: flex-end;
+  }
+
+  .giveaway-entry-modal-v4-head-actions .modal-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 12px;
+  }
+
+  .giveaway-entry-modal-v4-chip {
+    min-height: 30px;
+    font-size: 0.75rem;
+  }
+
+  .giveaway-entry-modal-v4-chip-total {
+    margin-top: 8px;
+  }
+
+  .giveaway-entry-modal-v4-scroll {
+    max-height: calc(96svh - 112px);
+    padding: 10px 10px 92px;
+  }
+
+  .giveaway-entry-modal-v4-title-row strong {
+    font-size: 1.06rem;
+  }
+
+  .giveaway-entry-modal-v4-proof-status {
+    font-size: 0.9rem;
+  }
+
+  .giveaway-entry-modal-v4-upload-error-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .giveaway-entry-modal-v4-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .giveaway-entry-modal-v4-action-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .giveaway-entry-modal-v4-field > span {
+    font-size: 1.95rem;
+  }
+
+  .giveaway-entry-modal-v4-footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .giveaway-entry-modal-v4-cancel,
+  .giveaway-entry-modal-v4-submit {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .giveaway-entry-modal-v4-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    margin-top: 6px;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.96) 34%, #ffffff);
+  }
+
+  .giveaway-entry-modal-v4-submit {
+    width: 100%;
+    min-width: 0;
+    min-height: 50px;
+    font-size: 1rem;
+  }
+
+  .giveaway-entry-modal-v4-cancel {
+    min-height: 50px;
+    font-size: 1rem;
   }
 }
 

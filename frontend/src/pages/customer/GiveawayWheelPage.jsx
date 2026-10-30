@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Search, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, Hash, Heart, ImageIcon, Search, Share2, Star, Upload, UserRound, X } from "lucide-react";
 import { apiRequest, getFriendlyUploadErrorMessage } from "../../utils/api";
 import {
   GIVEAWAY_WHEEL_MAX_UPLOAD_SIZE_BYTES,
@@ -53,11 +53,11 @@ function normalizeEntryFormData(data = {}) {
   return {
     id: data.id,
     fullName: data.fullName || "",
-    followProofImagePath: data.followProofImagePath || "",
-    commentProofImagePath: data.commentProofImagePath || "",
-    shareProofImagePath: data.shareProofImagePath || "",
-    reviewProofImagePath: data.reviewProofImagePath || "",
-    facebookProfileImagePath: data.facebookProfileImagePath || "",
+    followProofImagePath: data.followProof?.imagePath || data.followProofImagePath || "",
+    commentProofImagePath: data.commentProof?.imagePath || data.commentProofImagePath || "",
+    shareProofImagePath: data.shareProof?.imagePath || data.shareProofImagePath || "",
+    reviewProofImagePath: data.reviewProof?.imagePath || data.reviewProofImagePath || "",
+    facebookProfileImagePath: data.facebookProfile?.imagePath || data.facebookProfileImagePath || "",
     entryCount: Number(data.entryCount) || 0,
     status: data.status || "PENDING",
     rejectionReason: data.rejectionReason || "",
@@ -94,6 +94,58 @@ const WHEEL_RADIUS = 440;
 const WHEEL_CORE_RADIUS = 146;
 const WHEEL_HUB_RADIUS = 60;
 const SPIN_DURATION_MS = 5600;
+const MIN_UPLOAD_DIMENSION_PX = 120;
+const ALL_PROOF_FIELD_KEYS = [...GIVEAWAY_WHEEL_PROOF_FIELDS.map((field) => field.key), GIVEAWAY_WHEEL_PROFILE_FIELD.key];
+
+function createInitialUploadFieldState() {
+  return ALL_PROOF_FIELD_KEYS.reduce((accumulator, fieldKey) => {
+    accumulator[fieldKey] = { isValidating: false, error: "", fileName: "" };
+    return accumulator;
+  }, {});
+}
+
+async function readImageDimensions(file) {
+  const tempUrl = URL.createObjectURL(file);
+  try {
+    const dimensions = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve({ width: Number(image.naturalWidth) || 0, height: Number(image.naturalHeight) || 0 });
+      image.onerror = () => reject(new Error("Unable to read this image. Please choose another file."));
+      image.src = tempUrl;
+    });
+    return dimensions;
+  } finally {
+    URL.revokeObjectURL(tempUrl);
+  }
+}
+
+function sanitizeProofPreviewSrc(src) {
+  const value = String(src || "").trim();
+  if (!value) return "";
+  if (/^(blob:|data:)/i.test(value)) return value;
+  if (/^https?:\/\//i.test(value) || value.startsWith("//")) {
+    return value.includes("/uploads/giveaway-wheel/") ? value : "";
+  }
+  return value.includes("/uploads/giveaway-wheel/") ? value : "";
+}
+
+function formatKilobytes(bytes) {
+  const kb = Math.max(1, Math.round((Number(bytes) || 0) / 1024));
+  return `${kb} KB`;
+}
+
+function extractFileName(src) {
+  const value = String(src || "").trim();
+  if (!value) return "";
+  try {
+    const normalized = value.startsWith("http") ? new URL(value).pathname : value;
+    const name = normalized.split("/").pop() || "";
+    return decodeURIComponent(name);
+  } catch {
+    const name = value.split("/").pop() || "";
+    return name;
+  }
+}
 
 function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
   const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
@@ -207,6 +259,8 @@ async function submitMultipartEntry(url, method, entry, selectedFiles) {
 export default function GiveawayWheelPage() {
   const previewUrlsRef = useRef([]);
   const prizeGridRef = useRef(null);
+  const entryModalRef = useRef(null);
+  const lastFocusedElementRef = useRef(null);
   const [wheelEntries, setWheelEntries] = useState([]);
   const [entryForm, setEntryForm] = useState(EMPTY_FORM);
   const [proofReview, setProofReview] = useState(EMPTY_PROOF_REVIEW);
@@ -219,7 +273,6 @@ export default function GiveawayWheelPage() {
   const [giveawaySettings, setGiveawaySettings] = useState(DEFAULT_GIVEAWAY_WHEEL_SETTINGS);
   const [isSpinning, setIsSpinning] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
-  const [isViewOnlyMode, setIsViewOnlyMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -229,6 +282,9 @@ export default function GiveawayWheelPage() {
   const [openedFromSearchResult, setOpenedFromSearchResult] = useState(false);
   const [canScrollPrizeLeft, setCanScrollPrizeLeft] = useState(false);
   const [canScrollPrizeRight, setCanScrollPrizeRight] = useState(false);
+  const [isFeedbackExpanded, setIsFeedbackExpanded] = useState(false);
+  const [uploadStateByField, setUploadStateByField] = useState(() => createInitialUploadFieldState());
+  const [activeProofLightbox, setActiveProofLightbox] = useState(null);
 
   const loadWheelEntries = async () => {
     try {
@@ -340,7 +396,7 @@ export default function GiveawayWheelPage() {
   const sideJoinTitle = String(giveawaySettings?.howToJoinTitle || "").trim() || "Join";
   const sideJoinDescription = String(giveawaySettings?.intro || "").trim() || "Submit your entry.";
   const sideSearchKicker = String(giveawaySettings?.leaderboardGoalMessage || "").trim() || "Search";
-  const sideSearchTitle = String(giveawaySettings?.accountDeletionNote || "").trim() || "Search";
+  const sideSearchTitle = "Check Your Entry";
   const sideSearchDescription = String(giveawaySettings?.steps?.[0] || "").trim() || "Check your status.";
 
   useEffect(() => {
@@ -369,11 +425,16 @@ export default function GiveawayWheelPage() {
   }, [prizeImages]);
 
   const estimatedEntryCount = useMemo(() => {
+    const persistedCount = Math.max(0, Number(entryForm.entryCount) || 0);
+    if (persistedCount > 0) {
+      return persistedCount;
+    }
+
     return GIVEAWAY_WHEEL_PROOF_FIELDS.reduce((total, field) => {
-      const hasProof = Boolean(selectedFiles[field.key] || entryForm[field.pathKey] || proofReview[field.key]?.imagePath);
-      return total + (hasProof ? field.weight : 0);
+      const isApprovedProof = String(proofReview[field.key]?.status || "").toUpperCase() === "APPROVED";
+      return total + (isApprovedProof ? field.weight : 0);
     }, 0);
-  }, [entryForm, proofReview, selectedFiles]);
+  }, [entryForm.entryCount, proofReview]);
 
   const scrollPrizeGrid = (direction) => {
     const container = prizeGridRef.current;
@@ -382,7 +443,7 @@ export default function GiveawayWheelPage() {
     container.scrollBy({ left: direction * step, behavior: "smooth" });
   };
 
-  const handleFileChange = (fieldKey, event) => {
+  const handleFileChange = async (fieldKey, event) => {
     const file = event.target.files?.[0] || null;
     event.target.value = "";
     setFormError("");
@@ -392,13 +453,49 @@ export default function GiveawayWheelPage() {
       return;
     }
 
+    setUploadStateByField((previous) => ({
+      ...previous,
+      [fieldKey]: { isValidating: true, error: "", fileName: file.name || "" },
+    }));
+
     if (!file.type.startsWith("image/")) {
-      setFormError("Image files only please.");
+      setUploadStateByField((previous) => ({
+        ...previous,
+        [fieldKey]: { isValidating: false, error: "Image files only please.", fileName: "" },
+      }));
       return;
     }
 
     if (file.size > GIVEAWAY_WHEEL_MAX_UPLOAD_SIZE_BYTES) {
-      setFormError("This image is too large. Please upload an image up to 25MB.");
+      setUploadStateByField((previous) => ({
+        ...previous,
+        [fieldKey]: { isValidating: false, error: "This image is too large. Please upload an image up to 25MB.", fileName: "" },
+      }));
+      return;
+    }
+
+    try {
+      const { width, height } = await readImageDimensions(file);
+      if (width < MIN_UPLOAD_DIMENSION_PX || height < MIN_UPLOAD_DIMENSION_PX) {
+        setUploadStateByField((previous) => ({
+          ...previous,
+          [fieldKey]: {
+            isValidating: false,
+            error: `Image is too small. Minimum size is ${MIN_UPLOAD_DIMENSION_PX}x${MIN_UPLOAD_DIMENSION_PX}px.`,
+            fileName: "",
+          },
+        }));
+        return;
+      }
+    } catch (validationError) {
+      setUploadStateByField((previous) => ({
+        ...previous,
+        [fieldKey]: {
+          isValidating: false,
+          error: validationError.message || "Unable to read this image. Please choose another file.",
+          fileName: "",
+        },
+      }));
       return;
     }
 
@@ -410,18 +507,63 @@ export default function GiveawayWheelPage() {
       ...previous,
       [fieldKey]: { status: "PENDING", rejectionReason: "" },
     }));
+    setUploadStateByField((previous) => ({
+      ...previous,
+      [fieldKey]: { isValidating: false, error: "", fileName: file.name || "" },
+    }));
   };
 
+  const clearUploadFieldState = (fieldKey) => {
+    setUploadStateByField((previous) => ({
+      ...previous,
+      [fieldKey]: { isValidating: false, error: "", fileName: "" },
+    }));
+  };
+
+  const triggerFilePicker = (inputId) => {
+    const inputElement = document.getElementById(inputId);
+    if (inputElement) {
+      inputElement.click();
+    }
+  };
+
+  const clearSelectedFile = (fieldKey) => {
+    const existingPreview = filePreviews[fieldKey];
+    if (existingPreview?.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(existingPreview);
+      } catch {
+        // Ignore revocation failures.
+      }
+      previewUrlsRef.current = previewUrlsRef.current.filter((url) => url !== existingPreview);
+    }
+
+    setSelectedFiles((previous) => ({ ...previous, [fieldKey]: null }));
+    setFilePreviews((previous) => ({ ...previous, [fieldKey]: "" }));
+    clearUploadFieldState(fieldKey);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (isViewOnlyMode) {
+    if (String(entryForm.status || "").toUpperCase() === "APPROVED") {
       return;
     }
 
     setFormError("");
     setFormMessage("");
+
+    const hasPendingValidation = ALL_PROOF_FIELD_KEYS.some((fieldKey) => uploadStateByField[fieldKey]?.isValidating);
+    if (hasPendingValidation) {
+      setFormError("Please wait until all selected images finish validating.");
+      return;
+    }
+
+    const failedValidationField = ALL_PROOF_FIELD_KEYS.find((fieldKey) => Boolean(uploadStateByField[fieldKey]?.error));
+    if (failedValidationField) {
+      setFormError("Please fix image upload errors before submitting.");
+      return;
+    }
 
     const normalizedFullName = String(entryForm.fullName || "").trim();
     const hasAtLeastOneEntryProof = GIVEAWAY_WHEEL_PROOF_FIELDS.some(
@@ -458,9 +600,10 @@ export default function GiveawayWheelPage() {
 
       setEntryForm(normalizeEntryFormData(response));
       setProofReview(normalizeProofReview(response));
+      setIsFeedbackExpanded(false);
       setSelectedFiles(EMPTY_FILES);
       setFilePreviews(EMPTY_PREVIEWS);
-      setIsViewOnlyMode(false);
+      setUploadStateByField(createInitialUploadFieldState());
       setFormMessage(isEditing
         ? "Your giveaway entry was updated and sent back for admin review."
         : "You are now in the giveaway queue. Your wheel slots will turn active after admin approval.");
@@ -494,16 +637,27 @@ export default function GiveawayWheelPage() {
   };
 
   const openModal = (nextModal) => {
+    lastFocusedElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setOpenedFromSearchResult(false);
-    setIsViewOnlyMode(false);
     setActiveModal(nextModal);
+    setUploadStateByField(createInitialUploadFieldState());
     setFormError("");
     setFormMessage("");
   };
 
-  const closeModal = () => {
+  const closeModal = ({ force = false } = {}) => {
+    if (!force) {
+      const hasUnsavedUploads = ALL_PROOF_FIELD_KEYS.some((fieldKey) => Boolean(selectedFiles[fieldKey]));
+      if (hasUnsavedUploads && !isSubmitting) {
+        const shouldClose = window.confirm("You have selected uploads that are not submitted yet. Close anyway?");
+        if (!shouldClose) {
+          return;
+        }
+      }
+    }
+
     setActiveModal(null);
-    setIsViewOnlyMode(false);
+    setActiveProofLightbox(null);
     if (openedFromSearchResult) {
       setEntryForm(EMPTY_FORM);
       setProofReview(EMPTY_PROOF_REVIEW);
@@ -511,8 +665,10 @@ export default function GiveawayWheelPage() {
       setFilePreviews(EMPTY_PREVIEWS);
       setOpenedFromSearchResult(false);
     }
+    setUploadStateByField(createInitialUploadFieldState());
     setFormError("");
     setFormMessage("");
+    setIsFeedbackExpanded(false);
   };
 
   const closeSearchResultsModal = () => {
@@ -539,10 +695,11 @@ export default function GiveawayWheelPage() {
 
       setEntryForm(normalizeEntryFormData(data));
       setProofReview(normalizeProofReview(data));
+      setIsFeedbackExpanded(false);
       setSelectedFiles(EMPTY_FILES);
       setFilePreviews(EMPTY_PREVIEWS);
+      setUploadStateByField(createInitialUploadFieldState());
       setOpenedFromSearchResult(true);
-      setIsViewOnlyMode(normalizedStatus === "APPROVED");
       setIsSearchResultsModalOpen(false);
       setActiveModal("join");
     } catch (error) {
@@ -582,13 +739,150 @@ export default function GiveawayWheelPage() {
   };
 
   const readOnlyStatus = String(entryForm.status || "").toUpperCase();
-  const isApprovedReadOnly = isViewOnlyMode && readOnlyStatus === "APPROVED";
-  const profileImageSrc = filePreviews.facebookProfile
-    || getGiveawayWheelImageSrc(entryForm.facebookProfileImagePath || proofReview.facebookProfile?.imagePath);
+  const isApprovedReadOnly = readOnlyStatus === "APPROVED";
+  const rejectionFeedback = String(entryForm.rejectionReason || "").trim();
+  const parsedRejectionFeedback = useMemo(() => rejectionFeedback
+    .split("|")
+    .map((line) => line.trim())
+    .filter(Boolean), [rejectionFeedback]);
+  const shouldShowFeedbackToggle = rejectionFeedback.length > 96 || parsedRejectionFeedback.length > 1;
+  const hasFieldLevelRejectionFeedback = [GIVEAWAY_WHEEL_PROFILE_FIELD, ...GIVEAWAY_WHEEL_PROOF_FIELDS].some((field) => {
+    const review = proofReview[field.key];
+    return String(review?.status || "").toUpperCase() === "REJECTED" && Boolean(String(review?.rejectionReason || "").trim());
+  });
+  const getProofVisualStatus = (status, hasImage) => {
+    const normalizedStatus = String(status || "").toUpperCase();
+    if (normalizedStatus === "REJECTED") {
+      return { tone: "rejected", label: "Rejected" };
+    }
+    if (hasImage || normalizedStatus === "APPROVED") {
+      return { tone: "completed", label: "Completed" };
+    }
+    return { tone: "pending", label: "Pending" };
+  };
+  const getFileDescriptor = (fieldKey, imageSrc) => {
+    const selectedFile = selectedFiles[fieldKey];
+    if (selectedFile) {
+      return {
+        hasFile: true,
+        fileName: selectedFile.name || "Uploaded image",
+        fileSize: formatKilobytes(selectedFile.size),
+        thumbSrc: filePreviews[fieldKey] || imageSrc || "",
+        canClear: true,
+      };
+    }
+    if (imageSrc) {
+      return {
+        hasFile: true,
+        fileName: extractFileName(imageSrc) || "Uploaded image",
+        fileSize: "",
+        thumbSrc: imageSrc,
+        canClear: false,
+      };
+    }
+    return {
+      hasFile: false,
+      fileName: "No file uploaded",
+      fileSize: "",
+      thumbSrc: "",
+      canClear: false,
+    };
+  };
+  const rawProfileImageSrc = sanitizeProofPreviewSrc(
+    filePreviews.facebookProfile
+    || getGiveawayWheelImageSrc(proofReview.facebookProfile?.imagePath || entryForm.facebookProfileImagePath)
+  );
+  const profileImageSrc = rawProfileImageSrc;
+  const hasValidationInProgress = ALL_PROOF_FIELD_KEYS.some((fieldKey) => uploadStateByField[fieldKey]?.isValidating);
+  const hasValidationErrors = ALL_PROOF_FIELD_KEYS.some((fieldKey) => Boolean(uploadStateByField[fieldKey]?.error));
+
+  useEffect(() => {
+    if (!activeModal) {
+      const previouslyFocused = lastFocusedElementRef.current;
+      if (previouslyFocused && previouslyFocused.isConnected) {
+        previouslyFocused.focus();
+      }
+      return undefined;
+    }
+
+    const modalElement = entryModalRef.current;
+    if (!modalElement) {
+      return undefined;
+    }
+
+    const focusableSelector = [
+      "button:not([disabled])",
+      "[href]",
+      "input:not([disabled])",
+      "select:not([disabled])",
+      "textarea:not([disabled])",
+      "[tabindex]:not([tabindex='-1'])",
+    ].join(",");
+
+    const focusFirstElement = () => {
+      const firstFocusable = modalElement.querySelector("[data-autofocus]") || modalElement.querySelector(focusableSelector);
+      if (firstFocusable instanceof HTMLElement) {
+        firstFocusable.focus();
+      }
+    };
+
+    const handleDocumentKeydown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeModal();
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const focusableElements = Array.from(modalElement.querySelectorAll(focusableSelector))
+        .filter((element) => element instanceof HTMLElement && !element.hasAttribute("disabled"));
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey) {
+        if (activeElement === firstElement || !modalElement.contains(activeElement)) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+      } else if (activeElement === lastElement || !modalElement.contains(activeElement)) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    const frameId = window.requestAnimationFrame(focusFirstElement);
+    document.addEventListener("keydown", handleDocumentKeydown);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      document.removeEventListener("keydown", handleDocumentKeydown);
+    };
+  }, [activeModal]);
 
   return (
     <main className="giveaway-wheel-page">
       <section className="giveaway-wheel-hero giveaway-wheel-hero-compact">
+        <div className="giveaway-wheel-hero-shell-head">
+          <h1>Giveaway</h1>
+          <button
+            type="button"
+            className="modal-close-btn giveaway-wheel-hero-close-btn"
+            onClick={() => window.history.back()}
+            aria-label="Close giveaway"
+          >
+            ✕
+          </button>
+        </div>
         <div className="giveaway-wheel-hero-panel giveaway-wheel-hero-panel-compact">
           <div
             className="giveaway-wheel-stage giveaway-wheel-stage-compact"
@@ -671,6 +965,12 @@ export default function GiveawayWheelPage() {
               </div>
             </div>
 
+            <div className="giveaway-wheel-stage-copy">
+              <span>{sidePrizeKicker}</span>
+              <h3>{sidePrizeTitle}</h3>
+              <p>{sidePrizeDescription}</p>
+            </div>
+
           </div>
 
           <aside className="giveaway-wheel-sidebar">
@@ -730,18 +1030,6 @@ export default function GiveawayWheelPage() {
                 {prizeImages.length > 0 ? <small className="giveaway-wheel-prize-meta">{prizeImages.length} image{prizeImages.length === 1 ? "" : "s"}</small> : null}
               </div>
 
-              <div className="giveaway-wheel-side-card giveaway-wheel-join-panel">
-                <span className="giveaway-wheel-side-kicker">{sideJoinKicker}</span>
-                <h2>{sideJoinTitle}</h2>
-                <p>{sideJoinDescription}</p>
-
-                <div className="giveaway-wheel-action-row giveaway-wheel-action-row-sidebar">
-                  <button type="button" className="btn-primary giveaway-wheel-action-primary" onClick={() => openModal("join")}>
-                    Join giveaway
-                  </button>
-                </div>
-              </div>
-
               <div className="giveaway-wheel-side-card giveaway-wheel-search-panel">
                 <span className="giveaway-wheel-side-kicker">{sideSearchKicker}</span>
                 <h2>{sideSearchTitle}</h2>
@@ -762,6 +1050,22 @@ export default function GiveawayWheelPage() {
                   </button>
                 </form>
 
+                {searchResults.length > 0 ? (
+                  <div className="giveaway-wheel-inline-results">
+                    {searchResults.slice(0, 2).map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        className="giveaway-wheel-inline-result-row"
+                        onClick={() => handleOpenSearchResult(entry.id)}
+                      >
+                        <span className="giveaway-wheel-inline-result-user"><UserRound size={16} />{entry.fullName}</span>
+                        <span className="giveaway-wheel-inline-result-action">View Entry <ChevronRight size={14} /></span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
                 {searchError ? <div className="giveaway-wheel-inline-error">{searchError}</div> : null}
                 {searchResults.length > 0 ? (
                   <button
@@ -773,6 +1077,18 @@ export default function GiveawayWheelPage() {
                   </button>
                 ) : null}
               </div>
+
+              <div className="giveaway-wheel-side-card giveaway-wheel-join-panel">
+                <span className="giveaway-wheel-side-kicker">{sideJoinKicker}</span>
+                <h2>{sideJoinTitle}</h2>
+                <p>{sideJoinDescription}</p>
+
+                <div className="giveaway-wheel-action-row giveaway-wheel-action-row-sidebar">
+                  <button type="button" className="btn-primary giveaway-wheel-action-primary" onClick={() => openModal("join")}>
+                    Join Giveaway
+                  </button>
+                </div>
+              </div>
             </div>
           </aside>
 
@@ -780,46 +1096,65 @@ export default function GiveawayWheelPage() {
       </section>
 
       {activeModal ? (
-        <div className="giveaway-wheel-modal-overlay" role="dialog" aria-modal="true" onClick={closeModal}>
-          <section className="giveaway-wheel-modal-panel" onClick={(event) => event.stopPropagation()}>
-            <div className="giveaway-wheel-modal-head">
-              <div className="giveaway-wheel-modal-titleblock">
-                <h2>{isApprovedReadOnly ? "Approved entry" : entryForm.id ? "Edit your entry" : "Join giveaway"}</h2>
-              </div>
-              <div className="giveaway-wheel-modal-head-actions">
-                {isApprovedReadOnly ? (
-                  <span className="giveaway-wheel-modal-status-chip is-approved">
-                    Approved / View only
-                  </span>
-                ) : null}
-                <span className="giveaway-wheel-modal-total-chip">
-                  Total: {estimatedEntryCount} {estimatedEntryCount === 1 ? "entry" : "entries"}
+        <div className="giveaway-wheel-modal-overlay" onClick={() => closeModal()}>
+          <section
+            ref={entryModalRef}
+            className="giveaway-entry-modal-v4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="giveaway-entry-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="giveaway-entry-modal-v4-head">
+              <div className="giveaway-entry-modal-v4-titleblock">
+                <h2 id="giveaway-entry-modal-title">{isApprovedReadOnly ? "Approved Entry" : entryForm.id ? "Edit Entry" : "Join Giveaway"}</h2>
+                <span className="giveaway-entry-modal-v4-chip giveaway-entry-modal-v4-chip-total">
+                  {estimatedEntryCount} Active {estimatedEntryCount === 1 ? "Entry" : "Entries"}
                 </span>
-                <button type="button" className="modal-close-btn" onClick={closeModal} aria-label="Close modal">
+              </div>
+              <div className="giveaway-entry-modal-v4-head-actions">
+                <button type="button" className="modal-close-btn" onClick={() => closeModal()} aria-label="Close modal">
                   ✕
                 </button>
               </div>
             </div>
-            <div className="giveaway-wheel-modal-scroll">
-              <div className="giveaway-wheel-form-card giveaway-wheel-form-card-compact giveaway-wheel-modal-surface giveaway-wheel-join-form-panel">
-                  {isApprovedReadOnly ? (
-                    <div className="giveaway-wheel-readonly-note">
-                      This entry is approved and active on the wheel. Re-upload is disabled.
-                    </div>
-                  ) : null}
-
-                  {entryForm.status === "REJECTED" && entryForm.rejectionReason ? (
-                    <div className="giveaway-wheel-form-alert is-danger">
+            <div className="giveaway-entry-modal-v4-scroll">
+              <div className="giveaway-entry-modal-v4-panel">
+                  {entryForm.status === "REJECTED" && entryForm.rejectionReason && !hasFieldLevelRejectionFeedback ? (
+                    <div className="giveaway-wheel-form-alert giveaway-entry-modal-v4-alert is-danger">
                       <AlertCircle size={18} />
-                      <div>
-                        <strong>Admin feedback</strong>
-                        <p>{entryForm.rejectionReason}</p>
+                      <div className="giveaway-wheel-alert-copy">
+                        <div className="giveaway-wheel-alert-head">
+                          <strong>Admin feedback</strong>
+                          {shouldShowFeedbackToggle ? (
+                            <button
+                              type="button"
+                              className="giveaway-wheel-alert-toggle"
+                              onClick={() => setIsFeedbackExpanded((previous) => !previous)}
+                            >
+                              {isFeedbackExpanded ? "Hide details" : "Show details"}
+                            </button>
+                          ) : null}
+                        </div>
+                        {parsedRejectionFeedback.length > 1 ? (
+                          isFeedbackExpanded ? (
+                            <ul className="giveaway-entry-modal-v4-feedback-list">
+                              {parsedRejectionFeedback.map((line, index) => (
+                                <li key={`${line}-${index}`}>{line}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="is-collapsed">{parsedRejectionFeedback[0]}</p>
+                          )
+                        ) : (
+                          <p className={isFeedbackExpanded ? "" : "is-collapsed"}>{rejectionFeedback}</p>
+                        )}
                       </div>
                     </div>
                   ) : null}
 
                   {formMessage ? (
-                    <div className="giveaway-wheel-form-alert is-success">
+                    <div className="giveaway-wheel-form-alert giveaway-entry-modal-v4-alert is-success">
                       <CheckCircle2 size={18} />
                       <div>
                         <strong>Saved</strong>
@@ -829,7 +1164,7 @@ export default function GiveawayWheelPage() {
                   ) : null}
 
                   {formError ? (
-                    <div className="giveaway-wheel-form-alert is-danger">
+                    <div className="giveaway-wheel-form-alert giveaway-entry-modal-v4-alert is-danger">
                       <AlertCircle size={18} />
                       <div>
                         <strong>Check your form</strong>
@@ -838,11 +1173,12 @@ export default function GiveawayWheelPage() {
                     </div>
                   ) : null}
 
-                  <form className="giveaway-wheel-form giveaway-wheel-form-compact" onSubmit={handleSubmit}>
-                    <label className="giveaway-wheel-field giveaway-wheel-field-wide">
-                      <span>Name</span>
-                      <div className="giveaway-wheel-input-shell">
+                  <form className="giveaway-entry-modal-v4-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
+                    <label className="giveaway-entry-modal-v4-field">
+                      <span>Full Name</span>
+                      <div className="giveaway-entry-modal-v4-input-shell">
                         <input
+                          data-autofocus
                           type="text"
                           value={entryForm.fullName}
                           onChange={(event) => setEntryForm((previous) => ({ ...previous, fullName: event.target.value }))}
@@ -852,67 +1188,211 @@ export default function GiveawayWheelPage() {
                       </div>
                     </label>
 
-                    <div className="giveaway-wheel-proof-grid giveaway-wheel-proof-grid-compact">
-                      <label className={`giveaway-wheel-proof-card giveaway-wheel-proof-card-compact is-required${isApprovedReadOnly ? " is-readonly" : ""}`}>
-                        <div className="giveaway-wheel-proof-head">
+                    <div className="giveaway-entry-modal-v4-grid">
+                      <label className={`giveaway-entry-modal-v4-card is-required${isApprovedReadOnly ? " is-readonly" : ""}${uploadStateByField.facebookProfile?.error ? " has-error" : ""}${proofReview.facebookProfile.status === "REJECTED" ? " is-rejected" : ""}`}>
+                        {(() => {
+                          const file = getFileDescriptor(GIVEAWAY_WHEEL_PROFILE_FIELD.key, profileImageSrc);
+                          const profileStatus = getProofVisualStatus(proofReview.facebookProfile?.status, Boolean(profileImageSrc));
+                          return (
+                            <>
+                        <div className="giveaway-entry-modal-v4-card-head">
+                          <div className="giveaway-entry-modal-v4-card-icon is-profile"><UserRound size={20} /></div>
                           <div>
-                            <div className="giveaway-wheel-proof-title-row">
-                              <strong>{GIVEAWAY_WHEEL_PROFILE_FIELD.label}</strong>
-                              <span className="giveaway-wheel-entry-chip is-required">Required</span>
-                              {proofReview.facebookProfile.status === "REJECTED" ? (
-                                <span className="giveaway-wheel-entry-chip is-reupload">Needs re-upload</span>
-                              ) : null}
+                            <div className="giveaway-entry-modal-v4-title-row">
+                              <strong>{GIVEAWAY_WHEEL_PROFILE_FIELD.label} {!isApprovedReadOnly ? <em>*</em> : null}</strong>
                             </div>
-                            <small>{GIVEAWAY_WHEEL_PROFILE_FIELD.helper}</small>
-                            {proofReview.facebookProfile.status === "REJECTED" && proofReview.facebookProfile.rejectionReason ? (
-                              <small className="giveaway-wheel-proof-rejection">Rejected: {proofReview.facebookProfile.rejectionReason}</small>
-                            ) : null}
+                            <small className={`giveaway-entry-modal-v4-proof-status is-${profileStatus.tone}`}>
+                              <span className="status-dot" aria-hidden="true" />
+                              {profileStatus.label}
+                            </small>
                           </div>
                         </div>
                         <input id="giveaway-wheel-facebookProfile" className="sr-only-file-input" type="file" accept="image/*" disabled={isApprovedReadOnly} onChange={(event) => handleFileChange(GIVEAWAY_WHEEL_PROFILE_FIELD.key, event)} />
-                        <div className={`giveaway-wheel-proof-preview giveaway-wheel-proof-preview-compact giveaway-wheel-proof-preview--profile${profileImageSrc ? "" : " is-empty"}`}>
-                          {profileImageSrc
-                            ? <img src={profileImageSrc} alt={GIVEAWAY_WHEEL_PROFILE_FIELD.label} />
-                            : (
-                              <div className="giveaway-wheel-proof-empty-state">
-                                <Upload size={20} />
-                                <span className="giveaway-wheel-proof-empty-label">Upload image</span>
-                              </div>
-                            )}
+                        {file.hasFile ? (
+                          <div className="giveaway-entry-modal-v4-file-pill has-file">
+                            <img src={file.thumbSrc} alt={GIVEAWAY_WHEEL_PROFILE_FIELD.label} className="giveaway-entry-modal-v4-file-thumb" />
+                            <div className="giveaway-entry-modal-v4-file-copy">
+                              <strong>{file.fileName}</strong>
+                              {file.fileSize ? <small>{file.fileSize}</small> : null}
+                            </div>
+                            {file.canClear && !isApprovedReadOnly ? (
+                              <button
+                                type="button"
+                                className="giveaway-entry-modal-v4-file-clear"
+                                aria-label="Remove selected file"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  clearSelectedFile(GIVEAWAY_WHEEL_PROFILE_FIELD.key);
+                                }}
+                              >
+                                <X size={14} />
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <div className="giveaway-entry-modal-v4-upload-meta" aria-live="polite">
+                          {uploadStateByField.facebookProfile?.isValidating ? <small className="is-validating">Validating image...</small> : null}
+                          {uploadStateByField.facebookProfile?.error ? (
+                            <div className="giveaway-entry-modal-v4-upload-error-row">
+                              <small className="is-error">{uploadStateByField.facebookProfile.error}</small>
+                              <button
+                                type="button"
+                                className="giveaway-entry-modal-v4-retry-btn"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  clearUploadFieldState(GIVEAWAY_WHEEL_PROFILE_FIELD.key);
+                                  triggerFilePicker("giveaway-wheel-facebookProfile");
+                                }}
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
+                        <div className="giveaway-entry-modal-v4-actions">
+                          {isApprovedReadOnly ? null : (
+                            <button
+                              type="button"
+                              className={`giveaway-entry-modal-v4-action-btn is-upload${profileStatus.tone === "rejected" ? " is-emphasis" : ""}`}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                triggerFilePicker("giveaway-wheel-facebookProfile");
+                              }}
+                            >
+                              <Upload size={15} />
+                              Re-upload
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="giveaway-entry-modal-v4-action-btn is-view"
+                            disabled={!profileImageSrc}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              if (!profileImageSrc) {
+                                return;
+                              }
+                              setActiveProofLightbox({ src: profileImageSrc, label: GIVEAWAY_WHEEL_PROFILE_FIELD.label });
+                            }}
+                          >
+                            <Eye size={15} />
+                            View
+                          </button>
+                        </div>
+                            </>
+                          );
+                        })()}
                       </label>
 
                       {GIVEAWAY_WHEEL_PROOF_FIELDS.map((field) => {
-                        const imageSrc = filePreviews[field.key]
-                          || getGiveawayWheelImageSrc(entryForm[field.pathKey] || proofReview[field.key]?.imagePath);
+                        const rawImageSrc = sanitizeProofPreviewSrc(
+                          filePreviews[field.key]
+                          || getGiveawayWheelImageSrc(proofReview[field.key]?.imagePath || entryForm[field.pathKey])
+                        );
+                        const imageSrc = rawImageSrc;
+                        const file = getFileDescriptor(field.key, imageSrc);
                         const inputId = `giveaway-wheel-${field.key}`;
+                        const proofStatus = getProofVisualStatus(proofReview[field.key]?.status, Boolean(imageSrc));
+                        const iconByField = {
+                          followProof: Heart,
+                          commentProof: Hash,
+                          shareProof: Share2,
+                          reviewProof: Star,
+                        };
+                        const FieldIcon = iconByField[field.key] || ImageIcon;
                         return (
-                          <label key={field.key} className={`giveaway-wheel-proof-card giveaway-wheel-proof-card-compact${isApprovedReadOnly ? " is-readonly" : ""}`}>
-                            <div className="giveaway-wheel-proof-head">
+                          <label key={field.key} className={`giveaway-entry-modal-v4-card${isApprovedReadOnly ? " is-readonly" : ""}${uploadStateByField[field.key]?.error ? " has-error" : ""}${proofReview[field.key]?.status === "REJECTED" ? " is-rejected" : ""}`}>
+                            <div className="giveaway-entry-modal-v4-card-head">
+                              <div className={`giveaway-entry-modal-v4-card-icon is-${field.key}`}><FieldIcon size={20} /></div>
                               <div>
-                                <div className="giveaway-wheel-proof-title-row">
-                                  <strong>{field.label}</strong>
-                                  <span className="giveaway-wheel-entry-chip">{field.weightLabel}</span>
-                                  {proofReview[field.key]?.status === "REJECTED" ? (
-                                    <span className="giveaway-wheel-entry-chip is-reupload">Needs re-upload</span>
-                                  ) : null}
+                                <div className="giveaway-entry-modal-v4-title-row">
+                                  <strong>{field.label} {!isApprovedReadOnly ? <em>*</em> : null}</strong>
                                 </div>
-                                <small>{field.helper}</small>
-                                {proofReview[field.key]?.status === "REJECTED" && proofReview[field.key]?.rejectionReason ? (
-                                  <small className="giveaway-wheel-proof-rejection">Rejected: {proofReview[field.key].rejectionReason}</small>
-                                ) : null}
+                                <small className={`giveaway-entry-modal-v4-proof-status is-${proofStatus.tone}`}>
+                                  <span className="status-dot" aria-hidden="true" />
+                                  {proofStatus.label}
+                                </small>
                               </div>
                             </div>
                             <input id={inputId} className="sr-only-file-input" type="file" accept="image/*" disabled={isApprovedReadOnly} onChange={(event) => handleFileChange(field.key, event)} />
-                            <div className={`giveaway-wheel-proof-preview giveaway-wheel-proof-preview-compact giveaway-wheel-proof-preview--post${imageSrc ? "" : " is-empty"}`}>
-                              {imageSrc ? (
-                                <img src={imageSrc} alt={field.label} />
-                              ) : (
-                                <div className="giveaway-wheel-proof-empty-state">
-                                  <Upload size={20} />
-                                  <span className="giveaway-wheel-proof-empty-label">Upload image</span>
+                            {file.hasFile ? (
+                              <div className="giveaway-entry-modal-v4-file-pill has-file">
+                                <img src={file.thumbSrc} alt={field.label} className="giveaway-entry-modal-v4-file-thumb" />
+                                <div className="giveaway-entry-modal-v4-file-copy">
+                                  <strong>{file.fileName}</strong>
+                                  {file.fileSize ? <small>{file.fileSize}</small> : null}
                                 </div>
+                                {file.canClear && !isApprovedReadOnly ? (
+                                  <button
+                                    type="button"
+                                    className="giveaway-entry-modal-v4-file-clear"
+                                    aria-label="Remove selected file"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      clearSelectedFile(field.key);
+                                    }}
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            <div className="giveaway-entry-modal-v4-upload-meta" aria-live="polite">
+                              {uploadStateByField[field.key]?.isValidating ? <small className="is-validating">Validating image...</small> : null}
+                              {uploadStateByField[field.key]?.error ? (
+                                <div className="giveaway-entry-modal-v4-upload-error-row">
+                                  <small className="is-error">{uploadStateByField[field.key].error}</small>
+                                  <button
+                                    type="button"
+                                    className="giveaway-entry-modal-v4-retry-btn"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      clearUploadFieldState(field.key);
+                                      triggerFilePicker(inputId);
+                                    }}
+                                  >
+                                    Retry
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                            <div className="giveaway-entry-modal-v4-actions">
+                              {isApprovedReadOnly ? null : (
+                                <button
+                                  type="button"
+                                  className={`giveaway-entry-modal-v4-action-btn is-upload${proofStatus.tone === "rejected" ? " is-emphasis" : ""}`}
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    triggerFilePicker(inputId);
+                                  }}
+                                >
+                                  <Upload size={15} />
+                                  Re-upload
+                                </button>
                               )}
+                              <button
+                                type="button"
+                                className="giveaway-entry-modal-v4-action-btn is-view"
+                                disabled={!imageSrc}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  if (!imageSrc) {
+                                    return;
+                                  }
+                                  setActiveProofLightbox({ src: imageSrc, label: field.label });
+                                }}
+                              >
+                                <Eye size={15} />
+                                View
+                              </button>
                             </div>
                           </label>
                         );
@@ -920,9 +1400,12 @@ export default function GiveawayWheelPage() {
                     </div>
 
                     {isApprovedReadOnly ? null : (
-                      <div className="giveaway-wheel-form-footer giveaway-wheel-form-footer-compact">
-                        <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                          {isSubmitting ? "Saving..." : entryForm.id ? "Update My Entry" : "Submit My Entry"}
+                      <div className="giveaway-entry-modal-v4-footer">
+                        <button type="button" className="button-secondary giveaway-entry-modal-v4-cancel" onClick={() => closeModal()}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="btn-primary giveaway-entry-modal-v4-submit" disabled={isSubmitting || hasValidationInProgress || hasValidationErrors}>
+                          {isSubmitting ? "Saving..." : entryForm.id ? "Save Changes" : "Submit My Entry"}
                         </button>
                       </div>
                     )}
@@ -976,6 +1459,24 @@ export default function GiveawayWheelPage() {
                   );
                 })}
               </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {activeProofLightbox?.src ? (
+        <div className="giveaway-wheel-modal-overlay" role="dialog" aria-modal="true" onClick={() => setActiveProofLightbox(null)}>
+          <section className="giveaway-wheel-modal-panel giveaway-wheel-prize-lightbox-panel giveaway-entry-modal-v4-proof-lightbox" onClick={(event) => event.stopPropagation()}>
+            <div className="giveaway-wheel-modal-head">
+              <div className="giveaway-wheel-modal-titleblock">
+                <h2>{activeProofLightbox.label || "Uploaded proof"}</h2>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setActiveProofLightbox(null)} aria-label="Close uploaded proof preview">
+                ✕
+              </button>
+            </div>
+            <div className="giveaway-wheel-prize-lightbox-body">
+              <img src={activeProofLightbox.src} alt={activeProofLightbox.label || "Uploaded proof"} className="giveaway-wheel-prize-lightbox-image" />
             </div>
           </section>
         </div>

@@ -133,7 +133,9 @@ public class GiveawayWheelService {
             MultipartFile facebookProfile,
             boolean creating
     ) {
-        entry.setFullName(requireFullName(fullName));
+        String normalizedFullName = requireFullName(fullName);
+        ensureUniqueFullName(normalizedFullName, entry.getId(), creating);
+        entry.setFullName(normalizedFullName);
         replaceImageIfProvided(followProof, entry::setFollowProofImagePath, () -> resetProofState(entry, GiveawayWheelProofType.FOLLOW));
         replaceImageIfProvided(commentProof, entry::setCommentProofImagePath, () -> resetProofState(entry, GiveawayWheelProofType.COMMENT));
         replaceImageIfProvided(shareProof, entry::setShareProofImagePath, () -> resetProofState(entry, GiveawayWheelProofType.SHARE));
@@ -441,6 +443,15 @@ public class GiveawayWheelService {
             throw new IllegalArgumentException("Full name must be at least 2 characters.");
         }
         return normalized;
+    }
+
+    private void ensureUniqueFullName(String fullName, Long currentEntryId, boolean creating) {
+        boolean duplicateExists = creating
+                ? giveawayWheelEntryRepository.existsByFullNameIgnoreCase(fullName)
+                : giveawayWheelEntryRepository.existsByFullNameIgnoreCaseAndIdNot(fullName, currentEntryId);
+        if (duplicateExists) {
+            throw new IllegalArgumentException("This full name is already registered in Giveaway 2.");
+        }
     }
 
     private String requireMessage(String message) {

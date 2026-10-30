@@ -1,6 +1,7 @@
 package com.solereax.inventory.giveaway;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -82,6 +83,16 @@ class GiveawayWheelServiceTest {
                     .sorted(Comparator.comparing(GiveawayWheelEntry::getUpdatedAt).reversed())
                     .limit(20)
                     .toList();
+        });
+        when(giveawayWheelEntryRepository.existsByFullNameIgnoreCase(anyString())).thenAnswer(invocation -> {
+            String fullName = invocation.getArgument(0, String.class);
+            return storedEntries.stream().anyMatch(entry -> entry.getFullName().equalsIgnoreCase(fullName));
+        });
+        when(giveawayWheelEntryRepository.existsByFullNameIgnoreCaseAndIdNot(anyString(), anyLong())).thenAnswer(invocation -> {
+            String fullName = invocation.getArgument(0, String.class);
+            Long excludedId = invocation.getArgument(1, Long.class);
+            return storedEntries.stream()
+                    .anyMatch(entry -> !entry.getId().equals(excludedId) && entry.getFullName().equalsIgnoreCase(fullName));
         });
     }
 
@@ -208,6 +219,69 @@ class GiveawayWheelServiceTest {
         assertEquals(GiveawayWheelProofStatus.APPROVED, updated.followProof().status());
         assertEquals(GiveawayWheelProofStatus.PENDING, updated.commentProof().status());
         assertEquals("/uploads/giveaway-wheel/comment-proof-v2.png", updated.commentProof().imagePath());
+    }
+
+    @Test
+    void createEntry_throwsWhenFullNameAlreadyExists() {
+        giveawayWheelService.createEntry(
+                "Unique Name",
+                image("follow-proof.png"),
+                null,
+                null,
+                null,
+                image("facebook-profile.png")
+        );
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> giveawayWheelService.createEntry(
+                        "unique name",
+                        image("follow-proof-2.png"),
+                        null,
+                        null,
+                        null,
+                        image("facebook-profile-2.png")
+                )
+        );
+
+        assertEquals("This full name is already registered in Giveaway 2.", exception.getMessage());
+    }
+
+    @Test
+    void updateEntry_throwsWhenRenamingToAnotherExistingFullName() {
+        GiveawayWheelEntryResponse first = giveawayWheelService.createEntry(
+                "Name One",
+                image("follow-proof-1.png"),
+                null,
+                null,
+                null,
+                image("facebook-profile-1.png")
+        );
+        GiveawayWheelEntryResponse second = giveawayWheelService.createEntry(
+                "Name Two",
+                image("follow-proof-2.png"),
+                null,
+                null,
+                null,
+                image("facebook-profile-2.png")
+        );
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> giveawayWheelService.updateEntry(
+                        second.id(),
+                        "name one",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+
+        assertEquals("This full name is already registered in Giveaway 2.", exception.getMessage());
+        assertEquals("Name One", giveawayWheelService.getEntry(first.id()).fullName());
+        assertEquals("Name Two", giveawayWheelService.getEntry(second.id()).fullName());
     }
 
     private MockMultipartFile image(String filename) {
