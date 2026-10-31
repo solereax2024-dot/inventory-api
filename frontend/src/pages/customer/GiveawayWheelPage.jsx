@@ -456,6 +456,7 @@ export default function GiveawayWheelPage() {
   const [openedFromSearchResult, setOpenedFromSearchResult] = useState(false);
   const [canScrollPrizeLeft, setCanScrollPrizeLeft] = useState(false);
   const [canScrollPrizeRight, setCanScrollPrizeRight] = useState(false);
+  const [prizeScrollRatio, setPrizeScrollRatio] = useState(0);
   const [isFeedbackExpanded, setIsFeedbackExpanded] = useState(false);
   const [uploadStateByField, setUploadStateByField] = useState(() => createInitialUploadFieldState());
   const [activeProofLightbox, setActiveProofLightbox] = useState(null);
@@ -654,6 +655,7 @@ export default function GiveawayWheelPage() {
     if (!container) {
       setCanScrollPrizeLeft(false);
       setCanScrollPrizeRight(false);
+      setPrizeScrollRatio(0);
       return undefined;
     }
 
@@ -662,6 +664,7 @@ export default function GiveawayWheelPage() {
       const currentScrollLeft = Math.max(0, container.scrollLeft);
       setCanScrollPrizeLeft(currentScrollLeft > 2);
       setCanScrollPrizeRight(maxScrollLeft - currentScrollLeft > 2);
+      setPrizeScrollRatio(maxScrollLeft > 0 ? Math.min(1, currentScrollLeft / maxScrollLeft) : 0);
     };
 
     updateScrollState();
@@ -1716,6 +1719,15 @@ export default function GiveawayWheelPage() {
                       >
                         <ChevronRight size={14} />
                       </button>
+                    ) : null}
+
+                    {prizeImages.length > 4 ? (
+                      <div className="giveaway-wheel-prize-progress" aria-hidden="true">
+                        <span
+                          className="giveaway-wheel-prize-progress-thumb"
+                          style={{ "--giveaway-prize-scroll-ratio": prizeScrollRatio }}
+                        />
+                      </div>
                     ) : null}
                   </div>
                 ) : (
