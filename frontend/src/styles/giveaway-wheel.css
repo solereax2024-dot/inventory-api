@@ -2088,8 +2088,8 @@
     width: min(100%, 560px);
   }
 
-  .giveaway-wheel-hero-compact .giveaway-wheel-prize-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .giveaway-wheel-hero-compact .giveaway-wheel-prize-strip-shell {
+    --giveaway-prize-visible-columns: 4;
   }
 }
 
@@ -2243,9 +2243,9 @@
   }
 
   .giveaway-wheel-hero-compact .giveaway-wheel-prize-visual-btn {
-    min-height: 72px;
-    min-width: 86px;
-    flex: 0 0 86px;
+    min-height: clamp(68px, 18vw, 82px);
+    flex: 0 0 calc((100% - 18px) / 4);
+    min-width: 0;
     scroll-snap-align: start;
   }
 
