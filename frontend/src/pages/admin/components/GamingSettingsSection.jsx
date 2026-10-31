@@ -5,6 +5,48 @@ import GiveawaySelector from "./GiveawaySelector.jsx";
 import GiveawayWheelEntriesTable from "./GiveawayWheelEntriesTable.jsx";
 import { DEFAULT_GIVEAWAY_SETTINGS, giveawayImageSrc, normalizeGiveawaySettings } from "../../../constants/giveaway";
 
+const PH_TIMEZONE = "Asia/Manila";
+const PH_OFFSET = "+08:00";
+
+function toPhilippineOffsetDatetime(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) {
+    return `${raw}:00${PH_OFFSET}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(raw)) {
+    return `${raw}${PH_OFFSET}`;
+  }
+  return raw;
+}
+
+function toPhilippineDatetimeLocal(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) {
+    return raw;
+  }
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: PH_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(parsed).reduce((accumulator, part) => {
+    accumulator[part.type] = part.value;
+    return accumulator;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+function toDatetimeLocalValue(value) {
+  return toPhilippineDatetimeLocal(value);
+}
+
 export default function GamingSettingsSection({
   giveawayOneVisible,
   giveawayTwoVisible,
@@ -47,6 +89,9 @@ export default function GamingSettingsSection({
   giveawayWheelEntryActionKey = "",
   onApproveGiveawayWheelProof,
   onRejectGiveawayWheelProof,
+  onShuffleGiveawayWheel,
+  onDrawGiveawayWheelWinner,
+  onClearGiveawayWheelEntries,
 }) {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState({ isOpen: false });
@@ -165,6 +210,9 @@ export default function GamingSettingsSection({
                 actionKey={giveawayWheelEntryActionKey}
                 onApproveProof={onApproveGiveawayWheelProof}
                 onRejectProof={onRejectGiveawayWheelProof}
+                onShuffleWheel={onShuffleGiveawayWheel}
+                onDrawWinner={onDrawGiveawayWheelWinner}
+                onClearEntries={onClearGiveawayWheelEntries}
               />
             </div>
           </>
@@ -252,6 +300,15 @@ export default function GamingSettingsSection({
                         value={safeGiveawaySettings.leaderboardPrizeNote}
                         onChange={(event) => onGiveawaySettingChange("leaderboardPrizeNote", event.target.value)}
                         placeholder="Featured Prize"
+                      />
+                    </label>
+
+                    <label className="giveaway-settings-field giveaway-settings-field-wide">
+                      <span>First Spin Date & Time</span>
+                      <input
+                        type="datetime-local"
+                        value={toDatetimeLocalValue(safeGiveawaySettings.firstSpinAt)}
+                        onChange={(event) => onGiveawaySettingChange("firstSpinAt", toPhilippineOffsetDatetime(event.target.value))}
                       />
                     </label>
 

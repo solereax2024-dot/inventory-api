@@ -43,29 +43,42 @@ public class PublicGiveawayWheelController {
                 .body(giveawayWheelService.getEntry(entryId));
     }
 
+
+    @GetMapping("/entries/{entryId}/search-open")
+    public ResponseEntity<GiveawayWheelEntryResponse> openEntryFromSearch(
+            @PathVariable Long entryId,
+            @RequestParam(name = "password", required = false) String password
+    ) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(giveawayWheelService.openEntryFromSearch(entryId, password));
+    }
+
     @PostMapping(value = "/entries", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GiveawayWheelEntryResponse> createEntry(
             @RequestParam String fullName,
+            @RequestParam(name = "entryPassword", required = false) String entryPassword,
             @RequestParam(name = "followProof", required = false) MultipartFile followProof,
             @RequestParam(name = "commentProof", required = false) MultipartFile commentProof,
             @RequestParam(name = "shareProof", required = false) MultipartFile shareProof,
             @RequestParam(name = "reviewProof", required = false) MultipartFile reviewProof,
             @RequestParam(name = "facebookProfile", required = false) MultipartFile facebookProfile
     ) {
-        return ResponseEntity.ok(giveawayWheelService.createEntry(fullName, followProof, commentProof, shareProof, reviewProof, facebookProfile));
+        return ResponseEntity.ok(giveawayWheelService.createEntry(fullName, entryPassword, followProof, commentProof, shareProof, reviewProof, facebookProfile));
     }
 
     @PutMapping(value = "/entries/{entryId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GiveawayWheelEntryResponse> updateEntry(
             @PathVariable Long entryId,
             @RequestParam String fullName,
+            @RequestParam(name = "entryPassword", required = false) String entryPassword,
             @RequestParam(name = "followProof", required = false) MultipartFile followProof,
             @RequestParam(name = "commentProof", required = false) MultipartFile commentProof,
             @RequestParam(name = "shareProof", required = false) MultipartFile shareProof,
             @RequestParam(name = "reviewProof", required = false) MultipartFile reviewProof,
             @RequestParam(name = "facebookProfile", required = false) MultipartFile facebookProfile
     ) {
-        return ResponseEntity.ok(giveawayWheelService.updateEntry(entryId, fullName, followProof, commentProof, shareProof, reviewProof, facebookProfile));
+        return ResponseEntity.ok(giveawayWheelService.updateEntry(entryId, fullName, entryPassword, followProof, commentProof, shareProof, reviewProof, facebookProfile));
     }
 }
 

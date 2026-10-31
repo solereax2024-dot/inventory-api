@@ -19,6 +19,7 @@ export const DEFAULT_GIVEAWAY_SETTINGS = {
   prizeImageUrls: [],
   prizeImageCount: 1,
   prizeImageAlt: "Featured giveaway prize",
+  firstSpinAt: "",
 };
 
 export const DEFAULT_GIVEAWAY_WHEEL_SETTINGS = {
@@ -53,6 +54,7 @@ export function normalizeGiveawaySettings(settings = {}) {
     prizeImageUrls,
     prizeImageCount,
     prizeImageAlt: cleanText(settings.prizeImageAlt),
+    firstSpinAt: cleanText(settings.firstSpinAt),
   };
 }
 

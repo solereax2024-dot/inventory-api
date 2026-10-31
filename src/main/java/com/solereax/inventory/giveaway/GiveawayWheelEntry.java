@@ -87,6 +87,21 @@ public class GiveawayWheelEntry {
     @Column(name = "entry_count", nullable = false)
     private int entryCount;
 
+    @Column(name = "excluded_from_wheel", nullable = false)
+    private boolean excludedFromWheel = false;
+
+    @Column(name = "is_winner", nullable = false)
+    private boolean winner = false;
+
+    @Column(name = "won_at")
+    private Instant wonAt;
+
+    @Column(name = "win_mode", length = 20)
+    private String winMode;
+
+    @Column(name = "wheel_display_order", nullable = false)
+    private int wheelDisplayOrder = 0;
+
     @Column(name = "submitted_entry_count", nullable = false)
     private int submittedEntryCount;
 
@@ -96,6 +111,9 @@ public class GiveawayWheelEntry {
 
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
+
+    @Column(name = "entry_password_hash", length = 255)
+    private String entryPasswordHash;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

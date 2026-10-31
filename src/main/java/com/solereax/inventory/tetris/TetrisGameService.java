@@ -172,6 +172,7 @@ public class TetrisGameService {
                 .lastPiecesLocked(0)
                 .heartbeatCount(0)
                 .suspiciousSignalCount(0)
+                .mismatchStrikeCount(0)
                 .blocked(false)
                 .blockReason(null)
                 .ended(false)
@@ -332,6 +333,7 @@ public class TetrisGameService {
         int deltaLockedPieces = piecesLocked - previousLockedPieces;
 
         int suspiciousSignals = Math.max(session.getSuspiciousSignalCount() != null ? session.getSuspiciousSignalCount() : 0, 0);
+        int mismatchStrikeCount = Math.max(session.getMismatchStrikeCount() != null ? session.getMismatchStrikeCount() : 0, 0);
         String reason = "";
 
         String clientAlertCode = telemetry.clientAlertCode() == null ? "" : telemetry.clientAlertCode().trim();
@@ -366,8 +368,14 @@ public class TetrisGameService {
         }
 
         if (deltaLines >= 4 && deltaLockedPieces <= 0) {
-            suspiciousSignals += 1;
-            reason = "Run blocked: telemetry mismatch detected between line clears and piece locks.";
+            mismatchStrikeCount += 1;
+            // Require two consecutive mismatch windows before blocking to reduce single-sample false positives.
+            if (mismatchStrikeCount >= 2) {
+                suspiciousSignals += 2;
+                reason = "Run blocked: telemetry mismatch detected between line clears and piece locks.";
+            }
+        } else if (deltaLockedPieces > 0) {
+            mismatchStrikeCount = 0;
         }
 
         if (includeFinalChecks) {
@@ -389,6 +397,7 @@ public class TetrisGameService {
         session.setLastPiecesLocked(piecesLocked);
         session.setHeartbeatCount(Math.max(session.getHeartbeatCount() != null ? session.getHeartbeatCount() : 0, 0) + 1);
         session.setSuspiciousSignalCount(suspiciousSignals);
+        session.setMismatchStrikeCount(mismatchStrikeCount);
 
         if (suspiciousSignals >= 2) {
             String finalReason = reason == null || reason.isBlank()

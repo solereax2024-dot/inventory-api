@@ -15,7 +15,8 @@ public record GiveawaySettingsUpdateRequest(
         String prizeImageUrl,
         List<String> prizeImageUrls,
         Integer prizeImageCount,
-        String prizeImageAlt
+        String prizeImageAlt,
+        String firstSpinAt
 ) {
 }
 

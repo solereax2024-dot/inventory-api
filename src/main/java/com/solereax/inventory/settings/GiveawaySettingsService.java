@@ -26,6 +26,7 @@ public class GiveawaySettingsService {
     public static final String GIVEAWAY_MODAL_PRIZE_IMAGE_URLS_KEY = "GIVEAWAY_MODAL_PRIZE_IMAGE_URLS";
     public static final String GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY = "GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT";
     public static final String GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY = "GIVEAWAY_MODAL_PRIZE_IMAGE_ALT";
+    public static final String GIVEAWAY_WHEEL_FIRST_SPIN_AT_KEY = "GIVEAWAY_WHEEL_FIRST_SPIN_AT";
 
     private static final String DEFAULT_TITLE = "Join the Giveaway";
     private static final String DEFAULT_INTRO = "Play the Giveaway challenge for a chance to win. Before you continue, please confirm that you follow our page and can upload proof.";
@@ -93,7 +94,8 @@ public class GiveawaySettingsService {
                 prizeImageUrls.isEmpty() ? primaryPrizeImageUrl : prizeImageUrls.getFirst(),
                 prizeImageUrls,
                 prizeImageCount,
-                getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, DEFAULT_PRIZE_IMAGE_ALT)
+                getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, DEFAULT_PRIZE_IMAGE_ALT),
+                getSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_FIRST_SPIN_AT_KEY, "")
         );
     }
 
@@ -106,7 +108,7 @@ public class GiveawaySettingsService {
     public GiveawaySettingsResponse updateSettings(Long giveawayId, GiveawaySettingsUpdateRequest request) {
         long normalizedGiveawayId = normalizeGiveawayId(giveawayId);
         GiveawaySettingsUpdateRequest safeRequest = request == null
-                ? new GiveawaySettingsUpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null)
+                ? new GiveawaySettingsUpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null, null)
                 : request;
         List<String> steps = normalizeSteps(safeRequest.steps());
         List<String> normalizedPrizeImageUrls = normalizePrizeImageUrls(safeRequest.prizeImageUrls(), safeRequest.prizeImageUrl());
@@ -131,6 +133,7 @@ public class GiveawaySettingsService {
         saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_URLS_KEY, serializeList(prizeImageUrls));
         saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY, String.valueOf(prizeImageCount));
         saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, normalizeText(safeRequest.prizeImageAlt()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_FIRST_SPIN_AT_KEY, normalizeText(safeRequest.firstSpinAt()));
         return getSettings(normalizedGiveawayId);
     }
 

@@ -65,7 +65,7 @@ export default function SiteHeader({
       { label: "Giveaway", to: "/giveaway-game", isActive: location.pathname.startsWith("/giveaway-game") || location.pathname.startsWith("/tetris-game") },
     ] : []),
     ...(isGiveawayWheelVisible ? [
-      { label: "Spin Wheel", to: "/giveaway-wheel", isActive: location.pathname.startsWith("/giveaway-wheel") || location.pathname.startsWith("/giveaway-2") },
+      { label: "Spin", to: "/giveaway-wheel", isActive: location.pathname.startsWith("/giveaway-wheel") || location.pathname.startsWith("/giveaway-2") },
     ] : []),
   ];
   const quickBrandOptions = (catalogNav.brandOptions || []).filter((brand) => brand && brand !== "ALL").slice(0, 6);

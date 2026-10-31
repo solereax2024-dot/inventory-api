@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, Hash, Heart, ImageIcon, Search, Share2, Star, Upload, UserRound, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, Hash, Heart, ImageIcon, Lock, Search, Share2, SlidersHorizontal, Star, Upload, UserRound, X } from "lucide-react";
 import { apiRequest, getFriendlyUploadErrorMessage } from "../../utils/api";
 import {
   GIVEAWAY_WHEEL_MAX_UPLOAD_SIZE_BYTES,
@@ -10,11 +10,14 @@ import {
   getGiveawayWheelStatusLabel,
 } from "../../constants/giveawayWheel";
 import { DEFAULT_GIVEAWAY_WHEEL_SETTINGS, giveawayImageList, normalizeGiveawaySettings } from "../../constants/giveaway";
+import { useCountdown } from "../../hooks";
 import "../../styles/giveaway-wheel.css";
 
 const EMPTY_FORM = {
   id: null,
   fullName: "",
+  entryPassword: "",
+  passwordProtected: false,
   followProofImagePath: "",
   commentProofImagePath: "",
   shareProofImagePath: "",
@@ -49,10 +52,13 @@ const EMPTY_PROOF_REVIEW = {
   facebookProfile: { status: "NOT_UPLOADED", rejectionReason: "", imagePath: "" },
 };
 
-function normalizeEntryFormData(data = {}) {
+function normalizeEntryFormData(data = {}, options = {}) {
+  const prefilledPassword = String(options.prefilledPassword || "");
   return {
     id: data.id,
     fullName: data.fullName || "",
+    entryPassword: prefilledPassword,
+    passwordProtected: Boolean(data.passwordProtected),
     followProofImagePath: data.followProof?.imagePath || data.followProofImagePath || "",
     commentProofImagePath: data.commentProof?.imagePath || data.commentProofImagePath || "",
     shareProofImagePath: data.shareProof?.imagePath || data.shareProofImagePath || "",
@@ -94,8 +100,22 @@ const WHEEL_RADIUS = 440;
 const WHEEL_CORE_RADIUS = 146;
 const WHEEL_HUB_RADIUS = 60;
 const SPIN_DURATION_MS = 5600;
+const WHEEL_HOST_SESSION_STORAGE_KEY = "giveawayWheelHostSession";
+const WHEEL_DRAW_MODE_PREF_STORAGE_KEY = "giveawayWheelDrawModePref";
+const WHEEL_SOUND_PREF_STORAGE_KEY = "giveawayWheelSoundPref";
+const WHEEL_TICK_PROFILE_PREF_STORAGE_KEY = "giveawayWheelTickProfilePref";
+const WHEEL_SOUND_VOLUME_PREF_STORAGE_KEY = "giveawayWheelSoundVolumePref";
+const HOST_STATUS_NOTICE_DURATION_MS = 5000;
 const MIN_UPLOAD_DIMENSION_PX = 120;
 const ALL_PROOF_FIELD_KEYS = [...GIVEAWAY_WHEEL_PROOF_FIELDS.map((field) => field.key), GIVEAWAY_WHEEL_PROFILE_FIELD.key];
+const SEGMENT_PALETTE = [
+  { fill: "#6f3e43", text: "#ffffff" },
+  { fill: "#f2ded5", text: "#3f262a" },
+  { fill: "#d79b95", text: "#3f262a" },
+  { fill: "#eac0bb", text: "#3f262a" },
+];
+const PH_TIMEZONE = "Asia/Manila";
+const PH_OFFSET = "+08:00";
 
 function createInitialUploadFieldState() {
   return ALL_PROOF_FIELD_KEYS.reduce((accumulator, fieldKey) => {
@@ -181,51 +201,202 @@ function getStatusClassName(status) {
   return "is-pending";
 }
 
-function getSegmentFill(status, index) {
-  const normalized = String(status || "PENDING").toUpperCase();
-  if (normalized === "APPROVED") {
-    return index % 2 === 0 ? "#8b5cf6" : "#ec4899";
-  }
-  if (normalized === "REJECTED") {
-    return index % 2 === 0 ? "rgba(148, 163, 184, 0.45)" : "rgba(100, 116, 139, 0.34)";
-  }
-  return index % 2 === 0 ? "rgba(250, 204, 21, 0.78)" : "rgba(251, 146, 60, 0.72)";
+function formatFirstSpinDate(value) {
+  const parsed = parseFirstSpinDate(value);
+  if (!parsed) return "";
+  return parsed.toLocaleString("en-PH", {
+    timeZone: PH_TIMEZONE,
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }) + " PHT";
 }
 
-function formatDateTime(value) {
-  if (!value) return "—";
+function parseFirstSpinDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const normalized = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)
+    ? `${raw}:00${PH_OFFSET}`
+    : /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(raw)
+      ? `${raw}${PH_OFFSET}`
+      : raw;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatWinnerWonAt(value) {
+  const parsed = parseFirstSpinDate(value);
+  if (!parsed) return "";
+  return parsed.toLocaleString("en-PH", {
+    timeZone: PH_TIMEZONE,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }) + " PHT";
+}
+
+function getSegmentFill(index) {
+  return SEGMENT_PALETTE[index % SEGMENT_PALETTE.length].fill;
+}
+
+function getSegmentTextFill(index) {
+  return SEGMENT_PALETTE[index % SEGMENT_PALETTE.length].text;
+}
+
+function shuffleArray(items = []) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function readHostSessionFromStorage() {
   try {
-    return new Intl.DateTimeFormat("en-PH", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(new Date(value));
+    const raw = window.sessionStorage.getItem(WHEEL_HOST_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.token) {
+      window.sessionStorage.removeItem(WHEEL_HOST_SESSION_STORAGE_KEY);
+      return null;
+    }
+    return {
+      token: String(parsed.token),
+      role: String(parsed.role || ""),
+      username: String(parsed.username || ""),
+    };
   } catch {
-    return value;
+    return null;
   }
 }
 
-function getSearchEntryMessage(entry) {
-  const status = getPublicEntryStatus(entry);
-  const slotCount = Math.max(0, Number(entry?.entryCount) || 0);
-  const slotLabel = slotCount === 1 ? "slot" : "slots";
-
-  if (status === "APPROVED") {
-    return `Approved. Your ${slotCount} ${slotLabel} are active in the public wheel.`;
+function writeHostSessionToStorage(session) {
+  if (!session?.token) {
+    window.sessionStorage.removeItem(WHEEL_HOST_SESSION_STORAGE_KEY);
+    return;
   }
-
-  if (status === "REJECTED") {
-    return entry?.rejectionReason || "Rejected. Please read the admin feedback and update your submission.";
-  }
-
-  return "Pending review. Your entry is waiting for admin approval.";
+  window.sessionStorage.setItem(WHEEL_HOST_SESSION_STORAGE_KEY, JSON.stringify(session));
 }
+
+function readDrawModePreference() {
+  try {
+    const raw = window.sessionStorage.getItem(WHEEL_DRAW_MODE_PREF_STORAGE_KEY);
+    if (!raw) {
+      return { mode: "KEEP", remember: false };
+    }
+    const parsed = JSON.parse(raw);
+    return {
+      mode: parsed?.mode === "REMOVE" ? "REMOVE" : "KEEP",
+      remember: Boolean(parsed?.remember),
+    };
+  } catch {
+    return { mode: "KEEP", remember: false };
+  }
+}
+
+function writeDrawModePreference(preference) {
+  window.sessionStorage.setItem(WHEEL_DRAW_MODE_PREF_STORAGE_KEY, JSON.stringify(preference));
+}
+
+function readSoundPreference() {
+  try {
+    const raw = window.sessionStorage.getItem(WHEEL_SOUND_PREF_STORAGE_KEY);
+    return raw === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeSoundPreference(enabled) {
+  window.sessionStorage.setItem(WHEEL_SOUND_PREF_STORAGE_KEY, enabled ? "1" : "0");
+}
+
+function readTickProfilePreference() {
+  try {
+    const raw = String(window.sessionStorage.getItem(WHEEL_TICK_PROFILE_PREF_STORAGE_KEY) || "").trim().toUpperCase();
+    if (raw === "SOFT" || raw === "BALANCED" || raw === "CLICKY" || raw === "TURBO") {
+      return raw;
+    }
+  } catch {
+    // Ignore preference read errors.
+  }
+  return "BALANCED";
+}
+
+function writeTickProfilePreference(profile) {
+  window.sessionStorage.setItem(WHEEL_TICK_PROFILE_PREF_STORAGE_KEY, String(profile || "BALANCED"));
+}
+
+function readSoundVolumePreference() {
+  try {
+    const raw = Number(window.sessionStorage.getItem(WHEEL_SOUND_VOLUME_PREF_STORAGE_KEY));
+    if (Number.isFinite(raw)) {
+      return Math.min(1, Math.max(0.15, raw));
+    }
+  } catch {
+    // Ignore preference read errors.
+  }
+  return 0.72;
+}
+
+function writeSoundVolumePreference(volume) {
+  const normalized = Math.min(1, Math.max(0.15, Number(volume) || 0.72));
+  window.sessionStorage.setItem(WHEEL_SOUND_VOLUME_PREF_STORAGE_KEY, String(normalized));
+}
+
+function hexToRgb(hexColor) {
+  const normalized = String(hexColor || "").replace("#", "").trim();
+  if (normalized.length !== 6) return null;
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  if ([r, g, b].some((value) => Number.isNaN(value))) return null;
+  return { r, g, b };
+}
+
+function resolvePointerPingTone(fillColor) {
+  const rgb = hexToRgb(fillColor);
+  if (!rgb) return "warm";
+  const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
+  return luminance < 0.48 ? "cool" : "warm";
+}
+
+function normalizeRotationDegrees(rotation) {
+  const normalized = Number(rotation) % 360;
+  return normalized < 0 ? normalized + 360 : normalized;
+}
+
+const WHEEL_TICK_PROFILE_CONFIG = {
+  SOFT: {
+    segment: { type: "triangle", attackGain: 0.018, endGain: 0.0001, startFrequency: 640, endFrequency: 470, duration: 0.052 },
+    winner: { type: "triangle", attackGain: 0.042, endGain: 0.0001, startFrequency: 820, endFrequency: 510, duration: 0.125 },
+  },
+  BALANCED: {
+    segment: { type: "triangle", attackGain: 0.048, endGain: 0.0001, startFrequency: 800, endFrequency: 560, duration: 0.06 },
+    winner: { type: "triangle", attackGain: 0.082, endGain: 0.0001, startFrequency: 930, endFrequency: 580, duration: 0.145 },
+  },
+  CLICKY: {
+    segment: { type: "square", attackGain: 0.098, endGain: 0.0001, startFrequency: 1210, endFrequency: 730, duration: 0.038 },
+    winner: { type: "square", attackGain: 0.125, endGain: 0.0001, startFrequency: 1330, endFrequency: 760, duration: 0.112 },
+  },
+  TURBO: {
+    segment: { type: "square", attackGain: 0.14, endGain: 0.0001, startFrequency: 1480, endFrequency: 810, duration: 0.031 },
+    winner: { type: "square", attackGain: 0.17, endGain: 0.0001, startFrequency: 1650, endFrequency: 880, duration: 0.104 },
+  },
+};
 
 function buildFormDataPayload(entry, selectedFiles) {
   const payload = new FormData();
   payload.append("fullName", String(entry.fullName || "").trim());
+  const normalizedEntryPassword = String(entry.entryPassword || "").trim();
+  if (normalizedEntryPassword) {
+    payload.append("entryPassword", normalizedEntryPassword);
+  }
 
   [...GIVEAWAY_WHEEL_PROOF_FIELDS, GIVEAWAY_WHEEL_PROFILE_FIELD].forEach((field) => {
     const file = selectedFiles[field.key];
@@ -261,6 +432,9 @@ export default function GiveawayWheelPage() {
   const prizeGridRef = useRef(null);
   const entryModalRef = useRef(null);
   const lastFocusedElementRef = useRef(null);
+  const wheelAudioContextRef = useRef(null);
+  const spinTickTimeoutIdsRef = useRef([]);
+  const pointerTickTimeoutRef = useRef(null);
   const [wheelEntries, setWheelEntries] = useState([]);
   const [entryForm, setEntryForm] = useState(EMPTY_FORM);
   const [proofReview, setProofReview] = useState(EMPTY_PROOF_REVIEW);
@@ -285,6 +459,30 @@ export default function GiveawayWheelPage() {
   const [isFeedbackExpanded, setIsFeedbackExpanded] = useState(false);
   const [uploadStateByField, setUploadStateByField] = useState(() => createInitialUploadFieldState());
   const [activeProofLightbox, setActiveProofLightbox] = useState(null);
+  const [latestDrawResult, setLatestDrawResult] = useState(null);
+  const [isHostGateOpen, setIsHostGateOpen] = useState(false);
+  const [hostGateStep, setHostGateStep] = useState("prompt");
+  const [hostLoginForm, setHostLoginForm] = useState({ username: "", password: "" });
+  const [hostLoginError, setHostLoginError] = useState("");
+  const [isHostLoggingIn, setIsHostLoggingIn] = useState(false);
+  const [hostSession, setHostSession] = useState(() => readHostSessionFromStorage());
+  const [isDrawModeModalOpen, setIsDrawModeModalOpen] = useState(false);
+  const [drawModeSelection, setDrawModeSelection] = useState(() => readDrawModePreference().mode);
+  const [rememberDrawMode, setRememberDrawMode] = useState(() => readDrawModePreference().remember);
+  const [isDrawModeConfirmed, setIsDrawModeConfirmed] = useState(false);
+  const [hostStatusNotice, setHostStatusNotice] = useState("");
+  const [winnerPopup, setWinnerPopup] = useState({
+    isOpen: false,
+    winnerName: "",
+    winnerImageSrc: "",
+    removed: false,
+  });
+  const [isPointerPing, setIsPointerPing] = useState(false);
+  const [isPointerTickPulse, setIsPointerTickPulse] = useState(false);
+  const [pointerPingTone, setPointerPingTone] = useState("warm");
+  const [isWheelSoundEnabled, setIsWheelSoundEnabled] = useState(() => readSoundPreference());
+  const [wheelTickProfile, setWheelTickProfile] = useState(() => readTickProfilePreference());
+  const [wheelSoundVolume, setWheelSoundVolume] = useState(() => readSoundVolumePreference());
 
   const loadWheelEntries = async () => {
     try {
@@ -317,6 +515,9 @@ export default function GiveawayWheelPage() {
 
   useEffect(() => {
     const refreshWheelEntries = () => {
+      if (isSpinning) {
+        return;
+      }
       loadWheelEntries().catch(() => undefined);
     };
 
@@ -340,7 +541,7 @@ export default function GiveawayWheelPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [isSpinning]);
 
   useEffect(() => {
     const savedEntryId = window.localStorage.getItem(GIVEAWAY_WHEEL_STORAGE_KEY);
@@ -360,7 +561,44 @@ export default function GiveawayWheelPage() {
   }, []);
 
   useEffect(() => {
+    writeDrawModePreference({ mode: drawModeSelection, remember: rememberDrawMode });
+  }, [drawModeSelection, rememberDrawMode]);
+
+  useEffect(() => {
+    writeSoundPreference(isWheelSoundEnabled);
+  }, [isWheelSoundEnabled]);
+
+  useEffect(() => {
+    writeTickProfilePreference(wheelTickProfile);
+  }, [wheelTickProfile]);
+
+  useEffect(() => {
+    writeSoundVolumePreference(wheelSoundVolume);
+  }, [wheelSoundVolume]);
+
+  useEffect(() => {
+    if (!winnerPopup.isOpen) {
+      return undefined;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setWinnerPopup((previous) => ({ ...previous, isOpen: false }));
+    }, 7000);
+    return () => window.clearTimeout(timeoutId);
+  }, [winnerPopup.isOpen]);
+
+  useEffect(() => {
     return () => {
+      spinTickTimeoutIdsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      spinTickTimeoutIdsRef.current = [];
+      if (pointerTickTimeoutRef.current) {
+        window.clearTimeout(pointerTickTimeoutRef.current);
+        pointerTickTimeoutRef.current = null;
+      }
+      try {
+        wheelAudioContextRef.current?.close?.();
+      } catch {
+        // Ignore close failures.
+      }
       previewUrlsRef.current.forEach((url) => {
         if (url) {
           URL.revokeObjectURL(url);
@@ -375,16 +613,24 @@ export default function GiveawayWheelPage() {
       .map((entry) => ({ ...entry, status: "APPROVED" }));
   }, [wheelEntries]);
 
-  const weightedSegments = useMemo(() => {
+  const weightedSegmentsBase = useMemo(() => {
     return approvedWheelEntries.flatMap((entry) => Array.from(
       { length: Math.max(1, Number(entry.entryCount) || 0) },
       () => ({ ...entry })
     ));
   }, [approvedWheelEntries]);
 
+  const [weightedSegments, setWeightedSegments] = useState([]);
+
+  useEffect(() => {
+    setWeightedSegments(weightedSegmentsBase);
+  }, [weightedSegmentsBase]);
+
   const approvedSegments = useMemo(() => {
     return weightedSegments.map((segment, index) => ({ ...segment, wheelIndex: index }));
   }, [weightedSegments]);
+
+  const hasActiveHostSession = Boolean(hostSession?.token);
 
 
   const prizeImages = useMemo(() => giveawayImageList(giveawaySettings), [giveawaySettings]);
@@ -398,6 +644,10 @@ export default function GiveawayWheelPage() {
   const sideSearchKicker = String(giveawaySettings?.leaderboardGoalMessage || "").trim() || "Search";
   const sideSearchTitle = "Check Your Entry";
   const sideSearchDescription = String(giveawaySettings?.steps?.[0] || "").trim() || "Check your status.";
+  const firstSpinAt = String(giveawaySettings?.firstSpinAt || "").trim();
+  const firstSpinDate = parseFirstSpinDate(firstSpinAt);
+  const firstSpinLabel = formatFirstSpinDate(firstSpinAt);
+  const firstSpinCountdown = useCountdown(firstSpinDate ? firstSpinDate.toISOString() : null, Boolean(firstSpinDate));
 
   useEffect(() => {
     const container = prizeGridRef.current;
@@ -590,15 +840,41 @@ export default function GiveawayWheelPage() {
       return;
     }
 
+    const isEditing = Boolean(entryForm.id);
+
     setIsSubmitting(true);
 
     try {
-      const isEditing = Boolean(entryForm.id);
       const url = isEditing ? `/api/public/giveaway-wheel/entries/${entryForm.id}` : "/api/public/giveaway-wheel/entries";
       const method = isEditing ? "PUT" : "POST";
-      const response = await submitMultipartEntry(url, method, entryForm, selectedFiles);
+      const saveEntryWithPassword = async (passwordOverride = undefined) => {
+        const payloadEntry = passwordOverride === undefined
+          ? entryForm
+          : { ...entryForm, entryPassword: passwordOverride };
+        return submitMultipartEntry(url, method, payloadEntry, selectedFiles);
+      };
 
-      setEntryForm(normalizeEntryFormData(response));
+      let effectivePassword = String(entryForm.entryPassword || "");
+      let response;
+
+      try {
+        response = await saveEntryWithPassword();
+      } catch (error) {
+        const message = String(error?.message || "");
+        const requiresPassword = isEditing && /password/i.test(message);
+        if (!requiresPassword) {
+          throw error;
+        }
+
+        const promptedPassword = window.prompt("This entry is password-protected. Enter password to save changes:");
+        if (promptedPassword === null) {
+          throw new Error("Entry update cancelled. Password is required for protected entries.");
+        }
+        effectivePassword = String(promptedPassword || "").trim();
+        response = await saveEntryWithPassword(effectivePassword);
+      }
+
+      setEntryForm(normalizeEntryFormData(response, { prefilledPassword: effectivePassword }));
       setProofReview(normalizeProofReview(response));
       setIsFeedbackExpanded(false);
       setSelectedFiles(EMPTY_FILES);
@@ -616,24 +892,361 @@ export default function GiveawayWheelPage() {
     }
   };
 
-  const spinWheel = () => {
-    if (isSpinning || approvedSegments.length === 0 || weightedSegments.length === 0) {
+  const flashHostStatusNotice = (message) => {
+    setHostStatusNotice(String(message || ""));
+    if (!message) {
+      return;
+    }
+    window.setTimeout(() => {
+      setHostStatusNotice("");
+    }, HOST_STATUS_NOTICE_DURATION_MS);
+  };
+
+  const playWheelWinnerTick = () => {
+    if (!isWheelSoundEnabled) {
+      return;
+    }
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) {
+      return;
+    }
+    if (!wheelAudioContextRef.current) {
+      wheelAudioContextRef.current = new AudioContextCtor();
+    }
+
+    const context = wheelAudioContextRef.current;
+    if (!context) {
+      return;
+    }
+    if (context.state === "suspended") {
+      context.resume().catch(() => undefined);
+    }
+
+    const playTickTone = (toneMode) => {
+      const selectedProfile = WHEEL_TICK_PROFILE_CONFIG[wheelTickProfile] || WHEEL_TICK_PROFILE_CONFIG.BALANCED;
+      const tickConfig = selectedProfile[toneMode] || selectedProfile.segment;
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+      oscillator.type = tickConfig.type;
+      oscillator.frequency.setValueAtTime(tickConfig.startFrequency, context.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(tickConfig.endFrequency, context.currentTime + tickConfig.duration * 0.9);
+
+      gainNode.gain.setValueAtTime(0.0001, context.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(tickConfig.attackGain * wheelSoundVolume, context.currentTime + 0.008);
+      gainNode.gain.exponentialRampToValueAtTime(tickConfig.endGain, context.currentTime + tickConfig.duration);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+      oscillator.start(context.currentTime);
+      oscillator.stop(context.currentTime + tickConfig.duration + 0.01);
+    };
+
+    playTickTone("winner");
+  };
+
+  const clearScheduledSpinTicks = () => {
+    spinTickTimeoutIdsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    spinTickTimeoutIdsRef.current = [];
+  };
+
+  const triggerPointerTickPulse = (tone = "warm") => {
+    setPointerPingTone(tone);
+    if (pointerTickTimeoutRef.current) {
+      window.clearTimeout(pointerTickTimeoutRef.current);
+      pointerTickTimeoutRef.current = null;
+    }
+    setIsPointerTickPulse(true);
+    pointerTickTimeoutRef.current = window.setTimeout(() => {
+      setIsPointerTickPulse(false);
+    }, 120);
+  };
+
+  const playWheelSegmentTick = (tone = "warm") => {
+    if (!isWheelSoundEnabled) {
+      return;
+    }
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) {
+      return;
+    }
+    if (!wheelAudioContextRef.current) {
+      wheelAudioContextRef.current = new AudioContextCtor();
+    }
+
+    const context = wheelAudioContextRef.current;
+    if (!context) {
+      return;
+    }
+    if (context.state === "suspended") {
+      context.resume().catch(() => undefined);
+    }
+
+    const selectedProfile = WHEEL_TICK_PROFILE_CONFIG[wheelTickProfile] || WHEEL_TICK_PROFILE_CONFIG.BALANCED;
+    const config = selectedProfile.segment;
+    const toneOffset = tone === "cool" ? 36 : -10;
+
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    oscillator.type = config.type;
+    oscillator.frequency.setValueAtTime(Math.max(180, config.startFrequency + toneOffset), context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(160, config.endFrequency + toneOffset * 0.4), context.currentTime + config.duration * 0.9);
+
+    gainNode.gain.setValueAtTime(0.0001, context.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(config.attackGain * wheelSoundVolume, context.currentTime + 0.006);
+    gainNode.gain.exponentialRampToValueAtTime(config.endGain, context.currentTime + config.duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    oscillator.start(context.currentTime);
+    oscillator.stop(context.currentTime + config.duration + 0.01);
+  };
+
+  const scheduleSpinSegmentTicks = ({ fromRotation, toRotation, segmentCount, durationMs }) => {
+    clearScheduledSpinTicks();
+    if (!isWheelSoundEnabled || segmentCount <= 0 || durationMs <= 0) {
       return;
     }
 
-    const winningSegment = approvedSegments[Math.floor(Math.random() * approvedSegments.length)];
+    const anglePerSegment = 360 / segmentCount;
+    const totalAngle = Math.abs(toRotation - fromRotation);
+    const tickCount = Math.max(1, Math.round(totalAngle / anglePerSegment));
+    const baseSegmentIndex = Math.floor(normalizeRotationDegrees(fromRotation) / anglePerSegment);
+
+    for (let tickNumber = 1; tickNumber <= tickCount; tickNumber += 1) {
+      const linearProgress = tickNumber / tickCount;
+      const easedProgress = 1 - Math.pow(1 - linearProgress, 2.2);
+      const fireAtMs = Math.max(0, Math.min(durationMs - 36, Math.round(durationMs * easedProgress)));
+      const currentSegmentIndex = (baseSegmentIndex + tickNumber) % segmentCount;
+      const tone = resolvePointerPingTone(getSegmentFill(currentSegmentIndex));
+      const timeoutId = window.setTimeout(() => {
+        triggerPointerTickPulse(tone);
+        playWheelSegmentTick(tone);
+      }, fireAtMs);
+      spinTickTimeoutIdsRef.current.push(timeoutId);
+    }
+  };
+
+  const toggleWheelSound = () => {
+    setIsWheelSoundEnabled((previous) => {
+      const next = !previous;
+      flashHostStatusNotice(next ? "Wheel sound enabled." : "Wheel sound muted.");
+      return next;
+    });
+  };
+
+  const cycleWheelTickProfile = () => {
+    const nextByCurrent = {
+      SOFT: "BALANCED",
+      BALANCED: "CLICKY",
+      CLICKY: "TURBO",
+      TURBO: "SOFT",
+    };
+    setWheelTickProfile((previous) => {
+      const current = previous in nextByCurrent ? previous : "BALANCED";
+      const next = nextByCurrent[current];
+      const labelByMode = {
+        SOFT: "Soft",
+        BALANCED: "Balanced",
+        CLICKY: "Clicky",
+        TURBO: "Turbo",
+      };
+      flashHostStatusNotice(`Tick tone: ${labelByMode[next]}.`);
+      return next;
+    });
+  };
+
+  const handleWheelSoundVolumeChange = (event) => {
+    const sliderValue = Number(event.target.value);
+    if (!Number.isFinite(sliderValue)) {
+      return;
+    }
+    setWheelSoundVolume(Math.min(1, Math.max(0.15, sliderValue / 100)));
+  };
+
+  const closeHostGate = () => {
+    setIsHostGateOpen(false);
+    setHostGateStep("prompt");
+    setHostLoginError("");
+    setHostLoginForm({ username: "", password: "" });
+  };
+
+  const lockHostSession = (noticeMessage = "Host session ended.") => {
+    setHostSession(null);
+    setIsDrawModeConfirmed(false);
+    writeHostSessionToStorage(null);
+    flashHostStatusNotice(noticeMessage);
+  };
+
+  const handleHostLogout = () => {
+    lockHostSession("Admin logged out from wheel controls.");
+    setIsDrawModeModalOpen(false);
+  };
+
+  const handleHostLoginSubmit = async (event) => {
+    event.preventDefault();
+    const username = String(hostLoginForm.username || "").trim();
+    const password = String(hostLoginForm.password || "");
+    if (!username || !password) {
+      setHostLoginError("Enter admin username and password.");
+      return;
+    }
+
+    setIsHostLoggingIn(true);
+    setHostLoginError("");
+    try {
+      const response = await apiRequest("/api/auth/login", "POST", { username, password });
+      const role = String(response?.role || "").toUpperCase();
+      if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+        throw new Error("Admin access required to run the wheel draw.");
+      }
+
+      const nextSession = {
+        token: String(response?.token || ""),
+        role,
+        username: String(response?.username || username),
+      };
+      setHostSession(nextSession);
+      setIsDrawModeConfirmed(false);
+      writeHostSessionToStorage(nextSession);
+      closeHostGate();
+      flashHostStatusNotice("Host unlocked. Choose draw mode before spinning.");
+    } catch (error) {
+      setHostLoginError(error?.message || "Unable to verify admin login.");
+    } finally {
+      setIsHostLoggingIn(false);
+    }
+  };
+
+  const runAdminDraw = async (removeWinnerFromWheel) => {
+    if (isSpinning || approvedSegments.length === 0 || weightedSegments.length === 0) {
+      return;
+    }
+    if (!hasActiveHostSession) {
+      setIsDrawModeModalOpen(false);
+      setHostGateStep("prompt");
+      setIsHostGateOpen(true);
+      return;
+    }
+
+    setIsDrawModeModalOpen(false);
+    setIsSpinning(true);
+
+    let drawResult;
+    try {
+      drawResult = await apiRequest(
+        "/api/admin/settings/gaming/giveaway-wheel/draw",
+        "POST",
+        { removeWinnerFromWheel: Boolean(removeWinnerFromWheel) },
+        hostSession.token
+      );
+    } catch (error) {
+      setIsSpinning(false);
+      const message = String(error?.message || "");
+      if (/unauthorized|forbidden|invalid|expired/i.test(message)) {
+        setHostSession(null);
+        setIsDrawModeConfirmed(false);
+        writeHostSessionToStorage(null);
+        flashHostStatusNotice("Admin session expired or invalid. Login again to continue.");
+      }
+      window.alert(error?.message || "Unable to draw a winner right now. Please try again.");
+      return;
+    }
+
+    const winnerEntryId = Number(drawResult?.winnerEntryId) || 0;
+    const winnerTicketOffset = Math.max(0, Number(drawResult?.winnerTicketOffset) || 0);
+    const winnerSegments = approvedSegments.filter((segment) => Number(segment.id) === winnerEntryId);
+    const winningSegment = winnerSegments.length > 0
+      ? winnerSegments[winnerTicketOffset % winnerSegments.length]
+      : approvedSegments.find((segment) => Number(segment.id) === winnerEntryId);
+
+    if (!winningSegment) {
+      setIsSpinning(false);
+      window.alert("Winner was selected, but your wheel data changed. Refresh page and spin again.");
+      await loadWheelEntries();
+      return;
+    }
+
+    setPointerPingTone(resolvePointerPingTone(getSegmentFill(winningSegment.wheelIndex)));
+
+    setLatestDrawResult({
+      ...drawResult,
+      winnerRemovedFromWheel: Boolean(drawResult?.winnerRemovedFromWheel),
+    });
+
     const anglePerSegment = 360 / weightedSegments.length;
     const targetAngle = (winningSegment.wheelIndex + 0.5) * anglePerSegment;
     const extraTurns = 6 * 360;
-    const randomOffset = (Math.random() - 0.5) * Math.min(12, anglePerSegment * 0.45);
+    const randomOffset = 0;
     const nextRotation = activeRotation + extraTurns - targetAngle + randomOffset;
 
-    setIsSpinning(true);
+    scheduleSpinSegmentTicks({
+      fromRotation: activeRotation,
+      toRotation: nextRotation,
+      segmentCount: weightedSegments.length,
+      durationMs: SPIN_DURATION_MS,
+    });
     setActiveRotation(nextRotation);
-
     window.setTimeout(() => {
+      clearScheduledSpinTicks();
+      setIsPointerTickPulse(false);
       setIsSpinning(false);
+      setIsPointerPing(true);
+      playWheelWinnerTick();
+      window.setTimeout(() => setIsPointerPing(false), 700);
+      loadWheelEntries().catch(() => undefined);
+      setWinnerPopup({
+        isOpen: true,
+        winnerName: String(winningSegment?.fullName || drawResult?.winnerFullName || "Winner"),
+        winnerImageSrc: getGiveawayWheelImageSrc(
+          winningSegment?.facebookProfileImagePath
+            || drawResult?.winnerProfileImagePath
+            || drawResult?.winnerFacebookProfileImagePath
+        ),
+        removed: Boolean(drawResult?.winnerRemovedFromWheel),
+      });
     }, SPIN_DURATION_MS);
+  };
+
+  const handleDrawModeAction = (mode) => {
+    const normalizedMode = mode === "REMOVE" ? "REMOVE" : "KEEP";
+    setDrawModeSelection(normalizedMode);
+    setIsDrawModeConfirmed(true);
+    setIsDrawModeModalOpen(false);
+    flashHostStatusNotice(`Draw mode saved: ${normalizedMode === "REMOVE" ? "Remove Winner" : "Keep Winner"}. Tap center wheel to spin.`);
+  };
+
+  const handleSpinAttempt = () => {
+    if (isSpinning || approvedSegments.length === 0 || weightedSegments.length === 0) {
+      return;
+    }
+    if (!hasActiveHostSession) {
+      setHostGateStep("prompt");
+      setIsHostGateOpen(true);
+      return;
+    }
+
+    if (!isDrawModeConfirmed) {
+      flashHostStatusNotice("Set draw mode first via the options icon.");
+      return;
+    }
+
+    runAdminDraw(drawModeSelection === "REMOVE");
+  };
+
+  const handleVisualShuffle = () => {
+    if (isSpinning || weightedSegments.length === 0) {
+      return;
+    }
+    setWeightedSegments((previous) => shuffleArray(previous));
+  };
+
+  const handleOpenHostControls = () => {
+    if (!hasActiveHostSession) {
+      setHostGateStep("prompt");
+      setIsHostGateOpen(true);
+      return;
+    }
+    setIsDrawModeModalOpen(true);
   };
 
   const openModal = (nextModal) => {
@@ -680,8 +1293,44 @@ export default function GiveawayWheelPage() {
     setFormError("");
     setFormMessage("");
 
+    const selectedSearchResult = searchResults.find((entry) => entry.id === entryId) || null;
+    let providedPassword = "";
+
     try {
-      const data = await apiRequest(`/api/public/giveaway-wheel/entries/${entryId}`);
+      if (selectedSearchResult?.passwordProtected) {
+        const promptedPassword = window.prompt("This entry is password-protected. Enter password to open:");
+        if (promptedPassword === null) {
+          return;
+        }
+        providedPassword = String(promptedPassword || "").trim();
+      }
+
+      const loadEntry = async () => {
+        const passwordQuery = providedPassword ? `?password=${encodeURIComponent(providedPassword)}` : "";
+        return apiRequest(`/api/public/giveaway-wheel/entries/${entryId}/search-open${passwordQuery}`);
+      };
+
+      let data;
+      while (true) {
+        try {
+          data = await loadEntry();
+          break;
+        } catch (error) {
+          const message = String(error?.message || "");
+          const isPasswordError = /password/i.test(message);
+          if (!isPasswordError) {
+            throw error;
+          }
+          const promptedPassword = window.prompt(message.includes("Invalid")
+            ? "Incorrect password. Please try again:"
+            : "This entry is password-protected. Enter password:");
+          if (promptedPassword === null) {
+            return;
+          }
+          providedPassword = String(promptedPassword || "").trim();
+        }
+      }
+
       if (!data?.id) {
         setSearchError("Entry details are not available right now.");
         return;
@@ -693,7 +1342,7 @@ export default function GiveawayWheelPage() {
         return;
       }
 
-      setEntryForm(normalizeEntryFormData(data));
+      setEntryForm(normalizeEntryFormData(data, { prefilledPassword: providedPassword }));
       setProofReview(normalizeProofReview(data));
       setIsFeedbackExpanded(false);
       setSelectedFiles(EMPTY_FILES);
@@ -872,33 +1521,30 @@ export default function GiveawayWheelPage() {
   return (
     <main className="giveaway-wheel-page">
       <section className="giveaway-wheel-hero giveaway-wheel-hero-compact">
-        <div className="giveaway-wheel-hero-shell-head">
-          <h1>Giveaway</h1>
-          <button
-            type="button"
-            className="modal-close-btn giveaway-wheel-hero-close-btn"
-            onClick={() => window.history.back()}
-            aria-label="Close giveaway"
-          >
-            ✕
-          </button>
-        </div>
         <div className="giveaway-wheel-hero-panel giveaway-wheel-hero-panel-compact">
           <div
             className="giveaway-wheel-stage giveaway-wheel-stage-compact"
-            role="button"
-            tabIndex={0}
-            aria-label="Spin the giveaway wheel"
-            onClick={spinWheel}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                spinWheel();
-              }
-            }}
+            aria-label="Giveaway wheel preview"
           >
             <div className="giveaway-wheel-wheel-wrap">
-              <div className="giveaway-wheel-pointer" aria-hidden="true" />
+              <button
+                type="button"
+                className="giveaway-wheel-corner-shuffle is-right"
+                onClick={handleVisualShuffle}
+                disabled={isSpinning || weightedSegments.length === 0}
+                aria-label="Shuffle wheel entries"
+              >
+                Shuffle
+              </button>
+              <button
+                type="button"
+                className="giveaway-wheel-corner-options"
+                onClick={handleOpenHostControls}
+                aria-label="Open host controls"
+              >
+                <SlidersHorizontal size={14} aria-hidden="true" />
+              </button>
+              <div className={`giveaway-wheel-pointer is-${pointerPingTone}${isPointerTickPulse ? " is-tick" : ""}${isPointerPing ? " is-ping" : ""}`} aria-hidden="true" />
               <div className={`giveaway-wheel-svg-shell giveaway-wheel-svg-shell-compact${isSpinning ? " is-spinning" : ""}`}>
                 <svg
                   className="giveaway-wheel-svg"
@@ -907,7 +1553,7 @@ export default function GiveawayWheelPage() {
                   aria-label="Giveaway spin wheel"
                   style={{ transform: `rotate(${activeRotation}deg)` }}
                 >
-                  <circle cx={WHEEL_CENTER} cy={WHEEL_CENTER} r={WHEEL_RADIUS} fill="#0f172a" stroke="rgba(255,255,255,0.12)" strokeWidth="12" />
+                  <circle cx={WHEEL_CENTER} cy={WHEEL_CENTER} r={WHEEL_RADIUS} fill="url(#wheelOuterBase)" stroke="url(#wheelRimStroke)" strokeWidth="14" />
                   {weightedSegments.length > 0 ? weightedSegments.map((segment, index) => {
                     const anglePerSegment = 360 / weightedSegments.length;
                     const startAngle = index * anglePerSegment;
@@ -929,12 +1575,12 @@ export default function GiveawayWheelPage() {
 
                     return (
                       <g key={`${segment.id}-${index}`} className={`giveaway-wheel-segment ${statusClass}`}>
-                        <path d={describeSector(startAngle, endAngle)} fill={getSegmentFill(segment.status, index)} stroke="rgba(255,255,255,0.16)" strokeWidth="2" />
+                        <path d={describeSector(startAngle, endAngle)} fill={getSegmentFill(index)} stroke="rgba(255,255,255,0.9)" strokeWidth="2" />
                         <path id={labelPathId} d={labelPath} fill="none" stroke="none" />
                         <text
-                          fill={String(segment.status).toUpperCase() === "REJECTED" ? "rgba(226,232,240,0.82)" : "#ffffff"}
-                          stroke="rgba(15,23,42,0.35)"
-                          strokeWidth="6"
+                          fill={getSegmentTextFill(index)}
+                          stroke="rgba(255,255,255,0.55)"
+                          strokeWidth="3"
                           paintOrder="stroke"
                           strokeLinejoin="round"
                           fontSize={fontSize}
@@ -952,23 +1598,64 @@ export default function GiveawayWheelPage() {
                       Waiting for entries
                     </text>
                   )}
+                  {weightedSegments.length > 0 ? weightedSegments.map((segment, index) => {
+                    const anglePerSegment = 360 / weightedSegments.length;
+                    const markerPoint = polarToCartesian(WHEEL_CENTER, WHEEL_CENTER, WHEEL_RADIUS + 1, index * anglePerSegment);
+                    return (
+                      <circle
+                        key={`wheel-marker-${segment.id}-${index}`}
+                        cx={markerPoint.x}
+                        cy={markerPoint.y}
+                        r="6"
+                        fill="#ffffff"
+                        stroke="rgba(205, 173, 169, 0.9)"
+                        strokeWidth="1.5"
+                      />
+                    );
+                  }) : null}
                   <defs>
+                    <radialGradient id="wheelOuterBase" cx="50%" cy="45%" r="62%">
+                      <stop offset="0%" stopColor="#f6e7e0" />
+                      <stop offset="72%" stopColor="#f0ddd7" />
+                      <stop offset="100%" stopColor="#ead5cf" />
+                    </radialGradient>
+                    <linearGradient id="wheelRimStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#ffffff" />
+                      <stop offset="45%" stopColor="#f4e8e5" />
+                      <stop offset="100%" stopColor="#d8beb9" />
+                    </linearGradient>
                     <radialGradient id="wheelCoreGlow" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
-                      <stop offset="55%" stopColor="rgba(124,58,237,0.18)" />
-                      <stop offset="100%" stopColor="rgba(15,23,42,0.98)" />
+                      <stop offset="0%" stopColor="rgba(255,255,255,0.96)" />
+                      <stop offset="68%" stopColor="rgba(248, 240, 236, 0.98)" />
+                      <stop offset="100%" stopColor="rgba(230, 214, 208, 1)" />
+                    </radialGradient>
+                    <radialGradient id="wheelHubMetal" cx="40%" cy="34%" r="64%">
+                      <stop offset="0%" stopColor="#ffffff" />
+                      <stop offset="44%" stopColor="#f4ece8" />
+                      <stop offset="100%" stopColor="#e4d6d1" />
                     </radialGradient>
                   </defs>
-                  <circle cx={WHEEL_CENTER} cy={WHEEL_CENTER} r={WHEEL_CORE_RADIUS} fill="url(#wheelCoreGlow)" stroke="rgba(255,255,255,0.24)" strokeWidth="8" />
-                  <circle cx={WHEEL_CENTER} cy={WHEEL_CENTER} r={WHEEL_HUB_RADIUS} fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
+                  <circle cx={WHEEL_CENTER} cy={WHEEL_CENTER} r={WHEEL_RADIUS - 8} fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="8" />
+                  <circle cx={WHEEL_CENTER} cy={WHEEL_CENTER} r={WHEEL_CORE_RADIUS} fill="url(#wheelCoreGlow)" stroke="rgba(241,226,222,0.9)" strokeWidth="10" />
+                  <circle cx={WHEEL_CENTER} cy={WHEEL_CENTER} r={WHEEL_HUB_RADIUS} fill="url(#wheelHubMetal)" stroke="rgba(255,255,255,0.85)" strokeWidth="2" />
                 </svg>
               </div>
+              <button
+                type="button"
+                className="giveaway-wheel-center-cta"
+                onClick={handleSpinAttempt}
+                disabled={isSpinning || weightedSegments.length === 0}
+                aria-label={isSpinning ? "Drawing winner" : "Spin wheel"}
+              >
+                <span className="giveaway-wheel-center-title is-top">SOLE</span>
+                <span className="giveaway-wheel-center-title is-bottom">REAX</span>
+                <small className="giveaway-wheel-center-mark" />
+              </button>
             </div>
 
             <div className="giveaway-wheel-stage-copy">
               <span>{sidePrizeKicker}</span>
               <h3>{sidePrizeTitle}</h3>
-              <p>{sidePrizeDescription}</p>
             </div>
 
           </div>
@@ -979,6 +1666,15 @@ export default function GiveawayWheelPage() {
                 <span className="giveaway-wheel-side-kicker">{sidePrizeKicker}</span>
                 <h2>{sidePrizeTitle}</h2>
                 <p>{sidePrizeDescription}</p>
+                {firstSpinLabel ? (
+                  <div className="giveaway-wheel-first-spin-card" aria-live="polite">
+                    <span className="giveaway-wheel-first-spin-kicker">First Spin</span>
+                    <strong>{firstSpinLabel}</strong>
+                    <span className="giveaway-wheel-first-spin-countdown">
+                      Countdown: {firstSpinCountdown.label || "Live now"}
+                    </span>
+                  </div>
+                ) : null}
                 {prizeImages.length > 0 ? (
                   <div className="giveaway-wheel-prize-strip-shell">
                     {prizeImages.length > 4 && canScrollPrizeLeft ? (
@@ -1050,21 +1746,6 @@ export default function GiveawayWheelPage() {
                   </button>
                 </form>
 
-                {searchResults.length > 0 ? (
-                  <div className="giveaway-wheel-inline-results">
-                    {searchResults.slice(0, 2).map((entry) => (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        className="giveaway-wheel-inline-result-row"
-                        onClick={() => handleOpenSearchResult(entry.id)}
-                      >
-                        <span className="giveaway-wheel-inline-result-user"><UserRound size={16} />{entry.fullName}</span>
-                        <span className="giveaway-wheel-inline-result-action">View Entry <ChevronRight size={14} /></span>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
 
                 {searchError ? <div className="giveaway-wheel-inline-error">{searchError}</div> : null}
                 {searchResults.length > 0 ? (
@@ -1107,10 +1788,12 @@ export default function GiveawayWheelPage() {
           >
             <div className="giveaway-entry-modal-v4-head">
               <div className="giveaway-entry-modal-v4-titleblock">
-                <h2 id="giveaway-entry-modal-title">{isApprovedReadOnly ? "Approved Entry" : entryForm.id ? "Edit Entry" : "Join Giveaway"}</h2>
-                <span className="giveaway-entry-modal-v4-chip giveaway-entry-modal-v4-chip-total">
-                  {estimatedEntryCount} Active {estimatedEntryCount === 1 ? "Entry" : "Entries"}
-                </span>
+                <div className="giveaway-entry-modal-v4-title-row-main">
+                  <h2 id="giveaway-entry-modal-title">{isApprovedReadOnly ? "Approved Entry" : entryForm.id ? "Edit Entry" : "Join Giveaway"}</h2>
+                  <span className="giveaway-entry-modal-v4-chip giveaway-entry-modal-v4-chip-total">
+                    {estimatedEntryCount} Active {estimatedEntryCount === 1 ? "Entry" : "Entries"}
+                  </span>
+                </div>
               </div>
               <div className="giveaway-entry-modal-v4-head-actions">
                 <button type="button" className="modal-close-btn" onClick={() => closeModal()} aria-label="Close modal">
@@ -1173,7 +1856,7 @@ export default function GiveawayWheelPage() {
                     </div>
                   ) : null}
 
-                  <form className="giveaway-entry-modal-v4-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
+                  <form id="giveaway-entry-modal-v4-form" className="giveaway-entry-modal-v4-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
                     <label className="giveaway-entry-modal-v4-field">
                       <span>Full Name</span>
                       <div className="giveaway-entry-modal-v4-input-shell">
@@ -1188,11 +1871,38 @@ export default function GiveawayWheelPage() {
                       </div>
                     </label>
 
+                    {entryForm.id ? null : (
+                      <label className="giveaway-entry-modal-v4-field giveaway-entry-modal-v4-password-field">
+                        <span>Entry Password <em>(optional)</em></span>
+                        <div className="giveaway-entry-modal-v4-input-shell">
+                          <input
+                            type="password"
+                            value={entryForm.entryPassword}
+                            onChange={(event) => setEntryForm((previous) => ({ ...previous, entryPassword: event.target.value }))}
+                            placeholder="Create optional password"
+                            disabled={isApprovedReadOnly}
+                            autoComplete="new-password"
+                          />
+                        </div>
+                        <small className="giveaway-entry-modal-v4-password-note">
+                          Optional but recommended. This protects your entry when opening from search so other users cannot edit your uploads.
+                          If left blank, anyone who can find this name may open the entry.
+                        </small>
+                      </label>
+                    )}
+
                     <div className="giveaway-entry-modal-v4-grid">
                       <label className={`giveaway-entry-modal-v4-card is-required${isApprovedReadOnly ? " is-readonly" : ""}${uploadStateByField.facebookProfile?.error ? " has-error" : ""}${proofReview.facebookProfile.status === "REJECTED" ? " is-rejected" : ""}`}>
                         {(() => {
                           const file = getFileDescriptor(GIVEAWAY_WHEEL_PROFILE_FIELD.key, profileImageSrc);
                           const profileStatus = getProofVisualStatus(proofReview.facebookProfile?.status, Boolean(profileImageSrc));
+                          const profileReviewStatus = String(proofReview.facebookProfile?.status || "").toUpperCase();
+                          const isProfileApproved = profileReviewStatus === "APPROVED";
+                          const isProfileUploadLocked = isApprovedReadOnly || isProfileApproved;
+                          const profileUploadLabel = file.hasFile ? "Re-upload" : "Upload";
+                          const profileUploadLockHint = isProfileApproved
+                            ? "Approved by admin. Re-upload is disabled."
+                            : "";
                           return (
                             <>
                         <div className="giveaway-entry-modal-v4-card-head">
@@ -1205,9 +1915,10 @@ export default function GiveawayWheelPage() {
                               <span className="status-dot" aria-hidden="true" />
                               {profileStatus.label}
                             </small>
+                            <small className="giveaway-entry-modal-v4-proof-helper">{GIVEAWAY_WHEEL_PROFILE_FIELD.helper}</small>
                           </div>
                         </div>
-                        <input id="giveaway-wheel-facebookProfile" className="sr-only-file-input" type="file" accept="image/*" disabled={isApprovedReadOnly} onChange={(event) => handleFileChange(GIVEAWAY_WHEEL_PROFILE_FIELD.key, event)} />
+                        <input id="giveaway-wheel-facebookProfile" className="sr-only-file-input" type="file" accept="image/*" disabled={isProfileUploadLocked} onChange={(event) => handleFileChange(GIVEAWAY_WHEEL_PROFILE_FIELD.key, event)} />
                         {file.hasFile ? (
                           <div className="giveaway-entry-modal-v4-file-pill has-file">
                             <img src={file.thumbSrc} alt={GIVEAWAY_WHEEL_PROFILE_FIELD.label} className="giveaway-entry-modal-v4-file-thumb" />
@@ -1231,41 +1942,25 @@ export default function GiveawayWheelPage() {
                             ) : null}
                           </div>
                         ) : null}
-                        <div className="giveaway-entry-modal-v4-upload-meta" aria-live="polite">
-                          {uploadStateByField.facebookProfile?.isValidating ? <small className="is-validating">Validating image...</small> : null}
-                          {uploadStateByField.facebookProfile?.error ? (
-                            <div className="giveaway-entry-modal-v4-upload-error-row">
-                              <small className="is-error">{uploadStateByField.facebookProfile.error}</small>
-                              <button
-                                type="button"
-                                className="giveaway-entry-modal-v4-retry-btn"
-                                onClick={(event) => {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  clearUploadFieldState(GIVEAWAY_WHEEL_PROFILE_FIELD.key);
-                                  triggerFilePicker("giveaway-wheel-facebookProfile");
-                                }}
-                              >
-                                Retry
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
                         <div className="giveaway-entry-modal-v4-actions">
-                          {isApprovedReadOnly ? null : (
-                            <button
-                              type="button"
-                              className={`giveaway-entry-modal-v4-action-btn is-upload${profileStatus.tone === "rejected" ? " is-emphasis" : ""}`}
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                triggerFilePicker("giveaway-wheel-facebookProfile");
-                              }}
-                            >
-                              <Upload size={15} />
-                              Re-upload
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className={`giveaway-entry-modal-v4-action-btn is-upload${profileStatus.tone === "rejected" && !isProfileUploadLocked ? " is-emphasis" : ""}`}
+                            disabled={isProfileUploadLocked}
+                            title={isProfileUploadLocked ? (profileUploadLockHint || "This upload is locked.") : ""}
+                            aria-label={isProfileUploadLocked ? (profileUploadLockHint || "This upload is locked.") : "Upload file"}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              if (isProfileUploadLocked) {
+                                return;
+                              }
+                              triggerFilePicker("giveaway-wheel-facebookProfile");
+                            }}
+                          >
+                            <Upload size={15} />
+                            {isProfileApproved ? "Approved" : profileUploadLabel}
+                          </button>
                           <button
                             type="button"
                             className="giveaway-entry-modal-v4-action-btn is-view"
@@ -1296,6 +1991,13 @@ export default function GiveawayWheelPage() {
                         const imageSrc = rawImageSrc;
                         const file = getFileDescriptor(field.key, imageSrc);
                         const inputId = `giveaway-wheel-${field.key}`;
+                        const proofReviewStatus = String(proofReview[field.key]?.status || "").toUpperCase();
+                        const isProofApproved = proofReviewStatus === "APPROVED";
+                        const isProofUploadLocked = isApprovedReadOnly || isProofApproved;
+                        const proofUploadLabel = file.hasFile ? "Re-upload" : "Upload";
+                        const proofUploadLockHint = isProofApproved
+                          ? "Approved by admin. Re-upload is disabled."
+                          : "";
                         const proofStatus = getProofVisualStatus(proofReview[field.key]?.status, Boolean(imageSrc));
                         const iconByField = {
                           followProof: Heart,
@@ -1305,20 +2007,29 @@ export default function GiveawayWheelPage() {
                         };
                         const FieldIcon = iconByField[field.key] || ImageIcon;
                         return (
-                          <label key={field.key} className={`giveaway-entry-modal-v4-card${isApprovedReadOnly ? " is-readonly" : ""}${uploadStateByField[field.key]?.error ? " has-error" : ""}${proofReview[field.key]?.status === "REJECTED" ? " is-rejected" : ""}`}>
+                          <label key={field.key} className={`giveaway-entry-modal-v4-card${isProofUploadLocked ? " is-readonly" : ""}${uploadStateByField[field.key]?.error ? " has-error" : ""}${proofReview[field.key]?.status === "REJECTED" ? " is-rejected" : ""}`}>
                             <div className="giveaway-entry-modal-v4-card-head">
                               <div className={`giveaway-entry-modal-v4-card-icon is-${field.key}`}><FieldIcon size={20} /></div>
                               <div>
                                 <div className="giveaway-entry-modal-v4-title-row">
                                   <strong>{field.label} {!isApprovedReadOnly ? <em>*</em> : null}</strong>
+                                  <span className="giveaway-entry-modal-v4-entry-chip">{field.weightLabel}</span>
                                 </div>
                                 <small className={`giveaway-entry-modal-v4-proof-status is-${proofStatus.tone}`}>
                                   <span className="status-dot" aria-hidden="true" />
                                   {proofStatus.label}
                                 </small>
+                                <small className="giveaway-entry-modal-v4-proof-helper">{field.helper}</small>
                               </div>
                             </div>
-                            <input id={inputId} className="sr-only-file-input" type="file" accept="image/*" disabled={isApprovedReadOnly} onChange={(event) => handleFileChange(field.key, event)} />
+                            <input
+                              id={inputId}
+                              className="sr-only-file-input"
+                              type="file"
+                              accept="image/*"
+                              disabled={isProofUploadLocked}
+                              onChange={(event) => handleFileChange(field.key, event)}
+                            />
                             {file.hasFile ? (
                               <div className="giveaway-entry-modal-v4-file-pill has-file">
                                 <img src={file.thumbSrc} alt={field.label} className="giveaway-entry-modal-v4-file-thumb" />
@@ -1342,41 +2053,25 @@ export default function GiveawayWheelPage() {
                                 ) : null}
                               </div>
                             ) : null}
-                            <div className="giveaway-entry-modal-v4-upload-meta" aria-live="polite">
-                              {uploadStateByField[field.key]?.isValidating ? <small className="is-validating">Validating image...</small> : null}
-                              {uploadStateByField[field.key]?.error ? (
-                                <div className="giveaway-entry-modal-v4-upload-error-row">
-                                  <small className="is-error">{uploadStateByField[field.key].error}</small>
-                                  <button
-                                    type="button"
-                                    className="giveaway-entry-modal-v4-retry-btn"
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      clearUploadFieldState(field.key);
-                                      triggerFilePicker(inputId);
-                                    }}
-                                  >
-                                    Retry
-                                  </button>
-                                </div>
-                              ) : null}
-                            </div>
                             <div className="giveaway-entry-modal-v4-actions">
-                              {isApprovedReadOnly ? null : (
-                                <button
-                                  type="button"
-                                  className={`giveaway-entry-modal-v4-action-btn is-upload${proofStatus.tone === "rejected" ? " is-emphasis" : ""}`}
-                                  onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    triggerFilePicker(inputId);
-                                  }}
-                                >
-                                  <Upload size={15} />
-                                  Re-upload
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                className={`giveaway-entry-modal-v4-action-btn is-upload${proofStatus.tone === "rejected" && !isProofUploadLocked ? " is-emphasis" : ""}`}
+                                disabled={isProofUploadLocked}
+                                title={isProofUploadLocked ? (proofUploadLockHint || "This upload is locked.") : ""}
+                                aria-label={isProofUploadLocked ? (proofUploadLockHint || "This upload is locked.") : "Upload file"}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  if (isProofUploadLocked) {
+                                    return;
+                                  }
+                                  triggerFilePicker(inputId);
+                                }}
+                              >
+                                <Upload size={15} />
+                                {isProofApproved ? "Approved" : proofUploadLabel}
+                              </button>
                               <button
                                 type="button"
                                 className="giveaway-entry-modal-v4-action-btn is-view"
@@ -1399,18 +2094,175 @@ export default function GiveawayWheelPage() {
                       })}
                     </div>
 
-                    {isApprovedReadOnly ? null : (
-                      <div className="giveaway-entry-modal-v4-footer">
-                        <button type="button" className="button-secondary giveaway-entry-modal-v4-cancel" onClick={() => closeModal()}>
-                          Cancel
-                        </button>
-                        <button type="submit" className="btn-primary giveaway-entry-modal-v4-submit" disabled={isSubmitting || hasValidationInProgress || hasValidationErrors}>
-                          {isSubmitting ? "Saving..." : entryForm.id ? "Save Changes" : "Submit My Entry"}
-                        </button>
-                      </div>
-                    )}
                   </form>
               </div>
+            </div>
+            {isApprovedReadOnly ? null : (
+              <div className="giveaway-entry-modal-v4-footer">
+                <button type="button" className="giveaway-entry-modal-v4-cancel" onClick={() => closeModal()}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="giveaway-entry-modal-v4-form"
+                  className="giveaway-entry-modal-v4-submit"
+                  disabled={isSubmitting || hasValidationInProgress || hasValidationErrors}
+                >
+                  {isSubmitting ? "Saving..." : entryForm.id ? "Save Changes" : "Submit My Entry"}
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
+
+      {isHostGateOpen ? (
+        <div className="modal-overlay" onClick={closeHostGate}>
+          <section className="modal-panel modal-panel-compact confirm-action-modal" onClick={(event) => event.stopPropagation()}>
+            {hostGateStep === "prompt" ? (
+              <>
+                <div className="confirm-action-head">
+                  <h3>Admin Host Required</h3>
+                  <button type="button" className="modal-close-btn" onClick={closeHostGate} aria-label="Close host login modal">✕</button>
+                </div>
+                <div className="confirm-action-body">
+                  <p className="confirm-action-copy">Only admin host can run the official winner draw.</p>
+                </div>
+                <div className="confirm-action-footer modal-sticky-footer">
+                  <button type="button" className="button-secondary" onClick={closeHostGate}>Cancel</button>
+                  <button type="button" className="btn-primary" onClick={() => setHostGateStep("login")}>Yes, I am admin</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="confirm-action-head">
+                  <h3>Admin Login</h3>
+                  <button type="button" className="modal-close-btn" onClick={closeHostGate} aria-label="Close host login modal">✕</button>
+                </div>
+                <form className="confirm-action-body" onSubmit={handleHostLoginSubmit}>
+                  <label className="confirm-action-field">
+                    <span>Username</span>
+                    <input
+                      type="text"
+                      value={hostLoginForm.username}
+                      onChange={(event) => setHostLoginForm((previous) => ({ ...previous, username: event.target.value }))}
+                      autoComplete="username"
+                    />
+                  </label>
+                  <label className="confirm-action-field">
+                    <span>Password</span>
+                    <input
+                      type="password"
+                      value={hostLoginForm.password}
+                      onChange={(event) => setHostLoginForm((previous) => ({ ...previous, password: event.target.value }))}
+                      autoComplete="current-password"
+                    />
+                  </label>
+                  {hostLoginError ? <p className="field-hint" style={{ color: "#ef4444" }}>{hostLoginError}</p> : null}
+                  <div className="confirm-action-footer modal-sticky-footer">
+                    <button type="button" className="button-secondary" onClick={closeHostGate}>Cancel</button>
+                    <button type="submit" className="btn-primary" disabled={isHostLoggingIn}>
+                      {isHostLoggingIn ? "Verifying..." : "Unlock Spin"}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </section>
+        </div>
+      ) : null}
+
+      {isDrawModeModalOpen ? (
+        <div className="modal-overlay" onClick={() => setIsDrawModeModalOpen(false)}>
+          <section className="modal-panel modal-panel-compact confirm-action-modal giveaway-wheel-host-controls-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="confirm-action-head">
+              <h3>Choose Draw Mode</h3>
+              <button type="button" className="modal-close-btn" onClick={() => setIsDrawModeModalOpen(false)} aria-label="Close draw mode modal">✕</button>
+            </div>
+            <div className="confirm-action-body giveaway-wheel-host-controls-body">
+              <p className="confirm-action-copy">For fairness, decide if winner should stay in the wheel or be removed after winning.</p>
+              <div className="giveaway-wheel-draw-mode-grid">
+                <button
+                  type="button"
+                  className={`giveaway-wheel-draw-mode-card${drawModeSelection === "KEEP" ? " is-selected" : ""}`}
+                  onClick={() => setDrawModeSelection("KEEP")}
+                >
+                  <strong>Keep Winner</strong>
+                  <p>Winner stays in the wheel and can win again in future draws.</p>
+                </button>
+                <button
+                  type="button"
+                  className={`giveaway-wheel-draw-mode-card${drawModeSelection === "REMOVE" ? " is-selected" : ""}`}
+                  onClick={() => setDrawModeSelection("REMOVE")}
+                >
+                  <strong>Remove Winner</strong>
+                  <p>Winner is excluded from the next draws after winning.</p>
+                </button>
+              </div>
+              <label className="confirm-action-field giveaway-wheel-draw-mode-remember">
+                <input
+                  type="checkbox"
+                  checked={rememberDrawMode}
+                  onChange={(event) => setRememberDrawMode(event.target.checked)}
+                />
+                <span>Remember this draw mode for this session</span>
+              </label>
+              <div className="giveaway-wheel-host-audio-controls">
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={toggleWheelSound}
+                >
+                  {isWheelSoundEnabled ? "Sound On" : "Sound Off"}
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={cycleWheelTickProfile}
+                  disabled={!isWheelSoundEnabled}
+                >
+                  Tick {wheelTickProfile === "CLICKY" ? "Clicky" : wheelTickProfile === "SOFT" ? "Soft" : wheelTickProfile === "TURBO" ? "Turbo" : "Balanced"}
+                </button>
+                <label className="giveaway-wheel-host-volume">
+                  <span>Vol {Math.round(wheelSoundVolume * 100)}%</span>
+                  <input
+                    type="range"
+                    min="15"
+                    max="100"
+                    step="1"
+                    value={Math.round(wheelSoundVolume * 100)}
+                    onChange={handleWheelSoundVolumeChange}
+                    disabled={!isWheelSoundEnabled}
+                  />
+                </label>
+              </div>
+              <div className="giveaway-wheel-host-session-actions">
+                <button
+                  type="button"
+                  className="button-secondary giveaway-wheel-modal-btn"
+                  onClick={() => lockHostSession()}
+                >
+                  End Session
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary giveaway-wheel-modal-btn"
+                  onClick={handleHostLogout}
+                >
+                  Logout Admin
+                </button>
+              </div>
+            </div>
+            <div className="confirm-action-footer modal-sticky-footer giveaway-wheel-draw-mode-footer">
+              <button type="button" className="button-secondary giveaway-wheel-modal-btn" onClick={() => setIsDrawModeModalOpen(false)}>Cancel</button>
+              <button
+                type="button"
+                className="btn-primary giveaway-wheel-modal-btn"
+                onClick={() => handleDrawModeAction(drawModeSelection)}
+                disabled={isSpinning}
+              >
+                Save Draw Mode
+              </button>
             </div>
           </section>
         </div>
@@ -1434,17 +2286,27 @@ export default function GiveawayWheelPage() {
                   const statusClass = getStatusClassName(publicStatus);
                   const normalizedStatus = String(entry?.status || "").toUpperCase();
                   const canOpenReadOnly = normalizedStatus === "APPROVED" || normalizedStatus === "REJECTED";
+                  const winnerWonAtLabel = formatWinnerWonAt(entry?.wonAt);
 
                   return (
                     <div key={entry.id} className={`giveaway-wheel-search-result ${statusClass}`}>
                       <div className="giveaway-wheel-search-result-copy">
                         <strong>{entry.fullName}</strong>
                         <small className="giveaway-wheel-search-result-status">{getGiveawayWheelStatusLabel(publicStatus)}</small>
-                        <small className="giveaway-wheel-search-result-message">{getSearchEntryMessage(entry)}</small>
+                        {entry.winner ? (
+                          <>
+                            <small className="giveaway-wheel-search-winner-badge">Winner</small>
+                            {winnerWonAtLabel ? (
+                              <small className="giveaway-wheel-search-winner-meta">Won: {winnerWonAtLabel}</small>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {entry.passwordProtected ? (
+                          <small className="giveaway-wheel-search-lock-badge"><Lock size={12} />Password protected</small>
+                        ) : null}
                       </div>
                       <div className="giveaway-wheel-search-result-meta">
-                        <strong>{entry.entryCount} {entry.entryCount === 1 ? "slot" : "slots"}</strong>
-                        <small>Updated {formatDateTime(entry.updatedAt)}</small>
+                        <small className="giveaway-wheel-search-result-slots">{entry.entryCount} {entry.entryCount === 1 ? "slot" : "slots"}</small>
                         {canOpenReadOnly ? (
                           <button
                             type="button"
@@ -1527,6 +2389,44 @@ export default function GiveawayWheelPage() {
                 {activePrizeLightboxIndex + 1} / {prizeImages.length}
               </div>
             ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {hostStatusNotice ? (
+        <div className="giveaway-wheel-host-toast" role="status" aria-live="polite">
+          {hostStatusNotice}
+        </div>
+      ) : null}
+
+      {winnerPopup.isOpen ? (
+        <div className="giveaway-wheel-winner-popup-overlay" onClick={() => setWinnerPopup((previous) => ({ ...previous, isOpen: false }))}>
+          <section className="giveaway-wheel-winner-popup" onClick={(event) => event.stopPropagation()}>
+            <div className="giveaway-wheel-winner-confetti" aria-hidden="true">
+              {Array.from({ length: 18 }).map((_, index) => <span key={`winner-confetti-${index}`} />)}
+            </div>
+            <div className="giveaway-wheel-winner-popup-kicker">
+              <div className="giveaway-wheel-winner-avatar" title="Winner profile image">
+                {winnerPopup.winnerImageSrc ? (
+                  <img src={winnerPopup.winnerImageSrc} alt={`${winnerPopup.winnerName || "Winner"} profile`} />
+                ) : (
+                  <span>{String(winnerPopup.winnerName || "W").trim().charAt(0).toUpperCase() || "W"}</span>
+                )}
+              </div>
+              <div className="giveaway-wheel-winner-popup-meta">
+                <p className="giveaway-wheel-winner-popup-label">Winner Selected</p>
+                <h3>{winnerPopup.winnerName}</h3>
+                <p className="giveaway-wheel-winner-popup-sub">Winner profile confirmed for this draw.</p>
+              </div>
+            </div>
+            <p>{winnerPopup.removed ? "Removed from wheel for next draws." : "Stays on wheel for next draws."}</p>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setWinnerPopup((previous) => ({ ...previous, isOpen: false }))}
+            >
+              Nice!
+            </button>
           </section>
         </div>
       ) : null}

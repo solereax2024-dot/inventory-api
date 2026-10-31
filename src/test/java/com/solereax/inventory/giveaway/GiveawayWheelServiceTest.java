@@ -25,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,17 +36,25 @@ class GiveawayWheelServiceTest {
     private GiveawayWheelEntryRepository giveawayWheelEntryRepository;
 
     @Mock
+    private GiveawayWheelDrawRepository giveawayWheelDrawRepository;
+
+    @Mock
     private MediaStorageService mediaStorageService;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     private GiveawayWheelService giveawayWheelService;
     private List<GiveawayWheelEntry> storedEntries;
     private AtomicLong nextId;
+    private AtomicLong nextDrawId;
 
     @BeforeEach
     void setUp() {
-        giveawayWheelService = new GiveawayWheelService(giveawayWheelEntryRepository, mediaStorageService);
+        giveawayWheelService = new GiveawayWheelService(giveawayWheelEntryRepository, giveawayWheelDrawRepository, mediaStorageService, passwordEncoder);
         storedEntries = new ArrayList<>();
         nextId = new AtomicLong(1L);
+        nextDrawId = new AtomicLong(1L);
 
         when(mediaStorageService.storeImage(any(MultipartFile.class), eq("giveaway-wheel"))).thenAnswer(invocation -> {
             MultipartFile file = invocation.getArgument(0, MultipartFile.class);
@@ -73,6 +82,13 @@ class GiveawayWheelServiceTest {
                     .sorted(Comparator.comparing(GiveawayWheelEntry::getUpdatedAt).reversed())
                     .toList();
         });
+        when(giveawayWheelEntryRepository.findAllByEntryCountGreaterThanAndExcludedFromWheelFalseOrderByWheelDisplayOrderAscUpdatedAtDesc(anyInt())).thenAnswer(invocation -> {
+            Integer minimumCount = invocation.getArgument(0, Integer.class);
+            return storedEntries.stream()
+                    .filter(entry -> entry.getEntryCount() > minimumCount && !entry.isExcludedFromWheel())
+                    .sorted(Comparator.comparing(GiveawayWheelEntry::getWheelDisplayOrder).thenComparing(GiveawayWheelEntry::getUpdatedAt, Comparator.reverseOrder()))
+                    .toList();
+        });
         when(giveawayWheelEntryRepository.findAllByOrderByUpdatedAtDesc()).thenAnswer(invocation -> storedEntries.stream()
                 .sorted(Comparator.comparing(GiveawayWheelEntry::getUpdatedAt).reversed())
                 .toList());
@@ -94,12 +110,52 @@ class GiveawayWheelServiceTest {
             return storedEntries.stream()
                     .anyMatch(entry -> !entry.getId().equals(excludedId) && entry.getFullName().equalsIgnoreCase(fullName));
         });
+        when(giveawayWheelDrawRepository.save(any(GiveawayWheelDraw.class))).thenAnswer(invocation -> {
+            GiveawayWheelDraw draw = invocation.getArgument(0, GiveawayWheelDraw.class);
+            if (draw.getId() == null) {
+                draw.setId(nextDrawId.getAndIncrement());
+            }
+            return draw;
+        });
+    }
+
+    @Test
+    void drawWinner_returnsApprovedEntryAndPersistsDrawRecord() {
+        GiveawayWheelEntryResponse first = giveawayWheelService.createEntry(
+                "Winner One",
+                null,
+                image("follow-proof-1.png"),
+                null,
+                null,
+                null,
+                image("facebook-profile-1.png")
+        );
+        GiveawayWheelEntryResponse second = giveawayWheelService.createEntry(
+                "Winner Two",
+                null,
+                image("follow-proof-2.png"),
+                image("comment-proof-2.png"),
+                null,
+                null,
+                image("facebook-profile-2.png")
+        );
+        giveawayWheelService.approveEntry(first.id());
+        giveawayWheelService.approveEntry(second.id());
+
+        GiveawayWheelDrawResponse draw = giveawayWheelService.drawWinner(false);
+
+        assertTrue(draw.drawId() > 0);
+        assertTrue(draw.totalTickets() >= 4);
+        assertTrue(draw.winningTicketIndex() >= 0);
+        assertTrue(draw.winningTicketIndex() < draw.totalTickets());
+        assertTrue(draw.winnerEntryId().equals(first.id()) || draw.winnerEntryId().equals(second.id()));
     }
 
     @Test
     void createEntry_keepsUploadedProofsPendingUntilTheyAreValidated() {
         GiveawayWheelEntryResponse response = giveawayWheelService.createEntry(
                 "Juan Dela Cruz",
+                null,
                 image("follow-proof.png"),
                 null,
                 image("share-proof.png"),
@@ -121,6 +177,7 @@ class GiveawayWheelServiceTest {
     void validateProof_onlyActivatesTheSelectedProofButAlreadyShowsLiveWheelSlots() {
         GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
                 "Maria Santos",
+                null,
                 image("follow-proof.png"),
                 image("comment-proof.png"),
                 null,
@@ -145,6 +202,7 @@ class GiveawayWheelServiceTest {
     void revokeProof_onlyRemovesThatProofsSlotsAndKeepsOtherApprovedProofsActive() {
         GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
                 "Liza Mercado",
+                null,
                 image("follow-proof.png"),
                 image("comment-proof.png"),
                 null,
@@ -172,6 +230,7 @@ class GiveawayWheelServiceTest {
     void approveEntry_stillValidatesAllUploadedProofsForBackwardCompatibility() {
         GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
                 "Paolo Reyes",
+                null,
                 image("follow-proof.png"),
                 null,
                 null,
@@ -195,6 +254,7 @@ class GiveawayWheelServiceTest {
     void updateEntry_replacingOneProofResetsOnlyThatProofToPending() {
         GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
                 "Nina Lopez",
+                null,
                 image("follow-proof.png"),
                 image("comment-proof.png"),
                 null,
@@ -206,6 +266,7 @@ class GiveawayWheelServiceTest {
         GiveawayWheelEntryResponse updated = giveawayWheelService.updateEntry(
                 created.id(),
                 "Nina Lopez",
+                null,
                 null,
                 image("comment-proof-v2.png"),
                 null,
@@ -225,6 +286,7 @@ class GiveawayWheelServiceTest {
     void createEntry_throwsWhenFullNameAlreadyExists() {
         giveawayWheelService.createEntry(
                 "Unique Name",
+                null,
                 image("follow-proof.png"),
                 null,
                 null,
@@ -236,6 +298,7 @@ class GiveawayWheelServiceTest {
                 IllegalArgumentException.class,
                 () -> giveawayWheelService.createEntry(
                         "unique name",
+                        null,
                         image("follow-proof-2.png"),
                         null,
                         null,
@@ -251,6 +314,7 @@ class GiveawayWheelServiceTest {
     void updateEntry_throwsWhenRenamingToAnotherExistingFullName() {
         GiveawayWheelEntryResponse first = giveawayWheelService.createEntry(
                 "Name One",
+                null,
                 image("follow-proof-1.png"),
                 null,
                 null,
@@ -259,6 +323,7 @@ class GiveawayWheelServiceTest {
         );
         GiveawayWheelEntryResponse second = giveawayWheelService.createEntry(
                 "Name Two",
+                null,
                 image("follow-proof-2.png"),
                 null,
                 null,
@@ -271,6 +336,7 @@ class GiveawayWheelServiceTest {
                 () -> giveawayWheelService.updateEntry(
                         second.id(),
                         "name one",
+                        null,
                         null,
                         null,
                         null,

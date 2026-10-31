@@ -55,6 +55,9 @@ public class TetrisRunSession {
     @Column(name = "suspicious_signal_count", nullable = false)
     private Integer suspiciousSignalCount;
 
+    @Column(name = "mismatch_strike_count", nullable = false)
+    private Integer mismatchStrikeCount;
+
     @Column(name = "blocked", nullable = false)
     private boolean blocked;
 

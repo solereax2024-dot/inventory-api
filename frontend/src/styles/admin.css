@@ -792,6 +792,32 @@
   font-weight: 700;
 }
 
+.giveaway-wheel-actions-toolbar .btn-primary,
+.giveaway-wheel-actions-toolbar .button-secondary,
+.giveaway-wheel-actions-toolbar .btn-delete {
+  min-height: 38px;
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.giveaway-wheel-entry-chip.is-active {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  color: #065f46;
+}
+
+.giveaway-wheel-entry-chip.is-excluded {
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.24);
+  color: #9a3412;
+}
+
+.giveaway-wheel-entry-chip.is-winner {
+  background: rgba(79, 70, 229, 0.12);
+  border: 1px solid rgba(79, 70, 229, 0.22);
+  color: #3730a3;
+}
+
 .giveaway-player-proof-actions {
   display: flex;
   flex-direction: row;

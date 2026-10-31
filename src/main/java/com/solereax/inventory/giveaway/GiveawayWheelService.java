@@ -2,11 +2,20 @@ package com.solereax.inventory.giveaway;
 
 import com.solereax.inventory.settings.MediaStorageService;
 import com.solereax.inventory.shared.NotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,19 +28,158 @@ public class GiveawayWheelService {
     private static final String UPLOAD_FOLDER = "giveaway-wheel";
 
     private final GiveawayWheelEntryRepository giveawayWheelEntryRepository;
+    private final GiveawayWheelDrawRepository giveawayWheelDrawRepository;
     private final MediaStorageService mediaStorageService;
+    private final PasswordEncoder passwordEncoder;
 
     public GiveawayWheelService(
             GiveawayWheelEntryRepository giveawayWheelEntryRepository,
-            MediaStorageService mediaStorageService
+            GiveawayWheelDrawRepository giveawayWheelDrawRepository,
+            MediaStorageService mediaStorageService,
+            PasswordEncoder passwordEncoder
     ) {
         this.giveawayWheelEntryRepository = giveawayWheelEntryRepository;
+        this.giveawayWheelDrawRepository = giveawayWheelDrawRepository;
         this.mediaStorageService = mediaStorageService;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Transactional
+    public GiveawayWheelDrawResponse drawWinner(boolean removeWinnerFromWheel) {
+        List<GiveawayWheelEntry> approvedEntries = giveawayWheelEntryRepository
+                .findAllByEntryCountGreaterThanAndExcludedFromWheelFalseOrderByWheelDisplayOrderAscUpdatedAtDesc(0)
+                .stream()
+                .filter(entry -> entry.getEntryCount() > 0)
+                .toList();
+
+        int totalTickets = approvedEntries.stream()
+                .mapToInt(GiveawayWheelEntry::getEntryCount)
+                .sum();
+        if (totalTickets <= 0) {
+            throw new IllegalArgumentException("No approved entries available for draw yet.");
+        }
+
+        int winningTicketIndex = ThreadLocalRandom.current().nextInt(totalTickets);
+        int runningTicketCount = 0;
+        GiveawayWheelEntry winningEntry = null;
+        int winnerTicketOffset = 0;
+
+        for (GiveawayWheelEntry entry : approvedEntries) {
+            int entryTickets = Math.max(0, entry.getEntryCount());
+            if (winningTicketIndex < runningTicketCount + entryTickets) {
+                winningEntry = entry;
+                winnerTicketOffset = winningTicketIndex - runningTicketCount;
+                break;
+            }
+            runningTicketCount += entryTickets;
+        }
+
+        if (winningEntry == null) {
+            throw new IllegalStateException("Unable to determine a giveaway winner.");
+        }
+
+        GiveawayWheelDraw draw = new GiveawayWheelDraw();
+        draw.setWinnerEntryId(winningEntry.getId());
+        draw.setWinnerFullName(winningEntry.getFullName());
+        draw.setWinnerEntryCount(Math.max(0, winningEntry.getEntryCount()));
+        draw.setTotalTickets(totalTickets);
+        draw.setWinningTicketIndex(winningTicketIndex);
+        draw.setWinnerTicketOffset(winnerTicketOffset);
+        draw.setCreatedAt(Instant.now());
+
+        Instant now = Instant.now();
+        winningEntry.setWinner(true);
+        winningEntry.setWonAt(now);
+        winningEntry.setWinMode(removeWinnerFromWheel ? "remove" : "keep");
+
+        if (removeWinnerFromWheel) {
+            List<GiveawayWheelEntry> matchingEntries = giveawayWheelEntryRepository.findAllByFullNameIgnoreCase(winningEntry.getFullName());
+            for (GiveawayWheelEntry entry : matchingEntries) {
+                entry.setExcludedFromWheel(true);
+                entry.setUpdatedAt(now);
+                if (entry.getId().equals(winningEntry.getId())) {
+                    entry.setWinner(true);
+                    entry.setWonAt(now);
+                    entry.setWinMode("remove");
+                }
+            }
+            giveawayWheelEntryRepository.saveAll(matchingEntries);
+        } else {
+            winningEntry.setExcludedFromWheel(false);
+            winningEntry.setUpdatedAt(now);
+            giveawayWheelEntryRepository.save(winningEntry);
+        }
+
+        GiveawayWheelDraw savedDraw = giveawayWheelDrawRepository.save(draw);
+        return new GiveawayWheelDrawResponse(
+                savedDraw.getId(),
+                savedDraw.getWinnerEntryId(),
+                savedDraw.getWinnerFullName(),
+                winningEntry.getFacebookProfileImagePath(),
+                savedDraw.getWinnerEntryCount(),
+                removeWinnerFromWheel,
+                removeWinnerFromWheel ? "remove" : "keep",
+                savedDraw.getTotalTickets(),
+                savedDraw.getWinningTicketIndex(),
+                savedDraw.getWinnerTicketOffset(),
+                savedDraw.getCreatedAt()
+        );
+    }
+
+    @Transactional
+    public GiveawayWheelCleanupResponse clearAllEntries() {
+        long deletedUploadFiles = deleteGiveawayUploads();
+        long deletedDrawHistory = giveawayWheelDrawRepository.deleteAllByIdIsNotNull();
+        long deletedEntries = giveawayWheelEntryRepository.deleteAllByIdIsNotNull();
+        return new GiveawayWheelCleanupResponse(deletedEntries, deletedDrawHistory, deletedUploadFiles);
+    }
+
+    private long deleteGiveawayUploads() {
+        Path folderPath = Paths.get(mediaStorageService.getUploadBaseDirectoryAbsolutePath())
+                .resolve(UPLOAD_FOLDER)
+                .normalize();
+
+        if (!Files.exists(folderPath)) {
+            return 0;
+        }
+
+        long deletedFileCount = 0;
+        try (Stream<Path> walk = Files.walk(folderPath)) {
+            List<Path> paths = walk.sorted(Comparator.reverseOrder()).toList();
+            for (Path path : paths) {
+                if (!path.equals(folderPath) && Files.isRegularFile(path)) {
+                    deletedFileCount++;
+                }
+                Files.deleteIfExists(path);
+            }
+            Files.createDirectories(folderPath);
+            return deletedFileCount;
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to clear giveaway wheel uploads.", exception);
+        }
+    }
+
+    @Transactional
+    public GiveawayWheelShuffleResponse shuffleWheel() {
+        List<GiveawayWheelEntry> activeWheelEntries = new ArrayList<>(
+                giveawayWheelEntryRepository.findAllByEntryCountGreaterThanAndExcludedFromWheelFalseOrderByWheelDisplayOrderAscUpdatedAtDesc(0)
+        );
+        Collections.shuffle(activeWheelEntries);
+
+        int displayOrder = 1;
+        Instant now = Instant.now();
+        for (GiveawayWheelEntry entry : activeWheelEntries) {
+            entry.setWheelDisplayOrder(displayOrder++);
+            entry.setUpdatedAt(now);
+        }
+        giveawayWheelEntryRepository.saveAll(activeWheelEntries);
+
+        return new GiveawayWheelShuffleResponse(activeWheelEntries.size());
     }
 
     @Transactional(readOnly = true)
     public List<GiveawayWheelEntrySummaryResponse> listWheelEntries() {
-        return giveawayWheelEntryRepository.findAllByEntryCountGreaterThanOrderByUpdatedAtDesc(0).stream()
+        return giveawayWheelEntryRepository.findAllByEntryCountGreaterThanAndExcludedFromWheelFalseOrderByWheelDisplayOrderAscUpdatedAtDesc(0).stream()
                 .map(this::toSummaryResponse)
                 .toList();
     }
@@ -53,6 +201,13 @@ public class GiveawayWheelService {
     }
 
     @Transactional(readOnly = true)
+    public GiveawayWheelEntryResponse openEntryFromSearch(Long entryId, String password) {
+        GiveawayWheelEntry entry = findEntry(entryId);
+        validateEntryAccessPassword(entry, password);
+        return toResponse(entry);
+    }
+
+    @Transactional(readOnly = true)
     public List<GiveawayWheelEntryResponse> listAdminEntries() {
         return giveawayWheelEntryRepository.findAllByOrderByUpdatedAtDesc().stream()
                 .map(this::toResponse)
@@ -62,6 +217,7 @@ public class GiveawayWheelService {
     @Transactional
     public GiveawayWheelEntryResponse createEntry(
             String fullName,
+            String entryPassword,
             MultipartFile followProof,
             MultipartFile commentProof,
             MultipartFile shareProof,
@@ -70,13 +226,14 @@ public class GiveawayWheelService {
     ) {
         GiveawayWheelEntry entry = new GiveawayWheelEntry();
         entry.setCreatedAt(Instant.now());
-        return saveEntry(entry, fullName, followProof, commentProof, shareProof, reviewProof, facebookProfile, true);
+        return saveEntry(entry, fullName, entryPassword, followProof, commentProof, shareProof, reviewProof, facebookProfile, true);
     }
 
     @Transactional
     public GiveawayWheelEntryResponse updateEntry(
             Long entryId,
             String fullName,
+            String entryPassword,
             MultipartFile followProof,
             MultipartFile commentProof,
             MultipartFile shareProof,
@@ -84,7 +241,7 @@ public class GiveawayWheelService {
             MultipartFile facebookProfile
     ) {
         GiveawayWheelEntry entry = findEntry(entryId);
-        return saveEntry(entry, fullName, followProof, commentProof, shareProof, reviewProof, facebookProfile, false);
+        return saveEntry(entry, fullName, entryPassword, followProof, commentProof, shareProof, reviewProof, facebookProfile, false);
     }
 
     @Transactional
@@ -126,6 +283,7 @@ public class GiveawayWheelService {
     private GiveawayWheelEntryResponse saveEntry(
             GiveawayWheelEntry entry,
             String fullName,
+            String entryPassword,
             MultipartFile followProof,
             MultipartFile commentProof,
             MultipartFile shareProof,
@@ -136,6 +294,10 @@ public class GiveawayWheelService {
         String normalizedFullName = requireFullName(fullName);
         ensureUniqueFullName(normalizedFullName, entry.getId(), creating);
         entry.setFullName(normalizedFullName);
+        if (!creating) {
+            ensureUpdatePasswordAllowed(entry, entryPassword);
+        }
+        upsertEntryPassword(entry, entryPassword, creating);
         replaceImageIfProvided(followProof, entry::setFollowProofImagePath, () -> resetProofState(entry, GiveawayWheelProofType.FOLLOW));
         replaceImageIfProvided(commentProof, entry::setCommentProofImagePath, () -> resetProofState(entry, GiveawayWheelProofType.COMMENT));
         replaceImageIfProvided(shareProof, entry::setShareProofImagePath, () -> resetProofState(entry, GiveawayWheelProofType.SHARE));
@@ -216,6 +378,11 @@ public class GiveawayWheelService {
                 entry.getFullName(),
                 entry.getEntryCount(),
                 entry.getSubmittedEntryCount(),
+                entry.isExcludedFromWheel(),
+                entry.isWinner(),
+                entry.getWonAt(),
+                entry.getWinMode(),
+                hasValue(entry.getEntryPasswordHash()),
                 entry.getStatus(),
                 entry.getRejectionReason(),
                 toProofResponse(entry, GiveawayWheelProofType.FOLLOW),
@@ -238,6 +405,11 @@ public class GiveawayWheelService {
                 entry.getFacebookProfileImagePath(),
                 entry.getEntryCount(),
                 entry.getSubmittedEntryCount(),
+                entry.isExcludedFromWheel(),
+                entry.isWinner(),
+                entry.getWonAt(),
+                entry.getWinMode(),
+                hasValue(entry.getEntryPasswordHash()),
                 entry.getStatus(),
                 entry.getRejectionReason(),
                 toProofResponse(entry, GiveawayWheelProofType.FOLLOW),
@@ -452,6 +624,46 @@ public class GiveawayWheelService {
         if (duplicateExists) {
             throw new IllegalArgumentException("This full name is already registered in Giveaway 2.");
         }
+    }
+
+    private void ensureUpdatePasswordAllowed(GiveawayWheelEntry entry, String entryPassword) {
+        if (!hasValue(entry.getEntryPasswordHash())) {
+            return;
+        }
+        String normalizedPassword = normalizeText(entryPassword);
+        if (!hasValue(normalizedPassword)) {
+            throw new IllegalArgumentException("Entry password is required to update this entry.");
+        }
+        if (!passwordEncoder.matches(normalizedPassword, entry.getEntryPasswordHash())) {
+            throw new IllegalArgumentException("Invalid entry password.");
+        }
+    }
+
+    private void validateEntryAccessPassword(GiveawayWheelEntry entry, String entryPassword) {
+        if (!hasValue(entry.getEntryPasswordHash())) {
+            return;
+        }
+        String normalizedPassword = normalizeText(entryPassword);
+        if (!hasValue(normalizedPassword)) {
+            throw new IllegalArgumentException("Entry password required.");
+        }
+        if (!passwordEncoder.matches(normalizedPassword, entry.getEntryPasswordHash())) {
+            throw new IllegalArgumentException("Invalid entry password.");
+        }
+    }
+
+    private void upsertEntryPassword(GiveawayWheelEntry entry, String entryPassword, boolean creating) {
+        String normalizedPassword = normalizeText(entryPassword);
+        if (!hasValue(normalizedPassword)) {
+            if (creating) {
+                entry.setEntryPasswordHash(null);
+            }
+            return;
+        }
+        if (normalizedPassword.length() < 4) {
+            throw new IllegalArgumentException("Entry password must be at least 4 characters.");
+        }
+        entry.setEntryPasswordHash(passwordEncoder.encode(normalizedPassword));
     }
 
     private String requireMessage(String message) {

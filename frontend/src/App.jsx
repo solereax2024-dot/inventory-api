@@ -11,6 +11,7 @@ import ReservePage from "./pages/customer/ReservePage";
 import TetrisGamePage from "./pages/customer/TetrisGamePage";
 import TetrisLeaderboardPage from "./pages/customer/TetrisLeaderboardPage";
 import GiveawayWheelPage from "./pages/customer/GiveawayWheelPage";
+import GiveawayUnavailableModalPage from "./pages/customer/GiveawayUnavailableModalPage";
 import AdminPage from "./pages/admin/AdminPage";
 import { DEFAULT_THEME, THEMES } from "./constants/themes";
 import { trackMetaEvent } from "./utils/tracking";
@@ -71,6 +72,7 @@ export default function App() {
     giveawayTwoVisible: false,
     gamingSectionVisible: false,
   });
+  const [isBrandingLoaded, setIsBrandingLoaded] = useState(false);
   const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
@@ -201,7 +203,8 @@ export default function App() {
         giveawayOneVisible: false,
         giveawayTwoVisible: false,
         gamingSectionVisible: false,
-      }));
+      }))
+      .finally(() => setIsBrandingLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -410,8 +413,32 @@ export default function App() {
         <Route path="/shop" element={<Navigate to="/collections" replace />} />
          <Route path="/reserve" element={<Navigate to="/collections" replace />} />
          <Route path="/reserve/:productId" element={<ReservePage />} />
-         <Route path="/giveaway-game" element={branding.giveawayOneVisible ? <TetrisGamePage /> : <Navigate to="/collections" replace />} />
-         <Route path="/giveaway-wheel" element={branding.giveawayTwoVisible ? <GiveawayWheelPage /> : <Navigate to="/collections" replace />} />
+         <Route
+           path="/giveaway-game"
+           element={
+             !isBrandingLoaded
+               ? null
+               : (branding.giveawayOneVisible
+                 ? <TetrisGamePage />
+                 : <GiveawayUnavailableModalPage
+                     title="Giveaway unavailable"
+                     message="Sorry, this giveaway is not available right now or has already ended."
+                   />)
+           }
+         />
+         <Route
+           path="/giveaway-wheel"
+           element={
+             !isBrandingLoaded
+               ? null
+               : (branding.giveawayTwoVisible
+                 ? <GiveawayWheelPage />
+                 : <GiveawayUnavailableModalPage
+                     title="Giveaway unavailable"
+                     message="Sorry, this giveaway is not available right now or has already ended."
+                   />)
+           }
+         />
          <Route path="/giveaway-2" element={<Navigate to="/giveaway-wheel" replace />} />
          <Route path="/tetris-game" element={<Navigate to="/giveaway-game" replace />} />
          <Route path="/tetris-leaderboard" element={<TetrisLeaderboardPage />} />

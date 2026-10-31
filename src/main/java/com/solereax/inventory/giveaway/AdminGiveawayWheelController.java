@@ -6,8 +6,10 @@ import java.util.List;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,6 +28,28 @@ public class AdminGiveawayWheelController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(giveawayWheelService.listAdminEntries());
+    }
+
+    @PostMapping("/draw")
+    public ResponseEntity<GiveawayWheelDrawResponse> drawWinner(@RequestBody(required = false) GiveawayWheelDrawRequest request) {
+        boolean removeWinnerFromWheel = request != null && request.removeWinnerFromWheel();
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(giveawayWheelService.drawWinner(removeWinnerFromWheel));
+    }
+
+    @PostMapping("/shuffle")
+    public ResponseEntity<GiveawayWheelShuffleResponse> shuffleWheel() {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(giveawayWheelService.shuffleWheel());
+    }
+
+    @DeleteMapping("/entries")
+    public ResponseEntity<GiveawayWheelCleanupResponse> clearEntries() {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(giveawayWheelService.clearAllEntries());
     }
 
     @PatchMapping("/entries/{entryId}/approve")

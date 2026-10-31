@@ -593,6 +593,30 @@ button:disabled {
   box-shadow: var(--shadow-sm);
 }
 
+.giveaway-unavailable-modal {
+  gap: 14px;
+}
+
+.giveaway-unavailable-copy {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  color: #334155;
+}
+
+.giveaway-unavailable-copy p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.giveaway-unavailable-cta {
+  margin-top: 0;
+}
+
+body.theme-dark .giveaway-unavailable-copy {
+  color: #cbd5e1;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;

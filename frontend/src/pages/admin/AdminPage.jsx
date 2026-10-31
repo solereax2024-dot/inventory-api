@@ -452,6 +452,81 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+  const handleShuffleGiveawayWheel = async () => {
+    if (!token) return;
+
+    setGiveawayWheelEntryActionKey("shuffle-wheel");
+    setMessage("");
+
+    try {
+      const response = await apiRequest(
+        "/api/admin/settings/gaming/giveaway-wheel/shuffle",
+        "POST",
+        undefined,
+        token
+      );
+      await refreshGiveawayWheelEntries();
+      setSuccessModal({
+        isOpen: true,
+        message: `Wheel shuffled (${Number(response?.shuffledEntryCount) || 0} active entries).`,
+      });
+    } catch (err) {
+      setMessage(err.message || "Unable to shuffle wheel entries.");
+    } finally {
+      setGiveawayWheelEntryActionKey("");
+    }
+  };
+
+  const handleDrawGiveawayWheelWinner = async ({ removeWinnerFromWheel = false } = {}) => {
+    if (!token) return null;
+
+    setGiveawayWheelEntryActionKey("draw-wheel");
+    setMessage("");
+
+    try {
+      const response = await apiRequest(
+        "/api/admin/settings/gaming/giveaway-wheel/draw",
+        "POST",
+        { removeWinnerFromWheel: Boolean(removeWinnerFromWheel) },
+        token
+      );
+      await refreshGiveawayWheelEntries();
+      return response;
+    } catch (err) {
+      setMessage(err.message || "Unable to draw a giveaway winner.");
+      return null;
+    } finally {
+      setGiveawayWheelEntryActionKey("");
+    }
+  };
+
+  const handleClearGiveawayWheelEntries = async () => {
+    if (!token) return null;
+
+    setGiveawayWheelEntryActionKey("clear-wheel-entries");
+    setMessage("");
+
+    try {
+      const response = await apiRequest(
+        "/api/admin/settings/gaming/giveaway-wheel/entries",
+        "DELETE",
+        undefined,
+        token
+      );
+      await refreshGiveawayWheelEntries();
+      setSuccessModal({
+        isOpen: true,
+        message: `Reset complete: ${Number(response?.deletedEntries) || 0} joiner(s), ${Number(response?.deletedDrawHistory) || 0} draw history record(s), and ${Number(response?.deletedUploadFiles) || 0} upload file(s) removed.`,
+      });
+      return response;
+    } catch (err) {
+      setMessage(err.message || "Unable to clear giveaway wheel joiners.");
+      return null;
+    } finally {
+      setGiveawayWheelEntryActionKey("");
+    }
+  };
+
   const handleBonusProofAction = async (userId, bonusType, action, message = "") => {
     if (!token) return;
 
@@ -2389,6 +2464,9 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
            giveawayWheelEntryActionKey={giveawayWheelEntryActionKey}
            onApproveGiveawayWheelProof={handleApproveGiveawayWheelProof}
            onRejectGiveawayWheelProof={handleRejectGiveawayWheelProof}
+           onShuffleGiveawayWheel={handleShuffleGiveawayWheel}
+           onDrawGiveawayWheelWinner={handleDrawGiveawayWheelWinner}
+           onClearGiveawayWheelEntries={handleClearGiveawayWheelEntries}
          />
       ) : null}
 

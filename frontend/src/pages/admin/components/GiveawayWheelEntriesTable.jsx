@@ -4,7 +4,6 @@ import { ConfirmActionModal } from "../../../components/modals/admin";
 import {
   GIVEAWAY_WHEEL_PROOF_FIELDS,
   getGiveawayWheelImageSrc,
-  getGiveawayWheelStatusLabel,
 } from "../../../constants/giveawayWheel";
 
 function formatDateTime(value) {
@@ -29,28 +28,6 @@ function getStatusClassName(status) {
   return "is-pending";
 }
 
-function getEntryBadgeStyle(status) {
-  const normalized = String(status || "PENDING").toUpperCase();
-  if (normalized === "APPROVED") {
-    return {
-      background: "rgba(34, 197, 94, 0.12)",
-      border: "1px solid rgba(34, 197, 94, 0.2)",
-      color: "#166534",
-    };
-  }
-  if (normalized === "REJECTED") {
-    return {
-      background: "rgba(239, 68, 68, 0.12)",
-      border: "1px solid rgba(239, 68, 68, 0.2)",
-      color: "#991b1b",
-    };
-  }
-  return {
-    background: "rgba(245, 158, 11, 0.14)",
-    border: "1px solid rgba(245, 158, 11, 0.22)",
-    color: "#92400e",
-  };
-}
 
 function getProofStatusLabel(status) {
   const normalized = String(status || "PENDING").toUpperCase();
@@ -110,6 +87,26 @@ function getCompactWeightLabel(value) {
   return normalized;
 }
 
+function getEntryProofStatuses(entry) {
+  return IMAGE_COLUMNS.map((column) => String(entry?.[column.proofKey]?.status || "NOT_UPLOADED").toUpperCase());
+}
+
+function matchesProofFilter(entry, proofFilter) {
+  if (proofFilter === "ALL") return true;
+
+  const proofStatuses = getEntryProofStatuses(entry);
+  if (proofFilter === "HAS_REJECTED") {
+    return proofStatuses.includes("REJECTED");
+  }
+  if (proofFilter === "HAS_PENDING") {
+    return proofStatuses.includes("PENDING");
+  }
+  if (proofFilter === "MISSING_UPLOAD") {
+    return proofStatuses.includes("NOT_UPLOADED");
+  }
+  return true;
+}
+
 const PROOF_FIELD_BY_PATH_KEY = Object.fromEntries(
   GIVEAWAY_WHEEL_PROOF_FIELDS.map((field) => [field.pathKey, field])
 );
@@ -128,21 +125,34 @@ export default function GiveawayWheelEntriesTable({
   actionKey = "",
   onApproveProof,
   onRejectProof,
+  onShuffleWheel,
+  onDrawWinner,
+  onClearEntries,
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [proofFilter, setProofFilter] = useState("ALL");
   const [imageViewer, setImageViewer] = useState({ isOpen: false, src: "", alt: "" });
   const [approveConfirm, setApproveConfirm] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "" });
   const [rejectModal, setRejectModal] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "", message: "" });
+  const [drawModal, setDrawModal] = useState({ isOpen: false });
+  const [clearEntriesModal, setClearEntriesModal] = useState({ isOpen: false });
+  const [latestWinnerNotice, setLatestWinnerNotice] = useState("");
+
+  const isDrawingWinner = actionKey === "draw-wheel";
+  const isShufflingWheel = actionKey === "shuffle-wheel";
+  const isClearingEntries = actionKey === "clear-wheel-entries";
+  const isWheelActionBusy = isDrawingWinner || isShufflingWheel;
 
   const filteredEntries = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return entries.filter((entry) => {
       const matchesQuery = !keyword || String(entry.fullName || "").toLowerCase().includes(keyword);
       const matchesStatus = statusFilter === "ALL" || String(entry.status || "").toUpperCase() === statusFilter;
-      return matchesQuery && matchesStatus;
+      const matchesProof = matchesProofFilter(entry, proofFilter);
+      return matchesQuery && matchesStatus && matchesProof;
     });
-  }, [entries, query, statusFilter]);
+  }, [entries, query, statusFilter, proofFilter]);
 
   const stats = useMemo(() => ({
     total: entries.length,
@@ -150,6 +160,10 @@ export default function GiveawayWheelEntriesTable({
     pending: entries.filter((entry) => String(entry.status).toUpperCase() === "PENDING").length,
     rejected: entries.filter((entry) => String(entry.status).toUpperCase() === "REJECTED").length,
   }), [entries]);
+
+  const activeWheelEntriesCount = useMemo(() => (
+    entries.filter((entry) => Number(entry?.entryCount) > 0 && !entry?.excludedFromWheel).length
+  ), [entries]);
 
   const confirmApprove = async () => {
     if (!approveConfirm.entry || !approveConfirm.proofType || !onApproveProof) return;
@@ -169,6 +183,29 @@ export default function GiveawayWheelEntriesTable({
     await onRejectProof(entryId, proofType, message);
   };
 
+  const handleShuffleWheel = async () => {
+    if (!onShuffleWheel || isWheelActionBusy) return;
+    await onShuffleWheel();
+  };
+
+  const handleDrawWinner = async (removeWinnerFromWheel) => {
+    if (!onDrawWinner || isWheelActionBusy) return;
+    const result = await onDrawWinner({ removeWinnerFromWheel });
+    setDrawModal({ isOpen: false });
+    if (!result?.winnerFullName) {
+      return;
+    }
+    const modeLabel = removeWinnerFromWheel ? "excluded from next draws" : "still active on wheel";
+    setLatestWinnerNotice(`Winner: ${result.winnerFullName} (${modeLabel})`);
+  };
+
+  const handleClearEntries = async () => {
+    if (!onClearEntries || isClearingEntries) return;
+    await onClearEntries();
+    setClearEntriesModal({ isOpen: false });
+    setLatestWinnerNotice("");
+  };
+
   return (
     <section className="admin-subsection">
       <div className="section-head">
@@ -186,6 +223,35 @@ export default function GiveawayWheelEntriesTable({
             <span className="giveaway-player-summary-chip is-accent">Pending: {stats.pending}</span>
             <span className="giveaway-player-summary-chip is-muted">Rejected: {stats.rejected}</span>
           </div>
+          <div className="giveaway-wheel-actions-toolbar" style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              className="btn-delete"
+              onClick={() => setClearEntriesModal({ isOpen: true })}
+              disabled={isWheelActionBusy || isClearingEntries || !onClearEntries || entries.length === 0}
+            >
+              {isClearingEntries ? "Clearing..." : "Clean Up Joiners"}
+            </button>
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={handleShuffleWheel}
+              disabled={isWheelActionBusy || !onShuffleWheel || activeWheelEntriesCount === 0}
+            >
+              {isShufflingWheel ? "Shuffling..." : "Shuffle Wheel"}
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => setDrawModal({ isOpen: true })}
+              disabled={isWheelActionBusy || !onDrawWinner || activeWheelEntriesCount === 0}
+            >
+              {isDrawingWinner ? "Drawing..." : "Draw Winner"}
+            </button>
+          </div>
+          {latestWinnerNotice ? (
+            <small className="field-hint" style={{ display: "block", textAlign: "right" }}>{latestWinnerNotice}</small>
+          ) : null}
         </div>
       </div>
 
@@ -208,6 +274,16 @@ export default function GiveawayWheelEntriesTable({
             <option value="APPROVED">Approved</option>
             <option value="PENDING">Pending</option>
             <option value="REJECTED">Rejected</option>
+          </select>
+        </label>
+
+        <label className="field" style={{ minWidth: 220 }}>
+          <span className="field-hint" style={{ display: "block", marginBottom: 6 }}>Filter proof review</span>
+          <select value={proofFilter} onChange={(event) => setProofFilter(event.target.value)}>
+            <option value="ALL">All proof states</option>
+            <option value="HAS_REJECTED">May rejected proof</option>
+            <option value="HAS_PENDING">May pending proof</option>
+            <option value="MISSING_UPLOAD">May missing upload</option>
           </select>
         </label>
       </div>
@@ -246,7 +322,21 @@ export default function GiveawayWheelEntriesTable({
                   <td>
                     <div style={{ display: "grid", gap: 4 }}>
                       <strong>{entry.entryCount}</strong>
-                      <small className="field-hint">Visible on wheel</small>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                        {entry.winner ? (
+                          <span className="giveaway-player-proof-badge giveaway-wheel-entry-chip is-winner">
+                            Winner
+                          </span>
+                        ) : null}
+                        <span className={`giveaway-player-proof-badge giveaway-wheel-entry-chip ${entry.excludedFromWheel ? "is-excluded" : "is-active"}`}>
+                          {entry.excludedFromWheel ? "Wheel Excluded" : "Wheel Active"}
+                        </span>
+                        {entry.winner ? (
+                          <small className="field-hint">
+                            {entry.winMode === "remove" ? "Remove Winner mode" : "Keep Winner mode"}
+                          </small>
+                        ) : null}
+                      </div>
                     </div>
                   </td>
                   {IMAGE_COLUMNS.map((column) => {
@@ -460,6 +550,58 @@ export default function GiveawayWheelEntriesTable({
           </section>
         </div>
       ) : null}
+
+      {drawModal.isOpen ? (
+        <div className="modal-overlay" onClick={() => setDrawModal({ isOpen: false })}>
+          <section className="modal-panel modal-panel-compact confirm-action-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="confirm-action-head">
+              <h3>Draw Giveaway Winner</h3>
+              <button type="button" className="modal-close-btn" onClick={() => setDrawModal({ isOpen: false })} aria-label="Close draw winner modal">
+                ✕
+              </button>
+            </div>
+            <div className="confirm-action-body">
+              <p className="confirm-action-copy">
+                For fairness, choose what happens after a winner is picked.
+              </p>
+              <p className="field-hint" style={{ marginTop: 8 }}>
+                Stay = winner can still win again. Remove = winner is excluded from the next draws.
+              </p>
+            </div>
+            <div className="confirm-action-footer modal-sticky-footer" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button type="button" className="button-secondary" onClick={() => setDrawModal({ isOpen: false })}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => handleDrawWinner(false)}
+                disabled={isDrawingWinner}
+              >
+                Draw + Keep Winner
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => handleDrawWinner(true)}
+                disabled={isDrawingWinner}
+              >
+                Draw + Remove Winner
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      <ConfirmActionModal
+        isOpen={clearEntriesModal.isOpen}
+        title="Clean Up Giveaway Joiners"
+        description="This permanently deletes all Giveaway 2 joiners, draw history, and uploaded giveaway-wheel proof images so you can start a full reset."
+        targetLabel={`${entries.length} joiner${entries.length === 1 ? "" : "s"}`}
+        confirmLabel={isClearingEntries ? "Cleaning..." : "Clean Up"}
+        onCancel={() => setClearEntriesModal({ isOpen: false })}
+        onConfirm={handleClearEntries}
+      />
     </section>
   );
 }
