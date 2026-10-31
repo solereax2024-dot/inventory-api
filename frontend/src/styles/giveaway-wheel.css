@@ -384,10 +384,9 @@
 }
 
 .giveaway-wheel-prize-grid {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 36px) / var(--giveaway-prize-visible-columns));
+  display: flex;
   gap: 12px;
+  width: 100%;
   overflow-x: auto;
   scroll-behavior: smooth;
   scrollbar-width: none;
@@ -472,6 +471,7 @@
 .giveaway-wheel-prize-visual-btn {
   cursor: pointer;
   padding: 0;
+  flex: 0 0 calc((100% - 36px) / var(--giveaway-prize-visible-columns));
   min-width: 0;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
@@ -587,7 +587,6 @@
 }
 
 .giveaway-wheel-hero-compact .giveaway-wheel-prize-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -2237,7 +2236,7 @@
   }
 
   .giveaway-wheel-hero-compact .giveaway-wheel-prize-grid {
-    grid-auto-columns: 86px;
+    width: 100%;
     gap: 6px;
     padding-bottom: 2px;
     scroll-snap-type: x proximity;
@@ -2246,6 +2245,7 @@
   .giveaway-wheel-hero-compact .giveaway-wheel-prize-visual-btn {
     min-height: 72px;
     min-width: 86px;
+    flex: 0 0 86px;
     scroll-snap-align: start;
   }
 
