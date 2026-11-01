@@ -125,8 +125,6 @@ export default function GiveawayWheelEntriesTable({
   actionKey = "",
   onApproveProof,
   onRejectProof,
-  onShuffleWheel,
-  onDrawWinner,
   onClearEntries,
   onResetWinnerStatus,
 }) {
@@ -136,10 +134,9 @@ export default function GiveawayWheelEntriesTable({
   const [imageViewer, setImageViewer] = useState({ isOpen: false, src: "", alt: "" });
   const [approveConfirm, setApproveConfirm] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "" });
   const [rejectModal, setRejectModal] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "", message: "" });
-  const [drawModal, setDrawModal] = useState({ isOpen: false });
   const [clearEntriesModal, setClearEntriesModal] = useState({ isOpen: false });
   const [resetWinnerModal, setResetWinnerModal] = useState({ isOpen: false, entry: null });
-  const [latestWinnerNotice, setLatestWinnerNotice] = useState("");
+  const [latestDrawAudit, setLatestDrawAudit] = useState(null);
 
   const isDrawingWinner = actionKey === "draw-wheel";
   const isShufflingWheel = actionKey === "shuffle-wheel";
@@ -164,10 +161,6 @@ export default function GiveawayWheelEntriesTable({
     rejected: entries.filter((entry) => String(entry.status).toUpperCase() === "REJECTED").length,
   }), [entries]);
 
-  const activeWheelEntriesCount = useMemo(() => (
-    entries.filter((entry) => Number(entry?.entryCount) > 0 && !entry?.excludedFromWheel).length
-  ), [entries]);
-
   const confirmApprove = async () => {
     if (!approveConfirm.entry || !approveConfirm.proofType || !onApproveProof) return;
     const entryId = approveConfirm.entry.id;
@@ -186,27 +179,11 @@ export default function GiveawayWheelEntriesTable({
     await onRejectProof(entryId, proofType, message);
   };
 
-  const handleShuffleWheel = async () => {
-    if (!onShuffleWheel || isWheelActionBusy) return;
-    await onShuffleWheel();
-  };
-
-  const handleDrawWinner = async (removeWinnerFromWheel) => {
-    if (!onDrawWinner || isWheelActionBusy) return;
-    const result = await onDrawWinner({ removeWinnerFromWheel });
-    setDrawModal({ isOpen: false });
-    if (!result?.winnerFullName) {
-      return;
-    }
-    const modeLabel = removeWinnerFromWheel ? "excluded from next draws" : "still active on wheel";
-    setLatestWinnerNotice(`Winner: ${result.winnerFullName} (${modeLabel})`);
-  };
-
   const handleClearEntries = async () => {
     if (!onClearEntries || isClearingEntries) return;
     await onClearEntries();
     setClearEntriesModal({ isOpen: false });
-    setLatestWinnerNotice("");
+    setLatestDrawAudit(null);
   };
 
   const handleResetWinnerStatus = async () => {
@@ -214,7 +191,6 @@ export default function GiveawayWheelEntriesTable({
     if (!onResetWinnerStatus || !entryId) return;
     await onResetWinnerStatus(entryId);
     setResetWinnerModal({ isOpen: false, entry: null });
-    setLatestWinnerNotice("");
   };
 
   return (
@@ -243,25 +219,32 @@ export default function GiveawayWheelEntriesTable({
             >
               {isClearingEntries ? "Clearing..." : "Clean Up Joiners"}
             </button>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={handleShuffleWheel}
-              disabled={isWheelActionBusy || !onShuffleWheel || activeWheelEntriesCount === 0}
-            >
-              {isShufflingWheel ? "Shuffling..." : "Shuffle Wheel"}
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => setDrawModal({ isOpen: true })}
-              disabled={isWheelActionBusy || !onDrawWinner || activeWheelEntriesCount === 0}
-            >
-              {isDrawingWinner ? "Drawing..." : "Draw Winner"}
-            </button>
           </div>
-          {latestWinnerNotice ? (
-            <small className="field-hint" style={{ display: "block", textAlign: "right" }}>{latestWinnerNotice}</small>
+          {latestDrawAudit ? (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "10px 12px",
+                border: "1px solid #dbe5f2",
+                borderRadius: 12,
+                background: "#f8fafc",
+                display: "grid",
+                gap: 4,
+              }}
+            >
+              <strong style={{ fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", color: "#334155" }}>Draw Audit</strong>
+              <small className="field-hint">Draw ID: {latestDrawAudit.drawId || "—"} • Winner: {latestDrawAudit.winnerFullName || "—"}</small>
+              <small className="field-hint">
+                Eligible entries: {Number(latestDrawAudit.eligibleEntryCount) || 0} • Total tickets: {Number(latestDrawAudit.totalTickets) || 0}
+              </small>
+              <small className="field-hint">
+                Winning ticket: #{(Number(latestDrawAudit.winningTicketIndex) || 0) + 1} • Offset: {Number(latestDrawAudit.winnerTicketOffset) || 0}
+              </small>
+              <small className="field-hint">Drawn at: {formatDateTime(latestDrawAudit.drawnAt)}</small>
+              <small className="field-hint" style={{ wordBreak: "break-all" }}>
+                Snapshot hash: {latestDrawAudit.drawSnapshotHash || "—"}
+              </small>
+            </div>
           ) : null}
         </div>
       </div>
@@ -568,48 +551,6 @@ export default function GiveawayWheelEntriesTable({
               </button>
             </div>
             <img src={imageViewer.src} alt={imageViewer.alt} style={{ width: "100%", borderRadius: 18 }} />
-          </section>
-        </div>
-      ) : null}
-
-      {drawModal.isOpen ? (
-        <div className="modal-overlay" onClick={() => setDrawModal({ isOpen: false })}>
-          <section className="modal-panel modal-panel-compact confirm-action-modal" onClick={(event) => event.stopPropagation()}>
-            <div className="confirm-action-head">
-              <h3>Draw Giveaway Winner</h3>
-              <button type="button" className="modal-close-btn" onClick={() => setDrawModal({ isOpen: false })} aria-label="Close draw winner modal">
-                ✕
-              </button>
-            </div>
-            <div className="confirm-action-body">
-              <p className="confirm-action-copy">
-                For fairness, choose what happens after a winner is picked.
-              </p>
-              <p className="field-hint" style={{ marginTop: 8 }}>
-                Stay = winner can still win again. Remove = winner is excluded from the next draws.
-              </p>
-            </div>
-            <div className="confirm-action-footer modal-sticky-footer" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button type="button" className="button-secondary" onClick={() => setDrawModal({ isOpen: false })}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => handleDrawWinner(false)}
-                disabled={isDrawingWinner}
-              >
-                Draw + Keep Winner
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => handleDrawWinner(true)}
-                disabled={isDrawingWinner}
-              >
-                Draw + Remove Winner
-              </button>
-            </div>
           </section>
         </div>
       ) : null}

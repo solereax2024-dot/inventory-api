@@ -10,9 +10,11 @@ public record GiveawayWheelDrawResponse(
         int winnerEntryCount,
         boolean winnerRemovedFromWheel,
         String winnerMode,
+        int eligibleEntryCount,
         int totalTickets,
         int winningTicketIndex,
         int winnerTicketOffset,
+        String drawSnapshotHash,
         Instant drawnAt
 ) {
 }

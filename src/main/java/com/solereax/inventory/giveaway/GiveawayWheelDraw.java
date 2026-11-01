@@ -37,6 +37,12 @@ public class GiveawayWheelDraw {
     @Column(name = "winner_ticket_offset", nullable = false)
     private int winnerTicketOffset;
 
+    @Column(name = "eligible_entry_count", nullable = false)
+    private int eligibleEntryCount;
+
+    @Column(name = "draw_snapshot_hash", nullable = false, length = 64)
+    private String drawSnapshotHash;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

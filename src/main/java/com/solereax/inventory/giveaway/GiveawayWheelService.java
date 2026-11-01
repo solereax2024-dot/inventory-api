@@ -3,9 +3,12 @@ package com.solereax.inventory.giveaway;
 import com.solereax.inventory.settings.MediaStorageService;
 import com.solereax.inventory.shared.NotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,6 +58,7 @@ public class GiveawayWheelService {
         int totalTickets = approvedEntries.stream()
                 .mapToInt(GiveawayWheelEntry::getEntryCount)
                 .sum();
+        String drawSnapshotHash = buildDrawSnapshotHash(approvedEntries);
         if (totalTickets <= 0) {
             throw new IllegalArgumentException("No approved entries available for draw yet.");
         }
@@ -85,6 +89,8 @@ public class GiveawayWheelService {
         draw.setTotalTickets(totalTickets);
         draw.setWinningTicketIndex(winningTicketIndex);
         draw.setWinnerTicketOffset(winnerTicketOffset);
+        draw.setEligibleEntryCount(approvedEntries.size());
+        draw.setDrawSnapshotHash(drawSnapshotHash);
         draw.setCreatedAt(Instant.now());
 
         Instant now = Instant.now();
@@ -119,11 +125,42 @@ public class GiveawayWheelService {
                 savedDraw.getWinnerEntryCount(),
                 removeWinnerFromWheel,
                 removeWinnerFromWheel ? "remove" : "keep",
+                savedDraw.getEligibleEntryCount(),
                 savedDraw.getTotalTickets(),
                 savedDraw.getWinningTicketIndex(),
                 savedDraw.getWinnerTicketOffset(),
+                savedDraw.getDrawSnapshotHash(),
                 savedDraw.getCreatedAt()
         );
+    }
+
+    private String buildDrawSnapshotHash(List<GiveawayWheelEntry> approvedEntries) {
+        String payload = approvedEntries.stream()
+                .map(entry -> String.format(
+                        "%d|%s|%d|%d",
+                        entry.getId(),
+                        normalizeText(entry.getFullName()).toLowerCase(),
+                        Math.max(0, entry.getEntryCount()),
+                        entry.getWheelDisplayOrder()
+                ))
+                .reduce((left, right) -> left + "\n" + right)
+                .orElse("");
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(payload.getBytes(StandardCharsets.UTF_8));
+            return toHex(hashBytes);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("Unable to compute draw snapshot hash.", exception);
+        }
+    }
+
+    private String toHex(byte[] bytes) {
+        StringBuilder builder = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) {
+            builder.append(String.format("%02x", value));
+        }
+        return builder.toString();
     }
 
     @Transactional
