@@ -659,6 +659,8 @@ export default function GiveawayWheelPage() {
       return undefined;
     }
 
+    container.scrollLeft = 0;
+
     const updateScrollState = () => {
       const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
       const currentScrollLeft = Math.max(0, container.scrollLeft);
