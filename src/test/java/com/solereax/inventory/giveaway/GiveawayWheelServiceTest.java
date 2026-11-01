@@ -31,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class GiveawayWheelServiceTest {
+    private static final String ENTRY_PASSWORD = "pass1234";
 
     @Mock
     private GiveawayWheelEntryRepository giveawayWheelEntryRepository;
@@ -123,7 +124,7 @@ class GiveawayWheelServiceTest {
     void drawWinner_returnsApprovedEntryAndPersistsDrawRecord() {
         GiveawayWheelEntryResponse first = giveawayWheelService.createEntry(
                 "Winner One",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof-1.png"),
                 null,
                 null,
@@ -132,7 +133,7 @@ class GiveawayWheelServiceTest {
         );
         GiveawayWheelEntryResponse second = giveawayWheelService.createEntry(
                 "Winner Two",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof-2.png"),
                 image("comment-proof-2.png"),
                 null,
@@ -155,7 +156,7 @@ class GiveawayWheelServiceTest {
     void createEntry_keepsUploadedProofsPendingUntilTheyAreValidated() {
         GiveawayWheelEntryResponse response = giveawayWheelService.createEntry(
                 "Juan Dela Cruz",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof.png"),
                 null,
                 image("share-proof.png"),
@@ -177,7 +178,7 @@ class GiveawayWheelServiceTest {
     void validateProof_onlyActivatesTheSelectedProofButAlreadyShowsLiveWheelSlots() {
         GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
                 "Maria Santos",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof.png"),
                 image("comment-proof.png"),
                 null,
@@ -202,7 +203,7 @@ class GiveawayWheelServiceTest {
     void revokeProof_onlyRemovesThatProofsSlotsAndKeepsOtherApprovedProofsActive() {
         GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
                 "Liza Mercado",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof.png"),
                 image("comment-proof.png"),
                 null,
@@ -230,7 +231,7 @@ class GiveawayWheelServiceTest {
     void approveEntry_stillValidatesAllUploadedProofsForBackwardCompatibility() {
         GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
                 "Paolo Reyes",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof.png"),
                 null,
                 null,
@@ -254,7 +255,7 @@ class GiveawayWheelServiceTest {
     void updateEntry_replacingOneProofResetsOnlyThatProofToPending() {
         GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
                 "Nina Lopez",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof.png"),
                 image("comment-proof.png"),
                 null,
@@ -286,7 +287,7 @@ class GiveawayWheelServiceTest {
     void createEntry_throwsWhenFullNameAlreadyExists() {
         giveawayWheelService.createEntry(
                 "Unique Name",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof.png"),
                 null,
                 null,
@@ -298,7 +299,7 @@ class GiveawayWheelServiceTest {
                 IllegalArgumentException.class,
                 () -> giveawayWheelService.createEntry(
                         "unique name",
-                        null,
+                        ENTRY_PASSWORD,
                         image("follow-proof-2.png"),
                         null,
                         null,
@@ -314,7 +315,7 @@ class GiveawayWheelServiceTest {
     void updateEntry_throwsWhenRenamingToAnotherExistingFullName() {
         GiveawayWheelEntryResponse first = giveawayWheelService.createEntry(
                 "Name One",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof-1.png"),
                 null,
                 null,
@@ -323,7 +324,7 @@ class GiveawayWheelServiceTest {
         );
         GiveawayWheelEntryResponse second = giveawayWheelService.createEntry(
                 "Name Two",
-                null,
+                ENTRY_PASSWORD,
                 image("follow-proof-2.png"),
                 null,
                 null,

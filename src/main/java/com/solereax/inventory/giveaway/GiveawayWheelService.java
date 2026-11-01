@@ -353,6 +353,9 @@ public class GiveawayWheelService {
         String normalizedFullName = requireFullName(fullName);
         ensureUniqueFullName(normalizedFullName, entry.getId(), creating);
         entry.setFullName(normalizedFullName);
+        if (creating) {
+            requireEntryPassword(entryPassword);
+        }
         if (!creating) {
             ensureUpdatePasswordAllowed(entry, entryPassword);
         }
@@ -672,6 +675,14 @@ public class GiveawayWheelService {
         String normalized = normalizeText(fullName);
         if (normalized.length() < 2) {
             throw new IllegalArgumentException("Full name must be at least 2 characters.");
+        }
+        return normalized;
+    }
+
+    private String requireEntryPassword(String entryPassword) {
+        String normalized = normalizeText(entryPassword);
+        if (!hasValue(normalized)) {
+            throw new IllegalArgumentException("Entry password is required.");
         }
         return normalized;
     }

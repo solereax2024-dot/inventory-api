@@ -112,11 +112,11 @@ const PROOF_FIELD_BY_PATH_KEY = Object.fromEntries(
 );
 
 const IMAGE_COLUMNS = [
+  { key: "facebookProfileImagePath", proofKey: "facebookProfile", proofType: "profile", label: "FB Profile", weightLabel: "Required" },
   { key: "followProofImagePath", proofKey: "followProof", proofType: "follow", label: "Following", weightLabel: PROOF_FIELD_BY_PATH_KEY.followProofImagePath?.weightLabel || "1 entry" },
   { key: "commentProofImagePath", proofKey: "commentProof", proofType: "comment", label: "Tag Friend", weightLabel: PROOF_FIELD_BY_PATH_KEY.commentProofImagePath?.weightLabel || "2 entries" },
   { key: "shareProofImagePath", proofKey: "shareProof", proofType: "share", label: "Share Post", weightLabel: PROOF_FIELD_BY_PATH_KEY.shareProofImagePath?.weightLabel || "3 entries" },
   { key: "reviewProofImagePath", proofKey: "reviewProof", proofType: "review", label: "Review", weightLabel: PROOF_FIELD_BY_PATH_KEY.reviewProofImagePath?.weightLabel || "5 entries" },
-  { key: "facebookProfileImagePath", proofKey: "facebookProfile", proofType: "profile", label: "FB Profile", weightLabel: "Required" },
 ];
 
 export default function GiveawayWheelEntriesTable({

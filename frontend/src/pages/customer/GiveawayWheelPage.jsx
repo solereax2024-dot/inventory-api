@@ -394,9 +394,7 @@ function buildFormDataPayload(entry, selectedFiles) {
   const payload = new FormData();
   payload.append("fullName", String(entry.fullName || "").trim());
   const normalizedEntryPassword = String(entry.entryPassword || "").trim();
-  if (normalizedEntryPassword) {
-    payload.append("entryPassword", normalizedEntryPassword);
-  }
+  payload.append("entryPassword", normalizedEntryPassword);
 
   [...GIVEAWAY_WHEEL_PROOF_FIELDS, GIVEAWAY_WHEEL_PROFILE_FIELD].forEach((field) => {
     const file = selectedFiles[field.key];
@@ -830,6 +828,7 @@ export default function GiveawayWheelPage() {
     }
 
     const normalizedFullName = String(entryForm.fullName || "").trim();
+    const normalizedEntryPassword = String(entryForm.entryPassword || "").trim();
     const hasAtLeastOneEntryProof = GIVEAWAY_WHEEL_PROOF_FIELDS.some(
       (field) => Boolean(selectedFiles[field.key] || entryForm[field.pathKey] || proofReview[field.key]?.imagePath)
     );
@@ -841,6 +840,16 @@ export default function GiveawayWheelPage() {
 
     if (normalizedFullName.length < 2) {
       setFormError("Please enter your full name.");
+      return;
+    }
+
+    if (!normalizedEntryPassword) {
+      setFormError("Please enter your entry password.");
+      return;
+    }
+
+    if (normalizedEntryPassword.length < 4) {
+      setFormError("Entry password must be at least 4 characters.");
       return;
     }
 
@@ -1573,8 +1582,8 @@ export default function GiveawayWheelPage() {
                     const startAngle = index * anglePerSegment;
                     const endAngle = (index + 1) * anglePerSegment;
                     const midAngle = startAngle + (anglePerSegment / 2);
-                    const labelStartRadius = weightedSegments.length > 8 ? WHEEL_RADIUS * 0.38 : WHEEL_RADIUS * 0.34;
-                    const labelEndRadius = weightedSegments.length > 8 ? WHEEL_RADIUS * 0.84 : WHEEL_RADIUS * 0.8;
+                    const labelStartRadius = weightedSegments.length > 8 ? WHEEL_RADIUS * 0.46 : WHEEL_RADIUS * 0.42;
+                    const labelEndRadius = weightedSegments.length > 8 ? WHEEL_RADIUS * 0.88 : WHEEL_RADIUS * 0.84;
                     const fullLabelText = String(segment.fullName || "").trim() || "Guest";
                     const baseFontSize = Math.max(22, Math.min(36, 240 / Math.max(weightedSegments.length, 3)));
                     const fontSize = Math.max(18, Math.min(baseFontSize, 320 / Math.max(fullLabelText.length, 4)));
@@ -1906,20 +1915,19 @@ export default function GiveawayWheelPage() {
 
                     {entryForm.id ? null : (
                       <label className="giveaway-entry-modal-v4-field giveaway-entry-modal-v4-password-field">
-                        <span>Entry Password <em>(optional)</em></span>
+                        <span>Entry Password <em>*</em></span>
                         <div className="giveaway-entry-modal-v4-input-shell">
                           <input
                             type="password"
                             value={entryForm.entryPassword}
                             onChange={(event) => setEntryForm((previous) => ({ ...previous, entryPassword: event.target.value }))}
-                            placeholder="Create optional password"
+                            placeholder="Create your password"
                             disabled={isApprovedReadOnly}
                             autoComplete="new-password"
                           />
                         </div>
                         <small className="giveaway-entry-modal-v4-password-note">
-                          Optional but recommended. This protects your entry when opening from search so other users cannot edit your uploads.
-                          If left blank, anyone who can find this name may open the entry.
+                          Required. Use this password to open or edit your entry from search results.
                         </small>
                       </label>
                     )}
@@ -1943,6 +1951,7 @@ export default function GiveawayWheelPage() {
                           <div>
                             <div className="giveaway-entry-modal-v4-title-row">
                               <strong>{GIVEAWAY_WHEEL_PROFILE_FIELD.label} {!isApprovedReadOnly ? <em>*</em> : null}</strong>
+                              <span className="giveaway-entry-modal-v4-entry-chip is-noticeable">Required</span>
                             </div>
                             <small className={`giveaway-entry-modal-v4-proof-status is-${profileStatus.tone}`}>
                               <span className="status-dot" aria-hidden="true" />
@@ -2046,7 +2055,7 @@ export default function GiveawayWheelPage() {
                               <div>
                                 <div className="giveaway-entry-modal-v4-title-row">
                                   <strong>{field.label} {!isApprovedReadOnly ? <em>*</em> : null}</strong>
-                                  <span className="giveaway-entry-modal-v4-entry-chip">{field.weightLabel}</span>
+                                  <span className="giveaway-entry-modal-v4-entry-chip is-noticeable">{field.weightLabel}</span>
                                 </div>
                                 <small className={`giveaway-entry-modal-v4-proof-status is-${proofStatus.tone}`}>
                                   <span className="status-dot" aria-hidden="true" />
