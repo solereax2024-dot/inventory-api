@@ -541,6 +541,39 @@
   color: #1d4ed8;
 }
 
+.giveaway-wheel-consolation-card {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e4ebf3;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.giveaway-wheel-consolation-kicker {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.giveaway-wheel-consolation-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.giveaway-wheel-consolation-card li {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
 .giveaway-wheel-prize-lightbox-panel {
   width: min(1060px, 100%);
 }
@@ -1662,9 +1695,9 @@
   place-items: center;
   place-content: center;
   gap: 0;
-  width: clamp(172px, 18vw, 234px);
+  width: clamp(166px, 17.2vw, 224px);
   aspect-ratio: 1;
-  padding: 20px;
+  padding: 18px 16px;
   border-radius: 999px;
   border: 8px solid rgba(255, 255, 255, 0.98);
   background:
@@ -1683,13 +1716,13 @@
   display: block;
   font-size: clamp(1.68rem, 2.25vw, 2.28rem);
   font-weight: 900;
-  line-height: 0.94;
+  line-height: 0.98;
   letter-spacing: 0.055em;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .giveaway-wheel-center-title.is-top {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .giveaway-wheel-center-title.is-bottom {
@@ -1700,7 +1733,7 @@
   width: 78px;
   height: 5px;
   border-radius: 999px;
-  margin-top: 11px;
+  margin-top: 8px;
   background: linear-gradient(90deg, rgba(193, 131, 126, 0.7), rgba(193, 131, 126, 0.9));
 }
 
@@ -2172,19 +2205,19 @@
   }
 
   .giveaway-wheel-center-cta {
-    width: clamp(82px, 22vw, 104px);
-    padding: 6px 6px 6px;
+    width: clamp(92px, 23vw, 114px);
+    padding: 8px 8px 7px;
     border-width: 4px;
   }
 
   .giveaway-wheel-center-title {
-    font-size: clamp(0.74rem, 3vw, 1.02rem);
+    font-size: clamp(0.82rem, 3.2vw, 1.1rem);
     letter-spacing: 0.025em;
-    line-height: 0.9;
+    line-height: 0.96;
   }
 
   .giveaway-wheel-center-title.is-top {
-    margin-bottom: 2px;
+    margin-bottom: 4px;
   }
 
   .giveaway-wheel-center-title.is-bottom {
@@ -2192,9 +2225,9 @@
   }
 
   .giveaway-wheel-center-mark {
-    width: 28px;
+    width: 34px;
     height: 3px;
-    margin-top: 3px;
+    margin-top: 4px;
   }
 
   .giveaway-wheel-host-audio-controls {
@@ -2265,6 +2298,7 @@
   .giveaway-wheel-hero-compact .giveaway-wheel-prize-strip-nav {
     display: none;
   }
+
 
   .giveaway-wheel-hero-compact .giveaway-wheel-side-card h2 {
     overflow-wrap: anywhere;

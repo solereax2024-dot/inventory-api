@@ -128,6 +128,7 @@ export default function GiveawayWheelEntriesTable({
   onShuffleWheel,
   onDrawWinner,
   onClearEntries,
+  onResetWinnerStatus,
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -137,12 +138,14 @@ export default function GiveawayWheelEntriesTable({
   const [rejectModal, setRejectModal] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "", message: "" });
   const [drawModal, setDrawModal] = useState({ isOpen: false });
   const [clearEntriesModal, setClearEntriesModal] = useState({ isOpen: false });
+  const [resetWinnerModal, setResetWinnerModal] = useState({ isOpen: false, entry: null });
   const [latestWinnerNotice, setLatestWinnerNotice] = useState("");
 
   const isDrawingWinner = actionKey === "draw-wheel";
   const isShufflingWheel = actionKey === "shuffle-wheel";
   const isClearingEntries = actionKey === "clear-wheel-entries";
-  const isWheelActionBusy = isDrawingWinner || isShufflingWheel;
+  const isResettingWinner = String(actionKey || "").startsWith("reset-winner-");
+  const isWheelActionBusy = isDrawingWinner || isShufflingWheel || isResettingWinner;
 
   const filteredEntries = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -203,6 +206,14 @@ export default function GiveawayWheelEntriesTable({
     if (!onClearEntries || isClearingEntries) return;
     await onClearEntries();
     setClearEntriesModal({ isOpen: false });
+    setLatestWinnerNotice("");
+  };
+
+  const handleResetWinnerStatus = async () => {
+    const entryId = resetWinnerModal.entry?.id;
+    if (!onResetWinnerStatus || !entryId) return;
+    await onResetWinnerStatus(entryId);
+    setResetWinnerModal({ isOpen: false, entry: null });
     setLatestWinnerNotice("");
   };
 
@@ -335,6 +346,16 @@ export default function GiveawayWheelEntriesTable({
                           <small className="field-hint">
                             {entry.winMode === "remove" ? "Remove Winner mode" : "Keep Winner mode"}
                           </small>
+                        ) : null}
+                        {(entry.winner || entry.excludedFromWheel) ? (
+                          <button
+                            type="button"
+                            className="button-secondary"
+                            onClick={() => setResetWinnerModal({ isOpen: true, entry })}
+                            disabled={isWheelActionBusy || isClearingEntries || !onResetWinnerStatus || actionKey === `reset-winner-${entry.id}`}
+                          >
+                            {actionKey === `reset-winner-${entry.id}` ? "Resetting..." : "Reset Winner"}
+                          </button>
                         ) : null}
                       </div>
                     </div>
@@ -601,6 +622,16 @@ export default function GiveawayWheelEntriesTable({
         confirmLabel={isClearingEntries ? "Cleaning..." : "Clean Up"}
         onCancel={() => setClearEntriesModal({ isOpen: false })}
         onConfirm={handleClearEntries}
+      />
+
+      <ConfirmActionModal
+        isOpen={resetWinnerModal.isOpen}
+        title="Reset Winner Status"
+        description="This clears Winner and Wheel Excluded flags for this user and returns them to active wheel entries if their proofs are approved."
+        targetLabel={resetWinnerModal.entry?.fullName || ""}
+        confirmLabel={resetWinnerModal.entry?.id && actionKey === `reset-winner-${resetWinnerModal.entry.id}` ? "Resetting..." : "Reset Status"}
+        onCancel={() => setResetWinnerModal({ isOpen: false, entry: null })}
+        onConfirm={handleResetWinnerStatus}
       />
     </section>
   );

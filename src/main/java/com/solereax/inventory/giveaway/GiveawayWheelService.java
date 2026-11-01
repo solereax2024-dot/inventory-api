@@ -134,6 +134,28 @@ public class GiveawayWheelService {
         return new GiveawayWheelCleanupResponse(deletedEntries, deletedDrawHistory, deletedUploadFiles);
     }
 
+    @Transactional
+    public GiveawayWheelResetResponse resetWinnerStatus(Long entryId) {
+        GiveawayWheelEntry targetEntry = findEntry(entryId);
+        List<GiveawayWheelEntry> matchingEntries = giveawayWheelEntryRepository.findAllByFullNameIgnoreCase(targetEntry.getFullName());
+        Instant now = Instant.now();
+        long resetCount = 0;
+
+        for (GiveawayWheelEntry entry : matchingEntries) {
+            if (entry.isWinner() || entry.isExcludedFromWheel() || entry.getWonAt() != null || hasValue(entry.getWinMode())) {
+                resetCount++;
+            }
+            entry.setWinner(false);
+            entry.setExcludedFromWheel(false);
+            entry.setWonAt(null);
+            entry.setWinMode(null);
+            entry.setUpdatedAt(now);
+        }
+
+        giveawayWheelEntryRepository.saveAll(matchingEntries);
+        return new GiveawayWheelResetResponse(targetEntry.getFullName(), resetCount, matchingEntries.size());
+    }
+
     private long deleteGiveawayUploads() {
         Path folderPath = Paths.get(mediaStorageService.getUploadBaseDirectoryAbsolutePath())
                 .resolve(UPLOAD_FOLDER)

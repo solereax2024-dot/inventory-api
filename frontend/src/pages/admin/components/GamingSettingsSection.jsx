@@ -92,6 +92,7 @@ export default function GamingSettingsSection({
   onShuffleGiveawayWheel,
   onDrawGiveawayWheelWinner,
   onClearGiveawayWheelEntries,
+  onResetGiveawayWheelWinner,
 }) {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState({ isOpen: false });
@@ -213,6 +214,7 @@ export default function GamingSettingsSection({
                 onShuffleWheel={onShuffleGiveawayWheel}
                 onDrawWinner={onDrawGiveawayWheelWinner}
                 onClearEntries={onClearGiveawayWheelEntries}
+                onResetWinnerStatus={onResetGiveawayWheelWinner}
               />
             </div>
           </>
@@ -276,25 +278,16 @@ export default function GamingSettingsSection({
                 {isWheelGiveaway ? (
                   <div className="giveaway-settings-grid">
                     <label className="giveaway-settings-field">
-                      <span>Prize Kicker</span>
-                      <input
-                        type="text"
-                        value={safeGiveawaySettings.leaderboardPrizeEyebrow}
-                        onChange={(event) => onGiveawaySettingChange("leaderboardPrizeEyebrow", event.target.value)}
-                        placeholder="Prize"
-                      />
-                    </label>
-                    <label className="giveaway-settings-field">
-                      <span>Prize Title</span>
+                      <span>Grand Prize Name</span>
                       <input
                         type="text"
                         value={safeGiveawaySettings.prizeLabel}
                         onChange={(event) => onGiveawaySettingChange("prizeLabel", event.target.value)}
-                        placeholder="Prize"
+                        placeholder="Nike Vapor Pro 3"
                       />
                     </label>
                     <label className="giveaway-settings-field giveaway-settings-field-wide">
-                      <span>Prize Description</span>
+                      <span>Grand Prize Description</span>
                       <input
                         type="text"
                         value={safeGiveawaySettings.leaderboardPrizeNote}
@@ -304,77 +297,51 @@ export default function GamingSettingsSection({
                     </label>
 
                     <label className="giveaway-settings-field giveaway-settings-field-wide">
+                      <span>Consolation Header</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.consolationTitle}
+                        onChange={(event) => onGiveawaySettingChange("consolationTitle", event.target.value)}
+                        placeholder="Consolation Winners"
+                      />
+                    </label>
+
+                    <label className="giveaway-settings-field">
+                      <span>Consolation Prize 1</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.consolationPrizeOne}
+                        onChange={(event) => onGiveawaySettingChange("consolationPrizeOne", event.target.value)}
+                        placeholder="P1,000 cash voucher"
+                      />
+                    </label>
+
+                    <label className="giveaway-settings-field">
+                      <span>Consolation Prize 2</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.consolationPrizeTwo}
+                        onChange={(event) => onGiveawaySettingChange("consolationPrizeTwo", event.target.value)}
+                        placeholder="P500 cash voucher"
+                      />
+                    </label>
+
+                    <label className="giveaway-settings-field giveaway-settings-field-wide">
+                      <span>Consolation Prize 3</span>
+                      <input
+                        type="text"
+                        value={safeGiveawaySettings.consolationPrizeThree}
+                        onChange={(event) => onGiveawaySettingChange("consolationPrizeThree", event.target.value)}
+                        placeholder="P300 cash voucher"
+                      />
+                    </label>
+
+                    <label className="giveaway-settings-field giveaway-settings-field-wide">
                       <span>First Spin Date & Time</span>
                       <input
                         type="datetime-local"
                         value={toDatetimeLocalValue(safeGiveawaySettings.firstSpinAt)}
                         onChange={(event) => onGiveawaySettingChange("firstSpinAt", toPhilippineOffsetDatetime(event.target.value))}
-                      />
-                    </label>
-
-                    <label className="giveaway-settings-field">
-                      <span>Join Kicker</span>
-                      <input
-                        type="text"
-                        value={safeGiveawaySettings.title}
-                        onChange={(event) => onGiveawaySettingChange("title", event.target.value)}
-                        placeholder="Join"
-                      />
-                    </label>
-                    <label className="giveaway-settings-field">
-                      <span>Join Title</span>
-                      <input
-                        type="text"
-                        value={safeGiveawaySettings.howToJoinTitle}
-                        onChange={(event) => onGiveawaySettingChange("howToJoinTitle", event.target.value)}
-                        placeholder="Join"
-                      />
-                    </label>
-                    <label className="giveaway-settings-field giveaway-settings-field-wide">
-                      <span>Join Description</span>
-                      <input
-                        type="text"
-                        value={safeGiveawaySettings.intro}
-                        onChange={(event) => onGiveawaySettingChange("intro", event.target.value)}
-                        placeholder="Submit your entry."
-                      />
-                    </label>
-
-                    <label className="giveaway-settings-field">
-                      <span>Search Kicker</span>
-                      <input
-                        type="text"
-                        value={safeGiveawaySettings.leaderboardGoalMessage}
-                        onChange={(event) => onGiveawaySettingChange("leaderboardGoalMessage", event.target.value)}
-                        placeholder="Search"
-                      />
-                    </label>
-                    <label className="giveaway-settings-field">
-                      <span>Search Title</span>
-                      <input
-                        type="text"
-                        value={safeGiveawaySettings.accountDeletionNote}
-                        onChange={(event) => onGiveawaySettingChange("accountDeletionNote", event.target.value)}
-                        placeholder="Search"
-                      />
-                    </label>
-                    <label className="giveaway-settings-field giveaway-settings-field-wide">
-                      <span>Search Description</span>
-                      <input
-                        type="text"
-                        value={safeGiveawaySettings.steps?.[0] || ""}
-                        onChange={(event) => onGiveawayStepChange(0, event.target.value)}
-                        placeholder="Check your status."
-                      />
-                    </label>
-
-                    <label className="giveaway-settings-field giveaway-settings-field-wide">
-                      <span>Prize Image Alt Text</span>
-                      <input
-                        type="text"
-                        value={safeGiveawaySettings.prizeImageAlt}
-                        onChange={(event) => onGiveawaySettingChange("prizeImageAlt", event.target.value)}
-                        placeholder="Featured giveaway prize"
                       />
                     </label>
                   </div>

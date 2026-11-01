@@ -527,6 +527,33 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+  const handleResetGiveawayWheelWinner = async (entryId) => {
+    if (!token || !entryId) return null;
+
+    setGiveawayWheelEntryActionKey(`reset-winner-${entryId}`);
+    setMessage("");
+
+    try {
+      const response = await apiRequest(
+        `/api/admin/settings/gaming/giveaway-wheel/entries/${entryId}/winner/reset`,
+        "PATCH",
+        undefined,
+        token
+      );
+      await refreshGiveawayWheelEntries();
+      setSuccessModal({
+        isOpen: true,
+        message: `${response?.fullName || "User"} has been restored to the active wheel (${Number(response?.matchedEntryCount) || 0} matched entries).`,
+      });
+      return response;
+    } catch (err) {
+      setMessage(err.message || "Unable to reset winner status.");
+      return null;
+    } finally {
+      setGiveawayWheelEntryActionKey("");
+    }
+  };
+
   const handleBonusProofAction = async (userId, bonusType, action, message = "") => {
     if (!token) return;
 
@@ -2467,6 +2494,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
            onShuffleGiveawayWheel={handleShuffleGiveawayWheel}
            onDrawGiveawayWheelWinner={handleDrawGiveawayWheelWinner}
            onClearGiveawayWheelEntries={handleClearGiveawayWheelEntries}
+            onResetGiveawayWheelWinner={handleResetGiveawayWheelWinner}
          />
       ) : null}
 

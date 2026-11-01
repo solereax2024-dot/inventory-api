@@ -27,6 +27,10 @@ public class GiveawaySettingsService {
     public static final String GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY = "GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT";
     public static final String GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY = "GIVEAWAY_MODAL_PRIZE_IMAGE_ALT";
     public static final String GIVEAWAY_WHEEL_FIRST_SPIN_AT_KEY = "GIVEAWAY_WHEEL_FIRST_SPIN_AT";
+    public static final String GIVEAWAY_WHEEL_CONSOLATION_TITLE_KEY = "GIVEAWAY_WHEEL_CONSOLATION_TITLE";
+    public static final String GIVEAWAY_WHEEL_CONSOLATION_PRIZE_ONE_KEY = "GIVEAWAY_WHEEL_CONSOLATION_PRIZE_ONE";
+    public static final String GIVEAWAY_WHEEL_CONSOLATION_PRIZE_TWO_KEY = "GIVEAWAY_WHEEL_CONSOLATION_PRIZE_TWO";
+    public static final String GIVEAWAY_WHEEL_CONSOLATION_PRIZE_THREE_KEY = "GIVEAWAY_WHEEL_CONSOLATION_PRIZE_THREE";
 
     private static final String DEFAULT_TITLE = "Join the Giveaway";
     private static final String DEFAULT_INTRO = "Play the Giveaway challenge for a chance to win. Before you continue, please confirm that you follow our page and can upload proof.";
@@ -48,9 +52,13 @@ public class GiveawaySettingsService {
     private static final String WHEEL_DEFAULT_INTRO = "Submit your entry.";
     private static final String WHEEL_DEFAULT_ACCOUNT_DELETION_NOTE = "Search";
     private static final String WHEEL_DEFAULT_PRIZE_EYEBROW = "Prize";
-    private static final String WHEEL_DEFAULT_PRIZE_LABEL = "Prize";
+    private static final String WHEEL_DEFAULT_PRIZE_LABEL = "Nike Vapor Pro 3";
     private static final String WHEEL_DEFAULT_PRIZE_NOTE = "Featured Prize";
     private static final String WHEEL_DEFAULT_GOAL_MESSAGE = "Search";
+    private static final String WHEEL_DEFAULT_CONSOLATION_TITLE = "Consolation Winners";
+    private static final String WHEEL_DEFAULT_CONSOLATION_PRIZE_ONE = "₱1,000 Cash Prize";
+    private static final String WHEEL_DEFAULT_CONSOLATION_PRIZE_TWO = "₱500 Cash Prize";
+    private static final String WHEEL_DEFAULT_CONSOLATION_PRIZE_THREE = "₱300 Cash Prize";
     private static final List<String> WHEEL_DEFAULT_STEPS = List.of(
             "Check your status.",
             "",
@@ -95,7 +103,11 @@ public class GiveawaySettingsService {
                 prizeImageUrls,
                 prizeImageCount,
                 getSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, DEFAULT_PRIZE_IMAGE_ALT),
-                getSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_FIRST_SPIN_AT_KEY, "")
+                getSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_FIRST_SPIN_AT_KEY, ""),
+                getSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_CONSOLATION_TITLE_KEY, defaultConsolationTitleForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_CONSOLATION_PRIZE_ONE_KEY, defaultConsolationPrizeOneForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_CONSOLATION_PRIZE_TWO_KEY, defaultConsolationPrizeTwoForGiveaway(normalizedGiveawayId)),
+                getSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_CONSOLATION_PRIZE_THREE_KEY, defaultConsolationPrizeThreeForGiveaway(normalizedGiveawayId))
         );
     }
 
@@ -108,7 +120,7 @@ public class GiveawaySettingsService {
     public GiveawaySettingsResponse updateSettings(Long giveawayId, GiveawaySettingsUpdateRequest request) {
         long normalizedGiveawayId = normalizeGiveawayId(giveawayId);
         GiveawaySettingsUpdateRequest safeRequest = request == null
-                ? new GiveawaySettingsUpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                ? new GiveawaySettingsUpdateRequest(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null)
                 : request;
         List<String> steps = normalizeSteps(safeRequest.steps());
         List<String> normalizedPrizeImageUrls = normalizePrizeImageUrls(safeRequest.prizeImageUrls(), safeRequest.prizeImageUrl());
@@ -134,6 +146,10 @@ public class GiveawaySettingsService {
         saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_COUNT_KEY, String.valueOf(prizeImageCount));
         saveSetting(normalizedGiveawayId, GIVEAWAY_MODAL_PRIZE_IMAGE_ALT_KEY, normalizeText(safeRequest.prizeImageAlt()));
         saveSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_FIRST_SPIN_AT_KEY, normalizeText(safeRequest.firstSpinAt()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_CONSOLATION_TITLE_KEY, normalizeText(safeRequest.consolationTitle()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_CONSOLATION_PRIZE_ONE_KEY, normalizeText(safeRequest.consolationPrizeOne()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_CONSOLATION_PRIZE_TWO_KEY, normalizeText(safeRequest.consolationPrizeTwo()));
+        saveSetting(normalizedGiveawayId, GIVEAWAY_WHEEL_CONSOLATION_PRIZE_THREE_KEY, normalizeText(safeRequest.consolationPrizeThree()));
         return getSettings(normalizedGiveawayId);
     }
 
@@ -289,6 +305,22 @@ public class GiveawaySettingsService {
 
     private List<String> defaultStepsForGiveaway(long giveawayId) {
         return giveawayId == 2L ? WHEEL_DEFAULT_STEPS : DEFAULT_STEPS;
+    }
+
+    private String defaultConsolationTitleForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_CONSOLATION_TITLE : "";
+    }
+
+    private String defaultConsolationPrizeOneForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_CONSOLATION_PRIZE_ONE : "";
+    }
+
+    private String defaultConsolationPrizeTwoForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_CONSOLATION_PRIZE_TWO : "";
+    }
+
+    private String defaultConsolationPrizeThreeForGiveaway(long giveawayId) {
+        return giveawayId == 2L ? WHEEL_DEFAULT_CONSOLATION_PRIZE_THREE : "";
     }
 }
 

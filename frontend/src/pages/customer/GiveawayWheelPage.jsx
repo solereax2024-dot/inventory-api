@@ -636,19 +636,28 @@ export default function GiveawayWheelPage() {
 
   const prizeImages = useMemo(() => giveawayImageList(giveawaySettings), [giveawaySettings]);
 
-  const sidePrizeKicker = String(giveawaySettings?.leaderboardPrizeEyebrow || "").trim() || "Prize";
-  const sidePrizeTitle = String(giveawaySettings?.prizeLabel || "").trim() || "Prize";
+  const sidePrizeKicker = "Grand Prize";
+  const rawPrizeTitle = String(giveawaySettings?.prizeLabel || "").trim();
+  const sidePrizeTitle = ["", "prize", "featured prize"].includes(rawPrizeTitle.toLowerCase())
+    ? "Nike Vapor Pro 3"
+    : rawPrizeTitle;
   const sidePrizeDescription = String(giveawaySettings?.leaderboardPrizeNote || "").trim() || "Featured Prize";
-  const sideJoinKicker = String(giveawaySettings?.title || "").trim() || "Join";
-  const sideJoinTitle = String(giveawaySettings?.howToJoinTitle || "").trim() || "Join";
-  const sideJoinDescription = String(giveawaySettings?.intro || "").trim() || "Submit your entry.";
-  const sideSearchKicker = String(giveawaySettings?.leaderboardGoalMessage || "").trim() || "Search";
+  const sideJoinKicker = "Join";
+  const sideJoinTitle = "Join";
+  const sideJoinDescription = "Submit your entry.";
+  const sideSearchKicker = "Search";
   const sideSearchTitle = "Check Your Entry";
-  const sideSearchDescription = String(giveawaySettings?.steps?.[0] || "").trim() || "Check your status.";
+  const sideSearchDescription = "Check your status.";
   const firstSpinAt = String(giveawaySettings?.firstSpinAt || "").trim();
   const firstSpinDate = parseFirstSpinDate(firstSpinAt);
   const firstSpinLabel = formatFirstSpinDate(firstSpinAt);
   const firstSpinCountdown = useCountdown(firstSpinDate ? firstSpinDate.toISOString() : null, Boolean(firstSpinDate));
+  const consolationTitle = String(giveawaySettings?.consolationTitle || "").trim() || "Consolation Winners";
+  const consolationPrizes = [
+    String(giveawaySettings?.consolationPrizeOne || "").trim() || "₱1,000 Cash Prize",
+    String(giveawaySettings?.consolationPrizeTwo || "").trim() || "₱500 Cash Prize",
+    String(giveawaySettings?.consolationPrizeThree || "").trim() || "₱300 Cash Prize",
+  ].filter(Boolean);
 
   useEffect(() => {
     const container = prizeGridRef.current;
@@ -1669,7 +1678,7 @@ export default function GiveawayWheelPage() {
             <div className="giveaway-wheel-side-card giveaway-wheel-status-panel">
               <div className="giveaway-wheel-side-card giveaway-wheel-prize-panel">
                 <span className="giveaway-wheel-side-kicker">{sidePrizeKicker}</span>
-                <h2>{sidePrizeTitle}</h2>
+                <h2>Grand Prize: {sidePrizeTitle}</h2>
                 <p>{sidePrizeDescription}</p>
                 {firstSpinLabel ? (
                   <div className="giveaway-wheel-first-spin-card" aria-live="polite">
@@ -1678,6 +1687,16 @@ export default function GiveawayWheelPage() {
                     <span className="giveaway-wheel-first-spin-countdown">
                       Countdown: {firstSpinCountdown.label || "Live now"}
                     </span>
+                  </div>
+                ) : null}
+                {consolationPrizes.length > 0 ? (
+                  <div className="giveaway-wheel-consolation-card" aria-live="polite">
+                    <span className="giveaway-wheel-consolation-kicker">{consolationTitle}</span>
+                    <ul>
+                      {consolationPrizes.map((prize, index) => (
+                        <li key={`${prize}-${index}`}>{prize}</li>
+                      ))}
+                    </ul>
                   </div>
                 ) : null}
                 {prizeImages.length > 0 ? (
@@ -2363,7 +2382,7 @@ export default function GiveawayWheelPage() {
           <section className="giveaway-wheel-modal-panel giveaway-wheel-prize-lightbox-panel" onClick={(event) => event.stopPropagation()}>
             <div className="giveaway-wheel-modal-head">
               <div className="giveaway-wheel-modal-titleblock">
-                <h2>{giveawaySettings?.prizeLabel || "Prize"}</h2>
+                <h2>{giveawaySettings?.prizeLabel || "Nike Vapor Pro 3"}</h2>
               </div>
               <button type="button" className="modal-close-btn" onClick={() => setActivePrizeLightboxIndex(null)} aria-label="Close prize preview">
                 ✕

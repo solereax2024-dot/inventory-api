@@ -20,6 +20,10 @@ export const DEFAULT_GIVEAWAY_SETTINGS = {
   prizeImageCount: 1,
   prizeImageAlt: "Featured giveaway prize",
   firstSpinAt: "",
+  consolationTitle: "",
+  consolationPrizeOne: "",
+  consolationPrizeTwo: "",
+  consolationPrizeThree: "",
 };
 
 export const DEFAULT_GIVEAWAY_WHEEL_SETTINGS = {
@@ -30,9 +34,13 @@ export const DEFAULT_GIVEAWAY_WHEEL_SETTINGS = {
   steps: ["Check your status.", "", "", ""],
   accountDeletionNote: "Search",
   leaderboardPrizeEyebrow: "Prize",
-  prizeLabel: "Prize",
+  prizeLabel: "Nike Vapor Pro 3",
   leaderboardPrizeNote: "Featured Prize",
   leaderboardGoalMessage: "Search",
+  consolationTitle: "Consolation Winners",
+  consolationPrizeOne: "₱1,000 Cash Prize",
+  consolationPrizeTwo: "₱500 Cash Prize",
+  consolationPrizeThree: "₱300 Cash Prize",
 };
 
 export function normalizeGiveawaySettings(settings = {}) {
@@ -55,6 +63,10 @@ export function normalizeGiveawaySettings(settings = {}) {
     prizeImageCount,
     prizeImageAlt: cleanText(settings.prizeImageAlt),
     firstSpinAt: cleanText(settings.firstSpinAt),
+    consolationTitle: cleanText(settings.consolationTitle),
+    consolationPrizeOne: cleanText(settings.consolationPrizeOne),
+    consolationPrizeTwo: cleanText(settings.consolationPrizeTwo),
+    consolationPrizeThree: cleanText(settings.consolationPrizeThree),
   };
 }
 

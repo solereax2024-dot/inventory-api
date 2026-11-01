@@ -81,5 +81,10 @@ public class AdminGiveawayWheelController {
     ) {
         return ResponseEntity.ok(giveawayWheelService.revokeProof(entryId, proofType, request.message()));
     }
+
+    @PatchMapping("/entries/{entryId}/winner/reset")
+    public ResponseEntity<GiveawayWheelResetResponse> resetWinnerStatus(@PathVariable Long entryId) {
+        return ResponseEntity.ok(giveawayWheelService.resetWinnerStatus(entryId));
+    }
 }
 
