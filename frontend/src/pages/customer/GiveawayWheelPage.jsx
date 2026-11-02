@@ -112,6 +112,10 @@ const WHEEL_CENTER = WHEEL_VIEWBOX_SIZE / 2;
 const WHEEL_RADIUS = 440;
 const WHEEL_CORE_RADIUS = 146;
 const WHEEL_HUB_RADIUS = 60;
+const WHEEL_LABEL_INNER_PADDING = 28;
+const WHEEL_LABEL_OUTER_PADDING = 30;
+const WHEEL_LABEL_FONT_WIDTH_RATIO = 0.56;
+const WHEEL_LABEL_MIN_FONT_SIZE = 10;
 const SPIN_DURATION_MS = 5600;
 const WHEEL_HOST_SESSION_STORAGE_KEY = "giveawayWheelHostSession";
 const WHEEL_DRAW_MODE_PREF_STORAGE_KEY = "giveawayWheelDrawModePref";
@@ -129,6 +133,87 @@ const SEGMENT_PALETTE = [
 ];
 const PH_TIMEZONE = "Asia/Manila";
 const PH_OFFSET = "+08:00";
+
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function estimateWheelLabelLength(text, fontSize) {
+  return String(text || "").trim().length * fontSize * WHEEL_LABEL_FONT_WIDTH_RATIO;
+}
+
+function splitWheelLabel(text) {
+  const normalized = String(text || "").trim();
+  if (!normalized) return ["Guest"];
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length <= 1) {
+    const midpoint = Math.ceil(normalized.length / 2);
+    return [normalized.slice(0, midpoint), normalized.slice(midpoint)].filter(Boolean);
+  }
+
+  let bestSplitIndex = 1;
+  let bestDelta = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < words.length; index += 1) {
+    const left = words.slice(0, index).join(" ");
+    const right = words.slice(index).join(" ");
+    const delta = Math.abs(left.length - right.length);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      bestSplitIndex = index;
+    }
+  }
+
+  return [
+    words.slice(0, bestSplitIndex).join(" "),
+    words.slice(bestSplitIndex).join(" "),
+  ].filter(Boolean);
+}
+
+function buildWheelLabelLayout(text, segmentCount) {
+  const normalizedText = String(text || "").trim() || "Guest";
+  const densityOffset = segmentCount > 20 ? 10 : segmentCount > 12 ? 6 : 0;
+  const innerRadius = WHEEL_CORE_RADIUS + WHEEL_LABEL_INNER_PADDING + densityOffset;
+  const outerRadius = WHEEL_RADIUS - WHEEL_LABEL_OUTER_PADDING - densityOffset;
+  const radialCapacity = Math.max(outerRadius - innerRadius, 48);
+  const maxFontSize = clampNumber(230 / Math.max(segmentCount, 3), 16, 34);
+
+  const singleLineFontSize = clampNumber(
+    radialCapacity / Math.max(normalizedText.length * WHEEL_LABEL_FONT_WIDTH_RATIO, 1),
+    WHEEL_LABEL_MIN_FONT_SIZE,
+    maxFontSize
+  );
+
+  if (singleLineFontSize >= 12 || normalizedText.length <= 12) {
+    return {
+      lines: [{ text: normalizedText, angleOffset: 0 }],
+      fontSize: singleLineFontSize,
+      innerRadius,
+      outerRadius,
+      textLength: radialCapacity * 0.96,
+    };
+  }
+
+  const splitLines = splitWheelLabel(normalizedText);
+  const longestSplitLineLength = splitLines.reduce((longest, line) => Math.max(longest, line.length), 1);
+  const splitFontSize = clampNumber(
+    radialCapacity / Math.max(longestSplitLineLength * WHEEL_LABEL_FONT_WIDTH_RATIO, 1),
+    WHEEL_LABEL_MIN_FONT_SIZE,
+    Math.min(maxFontSize, 18)
+  );
+  const offset = segmentCount > 18 ? 1.2 : 0.85;
+
+  return {
+    lines: splitLines.map((lineText, index) => ({
+      text: lineText,
+      angleOffset: splitLines.length === 1 ? 0 : (index === 0 ? -offset : offset),
+    })),
+    fontSize: splitFontSize,
+    innerRadius,
+    outerRadius,
+    textLength: radialCapacity * 0.94,
+  };
+}
 
 function createInitialUploadFieldState() {
   return ALL_PROOF_FIELD_KEYS.reduce((accumulator, fieldKey) => {
@@ -1598,38 +1683,48 @@ export default function GiveawayWheelPage() {
                     const startAngle = index * anglePerSegment;
                     const endAngle = (index + 1) * anglePerSegment;
                     const midAngle = startAngle + (anglePerSegment / 2);
-                    const labelStartRadius = weightedSegments.length > 8 ? WHEEL_RADIUS * 0.46 : WHEEL_RADIUS * 0.42;
-                    const labelEndRadius = weightedSegments.length > 8 ? WHEEL_RADIUS * 0.88 : WHEEL_RADIUS * 0.84;
                     const fullLabelText = formatEntryDisplayName(segment.fullName, segment.sourceTag);
-                    const baseFontSize = Math.max(22, Math.min(36, 240 / Math.max(weightedSegments.length, 3)));
-                    const fontSize = Math.max(18, Math.min(baseFontSize, 320 / Math.max(fullLabelText.length, 4)));
+                    const labelLayout = buildWheelLabelLayout(fullLabelText, weightedSegments.length);
                     const statusClass = getStatusClassName(segment.status);
-                    const labelText = fullLabelText;
                     const normalizedAngle = ((midAngle % 360) + 360) % 360;
                     const isLeftSide = normalizedAngle > 180;
-                    const labelPathId = `wheel-label-path-${index}`;
-                    const labelPath = isLeftSide
-                      ? describeRadialLabelPath(labelEndRadius, labelStartRadius, midAngle)
-                      : describeRadialLabelPath(labelStartRadius, labelEndRadius, midAngle);
 
                     return (
                       <g key={`${segment.id}-${index}`} className={`giveaway-wheel-segment ${statusClass}`}>
                         <path d={describeSector(startAngle, endAngle)} fill={getSegmentFill(index)} stroke="rgba(255,255,255,0.9)" strokeWidth="2" />
-                        <path id={labelPathId} d={labelPath} fill="none" stroke="none" />
-                        <text
-                          fill={getSegmentTextFill(index)}
-                          stroke="rgba(255,255,255,0.55)"
-                          strokeWidth="3"
-                          paintOrder="stroke"
-                          strokeLinejoin="round"
-                          fontSize={fontSize}
-                          fontWeight="800"
-                          letterSpacing="0.02em"
-                        >
-                          <textPath href={`#${labelPathId}`} startOffset="50%" textAnchor="middle">
-                            {labelText}
-                          </textPath>
-                        </text>
+                        {labelLayout.lines.map((line, lineIndex) => {
+                          const labelPathId = `wheel-label-path-${index}-${lineIndex}`;
+                          const lineAngle = midAngle + line.angleOffset;
+                          const labelPath = isLeftSide
+                            ? describeRadialLabelPath(labelLayout.outerRadius, labelLayout.innerRadius, lineAngle)
+                            : describeRadialLabelPath(labelLayout.innerRadius, labelLayout.outerRadius, lineAngle);
+
+                          return (
+                            <g key={labelPathId}>
+                              <path id={labelPathId} d={labelPath} fill="none" stroke="none" />
+                              <text
+                                fill={getSegmentTextFill(index)}
+                                stroke="rgba(255,255,255,0.55)"
+                                strokeWidth="2.4"
+                                paintOrder="stroke"
+                                strokeLinejoin="round"
+                                fontSize={labelLayout.fontSize}
+                                fontWeight="800"
+                                letterSpacing="0.01em"
+                              >
+                                <textPath
+                                  href={`#${labelPathId}`}
+                                  startOffset="50%"
+                                  textAnchor="middle"
+                                  lengthAdjust="spacingAndGlyphs"
+                                  textLength={labelLayout.textLength}
+                                >
+                                  {line.text}
+                                </textPath>
+                              </text>
+                            </g>
+                          );
+                        })}
                       </g>
                     );
                   }) : (
