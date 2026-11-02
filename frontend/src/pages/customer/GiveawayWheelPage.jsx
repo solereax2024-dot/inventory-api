@@ -550,6 +550,7 @@ export default function GiveawayWheelPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [isGiveaway1NoticeOpen, setIsGiveaway1NoticeOpen] = useState(false);
+  const [isPreviewSpinNoticeOpen, setIsPreviewSpinNoticeOpen] = useState(false);
   const [isSearchResultsModalOpen, setIsSearchResultsModalOpen] = useState(false);
   const [activePrizeLightboxIndex, setActivePrizeLightboxIndex] = useState(null);
   const [openedFromSearchResult, setOpenedFromSearchResult] = useState(false);
@@ -1335,6 +1336,44 @@ export default function GiveawayWheelPage() {
     }, SPIN_DURATION_MS);
   };
 
+  const runPreviewSpin = () => {
+    if (isSpinning || approvedSegments.length === 0 || weightedSegments.length === 0) {
+      return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * approvedSegments.length);
+    const previewSegment = approvedSegments[randomIndex];
+    if (!previewSegment) {
+      return;
+    }
+
+    setIsSpinning(true);
+    setPointerPingTone(resolvePointerPingTone(getSegmentFill(previewSegment.wheelIndex)));
+
+    const anglePerSegment = 360 / weightedSegments.length;
+    const targetAngle = (previewSegment.wheelIndex + 0.5) * anglePerSegment;
+    const extraTurns = 6 * 360;
+    const nextRotation = activeRotation + extraTurns - targetAngle;
+
+    scheduleSpinSegmentTicks({
+      fromRotation: activeRotation,
+      toRotation: nextRotation,
+      segmentCount: weightedSegments.length,
+      durationMs: SPIN_DURATION_MS,
+    });
+    setActiveRotation(nextRotation);
+
+    window.setTimeout(() => {
+      clearScheduledSpinTicks();
+      setIsPointerTickPulse(false);
+      setIsSpinning(false);
+      setIsPointerPing(true);
+      playWheelWinnerTick();
+      window.setTimeout(() => setIsPointerPing(false), 700);
+      setIsPreviewSpinNoticeOpen(true);
+    }, SPIN_DURATION_MS);
+  };
+
   const handleDrawModeAction = (mode) => {
     const normalizedMode = mode === "REMOVE" ? "REMOVE" : "KEEP";
     setDrawModeSelection(normalizedMode);
@@ -1348,8 +1387,7 @@ export default function GiveawayWheelPage() {
       return;
     }
     if (!hasActiveHostSession) {
-      setHostGateStep("prompt");
-      setIsHostGateOpen(true);
+      runPreviewSpin();
       return;
     }
 
@@ -2390,6 +2428,28 @@ export default function GiveawayWheelPage() {
             <div className="confirm-action-footer modal-sticky-footer">
               <button type="button" className="button-secondary" onClick={closeGiveaway1NoticeModal}>Close</button>
               <button type="button" className="btn-primary" onClick={handleJoinGiveaway2FromNotice}>Join Giveaway 2</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {isPreviewSpinNoticeOpen ? (
+        <div className="modal-overlay" onClick={() => setIsPreviewSpinNoticeOpen(false)}>
+          <section className="modal-panel modal-panel-compact confirm-action-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="confirm-action-head">
+              <h3>Preview Spin Only</h3>
+              <button type="button" className="modal-close-btn" onClick={() => setIsPreviewSpinNoticeOpen(false)} aria-label="Close preview spin notice">✕</button>
+            </div>
+            <div className="confirm-action-body">
+              <p className="confirm-action-copy">
+                This was a preview spin for demo only and is not an official valid draw.
+              </p>
+              <p className="confirm-action-copy">
+                Official winner selection is done by the admin host only.
+              </p>
+            </div>
+            <div className="confirm-action-footer modal-sticky-footer">
+              <button type="button" className="btn-primary" onClick={() => setIsPreviewSpinNoticeOpen(false)}>Got it</button>
             </div>
           </section>
         </div>
