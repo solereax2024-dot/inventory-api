@@ -19,6 +19,7 @@ public record GiveawayWheelEntryResponse(
         boolean passwordProtected,
         GiveawayWheelEntryStatus status,
         String rejectionReason,
+        String sourceTag,
         GiveawayWheelProofResponse followProof,
         GiveawayWheelProofResponse commentProof,
         GiveawayWheelProofResponse shareProof,

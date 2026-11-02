@@ -818,6 +818,12 @@
   color: #3730a3;
 }
 
+.giveaway-wheel-entry-chip.is-source-g1 {
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  color: #1d4ed8;
+}
+
 .giveaway-player-proof-actions {
   display: flex;
   flex-direction: row;

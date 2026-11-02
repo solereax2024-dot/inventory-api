@@ -115,6 +115,9 @@ public class GiveawayWheelEntry {
     @Column(name = "entry_password_hash", length = 255)
     private String entryPasswordHash;
 
+    @Column(name = "source_tag", length = 50)
+    private String sourceTag;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

@@ -87,6 +87,19 @@ function getCompactWeightLabel(value) {
   return normalized;
 }
 
+function getSourceTagLabel(sourceTag) {
+  const normalized = String(sourceTag || "").trim().toUpperCase();
+  if (normalized === "GIVEAWAY_1") return "G1";
+  return String(sourceTag || "").trim();
+}
+
+function formatEntryDisplayName(fullName, sourceTag) {
+  const baseName = String(fullName || "").trim() || "Guest";
+  const sourceLabel = getSourceTagLabel(sourceTag);
+  if (!sourceLabel) return baseName;
+  return `${baseName}-${sourceLabel}`;
+}
+
 function getEntryProofStatuses(entry) {
   return IMAGE_COLUMNS.map((column) => String(entry?.[column.proofKey]?.status || "NOT_UPLOADED").toUpperCase());
 }
@@ -305,11 +318,18 @@ export default function GiveawayWheelEntriesTable({
             ) : filteredEntries.map((entry) => {
               const statusClass = getStatusClassName(entry.status);
               const initials = getInitials(entry.fullName);
+              const sourceTagLabel = getSourceTagLabel(entry.sourceTag);
+              const displayName = formatEntryDisplayName(entry.fullName, entry.sourceTag);
               return (
                 <tr key={entry.id} className={`giveaway-wheel-admin-row ${statusClass}`}>
                   <td>
                     <div style={{ display: "grid", gap: 4 }}>
-                      <strong>{entry.fullName}</strong>
+                      <strong>{displayName}</strong>
+                      {sourceTagLabel ? (
+                        <span className="giveaway-player-proof-badge giveaway-wheel-entry-chip is-source-g1" style={{ width: "fit-content" }}>
+                          {sourceTagLabel}
+                        </span>
+                      ) : null}
                       <small className="field-hint">Created {formatDateTime(entry.createdAt)}</small>
                     </div>
                   </td>

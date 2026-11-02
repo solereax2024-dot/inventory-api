@@ -94,6 +94,19 @@ function getPublicEntryStatus(entry) {
   return String(entry?.status || "PENDING").toUpperCase();
 }
 
+function getSourceTagLabel(sourceTag) {
+  const normalized = String(sourceTag || "").trim().toUpperCase();
+  if (normalized === "GIVEAWAY_1") return "G1";
+  return String(sourceTag || "").trim();
+}
+
+function formatEntryDisplayName(fullName, sourceTag) {
+  const baseName = String(fullName || "").trim() || "Guest";
+  const sourceLabel = getSourceTagLabel(sourceTag);
+  if (!sourceLabel) return baseName;
+  return `${baseName}-${sourceLabel}`;
+}
+
 const WHEEL_VIEWBOX_SIZE = 1000;
 const WHEEL_CENTER = WHEEL_VIEWBOX_SIZE / 2;
 const WHEEL_RADIUS = 440;
@@ -1219,7 +1232,10 @@ export default function GiveawayWheelPage() {
       loadWheelEntries().catch(() => undefined);
       setWinnerPopup({
         isOpen: true,
-        winnerName: String(winningSegment?.fullName || drawResult?.winnerFullName || "Winner"),
+        winnerName: formatEntryDisplayName(
+          winningSegment?.fullName || drawResult?.winnerFullName || "Winner",
+          winningSegment?.sourceTag
+        ),
         winnerImageSrc: getGiveawayWheelImageSrc(
           winningSegment?.facebookProfileImagePath
             || drawResult?.winnerProfileImagePath
@@ -1584,7 +1600,7 @@ export default function GiveawayWheelPage() {
                     const midAngle = startAngle + (anglePerSegment / 2);
                     const labelStartRadius = weightedSegments.length > 8 ? WHEEL_RADIUS * 0.46 : WHEEL_RADIUS * 0.42;
                     const labelEndRadius = weightedSegments.length > 8 ? WHEEL_RADIUS * 0.88 : WHEEL_RADIUS * 0.84;
-                    const fullLabelText = String(segment.fullName || "").trim() || "Guest";
+                    const fullLabelText = formatEntryDisplayName(segment.fullName, segment.sourceTag);
                     const baseFontSize = Math.max(22, Math.min(36, 240 / Math.max(weightedSegments.length, 3)));
                     const fontSize = Math.max(18, Math.min(baseFontSize, 320 / Math.max(fullLabelText.length, 4)));
                     const statusClass = getStatusClassName(segment.status);
@@ -2329,12 +2345,16 @@ export default function GiveawayWheelPage() {
                   const normalizedStatus = String(entry?.status || "").toUpperCase();
                   const canOpenReadOnly = normalizedStatus === "APPROVED" || normalizedStatus === "REJECTED";
                   const winnerWonAtLabel = formatWinnerWonAt(entry?.wonAt);
+                  const sourceTagLabel = getSourceTagLabel(entry?.sourceTag);
 
                   return (
                     <div key={entry.id} className={`giveaway-wheel-search-result ${statusClass}`}>
                       <div className="giveaway-wheel-search-result-copy">
-                        <strong>{entry.fullName}</strong>
+                        <strong>{formatEntryDisplayName(entry.fullName, entry.sourceTag)}</strong>
                         <small className="giveaway-wheel-search-result-status">{getGiveawayWheelStatusLabel(publicStatus)}</small>
+                        {sourceTagLabel ? (
+                          <small className="giveaway-wheel-search-winner-badge is-source-g1">{sourceTagLabel}</small>
+                        ) : null}
                         {entry.winner ? (
                           <>
                             <small className="giveaway-wheel-search-winner-badge">Winner</small>
