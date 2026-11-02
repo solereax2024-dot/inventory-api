@@ -2065,7 +2065,7 @@ export default function GiveawayWheelPage() {
                     {entryForm.id ? null : (
                       <label className="giveaway-entry-modal-v4-field giveaway-entry-modal-v4-password-field">
                         <span>Entry Password <em>*</em></span>
-                        <div className="giveaway-entry-modal-v4-input-shell">
+                        <div className="giveaway-entry-modal-v4-input-shell has-trailing-action">
                           <input
                             type={showEntryPassword ? "text" : "password"}
                             value={entryForm.entryPassword}
@@ -2076,14 +2076,12 @@ export default function GiveawayWheelPage() {
                           />
                           <button
                             type="button"
-                            className="giveaway-entry-modal-v4-action-btn is-view"
+                            className="giveaway-entry-modal-v4-input-trailing-btn"
                             onClick={() => setShowEntryPassword((previous) => !previous)}
                             aria-label={showEntryPassword ? "Hide password" : "Show password"}
                             title={showEntryPassword ? "Hide password" : "Show password"}
-                            style={{ marginLeft: 8 }}
                           >
-                            {showEntryPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                            {showEntryPassword ? "Hide" : "Show"}
+                            {showEntryPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
                         <small className="giveaway-entry-modal-v4-password-note">

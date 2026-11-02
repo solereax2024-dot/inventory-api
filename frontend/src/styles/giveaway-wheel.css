@@ -2797,10 +2797,42 @@
 }
 
 .giveaway-entry-modal-v4-input-shell {
+  position: relative;
   padding: 4px;
   border-radius: 14px;
   border: 1px solid #dbe6f1;
   background: #f8fbff;
+}
+
+.giveaway-entry-modal-v4-input-shell.has-trailing-action input {
+  padding-right: 46px;
+}
+
+.giveaway-entry-modal-v4-input-trailing-btn {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.giveaway-entry-modal-v4-input-trailing-btn:hover {
+  background: rgba(148, 163, 184, 0.16);
+  color: #334155;
+}
+
+.giveaway-entry-modal-v4-input-trailing-btn:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
 }
 
 .giveaway-entry-modal-v4-input-shell input {
