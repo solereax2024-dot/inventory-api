@@ -549,6 +549,7 @@ export default function GiveawayWheelPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [isGiveaway1NoticeOpen, setIsGiveaway1NoticeOpen] = useState(false);
   const [isSearchResultsModalOpen, setIsSearchResultsModalOpen] = useState(false);
   const [activePrizeLightboxIndex, setActivePrizeLightboxIndex] = useState(null);
   const [openedFromSearchResult, setOpenedFromSearchResult] = useState(false);
@@ -1417,6 +1418,19 @@ export default function GiveawayWheelPage() {
     setIsSearchResultsModalOpen(false);
   };
 
+  const closeGiveaway1NoticeModal = () => {
+    setIsGiveaway1NoticeOpen(false);
+  };
+
+  const handleJoinGiveaway2FromNotice = () => {
+    setIsGiveaway1NoticeOpen(false);
+    setEntryForm(EMPTY_FORM);
+    setProofReview(EMPTY_PROOF_REVIEW);
+    setSelectedFiles(EMPTY_FILES);
+    setFilePreviews(EMPTY_PREVIEWS);
+    openModal("join");
+  };
+
   const handleOpenSearchResult = async (entryId) => {
     setSearchError("");
     setFormError("");
@@ -1474,11 +1488,7 @@ export default function GiveawayWheelPage() {
       const sourceTag = String(data?.sourceTag || "").trim().toUpperCase();
       if (sourceTag === "GIVEAWAY_1") {
         setIsSearchResultsModalOpen(false);
-        window.alert(
-          "Giveaway 1 Entry\n\n"
-          + "Because you joined Giveaway 1, you earned a special privilege: 1 wheel entry is already credited to you. "
-          + "You can still submit a separate Giveaway 2 entry by tapping Join Giveaway."
-        );
+        setIsGiveaway1NoticeOpen(true);
         return;
       }
 
@@ -2360,6 +2370,29 @@ export default function GiveawayWheelPage() {
                 </form>
               </>
             )}
+          </section>
+        </div>
+      ) : null}
+
+      {isGiveaway1NoticeOpen ? (
+        <div className="modal-overlay" onClick={closeGiveaway1NoticeModal}>
+          <section className="modal-panel modal-panel-compact confirm-action-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="confirm-action-head">
+              <h3>Giveaway 1 Privilege</h3>
+              <button type="button" className="modal-close-btn" onClick={closeGiveaway1NoticeModal} aria-label="Close Giveaway 1 notice">✕</button>
+            </div>
+            <div className="confirm-action-body">
+              <p className="confirm-action-copy">
+                Because you joined Giveaway 1, you earned a special privilege: 1 wheel entry is already credited to you.
+              </p>
+              <p className="confirm-action-copy">
+                You can still submit a separate Giveaway 2 entry anytime.
+              </p>
+            </div>
+            <div className="confirm-action-footer modal-sticky-footer">
+              <button type="button" className="button-secondary" onClick={closeGiveaway1NoticeModal}>Close</button>
+              <button type="button" className="btn-primary" onClick={handleJoinGiveaway2FromNotice}>Join Giveaway 2</button>
+            </div>
           </section>
         </div>
       ) : null}
