@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, Hash, Heart, ImageIcon, Lock, Search, Share2, SlidersHorizontal, Star, Upload, UserRound, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Hash, Heart, ImageIcon, Lock, Search, Share2, SlidersHorizontal, Star, Upload, UserRound, X } from "lucide-react";
 import { apiRequest, getFriendlyUploadErrorMessage } from "../../utils/api";
 import {
   GIVEAWAY_WHEEL_MAX_UPLOAD_SIZE_BYTES,
@@ -18,6 +18,7 @@ const EMPTY_FORM = {
   fullName: "",
   entryPassword: "",
   passwordProtected: false,
+  sourceTag: "",
   followProofImagePath: "",
   commentProofImagePath: "",
   shareProofImagePath: "",
@@ -59,6 +60,7 @@ function normalizeEntryFormData(data = {}, options = {}) {
     fullName: data.fullName || "",
     entryPassword: prefilledPassword,
     passwordProtected: Boolean(data.passwordProtected),
+    sourceTag: String(data.sourceTag || ""),
     followProofImagePath: data.followProof?.imagePath || data.followProofImagePath || "",
     commentProofImagePath: data.commentProof?.imagePath || data.commentProofImagePath || "",
     shareProofImagePath: data.shareProof?.imagePath || data.shareProofImagePath || "",
@@ -580,6 +582,7 @@ export default function GiveawayWheelPage() {
   const [isWheelSoundEnabled, setIsWheelSoundEnabled] = useState(() => readSoundPreference());
   const [wheelTickProfile, setWheelTickProfile] = useState(() => readTickProfilePreference());
   const [wheelSoundVolume, setWheelSoundVolume] = useState(() => readSoundVolumePreference());
+  const [showEntryPassword, setShowEntryPassword] = useState(false);
 
   const loadWheelEntries = async () => {
     try {
@@ -1378,6 +1381,7 @@ export default function GiveawayWheelPage() {
     setOpenedFromSearchResult(false);
     setActiveModal(nextModal);
     setUploadStateByField(createInitialUploadFieldState());
+    setShowEntryPassword(false);
     setFormError("");
     setFormMessage("");
   };
@@ -1403,6 +1407,7 @@ export default function GiveawayWheelPage() {
       setOpenedFromSearchResult(false);
     }
     setUploadStateByField(createInitialUploadFieldState());
+    setShowEntryPassword(false);
     setFormError("");
     setFormMessage("");
     setIsFeedbackExpanded(false);
@@ -1468,6 +1473,10 @@ export default function GiveawayWheelPage() {
 
       setEntryForm(normalizeEntryFormData(data, { prefilledPassword: providedPassword }));
       setProofReview(normalizeProofReview(data));
+      const sourceTag = String(data?.sourceTag || "").trim().toUpperCase();
+      if (sourceTag === "GIVEAWAY_1") {
+        setFormMessage("This entry is from Giveaway 1 and already has 1 wheel entry.");
+      }
       setIsFeedbackExpanded(false);
       setSelectedFiles(EMPTY_FILES);
       setFilePreviews(EMPTY_PREVIEWS);
@@ -1512,7 +1521,9 @@ export default function GiveawayWheelPage() {
   };
 
   const readOnlyStatus = String(entryForm.status || "").toUpperCase();
+  const isGiveaway1ImportedEntry = String(entryForm.sourceTag || "").trim().toUpperCase() === "GIVEAWAY_1";
   const isApprovedReadOnly = readOnlyStatus === "APPROVED";
+  const isEntryReadOnly = isApprovedReadOnly || isGiveaway1ImportedEntry;
   const rejectionFeedback = String(entryForm.rejectionReason || "").trim();
   const parsedRejectionFeedback = useMemo(() => rejectionFeedback
     .split("|")
@@ -1942,7 +1953,7 @@ export default function GiveawayWheelPage() {
             <div className="giveaway-entry-modal-v4-head">
               <div className="giveaway-entry-modal-v4-titleblock">
                 <div className="giveaway-entry-modal-v4-title-row-main">
-                  <h2 id="giveaway-entry-modal-title">{isApprovedReadOnly ? "Approved Entry" : entryForm.id ? "Edit Entry" : "Join Giveaway"}</h2>
+                  <h2 id="giveaway-entry-modal-title">{isGiveaway1ImportedEntry ? "Giveaway 1 Entry" : isApprovedReadOnly ? "Approved Entry" : entryForm.id ? "Edit Entry" : "Join Giveaway"}</h2>
                   <span className="giveaway-entry-modal-v4-chip giveaway-entry-modal-v4-chip-total">
                     {estimatedEntryCount} Active {estimatedEntryCount === 1 ? "Entry" : "Entries"}
                   </span>
@@ -2009,6 +2020,16 @@ export default function GiveawayWheelPage() {
                     </div>
                   ) : null}
 
+                  {isGiveaway1ImportedEntry ? (
+                    <div className="giveaway-wheel-form-alert giveaway-entry-modal-v4-alert is-success">
+                      <CheckCircle2 size={18} />
+                      <div>
+                        <strong>Giveaway 1 Entry</strong>
+                        <p>This entry is from Giveaway 1 and already has 1 wheel entry.</p>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <form id="giveaway-entry-modal-v4-form" className="giveaway-entry-modal-v4-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
                     <label className="giveaway-entry-modal-v4-field">
                       <span>Full Name</span>
@@ -2019,7 +2040,7 @@ export default function GiveawayWheelPage() {
                           value={entryForm.fullName}
                           onChange={(event) => setEntryForm((previous) => ({ ...previous, fullName: event.target.value }))}
                           placeholder="Juan Dela Cruz"
-                          disabled={isApprovedReadOnly}
+                          disabled={isEntryReadOnly}
                         />
                       </div>
                     </label>
@@ -2029,13 +2050,24 @@ export default function GiveawayWheelPage() {
                         <span>Entry Password <em>*</em></span>
                         <div className="giveaway-entry-modal-v4-input-shell">
                           <input
-                            type="password"
+                            type={showEntryPassword ? "text" : "password"}
                             value={entryForm.entryPassword}
                             onChange={(event) => setEntryForm((previous) => ({ ...previous, entryPassword: event.target.value }))}
                             placeholder="Create your password"
-                            disabled={isApprovedReadOnly}
+                            disabled={isEntryReadOnly}
                             autoComplete="new-password"
                           />
+                          <button
+                            type="button"
+                            className="giveaway-entry-modal-v4-action-btn is-view"
+                            onClick={() => setShowEntryPassword((previous) => !previous)}
+                            aria-label={showEntryPassword ? "Hide password" : "Show password"}
+                            title={showEntryPassword ? "Hide password" : "Show password"}
+                            style={{ marginLeft: 8 }}
+                          >
+                            {showEntryPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                            {showEntryPassword ? "Hide" : "Show"}
+                          </button>
                         </div>
                         <small className="giveaway-entry-modal-v4-password-note">
                           Required. Use this password to open or edit your entry from search results.
@@ -2044,13 +2076,13 @@ export default function GiveawayWheelPage() {
                     )}
 
                     <div className="giveaway-entry-modal-v4-grid">
-                      <label className={`giveaway-entry-modal-v4-card is-required${isApprovedReadOnly ? " is-readonly" : ""}${uploadStateByField.facebookProfile?.error ? " has-error" : ""}${proofReview.facebookProfile.status === "REJECTED" ? " is-rejected" : ""}`}>
+                      <label className={`giveaway-entry-modal-v4-card is-required${isEntryReadOnly ? " is-readonly" : ""}${uploadStateByField.facebookProfile?.error ? " has-error" : ""}${proofReview.facebookProfile.status === "REJECTED" ? " is-rejected" : ""}`}>
                         {(() => {
                           const file = getFileDescriptor(GIVEAWAY_WHEEL_PROFILE_FIELD.key, profileImageSrc);
                           const profileStatus = getProofVisualStatus(proofReview.facebookProfile?.status, Boolean(profileImageSrc));
                           const profileReviewStatus = String(proofReview.facebookProfile?.status || "").toUpperCase();
                           const isProfileApproved = profileReviewStatus === "APPROVED";
-                          const isProfileUploadLocked = isApprovedReadOnly || isProfileApproved;
+                          const isProfileUploadLocked = isEntryReadOnly || isProfileApproved;
                           const profileUploadLabel = file.hasFile ? "Re-upload" : "Upload";
                           const profileUploadLockHint = isProfileApproved
                             ? "Approved by admin. Re-upload is disabled."
@@ -2061,7 +2093,7 @@ export default function GiveawayWheelPage() {
                           <div className="giveaway-entry-modal-v4-card-icon is-profile"><UserRound size={20} /></div>
                           <div>
                             <div className="giveaway-entry-modal-v4-title-row">
-                              <strong>{GIVEAWAY_WHEEL_PROFILE_FIELD.label} {!isApprovedReadOnly ? <em>*</em> : null}</strong>
+                              <strong>{GIVEAWAY_WHEEL_PROFILE_FIELD.label} {!isEntryReadOnly ? <em>*</em> : null}</strong>
                               <span className="giveaway-entry-modal-v4-entry-chip is-noticeable">Required</span>
                             </div>
                             <small className={`giveaway-entry-modal-v4-proof-status is-${profileStatus.tone}`}>
@@ -2079,7 +2111,7 @@ export default function GiveawayWheelPage() {
                               <strong>{file.fileName}</strong>
                               {file.fileSize ? <small>{file.fileSize}</small> : null}
                             </div>
-                            {file.canClear && !isApprovedReadOnly ? (
+                            {file.canClear && !isEntryReadOnly ? (
                               <button
                                 type="button"
                                 className="giveaway-entry-modal-v4-file-clear"
@@ -2146,7 +2178,7 @@ export default function GiveawayWheelPage() {
                         const inputId = `giveaway-wheel-${field.key}`;
                         const proofReviewStatus = String(proofReview[field.key]?.status || "").toUpperCase();
                         const isProofApproved = proofReviewStatus === "APPROVED";
-                        const isProofUploadLocked = isApprovedReadOnly || isProofApproved;
+                        const isProofUploadLocked = isEntryReadOnly || isProofApproved;
                         const proofUploadLabel = file.hasFile ? "Re-upload" : "Upload";
                         const proofUploadLockHint = isProofApproved
                           ? "Approved by admin. Re-upload is disabled."
@@ -2165,7 +2197,7 @@ export default function GiveawayWheelPage() {
                               <div className={`giveaway-entry-modal-v4-card-icon is-${field.key}`}><FieldIcon size={20} /></div>
                               <div>
                                 <div className="giveaway-entry-modal-v4-title-row">
-                                  <strong>{field.label} {!isApprovedReadOnly ? <em>*</em> : null}</strong>
+                                  <strong>{field.label} {!isEntryReadOnly ? <em>*</em> : null}</strong>
                                   <span className="giveaway-entry-modal-v4-entry-chip is-noticeable">{field.weightLabel}</span>
                                 </div>
                                 <small className={`giveaway-entry-modal-v4-proof-status is-${proofStatus.tone}`}>
@@ -2190,7 +2222,7 @@ export default function GiveawayWheelPage() {
                                   <strong>{file.fileName}</strong>
                                   {file.fileSize ? <small>{file.fileSize}</small> : null}
                                 </div>
-                                {file.canClear && !isApprovedReadOnly ? (
+                                {file.canClear && !isEntryReadOnly ? (
                                   <button
                                     type="button"
                                     className="giveaway-entry-modal-v4-file-clear"
@@ -2250,7 +2282,7 @@ export default function GiveawayWheelPage() {
                   </form>
               </div>
             </div>
-            {isApprovedReadOnly ? null : (
+            {isEntryReadOnly ? null : (
               <div className="giveaway-entry-modal-v4-footer">
                 <button type="button" className="giveaway-entry-modal-v4-cancel" onClick={() => closeModal()}>
                   Cancel

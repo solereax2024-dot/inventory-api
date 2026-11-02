@@ -29,6 +29,7 @@ public class GiveawayWheelService {
     public static final int SHARE_ENTRY_COUNT = 3;
     public static final int REVIEW_ENTRY_COUNT = 5;
     private static final String UPLOAD_FOLDER = "giveaway-wheel";
+    private static final String GIVEAWAY_1_SOURCE_TAG = "GIVEAWAY_1";
 
     private final GiveawayWheelEntryRepository giveawayWheelEntryRepository;
     private final GiveawayWheelDrawRepository giveawayWheelDrawRepository;
@@ -300,6 +301,9 @@ public class GiveawayWheelService {
             MultipartFile facebookProfile
     ) {
         GiveawayWheelEntry entry = findEntry(entryId);
+        if (isImportedFromGiveaway1(entry)) {
+            throw new IllegalArgumentException("This entry came from Giveaway 1 and cannot be edited here.");
+        }
         return saveEntry(entry, fullName, entryPassword, followProof, commentProof, shareProof, reviewProof, facebookProfile, false);
     }
 
@@ -690,12 +694,14 @@ public class GiveawayWheelService {
     }
 
     private void ensureUniqueFullName(String fullName, Long currentEntryId, boolean creating) {
-        boolean duplicateExists = creating
-                ? giveawayWheelEntryRepository.existsByFullNameIgnoreCase(fullName)
-                : giveawayWheelEntryRepository.existsByFullNameIgnoreCaseAndIdNot(fullName, currentEntryId);
+        boolean duplicateExists = giveawayWheelEntryRepository.existsRegularEntryNameConflict(fullName, creating ? null : currentEntryId);
         if (duplicateExists) {
             throw new IllegalArgumentException("This full name is already registered in Giveaway 2.");
         }
+    }
+
+    private boolean isImportedFromGiveaway1(GiveawayWheelEntry entry) {
+        return hasValue(entry.getSourceTag()) && GIVEAWAY_1_SOURCE_TAG.equalsIgnoreCase(entry.getSourceTag().trim());
     }
 
     private void ensureUpdatePasswordAllowed(GiveawayWheelEntry entry, String entryPassword) {
