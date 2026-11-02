@@ -1471,12 +1471,19 @@ export default function GiveawayWheelPage() {
         return;
       }
 
-      setEntryForm(normalizeEntryFormData(data, { prefilledPassword: providedPassword }));
-      setProofReview(normalizeProofReview(data));
       const sourceTag = String(data?.sourceTag || "").trim().toUpperCase();
       if (sourceTag === "GIVEAWAY_1") {
-        setFormMessage("This entry is from Giveaway 1 and already has 1 wheel entry.");
+        setIsSearchResultsModalOpen(false);
+        window.alert(
+          "Giveaway 1 Entry\n\n"
+          + "Because you joined Giveaway 1, you earned a special privilege: 1 wheel entry is already credited to you. "
+          + "You can still submit a separate Giveaway 2 entry by tapping Join Giveaway."
+        );
+        return;
       }
+
+      setEntryForm(normalizeEntryFormData(data, { prefilledPassword: providedPassword }));
+      setProofReview(normalizeProofReview(data));
       setIsFeedbackExpanded(false);
       setSelectedFiles(EMPTY_FILES);
       setFilePreviews(EMPTY_PREVIEWS);
@@ -2031,7 +2038,7 @@ export default function GiveawayWheelPage() {
                   ) : null}
 
                   <form id="giveaway-entry-modal-v4-form" className="giveaway-entry-modal-v4-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
-                    <label className="giveaway-entry-modal-v4-field">
+                    <label className="giveaway-entry-modal-v4-field" style={isGiveaway1ImportedEntry ? { display: "none" } : undefined}>
                       <span>Full Name</span>
                       <div className="giveaway-entry-modal-v4-input-shell">
                         <input
@@ -2075,7 +2082,7 @@ export default function GiveawayWheelPage() {
                       </label>
                     )}
 
-                    <div className="giveaway-entry-modal-v4-grid">
+                    <div className="giveaway-entry-modal-v4-grid" style={isGiveaway1ImportedEntry ? { display: "none" } : undefined}>
                       <label className={`giveaway-entry-modal-v4-card is-required${isEntryReadOnly ? " is-readonly" : ""}${uploadStateByField.facebookProfile?.error ? " has-error" : ""}${proofReview.facebookProfile.status === "REJECTED" ? " is-rejected" : ""}`}>
                         {(() => {
                           const file = getFileDescriptor(GIVEAWAY_WHEEL_PROFILE_FIELD.key, profileImageSrc);
