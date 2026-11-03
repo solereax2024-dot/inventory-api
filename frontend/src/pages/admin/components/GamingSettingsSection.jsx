@@ -93,6 +93,7 @@ export default function GamingSettingsSection({
   onDrawGiveawayWheelWinner,
   onClearGiveawayWheelEntries,
   onResetGiveawayWheelWinner,
+  onDeleteGiveawayWheelEntry,
 }) {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState({ isOpen: false });
@@ -215,6 +216,7 @@ export default function GamingSettingsSection({
                 onDrawWinner={onDrawGiveawayWheelWinner}
                 onClearEntries={onClearGiveawayWheelEntries}
                 onResetWinnerStatus={onResetGiveawayWheelWinner}
+                onDeleteEntry={onDeleteGiveawayWheelEntry}
               />
             </div>
           </>

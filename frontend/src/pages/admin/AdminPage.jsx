@@ -554,6 +554,33 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+  const handleDeleteGiveawayWheelEntry = async (entryId) => {
+    if (!token || !entryId) return null;
+
+    setGiveawayWheelEntryActionKey(`delete-entry-${entryId}`);
+    setMessage("");
+
+    try {
+      await apiRequest(
+        `/api/admin/settings/gaming/giveaway-wheel/entries/${entryId}`,
+        "DELETE",
+        undefined,
+        token
+      );
+      await refreshGiveawayWheelEntries();
+      setSuccessModal({
+        isOpen: true,
+        message: "Joiner deleted successfully.",
+      });
+      return true;
+    } catch (err) {
+      setMessage(err.message || "Unable to delete joiner.");
+      return null;
+    } finally {
+      setGiveawayWheelEntryActionKey("");
+    }
+  };
+
   const handleBonusProofAction = async (userId, bonusType, action, message = "") => {
     if (!token) return;
 
@@ -2495,6 +2522,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
            onDrawGiveawayWheelWinner={handleDrawGiveawayWheelWinner}
            onClearGiveawayWheelEntries={handleClearGiveawayWheelEntries}
             onResetGiveawayWheelWinner={handleResetGiveawayWheelWinner}
+            onDeleteGiveawayWheelEntry={handleDeleteGiveawayWheelEntry}
          />
       ) : null}
 

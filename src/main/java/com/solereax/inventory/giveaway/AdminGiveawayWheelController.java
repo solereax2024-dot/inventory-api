@@ -52,6 +52,12 @@ public class AdminGiveawayWheelController {
                 .body(giveawayWheelService.clearAllEntries());
     }
 
+    @DeleteMapping("/entries/{entryId}")
+    public ResponseEntity<Void> deleteEntry(@PathVariable Long entryId) {
+        giveawayWheelService.deleteEntry(entryId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/entries/{entryId}/approve")
     public ResponseEntity<GiveawayWheelEntryResponse> approveEntry(@PathVariable Long entryId) {
         return ResponseEntity.ok(giveawayWheelService.approveEntry(entryId));

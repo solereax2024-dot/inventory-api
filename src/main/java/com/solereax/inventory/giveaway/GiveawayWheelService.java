@@ -13,7 +13,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -173,6 +175,13 @@ public class GiveawayWheelService {
     }
 
     @Transactional
+    public void deleteEntry(Long entryId) {
+        GiveawayWheelEntry entry = findEntry(entryId);
+        deleteEntryUploads(entry);
+        giveawayWheelEntryRepository.delete(entry);
+    }
+
+    @Transactional
     public GiveawayWheelResetResponse resetWinnerStatus(Long entryId) {
         GiveawayWheelEntry targetEntry = findEntry(entryId);
         List<GiveawayWheelEntry> matchingEntries = giveawayWheelEntryRepository.findAllByFullNameIgnoreCase(targetEntry.getFullName());
@@ -216,6 +225,45 @@ public class GiveawayWheelService {
             return deletedFileCount;
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to clear giveaway wheel uploads.", exception);
+        }
+    }
+
+    private void deleteEntryUploads(GiveawayWheelEntry entry) {
+        Set<String> uniquePaths = new HashSet<>();
+        uniquePaths.add(entry.getFollowProofImagePath());
+        uniquePaths.add(entry.getCommentProofImagePath());
+        uniquePaths.add(entry.getShareProofImagePath());
+        uniquePaths.add(entry.getReviewProofImagePath());
+        uniquePaths.add(entry.getFacebookProfileImagePath());
+
+        for (String uploadPath : uniquePaths) {
+            deleteUploadFileIfExists(uploadPath);
+        }
+    }
+
+    private void deleteUploadFileIfExists(String uploadPath) {
+        if (!hasValue(uploadPath)) {
+            return;
+        }
+        String normalizedPath = uploadPath.trim();
+        String expectedPrefix = "/uploads/" + UPLOAD_FOLDER + "/";
+        if (!normalizedPath.startsWith(expectedPrefix)) {
+            return;
+        }
+
+        String relativePath = normalizedPath.substring("/uploads/".length());
+        Path filePath = Paths.get(mediaStorageService.getUploadBaseDirectoryAbsolutePath())
+                .resolve(relativePath)
+                .normalize();
+        Path uploadsRoot = Paths.get(mediaStorageService.getUploadBaseDirectoryAbsolutePath()).normalize();
+        if (!filePath.startsWith(uploadsRoot)) {
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(filePath);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to delete giveaway wheel upload file.", exception);
         }
     }
 

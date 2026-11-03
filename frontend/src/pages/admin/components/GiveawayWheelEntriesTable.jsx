@@ -140,6 +140,7 @@ export default function GiveawayWheelEntriesTable({
   onRejectProof,
   onClearEntries,
   onResetWinnerStatus,
+  onDeleteEntry,
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -147,7 +148,8 @@ export default function GiveawayWheelEntriesTable({
   const [imageViewer, setImageViewer] = useState({ isOpen: false, src: "", alt: "" });
   const [approveConfirm, setApproveConfirm] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "" });
   const [rejectModal, setRejectModal] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "", message: "" });
-  const [clearEntriesModal, setClearEntriesModal] = useState({ isOpen: false });
+  const [clearEntriesModal, setClearEntriesModal] = useState({ isOpen: false, challenge: "", error: "" });
+  const [deleteEntryModal, setDeleteEntryModal] = useState({ isOpen: false, entry: null, challenge: "", error: "" });
   const [resetWinnerModal, setResetWinnerModal] = useState({ isOpen: false, entry: null });
   const [latestDrawAudit, setLatestDrawAudit] = useState(null);
 
@@ -194,9 +196,24 @@ export default function GiveawayWheelEntriesTable({
 
   const handleClearEntries = async () => {
     if (!onClearEntries || isClearingEntries) return;
+    if (String(clearEntriesModal.challenge || "").trim().toUpperCase() !== "DELETE") {
+      setClearEntriesModal((previous) => ({ ...previous, error: "Type DELETE to continue." }));
+      return;
+    }
     await onClearEntries();
-    setClearEntriesModal({ isOpen: false });
+    setClearEntriesModal({ isOpen: false, challenge: "", error: "" });
     setLatestDrawAudit(null);
+  };
+
+  const handleDeleteEntry = async () => {
+    const entryId = deleteEntryModal.entry?.id;
+    if (!entryId || !onDeleteEntry) return;
+    if (String(deleteEntryModal.challenge || "").trim().toUpperCase() !== "DELETE") {
+      setDeleteEntryModal((previous) => ({ ...previous, error: "Type DELETE to continue." }));
+      return;
+    }
+    await onDeleteEntry(entryId);
+    setDeleteEntryModal({ isOpen: false, entry: null, challenge: "", error: "" });
   };
 
   const handleResetWinnerStatus = async () => {
@@ -227,7 +244,7 @@ export default function GiveawayWheelEntriesTable({
             <button
               type="button"
               className="btn-delete"
-              onClick={() => setClearEntriesModal({ isOpen: true })}
+              onClick={() => setClearEntriesModal({ isOpen: true, challenge: "", error: "" })}
               disabled={isWheelActionBusy || isClearingEntries || !onClearEntries || entries.length === 0}
             >
               {isClearingEntries ? "Clearing..." : "Clean Up Joiners"}
@@ -320,6 +337,8 @@ export default function GiveawayWheelEntriesTable({
               const initials = getInitials(entry.fullName);
               const sourceTagLabel = getSourceTagLabel(entry.sourceTag);
               const displayName = formatEntryDisplayName(entry.fullName, entry.sourceTag);
+              const deleteBusy = actionKey === `delete-entry-${entry.id}`;
+              const isDeleteLocked = (Boolean(actionKey) && !deleteBusy) || isWheelActionBusy || isClearingEntries;
               return (
                 <tr key={entry.id} className={`giveaway-wheel-admin-row ${statusClass}`}>
                   <td>
@@ -360,6 +379,14 @@ export default function GiveawayWheelEntriesTable({
                             {actionKey === `reset-winner-${entry.id}` ? "Resetting..." : "Reset Winner"}
                           </button>
                         ) : null}
+                        <button
+                          type="button"
+                          className="button-secondary btn-delete"
+                          onClick={() => setDeleteEntryModal({ isOpen: true, entry, challenge: "", error: "" })}
+                          disabled={isDeleteLocked || !onDeleteEntry}
+                        >
+                          {deleteBusy ? "Deleting..." : "Delete Joiner"}
+                        </button>
                       </div>
                     </div>
                   </td>
@@ -575,15 +602,78 @@ export default function GiveawayWheelEntriesTable({
         </div>
       ) : null}
 
-      <ConfirmActionModal
-        isOpen={clearEntriesModal.isOpen}
-        title="Clean Up Giveaway Joiners"
-        description="This permanently deletes all Giveaway 2 joiners, draw history, and uploaded giveaway-wheel proof images so you can start a full reset."
-        targetLabel={`${entries.length} joiner${entries.length === 1 ? "" : "s"}`}
-        confirmLabel={isClearingEntries ? "Cleaning..." : "Clean Up"}
-        onCancel={() => setClearEntriesModal({ isOpen: false })}
-        onConfirm={handleClearEntries}
-      />
+      {clearEntriesModal.isOpen ? (
+        <div className="modal-overlay" onClick={() => setClearEntriesModal({ isOpen: false, challenge: "", error: "" })}>
+          <section className="modal-panel modal-panel-compact confirm-action-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="confirm-action-head">
+              <h3>Clean Up Giveaway Joiners</h3>
+              <button type="button" className="modal-close-btn" onClick={() => setClearEntriesModal({ isOpen: false, challenge: "", error: "" })} aria-label="Close cleanup modal">
+                ✕
+              </button>
+            </div>
+            <p className="confirm-action-copy">
+              This permanently deletes all Giveaway 2 joiners, draw history, and uploaded giveaway-wheel proof images.
+            </p>
+            <p className="confirm-action-target">{`${entries.length} joiner${entries.length === 1 ? "" : "s"}`}</p>
+            <label className="confirm-action-field">
+              <span>Security check: type DELETE</span>
+              <input
+                type="text"
+                value={clearEntriesModal.challenge}
+                onChange={(event) => setClearEntriesModal((previous) => ({ ...previous, challenge: event.target.value, error: "" }))}
+                placeholder="DELETE"
+              />
+            </label>
+            {clearEntriesModal.error ? <p className="field-hint" style={{ color: "#dc2626", marginTop: 8 }}>{clearEntriesModal.error}</p> : null}
+            <div className="confirm-action-footer modal-sticky-footer">
+              <button type="button" className="button-secondary" onClick={() => setClearEntriesModal({ isOpen: false, challenge: "", error: "" })}>
+                Cancel
+              </button>
+              <button type="button" className="confirm-action-danger-btn" onClick={handleClearEntries} disabled={isClearingEntries}>
+                {isClearingEntries ? "Cleaning..." : "Clean Up"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {deleteEntryModal.isOpen ? (
+        <div className="modal-overlay" onClick={() => setDeleteEntryModal({ isOpen: false, entry: null, challenge: "", error: "" })}>
+          <section className="modal-panel modal-panel-compact confirm-action-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="confirm-action-head">
+              <h3>Delete Joiner</h3>
+              <button type="button" className="modal-close-btn" onClick={() => setDeleteEntryModal({ isOpen: false, entry: null, challenge: "", error: "" })} aria-label="Close delete joiner modal">
+                ✕
+              </button>
+            </div>
+            <p className="confirm-action-copy">This permanently deletes this joiner and all uploaded giveaway-wheel proof images.</p>
+            <p className="confirm-action-target">{deleteEntryModal.entry?.fullName || ""}</p>
+            <label className="confirm-action-field">
+              <span>Security check: type DELETE</span>
+              <input
+                type="text"
+                value={deleteEntryModal.challenge}
+                onChange={(event) => setDeleteEntryModal((previous) => ({ ...previous, challenge: event.target.value, error: "" }))}
+                placeholder="DELETE"
+              />
+            </label>
+            {deleteEntryModal.error ? <p className="field-hint" style={{ color: "#dc2626", marginTop: 8 }}>{deleteEntryModal.error}</p> : null}
+            <div className="confirm-action-footer modal-sticky-footer">
+              <button type="button" className="button-secondary" onClick={() => setDeleteEntryModal({ isOpen: false, entry: null, challenge: "", error: "" })}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="confirm-action-danger-btn"
+                onClick={handleDeleteEntry}
+                disabled={actionKey === `delete-entry-${deleteEntryModal.entry?.id}`}
+              >
+                {actionKey === `delete-entry-${deleteEntryModal.entry?.id}` ? "Deleting..." : "Delete Joiner"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       <ConfirmActionModal
         isOpen={resetWinnerModal.isOpen}

@@ -552,6 +552,12 @@ export default function GiveawayWheelPage() {
   const [isGiveaway1NoticeOpen, setIsGiveaway1NoticeOpen] = useState(false);
   const [isPreviewSpinNoticeOpen, setIsPreviewSpinNoticeOpen] = useState(false);
   const [isSearchResultsModalOpen, setIsSearchResultsModalOpen] = useState(false);
+  const [searchPasswordModal, setSearchPasswordModal] = useState({
+    isOpen: false,
+    entryId: null,
+    password: "",
+    error: "",
+  });
   const [activePrizeLightboxIndex, setActivePrizeLightboxIndex] = useState(null);
   const [openedFromSearchResult, setOpenedFromSearchResult] = useState(false);
   const [canScrollPrizeLeft, setCanScrollPrizeLeft] = useState(false);
@@ -1456,6 +1462,10 @@ export default function GiveawayWheelPage() {
     setIsSearchResultsModalOpen(false);
   };
 
+  const closeSearchPasswordModal = () => {
+    setSearchPasswordModal({ isOpen: false, entryId: null, password: "", error: "" });
+  };
+
   const closeGiveaway1NoticeModal = () => {
     setIsGiveaway1NoticeOpen(false);
   };
@@ -1469,78 +1479,98 @@ export default function GiveawayWheelPage() {
     openModal("join");
   };
 
+  const openSearchResultEntry = async (entryId, providedPassword = "") => {
+    const passwordQuery = providedPassword ? `?password=${encodeURIComponent(providedPassword)}` : "";
+    const data = await apiRequest(`/api/public/giveaway-wheel/entries/${entryId}/search-open${passwordQuery}`);
+
+    if (!data?.id) {
+      setSearchError("Entry details are not available right now.");
+      return;
+    }
+
+    const normalizedStatus = String(data.status || "").toUpperCase();
+    if (normalizedStatus !== "APPROVED" && normalizedStatus !== "REJECTED") {
+      setSearchError("Only approved or rejected entries can be opened in view-only mode.");
+      return;
+    }
+
+    const sourceTag = String(data?.sourceTag || "").trim().toUpperCase();
+    if (sourceTag === "GIVEAWAY_1") {
+      setIsSearchResultsModalOpen(false);
+      setIsGiveaway1NoticeOpen(true);
+      return;
+    }
+
+    setEntryForm(normalizeEntryFormData(data, { prefilledPassword: providedPassword }));
+    setProofReview(normalizeProofReview(data));
+    setIsFeedbackExpanded(false);
+    setSelectedFiles(EMPTY_FILES);
+    setFilePreviews(EMPTY_PREVIEWS);
+    setUploadStateByField(createInitialUploadFieldState());
+    setOpenedFromSearchResult(true);
+    setIsSearchResultsModalOpen(false);
+    setActiveModal("join");
+    closeSearchPasswordModal();
+  };
+
   const handleOpenSearchResult = async (entryId) => {
     setSearchError("");
     setFormError("");
     setFormMessage("");
 
     const selectedSearchResult = searchResults.find((entry) => entry.id === entryId) || null;
-    let providedPassword = "";
 
     try {
       if (selectedSearchResult?.passwordProtected) {
-        const promptedPassword = window.prompt("This entry is password-protected. Enter password to open:");
-        if (promptedPassword === null) {
-          return;
-        }
-        providedPassword = String(promptedPassword || "").trim();
-      }
-
-      const loadEntry = async () => {
-        const passwordQuery = providedPassword ? `?password=${encodeURIComponent(providedPassword)}` : "";
-        return apiRequest(`/api/public/giveaway-wheel/entries/${entryId}/search-open${passwordQuery}`);
-      };
-
-      let data;
-      while (true) {
-        try {
-          data = await loadEntry();
-          break;
-        } catch (error) {
-          const message = String(error?.message || "");
-          const isPasswordError = /password/i.test(message);
-          if (!isPasswordError) {
-            throw error;
-          }
-          const promptedPassword = window.prompt(message.includes("Invalid")
-            ? "Incorrect password. Please try again:"
-            : "This entry is password-protected. Enter password:");
-          if (promptedPassword === null) {
-            return;
-          }
-          providedPassword = String(promptedPassword || "").trim();
-        }
-      }
-
-      if (!data?.id) {
-        setSearchError("Entry details are not available right now.");
+        setSearchPasswordModal({
+          isOpen: true,
+          entryId,
+          password: "",
+          error: "",
+        });
         return;
       }
 
-      const normalizedStatus = String(data.status || "").toUpperCase();
-      if (normalizedStatus !== "APPROVED" && normalizedStatus !== "REJECTED") {
-        setSearchError("Only approved or rejected entries can be opened in view-only mode.");
-        return;
-      }
-
-      const sourceTag = String(data?.sourceTag || "").trim().toUpperCase();
-      if (sourceTag === "GIVEAWAY_1") {
-        setIsSearchResultsModalOpen(false);
-        setIsGiveaway1NoticeOpen(true);
-        return;
-      }
-
-      setEntryForm(normalizeEntryFormData(data, { prefilledPassword: providedPassword }));
-      setProofReview(normalizeProofReview(data));
-      setIsFeedbackExpanded(false);
-      setSelectedFiles(EMPTY_FILES);
-      setFilePreviews(EMPTY_PREVIEWS);
-      setUploadStateByField(createInitialUploadFieldState());
-      setOpenedFromSearchResult(true);
-      setIsSearchResultsModalOpen(false);
-      setActiveModal("join");
+      await openSearchResultEntry(entryId);
     } catch (error) {
-      setSearchError(error.message || "Unable to open this giveaway entry right now.");
+      const message = String(error?.message || "");
+      if (/password/i.test(message)) {
+        setSearchPasswordModal({
+          isOpen: true,
+          entryId,
+          password: "",
+          error: message.includes("Invalid") ? "Incorrect password. Please try again." : "Entry password required.",
+        });
+        return;
+      }
+      setSearchError(message || "Unable to open this giveaway entry right now.");
+    }
+  };
+
+  const handleSearchPasswordSubmit = async (event) => {
+    event.preventDefault();
+    const entryId = searchPasswordModal.entryId;
+    if (!entryId) return;
+    const password = String(searchPasswordModal.password || "").trim();
+    if (!password) {
+      setSearchPasswordModal((previous) => ({ ...previous, error: "Please enter your entry password." }));
+      return;
+    }
+
+    setSearchError("");
+    try {
+      await openSearchResultEntry(entryId, password);
+    } catch (error) {
+      const message = String(error?.message || "");
+      if (/password/i.test(message)) {
+        setSearchPasswordModal((previous) => ({
+          ...previous,
+          error: message.includes("Invalid") ? "Incorrect password. Please try again." : "Entry password required.",
+        }));
+        return;
+      }
+      setSearchError(message || "Unable to open this giveaway entry right now.");
+      closeSearchPasswordModal();
     }
   };
 
@@ -1951,15 +1981,15 @@ export default function GiveawayWheelPage() {
                 <p>{sideSearchDescription}</p>
 
                 <form className="giveaway-wheel-search-form giveaway-wheel-search-form-compact" onSubmit={handleSearchSubmit}>
-                  <label className="giveaway-wheel-search-input">
+                  <div className="giveaway-wheel-search-input-plain">
                     <Search size={16} aria-hidden="true" />
                     <input
                       type="search"
                       value={searchQuery}
                       onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder="Juan Dela Cruz"
+                      placeholder="Search full name"
                     />
-                  </label>
+                  </div>
                   <button type="submit" className="btn-primary" disabled={isSearching}>
                     {isSearching ? "Searching..." : "Search"}
                   </button>
@@ -2119,7 +2149,7 @@ export default function GiveawayWheelPage() {
                             aria-label={showEntryPassword ? "Hide password" : "Show password"}
                             title={showEntryPassword ? "Hide password" : "Show password"}
                           >
-                            {showEntryPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            {showEntryPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                           </button>
                         </div>
                         <small className="giveaway-entry-modal-v4-password-note">
@@ -2609,6 +2639,46 @@ export default function GiveawayWheelPage() {
                 })}
               </div>
             </div>
+          </section>
+        </div>
+      ) : null}
+
+      {searchPasswordModal.isOpen ? (
+        <div className="giveaway-wheel-modal-overlay" role="dialog" aria-modal="true" onClick={closeSearchPasswordModal}>
+          <section className="giveaway-wheel-modal-panel giveaway-wheel-search-results-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="giveaway-wheel-modal-head">
+              <div className="giveaway-wheel-modal-titleblock">
+                <h2>Enter Entry Password</h2>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={closeSearchPasswordModal} aria-label="Close password modal">
+                ✕
+              </button>
+            </div>
+            <form className="giveaway-wheel-modal-scroll" onSubmit={handleSearchPasswordSubmit}>
+              <div className="giveaway-wheel-search-results giveaway-wheel-search-results-block">
+                <label className="giveaway-entry-modal-v4-field" style={{ marginBottom: 0 }}>
+                  <span>Password</span>
+                  <div className="giveaway-entry-modal-v4-input-shell">
+                    <input
+                      type="password"
+                      value={searchPasswordModal.password}
+                      onChange={(event) => setSearchPasswordModal((previous) => ({ ...previous, password: event.target.value, error: "" }))}
+                      placeholder="Enter your entry password"
+                      autoFocus
+                    />
+                  </div>
+                </label>
+                {searchPasswordModal.error ? <div className="giveaway-wheel-inline-error">{searchPasswordModal.error}</div> : null}
+              </div>
+              <div className="confirm-action-footer modal-sticky-footer">
+                <button type="button" className="button-secondary giveaway-wheel-modal-btn" onClick={closeSearchPasswordModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary giveaway-wheel-modal-btn">
+                  Open Entry
+                </button>
+              </div>
+            </form>
           </section>
         </div>
       ) : null}
