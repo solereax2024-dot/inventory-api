@@ -2645,7 +2645,7 @@ export default function GiveawayWheelPage() {
 
       {searchPasswordModal.isOpen ? (
         <div className="giveaway-wheel-modal-overlay" role="dialog" aria-modal="true" onClick={closeSearchPasswordModal}>
-          <section className="giveaway-wheel-modal-panel giveaway-wheel-search-results-modal" onClick={(event) => event.stopPropagation()}>
+          <section className="giveaway-wheel-modal-panel giveaway-wheel-password-modal" onClick={(event) => event.stopPropagation()}>
             <div className="giveaway-wheel-modal-head">
               <div className="giveaway-wheel-modal-titleblock">
                 <h2>Enter Entry Password</h2>
@@ -2655,8 +2655,11 @@ export default function GiveawayWheelPage() {
               </button>
             </div>
             <form className="giveaway-wheel-modal-scroll" onSubmit={handleSearchPasswordSubmit}>
-              <div className="giveaway-wheel-search-results giveaway-wheel-search-results-block">
-                <label className="giveaway-entry-modal-v4-field" style={{ marginBottom: 0 }}>
+              <div className="giveaway-wheel-password-modal-body">
+                <p className="giveaway-wheel-password-modal-copy">
+                  This entry is password-protected. Enter the password used during registration.
+                </p>
+                <label className="giveaway-entry-modal-v4-field giveaway-wheel-password-modal-field" style={{ marginBottom: 0 }}>
                   <span>Password</span>
                   <div className="giveaway-entry-modal-v4-input-shell">
                     <input
@@ -2670,7 +2673,7 @@ export default function GiveawayWheelPage() {
                 </label>
                 {searchPasswordModal.error ? <div className="giveaway-wheel-inline-error">{searchPasswordModal.error}</div> : null}
               </div>
-              <div className="confirm-action-footer modal-sticky-footer">
+              <div className="confirm-action-footer modal-sticky-footer giveaway-wheel-password-modal-footer">
                 <button type="button" className="button-secondary giveaway-wheel-modal-btn" onClick={closeSearchPasswordModal}>
                   Cancel
                 </button>

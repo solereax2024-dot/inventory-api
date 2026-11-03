@@ -1932,6 +1932,43 @@
   max-height: min(82svh, 720px);
 }
 
+.giveaway-wheel-password-modal {
+  width: min(520px, 100%);
+  max-height: min(70svh, 460px);
+}
+
+.giveaway-wheel-password-modal .giveaway-wheel-modal-scroll {
+  padding-right: 0;
+  gap: 14px;
+}
+
+.giveaway-wheel-password-modal-body {
+  display: grid;
+  gap: 10px;
+  padding: 4px 2px 2px;
+}
+
+.giveaway-wheel-password-modal-copy {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.giveaway-wheel-password-modal-field > span {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.giveaway-wheel-password-modal-footer {
+  justify-content: flex-end;
+}
+
+.giveaway-wheel-password-modal-footer .giveaway-wheel-modal-btn {
+  min-width: 124px;
+}
+
 .giveaway-wheel-join-form-panel {
   background: transparent;
   border: 0;
@@ -2099,6 +2136,19 @@
   .giveaway-wheel-modal-head-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .giveaway-wheel-password-modal {
+    width: min(100%, 560px);
+    max-height: min(78svh, 520px);
+  }
+
+  .giveaway-wheel-password-modal-footer {
+    justify-content: stretch;
+  }
+
+  .giveaway-wheel-password-modal-footer .giveaway-wheel-modal-btn {
+    min-width: 0;
   }
 }
 
