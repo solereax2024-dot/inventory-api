@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Hash, Heart, ImageIcon, Lock, Search, Share2, SlidersHorizontal, Star, Upload, UserRound, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, EyeOff, Hash, Heart, ImageIcon, Lock, Search, Share2, SlidersHorizontal, Star, Upload, UserRound, Volume2, VolumeX, X } from "lucide-react";
 import { apiRequest, getFriendlyUploadErrorMessage } from "../../utils/api";
 import {
   GIVEAWAY_WHEEL_MAX_UPLOAD_SIZE_BYTES,
@@ -123,7 +123,6 @@ const WHEEL_HOST_SESSION_STORAGE_KEY = "giveawayWheelHostSession";
 const WHEEL_DRAW_MODE_PREF_STORAGE_KEY = "giveawayWheelDrawModePref";
 const WHEEL_SOUND_PREF_STORAGE_KEY = "giveawayWheelSoundPref";
 const WHEEL_TICK_PROFILE_PREF_STORAGE_KEY = "giveawayWheelTickProfilePref";
-const WHEEL_SOUND_VOLUME_PREF_STORAGE_KEY = "giveawayWheelSoundVolumePref";
 const HOST_STATUS_NOTICE_DURATION_MS = 5000;
 const MIN_UPLOAD_DIMENSION_PX = 120;
 const ALL_PROOF_FIELD_KEYS = [...GIVEAWAY_WHEEL_PROOF_FIELDS.map((field) => field.key), GIVEAWAY_WHEEL_PROFILE_FIELD.key];
@@ -432,23 +431,6 @@ function writeTickProfilePreference(profile) {
   window.sessionStorage.setItem(WHEEL_TICK_PROFILE_PREF_STORAGE_KEY, String(profile || "BALANCED"));
 }
 
-function readSoundVolumePreference() {
-  try {
-    const raw = Number(window.sessionStorage.getItem(WHEEL_SOUND_VOLUME_PREF_STORAGE_KEY));
-    if (Number.isFinite(raw)) {
-      return Math.min(1, Math.max(0.15, raw));
-    }
-  } catch {
-    // Ignore preference read errors.
-  }
-  return 0.72;
-}
-
-function writeSoundVolumePreference(volume) {
-  const normalized = Math.min(1, Math.max(0.15, Number(volume) || 0.72));
-  window.sessionStorage.setItem(WHEEL_SOUND_VOLUME_PREF_STORAGE_KEY, String(normalized));
-}
-
 function hexToRgb(hexColor) {
   const normalized = String(hexColor || "").replace("#", "").trim();
   if (normalized.length !== 6) return null;
@@ -589,7 +571,6 @@ export default function GiveawayWheelPage() {
   const [pointerPingTone, setPointerPingTone] = useState("warm");
   const [isWheelSoundEnabled, setIsWheelSoundEnabled] = useState(() => readSoundPreference());
   const [wheelTickProfile, setWheelTickProfile] = useState(() => readTickProfilePreference());
-  const [wheelSoundVolume, setWheelSoundVolume] = useState(() => readSoundVolumePreference());
   const [showEntryPassword, setShowEntryPassword] = useState(false);
 
   const loadWheelEntries = async () => {
@@ -679,10 +660,6 @@ export default function GiveawayWheelPage() {
   useEffect(() => {
     writeTickProfilePreference(wheelTickProfile);
   }, [wheelTickProfile]);
-
-  useEffect(() => {
-    writeSoundVolumePreference(wheelSoundVolume);
-  }, [wheelSoundVolume]);
 
   useEffect(() => {
     if (!winnerPopup.isOpen) {
@@ -1064,7 +1041,7 @@ export default function GiveawayWheelPage() {
       oscillator.frequency.exponentialRampToValueAtTime(tickConfig.endFrequency, context.currentTime + tickConfig.duration * 0.9);
 
       gainNode.gain.setValueAtTime(0.0001, context.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(tickConfig.attackGain * wheelSoundVolume, context.currentTime + 0.008);
+      gainNode.gain.exponentialRampToValueAtTime(tickConfig.attackGain, context.currentTime + 0.008);
       gainNode.gain.exponentialRampToValueAtTime(tickConfig.endGain, context.currentTime + tickConfig.duration);
 
       oscillator.connect(gainNode);
@@ -1124,7 +1101,7 @@ export default function GiveawayWheelPage() {
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(160, config.endFrequency + toneOffset * 0.4), context.currentTime + config.duration * 0.9);
 
     gainNode.gain.setValueAtTime(0.0001, context.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(config.attackGain * wheelSoundVolume, context.currentTime + 0.006);
+    gainNode.gain.exponentialRampToValueAtTime(config.attackGain, context.currentTime + 0.006);
     gainNode.gain.exponentialRampToValueAtTime(config.endGain, context.currentTime + config.duration);
 
     oscillator.connect(gainNode);
@@ -1185,14 +1162,6 @@ export default function GiveawayWheelPage() {
       flashHostStatusNotice(`Tick tone: ${labelByMode[next]}.`);
       return next;
     });
-  };
-
-  const handleWheelSoundVolumeChange = (event) => {
-    const sliderValue = Number(event.target.value);
-    if (!Number.isFinite(sliderValue)) {
-      return;
-    }
-    setWheelSoundVolume(Math.min(1, Math.max(0.15, sliderValue / 100)));
   };
 
   const closeHostGate = () => {
@@ -1765,6 +1734,15 @@ export default function GiveawayWheelPage() {
                 <SlidersHorizontal size={14} aria-hidden="true" />
               </button>
               <div className={`giveaway-wheel-pointer is-${pointerPingTone}${isPointerTickPulse ? " is-tick" : ""}${isPointerPing ? " is-ping" : ""}`} aria-hidden="true" />
+              <button
+                type="button"
+                className="giveaway-wheel-pointer-sound-btn"
+                onClick={toggleWheelSound}
+                aria-label={isWheelSoundEnabled ? "Mute wheel sound" : "Enable wheel sound"}
+                title={isWheelSoundEnabled ? "Sound on" : "Sound off"}
+              >
+                {isWheelSoundEnabled ? <Volume2 size={13} aria-hidden="true" /> : <VolumeX size={13} aria-hidden="true" />}
+              </button>
               <div className={`giveaway-wheel-svg-shell giveaway-wheel-svg-shell-compact${isSpinning ? " is-spinning" : ""}`}>
                 <svg
                   className="giveaway-wheel-svg"
@@ -2536,18 +2514,6 @@ export default function GiveawayWheelPage() {
                 >
                   Tick {wheelTickProfile === "CLICKY" ? "Clicky" : wheelTickProfile === "SOFT" ? "Soft" : wheelTickProfile === "TURBO" ? "Turbo" : "Balanced"}
                 </button>
-                <label className="giveaway-wheel-host-volume">
-                  <span>Vol {Math.round(wheelSoundVolume * 100)}%</span>
-                  <input
-                    type="range"
-                    min="15"
-                    max="100"
-                    step="1"
-                    value={Math.round(wheelSoundVolume * 100)}
-                    onChange={handleWheelSoundVolumeChange}
-                    disabled={!isWheelSoundEnabled}
-                  />
-                </label>
               </div>
               <div className="giveaway-wheel-host-session-actions">
                 <button
@@ -2654,8 +2620,9 @@ export default function GiveawayWheelPage() {
                 ✕
               </button>
             </div>
-            <form className="giveaway-wheel-modal-scroll" onSubmit={handleSearchPasswordSubmit}>
-              <div className="giveaway-wheel-password-modal-body">
+            <form className="giveaway-wheel-password-modal-form" onSubmit={handleSearchPasswordSubmit}>
+              <div className="giveaway-wheel-modal-scroll giveaway-wheel-password-modal-scroll">
+                <div className="giveaway-wheel-password-modal-body">
                 <p className="giveaway-wheel-password-modal-copy">
                   This entry is password-protected. Enter the password used during registration.
                 </p>
@@ -2672,6 +2639,7 @@ export default function GiveawayWheelPage() {
                   </div>
                 </label>
                 {searchPasswordModal.error ? <div className="giveaway-wheel-inline-error">{searchPasswordModal.error}</div> : null}
+                </div>
               </div>
               <div className="confirm-action-footer modal-sticky-footer giveaway-wheel-password-modal-footer">
                 <button type="button" className="button-secondary giveaway-wheel-modal-btn" onClick={closeSearchPasswordModal}>
