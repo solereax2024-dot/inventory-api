@@ -424,11 +424,11 @@ function readTickProfilePreference() {
   } catch {
     // Ignore preference read errors.
   }
-  return "BALANCED";
+  return "TURBO";
 }
 
 function writeTickProfilePreference(profile) {
-  window.sessionStorage.setItem(WHEEL_TICK_PROFILE_PREF_STORAGE_KEY, String(profile || "BALANCED"));
+  window.sessionStorage.setItem(WHEEL_TICK_PROFILE_PREF_STORAGE_KEY, String(profile || "TURBO"));
 }
 
 function hexToRgb(hexColor) {
@@ -1032,7 +1032,7 @@ export default function GiveawayWheelPage() {
     }
 
     const playTickTone = (toneMode) => {
-      const selectedProfile = WHEEL_TICK_PROFILE_CONFIG[wheelTickProfile] || WHEEL_TICK_PROFILE_CONFIG.BALANCED;
+      const selectedProfile = WHEEL_TICK_PROFILE_CONFIG[wheelTickProfile] || WHEEL_TICK_PROFILE_CONFIG.TURBO;
       const tickConfig = selectedProfile[toneMode] || selectedProfile.segment;
       const oscillator = context.createOscillator();
       const gainNode = context.createGain();
@@ -1090,7 +1090,7 @@ export default function GiveawayWheelPage() {
       context.resume().catch(() => undefined);
     }
 
-    const selectedProfile = WHEEL_TICK_PROFILE_CONFIG[wheelTickProfile] || WHEEL_TICK_PROFILE_CONFIG.BALANCED;
+    const selectedProfile = WHEEL_TICK_PROFILE_CONFIG[wheelTickProfile] || WHEEL_TICK_PROFILE_CONFIG.TURBO;
     const config = selectedProfile.segment;
     const toneOffset = tone === "cool" ? 36 : -10;
 
@@ -1151,7 +1151,7 @@ export default function GiveawayWheelPage() {
       TURBO: "SOFT",
     };
     setWheelTickProfile((previous) => {
-      const current = previous in nextByCurrent ? previous : "BALANCED";
+      const current = previous in nextByCurrent ? previous : "TURBO";
       const next = nextByCurrent[current];
       const labelByMode = {
         SOFT: "Soft",
@@ -1859,6 +1859,11 @@ export default function GiveawayWheelPage() {
                 <span className="giveaway-wheel-center-title is-bottom">REAX</span>
                 <small className="giveaway-wheel-center-mark" />
               </button>
+              <div className="giveaway-wheel-slot-chip-row">
+                <span className="giveaway-wheel-slot-chip" aria-live="polite">
+                  {weightedSegments.length} Active Slots
+                </span>
+              </div>
             </div>
 
             <div className="giveaway-wheel-stage-copy">

@@ -378,6 +378,36 @@
   gap: 10px;
 }
 
+.giveaway-wheel-slot-chip-row {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  transform: translateX(-50%);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.giveaway-wheel-slot-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 33px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(187, 135, 132, 0.52);
+  background: linear-gradient(180deg, #f3dfd8 0%, #e8c4be 100%);
+  color: #5f3439;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow:
+    0 10px 20px rgba(110, 71, 75, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
 .giveaway-wheel-prize-strip-shell {
   position: relative;
   --giveaway-prize-visible-columns: 4;
@@ -2215,19 +2245,32 @@
 }
 
 @media (min-width: 1081px) {
+  .giveaway-wheel-page {
+    gap: 16px;
+    padding: 10px 0 12px;
+  }
+
   .giveaway-wheel-hero-compact {
     width: min(1520px, calc(100vw - 28px));
   }
 
   .giveaway-wheel-hero-compact .giveaway-wheel-hero-panel-compact {
     grid-template-columns: minmax(0, 1.16fr) minmax(420px, 0.84fr);
-    gap: 30px;
-    padding: 30px 28px 28px;
+    gap: 24px;
+    padding: 24px 24px 22px;
   }
 
   .giveaway-wheel-wheel-wrap,
   .giveaway-wheel-svg-shell-compact {
-    width: min(100%, 820px);
+    width: min(100%, clamp(620px, 68vh, 780px));
+  }
+
+  .giveaway-wheel-wheel-wrap {
+    height: clamp(620px, 68vh, 780px);
+  }
+
+  .giveaway-wheel-svg-shell-compact {
+    height: 100%;
   }
 
   .giveaway-wheel-wheel-wrap {
@@ -2258,6 +2301,10 @@
   .giveaway-wheel-hero-compact .giveaway-wheel-action-row-sidebar .btn-primary {
     min-height: 74px;
     font-size: 1.08rem;
+  }
+
+  .giveaway-wheel-slot-chip-row {
+    bottom: -8px;
   }
 }
 
@@ -2463,6 +2510,16 @@
   .giveaway-wheel-hero-compact .giveaway-wheel-side-card h2 {
     overflow-wrap: anywhere;
     word-break: break-word;
+  }
+
+  .giveaway-wheel-slot-chip {
+    font-size: 0.74rem;
+    min-height: 28px;
+    padding: 5px 11px;
+  }
+
+  .giveaway-wheel-slot-chip-row {
+    bottom: -10px;
   }
 
   .giveaway-wheel-winner-popup {
