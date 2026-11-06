@@ -26,6 +26,7 @@ const DESKTOP_BREAKPOINT = 901;
 const DESKTOP_BASE_IMAGE_SCALE = 1;
 const MOBILE_BASE_IMAGE_SCALE = 1;
 const ENABLE_ONLINE_PAYMENT = String(import.meta.env.VITE_ENABLE_PAYMONGO_CHECKOUT || "").toLowerCase() === "true";
+const SOLE_REAX_FACEBOOK_PAGE_URL = String(import.meta.env.VITE_SOLEREAX_FACEBOOK_URL || "https://www.facebook.com/solereax/").trim();
 
 export default function ReservePage() {
   const navigate = useNavigate();
@@ -47,6 +48,8 @@ export default function ReservePage() {
   } = useModalState(false);
   const [successReference, setSuccessReference] = useState("");
   const [successOrderId, setSuccessOrderId] = useState(null);
+  const [isReferenceCopied, setIsReferenceCopied] = useState(false);
+  const [hasClickedNotifyFacebook, setHasClickedNotifyFacebook] = useState(false);
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const {
@@ -665,6 +668,16 @@ export default function ReservePage() {
   }, [message]);
 
   useEffect(() => {
+    if (!isSuccessOpen || hasClickedNotifyFacebook) {
+      return undefined;
+    }
+    const reminderTimer = window.setTimeout(() => {
+      setMessage("Tip: Message Sole Reax on Facebook with your reference for faster response.");
+    }, 6000);
+    return () => window.clearTimeout(reminderTimer);
+  }, [isSuccessOpen, hasClickedNotifyFacebook]);
+
+  useEffect(() => {
     closeSizeGuideModal();
   }, [product?.id, product?.brand, closeSizeGuideModal]);
 
@@ -881,7 +894,10 @@ export default function ReservePage() {
       closeConfirmModal();
       setSuccessReference(reservationRef);
       setSuccessOrderId(response?.id ?? null);
+      setIsReferenceCopied(false);
+      setHasClickedNotifyFacebook(false);
       openSuccessModal();
+      setMessage("Reservation sent. Please notify Sole Reax on Facebook with your reference code.");
       const metaPayload = {
         content_ids: [String(product.id)],
         content_name: product.name || "",
@@ -901,10 +917,57 @@ export default function ReservePage() {
     }
   };
 
+  const notifyViaFacebook = () => {
+    if (!SOLE_REAX_FACEBOOK_PAGE_URL) {
+      setMessage("Facebook page URL is not configured.");
+      return;
+    }
+
+    setHasClickedNotifyFacebook(true);
+
+    const popup = window.open(SOLE_REAX_FACEBOOK_PAGE_URL, "_blank", "noopener,noreferrer");
+    if (popup) {
+      popup.focus();
+      return;
+    }
+
+    // Fallback for strict pop-up blockers.
+    window.location.assign(SOLE_REAX_FACEBOOK_PAGE_URL);
+  };
+
+  const copyReferenceToClipboard = async () => {
+    if (!successReference) {
+      setMessage("No reference available yet.");
+      return;
+    }
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(successReference);
+      } else {
+        const tempInput = document.createElement("input");
+        tempInput.value = successReference;
+        tempInput.setAttribute("readonly", "true");
+        tempInput.style.position = "absolute";
+        tempInput.style.left = "-9999px";
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+      }
+      setIsReferenceCopied(true);
+      setMessage("Reference copied. Paste it in your Facebook message.");
+    } catch {
+      setMessage("Unable to copy automatically. Please copy the reference manually.");
+    }
+  };
+
   const handleReserveAnother = () => {
     closeSuccessModal();
     setSuccessOrderId(null);
     setSuccessReference("");
+    setIsReferenceCopied(false);
+    setHasClickedNotifyFacebook(false);
     setReserve((prev) => ({
       ...prev,
       customerName: "",
@@ -1509,7 +1572,10 @@ export default function ReservePage() {
         isOpen={isSuccessOpen}
         onClose={closeSuccessModal}
         successReference={successReference}
+        isReferenceCopied={isReferenceCopied}
         onReserveAnother={handleReserveAnother}
+        onCopyReference={() => copyReferenceToClipboard().catch(() => setMessage("Unable to copy automatically. Please copy the reference manually."))}
+        onNotifyFacebook={notifyViaFacebook}
         enableOnlinePayment={ENABLE_ONLINE_PAYMENT}
         onPayment={() => startOnlinePayment().catch((err) => setMessage(err.message))}
         successOrderId={successOrderId}

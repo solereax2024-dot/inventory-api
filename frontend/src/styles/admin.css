@@ -113,6 +113,9 @@
 }
 
 .admin-subnav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 0;
   width: auto;
   min-height: 38px;
@@ -124,6 +127,26 @@
   padding: 0 14px;
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.admin-subnav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-subnav-tab.active .admin-subnav-badge {
+  background: #fff;
+  color: var(--primary-strong);
 }
 
 .admin-subnav-tab.active {

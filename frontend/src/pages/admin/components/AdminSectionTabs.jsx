@@ -9,7 +9,10 @@ export default function AdminSectionTabs({ adminSections, activeAdminSection, on
             className={`admin-subnav-tab ${activeAdminSection === section.key ? "active" : ""}`}
             onClick={() => onSelectSection(section.key)}
           >
-            {section.label}
+            <span>{section.label}</span>
+            {Number(section.badgeCount || 0) > 0 ? (
+              <span className="admin-subnav-badge" aria-label={`${section.badgeCount} new`}>{section.badgeCount}</span>
+            ) : null}
           </button>
         ))}
       </div>
