@@ -461,6 +461,49 @@ body.theme-dark .reserve-page-crumb-current {
   color: #0f172a;
 }
 
+.reserve-success-required-chip {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+}
+
+.reserve-success-primary-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.reserve-success-facebook-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+.reserve-success-copy-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+.reserve-success-confirm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  font-size: 12.5px;
+  color: #334155;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, #cbd5e1);
+  background: color-mix(in srgb, var(--primary-soft-2) 32%, #ffffff);
+}
+
+.reserve-success-confirm-check input {
+  margin-top: 2px;
+}
+
 .reserve-success-actions {
   margin-top: 2px;
   display: flex;
@@ -489,6 +532,18 @@ body.theme-dark .reserve-success-ref {
 
 body.theme-dark .reserve-success-ref strong {
   color: #e2e8f0;
+}
+
+body.theme-dark .reserve-success-required-chip {
+  color: #fef3c7;
+  background: rgba(146, 64, 14, 0.35);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+body.theme-dark .reserve-success-confirm-check {
+  color: #cbd5e1;
+  border-color: color-mix(in srgb, var(--primary) 24%, #334155);
+  background: color-mix(in srgb, var(--primary-soft) 30%, #0f172a);
 }
 
 .reserve-confirm-header {

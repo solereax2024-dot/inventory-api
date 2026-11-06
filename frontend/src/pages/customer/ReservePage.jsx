@@ -26,6 +26,7 @@ const DESKTOP_BREAKPOINT = 901;
 const DESKTOP_BASE_IMAGE_SCALE = 1;
 const MOBILE_BASE_IMAGE_SCALE = 1;
 const ENABLE_ONLINE_PAYMENT = String(import.meta.env.VITE_ENABLE_PAYMONGO_CHECKOUT || "").toLowerCase() === "true";
+const SOLE_REAX_FACEBOOK_MESSENGER_URL = String(import.meta.env.VITE_SOLEREAX_FACEBOOK_MESSENGER_URL || "https://m.me/solereax").trim();
 const SOLE_REAX_FACEBOOK_PAGE_URL = String(import.meta.env.VITE_SOLEREAX_FACEBOOK_URL || "https://www.facebook.com/solereax/").trim();
 
 export default function ReservePage() {
@@ -50,6 +51,7 @@ export default function ReservePage() {
   const [successOrderId, setSuccessOrderId] = useState(null);
   const [isReferenceCopied, setIsReferenceCopied] = useState(false);
   const [hasClickedNotifyFacebook, setHasClickedNotifyFacebook] = useState(false);
+  const [hasConfirmedFacebookMessage, setHasConfirmedFacebookMessage] = useState(false);
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const {
@@ -896,6 +898,7 @@ export default function ReservePage() {
       setSuccessOrderId(response?.id ?? null);
       setIsReferenceCopied(false);
       setHasClickedNotifyFacebook(false);
+      setHasConfirmedFacebookMessage(false);
       openSuccessModal();
       setMessage("Reservation sent. Please notify Sole Reax on Facebook with your reference code.");
       const metaPayload = {
@@ -918,26 +921,30 @@ export default function ReservePage() {
   };
 
   const notifyViaFacebook = () => {
-    if (!SOLE_REAX_FACEBOOK_PAGE_URL) {
+    const targetUrl = SOLE_REAX_FACEBOOK_MESSENGER_URL || SOLE_REAX_FACEBOOK_PAGE_URL;
+    if (!targetUrl) {
       setMessage("Facebook page URL is not configured.");
       return;
     }
 
     setHasClickedNotifyFacebook(true);
+    copyReferenceToClipboard({ silent: true }).catch(() => {});
 
-    const popup = window.open(SOLE_REAX_FACEBOOK_PAGE_URL, "_blank", "noopener,noreferrer");
+    const popup = window.open(targetUrl, "_blank", "noopener,noreferrer");
     if (popup) {
       popup.focus();
       return;
     }
 
     // Fallback for strict pop-up blockers.
-    window.location.assign(SOLE_REAX_FACEBOOK_PAGE_URL);
+    window.location.assign(targetUrl);
   };
 
-  const copyReferenceToClipboard = async () => {
+  const copyReferenceToClipboard = async ({ silent = false } = {}) => {
     if (!successReference) {
-      setMessage("No reference available yet.");
+      if (!silent) {
+        setMessage("No reference available yet.");
+      }
       return;
     }
 
@@ -956,9 +963,13 @@ export default function ReservePage() {
         document.body.removeChild(tempInput);
       }
       setIsReferenceCopied(true);
-      setMessage("Reference copied. Paste it in your Facebook message.");
+      if (!silent) {
+        setMessage("Reference copied. Paste it in your Facebook message.");
+      }
     } catch {
-      setMessage("Unable to copy automatically. Please copy the reference manually.");
+      if (!silent) {
+        setMessage("Unable to copy automatically. Please copy the reference manually.");
+      }
     }
   };
 
@@ -968,6 +979,7 @@ export default function ReservePage() {
     setSuccessReference("");
     setIsReferenceCopied(false);
     setHasClickedNotifyFacebook(false);
+    setHasConfirmedFacebookMessage(false);
     setReserve((prev) => ({
       ...prev,
       customerName: "",
@@ -1573,6 +1585,10 @@ export default function ReservePage() {
         onClose={closeSuccessModal}
         successReference={successReference}
         isReferenceCopied={isReferenceCopied}
+        hasConfirmedFacebookMessage={hasConfirmedFacebookMessage}
+        onToggleConfirmedFacebookMessage={setHasConfirmedFacebookMessage}
+        requireFacebookConfirmation={!ENABLE_ONLINE_PAYMENT}
+        onAttemptCloseBeforeConfirm={() => setMessage("Please confirm you already messaged Sole Reax on Facebook before continuing.")}
         onReserveAnother={handleReserveAnother}
         onCopyReference={() => copyReferenceToClipboard().catch(() => setMessage("Unable to copy automatically. Please copy the reference manually."))}
         onNotifyFacebook={notifyViaFacebook}

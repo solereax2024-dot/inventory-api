@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, PlusCircle, RotateCcw, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -81,6 +81,7 @@ const createManualReservationForm = () => ({
 export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const UNDO_WINDOW_MS = 5000;
   const RESERVATION_POLL_INTERVAL_MS = 20000;
+  const RESERVATION_LAST_SEEN_STORAGE_KEY = "adminReservationsLastSeenAt";
   const navigate = useNavigate();
   const [token, setToken] = useState(() => localStorage.getItem("adminToken") || "");
   const [adminRole, setAdminRole] = useState(() => {
@@ -187,9 +188,10 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [newProductNameModal, setNewProductNameModal] = useState({ isOpen: false, productName: "" });
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
   const [activeAdminSection, setActiveAdminSection] = useState("products");
-  const [unseenReservationIds, setUnseenReservationIds] = useState([]);
-  const hasReservationBaselineRef = useRef(false);
-  const knownReservationIdsRef = useRef(new Set());
+  const [lastSeenReservationAt, setLastSeenReservationAt] = useState(() => {
+    const raw = Number(localStorage.getItem("adminReservationsLastSeenAt") || 0);
+    return Number.isFinite(raw) && raw > 0 ? raw : 0;
+  });
     const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
   const [gamingSettings, setGamingSettings] = useState({ giveawayOneVisible: false, giveawayTwoVisible: false });
   const [giveaways, setGiveaways] = useState([
@@ -277,6 +279,17 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     };
   };
 
+   const unseenReservationIds = useMemo(() => {
+      const threshold = Number(lastSeenReservationAt || 0);
+      return orders
+        .filter((order) => {
+          const createdAtMs = new Date(order?.createdAt || 0).getTime();
+          return Number.isFinite(createdAtMs) && createdAtMs > threshold;
+        })
+        .map((order) => String(order?.id || "").trim())
+        .filter(Boolean);
+    }, [orders, lastSeenReservationAt]);
+
    const unseenReservationCount = unseenReservationIds.length;
 
    const adminSections = useMemo(
@@ -289,34 +302,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       [isSuperAdmin, unseenReservationCount]
     );
 
-  const syncOrdersWithNotifications = (nextOrders, options = {}) => {
-    const shouldMarkAllSeen = options.markAllSeen === true || activeAdminSection === "reservations";
-    const normalizedOrders = Array.isArray(nextOrders) ? nextOrders : [];
-    const nextIdList = normalizedOrders
-      .map((order) => String(order?.id || "").trim())
-      .filter(Boolean);
-    const nextIdSet = new Set(nextIdList);
-
-    setOrders(normalizedOrders);
-    setUnseenReservationIds((prev) => {
-      const preserved = new Set(prev.filter((id) => nextIdSet.has(id)));
-      if (!hasReservationBaselineRef.current) {
-        hasReservationBaselineRef.current = true;
-        return [];
-      }
-      if (shouldMarkAllSeen) {
-        return [];
-      }
-      nextIdList.forEach((id) => {
-        if (!knownReservationIdsRef.current.has(id)) {
-          preserved.add(id);
-        }
-      });
-      return Array.from(preserved);
-    });
-
-    knownReservationIdsRef.current = nextIdSet;
-  };
 
   const mergeUpdatedProduct = (updatedProduct) => {
     if (!updatedProduct?.id) {
@@ -384,7 +369,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         apiRequest("/api/admin/settings/gaming/giveaway-wheel/entries", "GET", undefined, authToken),
       ]);
       setProducts(productData);
-      syncOrdersWithNotifications(orderData);
+      setOrders(Array.isArray(orderData) ? orderData : []);
       setSavedBrands(brandData);
       setSavedProductNames(productNameData);
       setGamingSettings({
@@ -1034,13 +1019,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   }, [token, adminRole, onAdminAuthChange]);
 
   useEffect(() => {
-    if (token) {
+    if (!token) {
+      setLastSeenReservationAt(0);
       return;
     }
-    setUnseenReservationIds([]);
-    hasReservationBaselineRef.current = false;
-    knownReservationIdsRef.current = new Set();
-  }, [token]);
+
+    if (lastSeenReservationAt > 0) {
+      return;
+    }
+
+    const baseline = Date.now();
+    localStorage.setItem(RESERVATION_LAST_SEEN_STORAGE_KEY, String(baseline));
+    setLastSeenReservationAt(baseline);
+  }, [token, lastSeenReservationAt]);
 
   useEffect(() => {
     if (!token) {
@@ -1050,7 +1041,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     const refreshOrders = async () => {
       try {
         const latestOrders = await apiRequest("/api/admin/orders", "GET", undefined, token);
-        syncOrdersWithNotifications(latestOrders);
+        setOrders(Array.isArray(latestOrders) ? latestOrders : []);
       } catch {
         // Keep polling silent to avoid noisy toasts when connection briefly drops.
       }
@@ -1061,13 +1052,15 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }, RESERVATION_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
-  }, [token, activeAdminSection]);
+  }, [token]);
 
   useEffect(() => {
     if (activeAdminSection !== "reservations") {
       return;
     }
-    setUnseenReservationIds([]);
+    const nextSeenAt = Date.now();
+    localStorage.setItem(RESERVATION_LAST_SEEN_STORAGE_KEY, String(nextSeenAt));
+    setLastSeenReservationAt(nextSeenAt);
   }, [activeAdminSection]);
 
   useEffect(() => {
