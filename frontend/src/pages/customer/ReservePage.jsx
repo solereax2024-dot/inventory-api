@@ -12,6 +12,7 @@ import { getOrCreateViewSessionId, shouldTrackViewForScope } from "../../utils/t
 import { applyPromotionPreviewPrice, formatMaskedPriceDisplay, PHP_CURRENCY, formatPriceDisplay } from "../../utils/price";
 import { trackMetaEvent } from "../../utils/tracking";
 import { stripColorwayFromDescription } from "../../utils/productDescription";
+import { getProductColorways } from "../../utils/productFormHelpers";
 import { ProductCard } from "../../components/catalog";
 import {
   ReserveConfirmModal,
@@ -48,11 +49,7 @@ export default function ReservePage() {
     close: closeSuccessModal
   } = useModalState(false);
   const [successReference, setSuccessReference] = useState("");
-  const [successOrderId, setSuccessOrderId] = useState(null);
-  const [isReferenceCopied, setIsReferenceCopied] = useState(false);
   const [hasClickedNotifyFacebook, setHasClickedNotifyFacebook] = useState(false);
-  const [hasConfirmedFacebookMessage, setHasConfirmedFacebookMessage] = useState(false);
-  const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     isOpen: isSizeGuideOpen,
@@ -175,6 +172,10 @@ export default function ReservePage() {
 
   const colorways = useMemo(
     () => (product ? getSortedColorwaysFromStocks(product.stocks) : []),
+    [product]
+  );
+  const selectableColorways = useMemo(
+    () => (product ? getProductColorways(product) : []),
     [product]
   );
   const prioritizedColorways = useMemo(() => {
@@ -604,12 +605,13 @@ export default function ReservePage() {
   };
 
    useEffect(() => {
-     if (!product || colorways.length === 0) return;
+     if (!product) return;
      const preferredColorway = searchParams.get("colorway");
-     const matchedPreferredColorway = colorways.find(
+     const pool = colorways.length > 0 ? colorways : selectableColorways;
+     const matchedPreferredColorway = pool.find(
        (colorway) => normalizeColorwayValue(colorway) === normalizeColorwayValue(preferredColorway)
      );
-     const selectedColorway = matchedPreferredColorway ? matchedPreferredColorway : colorways[0];
+     const selectedColorway = matchedPreferredColorway || pool[0] || "DEFAULT";
 
      // Keep the entry colorway pinned for thumbnail ordering.
      setEntryColorway(selectedColorway);
@@ -620,7 +622,7 @@ export default function ReservePage() {
        sizeGroup: prev.sizeGroup || "MEN"
      }));
      setHasConfirmedQuantity(false);
-   }, [product?.id, colorways]);
+   }, [product?.id, colorways, selectableColorways]);
 
 
   useEffect(() => {
@@ -895,10 +897,7 @@ export default function ReservePage() {
       const reservationRef = String(response?.orderCode || response?.reference || response?.id || "").trim();
       closeConfirmModal();
       setSuccessReference(reservationRef);
-      setSuccessOrderId(response?.id ?? null);
-      setIsReferenceCopied(false);
       setHasClickedNotifyFacebook(false);
-      setHasConfirmedFacebookMessage(false);
       openSuccessModal();
       setMessage("Reservation sent. Please notify Sole Reax on Facebook with your reference code.");
       const metaPayload = {
@@ -928,7 +927,9 @@ export default function ReservePage() {
     }
 
     setHasClickedNotifyFacebook(true);
-    copyReferenceToClipboard({ silent: true }).catch(() => {});
+    copyReferenceToClipboard({ silent: false }).catch(() => {
+      setMessage("Unable to copy automatically. Please copy the reference shown in your order.");
+    });
 
     const popup = window.open(targetUrl, "_blank", "noopener,noreferrer");
     if (popup) {
@@ -962,68 +963,13 @@ export default function ReservePage() {
         document.execCommand("copy");
         document.body.removeChild(tempInput);
       }
-      setIsReferenceCopied(true);
       if (!silent) {
-        setMessage("Reference copied. Paste it in your Facebook message.");
+        setMessage("Order reference copied and ready to send on Facebook.");
       }
     } catch {
       if (!silent) {
-        setMessage("Unable to copy automatically. Please copy the reference manually.");
+        setMessage("Unable to copy automatically. Please copy the reference shown in your order.");
       }
-    }
-  };
-
-  const handleReserveAnother = () => {
-    closeSuccessModal();
-    setSuccessOrderId(null);
-    setSuccessReference("");
-    setIsReferenceCopied(false);
-    setHasClickedNotifyFacebook(false);
-    setHasConfirmedFacebookMessage(false);
-    setReserve((prev) => ({
-      ...prev,
-      customerName: "",
-      customerContact: "",
-      notes: "",
-        mop: "",
-        mopOther: "",
-      quantity: 0
-    }));
-    setPromoCode("");
-    setAppliedPromotion(null);
-    setAutoSalePromotion(null);
-    setPromoMessage("");
-    setHasConfirmedQuantity(false);
-  };
-
-  const startOnlinePayment = async () => {
-    if (!ENABLE_ONLINE_PAYMENT) {
-      setMessage("Online payment is coming soon.");
-      return;
-    }
-    if (!successOrderId) {
-      setMessage("Missing reservation ID. Please refresh and try again.");
-      return;
-    }
-
-    setIsPaymentRedirecting(true);
-    try {
-      const currentPath = `${window.location.origin}${location.pathname}`;
-      const response = await apiRequest("/api/public/payments/paymongo/checkout", "POST", {
-        orderId: Number(successOrderId),
-        successUrl: `${currentPath}?payment=success`,
-        cancelUrl: `${currentPath}?payment=cancel`
-      });
-      const checkoutUrl = String(response?.checkoutUrl || "").trim();
-      if (!checkoutUrl) {
-        setMessage("No checkout URL received.");
-        setIsPaymentRedirecting(false);
-        return;
-      }
-      window.location.assign(checkoutUrl);
-    } catch (err) {
-      setMessage(err.message || "Unable to start online payment.");
-      setIsPaymentRedirecting(false);
     }
   };
 
@@ -1582,21 +1528,12 @@ export default function ReservePage() {
 
       <ReserveSuccessModal
         isOpen={isSuccessOpen}
-        onClose={closeSuccessModal}
         successReference={successReference}
-        isReferenceCopied={isReferenceCopied}
-        hasConfirmedFacebookMessage={hasConfirmedFacebookMessage}
-        onToggleConfirmedFacebookMessage={setHasConfirmedFacebookMessage}
-        requireFacebookConfirmation={!ENABLE_ONLINE_PAYMENT}
-        onAttemptCloseBeforeConfirm={() => setMessage("Please confirm you already messaged Sole Reax on Facebook before continuing.")}
-        onReserveAnother={handleReserveAnother}
-        onCopyReference={() => copyReferenceToClipboard().catch(() => setMessage("Unable to copy automatically. Please copy the reference manually."))}
         onNotifyFacebook={notifyViaFacebook}
-        enableOnlinePayment={ENABLE_ONLINE_PAYMENT}
-        onPayment={() => startOnlinePayment().catch((err) => setMessage(err.message))}
-        successOrderId={successOrderId}
-        isPaymentRedirecting={isPaymentRedirecting}
-        onBackToCollections={() => navigate(backToCollectionsPath)}
+        onBackToCollections={() => {
+          closeSuccessModal();
+          navigate(backToCollectionsPath);
+        }}
       />
       {message ? <div className="toast-banner">{message}</div> : null}
     </main>

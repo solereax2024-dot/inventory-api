@@ -81,7 +81,6 @@ const createManualReservationForm = () => ({
 export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const UNDO_WINDOW_MS = 5000;
   const RESERVATION_POLL_INTERVAL_MS = 20000;
-  const RESERVATION_LAST_SEEN_STORAGE_KEY = "adminReservationsLastSeenAt";
   const navigate = useNavigate();
   const [token, setToken] = useState(() => localStorage.getItem("adminToken") || "");
   const [adminRole, setAdminRole] = useState(() => {
@@ -188,10 +187,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
   const [newProductNameModal, setNewProductNameModal] = useState({ isOpen: false, productName: "" });
   const [newAdminForm, setNewAdminForm] = useState({ username: "", password: "", role: "ADMIN" });
   const [activeAdminSection, setActiveAdminSection] = useState("products");
-  const [lastSeenReservationAt, setLastSeenReservationAt] = useState(() => {
-    const raw = Number(localStorage.getItem("adminReservationsLastSeenAt") || 0);
-    return Number.isFinite(raw) && raw > 0 ? raw : 0;
-  });
     const [isCreateDescriptionEdited, setIsCreateDescriptionEdited] = useState(false);
   const [gamingSettings, setGamingSettings] = useState({ giveawayOneVisible: false, giveawayTwoVisible: false });
   const [giveaways, setGiveaways] = useState([
@@ -279,27 +274,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     };
   };
 
-   const unseenReservationIds = useMemo(() => {
-      const threshold = Number(lastSeenReservationAt || 0);
-      return orders
-        .filter((order) => {
-          const createdAtMs = new Date(order?.createdAt || 0).getTime();
-          return Number.isFinite(createdAtMs) && createdAtMs > threshold;
-        })
-        .map((order) => String(order?.id || "").trim())
-        .filter(Boolean);
-    }, [orders, lastSeenReservationAt]);
-
-   const unseenReservationCount = unseenReservationIds.length;
+   const orderedReservationCount = useMemo(
+      () => orders.filter((order) => String(order?.status || "ORDERED").trim().toUpperCase() === "ORDERED").length,
+      [orders]
+    );
 
    const adminSections = useMemo(
       () => [
         { key: "products", label: "Products" },
-        { key: "reservations", label: "Reservations", badgeCount: unseenReservationCount },
+        { key: "reservations", label: "Reservations", badgeCount: orderedReservationCount },
         { key: "gaming", label: "Giveaway Arcade" },
         ...(isSuperAdmin ? [{ key: "promotions", label: "Promotions" }, { key: "users", label: "Admin Users" }] : [])
       ],
-      [isSuperAdmin, unseenReservationCount]
+      [isSuperAdmin, orderedReservationCount]
     );
 
 
@@ -369,7 +356,8 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
         apiRequest("/api/admin/settings/gaming/giveaway-wheel/entries", "GET", undefined, authToken),
       ]);
       setProducts(productData);
-      setOrders(Array.isArray(orderData) ? orderData : []);
+      const normalizedOrders = Array.isArray(orderData) ? orderData : [];
+      setOrders(normalizedOrders);
       setSavedBrands(brandData);
       setSavedProductNames(productNameData);
       setGamingSettings({
@@ -1020,21 +1008,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
 
   useEffect(() => {
     if (!token) {
-      setLastSeenReservationAt(0);
-      return;
-    }
-
-    if (lastSeenReservationAt > 0) {
-      return;
-    }
-
-    const baseline = Date.now();
-    localStorage.setItem(RESERVATION_LAST_SEEN_STORAGE_KEY, String(baseline));
-    setLastSeenReservationAt(baseline);
-  }, [token, lastSeenReservationAt]);
-
-  useEffect(() => {
-    if (!token) {
       return undefined;
     }
 
@@ -1054,14 +1027,6 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     return () => window.clearInterval(interval);
   }, [token]);
 
-  useEffect(() => {
-    if (activeAdminSection !== "reservations") {
-      return;
-    }
-    const nextSeenAt = Date.now();
-    localStorage.setItem(RESERVATION_LAST_SEEN_STORAGE_KEY, String(nextSeenAt));
-    setLastSeenReservationAt(nextSeenAt);
-  }, [activeAdminSection]);
 
   useEffect(() => {
     if (!message) return undefined;
