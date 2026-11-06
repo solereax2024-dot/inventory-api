@@ -1,6 +1,5 @@
 export default function ReserveSuccessModal({
   isOpen,
-  successReference,
   onNotifyFacebook,
   onBackToCollections
 }) {
@@ -15,12 +14,6 @@ export default function ReserveSuccessModal({
           <p className="reserve-success-required-chip" role="status" aria-live="polite">
             For faster transaction, notify our Facebook page about your order.
           </p>
-          <p className="reserve-success-copy">Please message Sole Reax now and include your reference code.</p>
-          {successReference ? (
-            <p className="reserve-success-ref">
-              Reference: <strong>{successReference}</strong>
-            </p>
-          ) : null}
           <div className="reserve-success-primary-stack">
             <button
               type="button"

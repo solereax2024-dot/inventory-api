@@ -48,7 +48,6 @@ export default function ReservePage() {
     open: openSuccessModal,
     close: closeSuccessModal
   } = useModalState(false);
-  const [successReference, setSuccessReference] = useState("");
   const [hasClickedNotifyFacebook, setHasClickedNotifyFacebook] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const {
@@ -676,7 +675,7 @@ export default function ReservePage() {
       return undefined;
     }
     const reminderTimer = window.setTimeout(() => {
-      setMessage("Tip: Message Sole Reax on Facebook with your reference for faster response.");
+      setMessage("Tip: Notify the Facebook page now so your order can be processed faster.");
     }, 6000);
     return () => window.clearTimeout(reminderTimer);
   }, [isSuccessOpen, hasClickedNotifyFacebook]);
@@ -896,10 +895,9 @@ export default function ReservePage() {
       const response = await apiRequest("/api/public/orders/reserve", "POST", payload);
       const reservationRef = String(response?.orderCode || response?.reference || response?.id || "").trim();
       closeConfirmModal();
-      setSuccessReference(reservationRef);
       setHasClickedNotifyFacebook(false);
       openSuccessModal();
-      setMessage("Reservation sent. Please notify Sole Reax on Facebook with your reference code.");
+      setMessage("Reservation sent. Notify the Facebook page now to process your order faster.");
       const metaPayload = {
         content_ids: [String(product.id)],
         content_name: product.name || "",
@@ -927,8 +925,8 @@ export default function ReservePage() {
     }
 
     setHasClickedNotifyFacebook(true);
-    copyReferenceToClipboard({ silent: false }).catch(() => {
-      setMessage("Unable to copy automatically. Please copy the reference shown in your order.");
+    copyOrderDetailsToClipboard({ silent: false }).catch(() => {
+      setMessage("Unable to copy order details automatically. Please copy your details manually.");
     });
 
     const popup = window.open(targetUrl, "_blank", "noopener,noreferrer");
@@ -941,20 +939,30 @@ export default function ReservePage() {
     window.location.assign(targetUrl);
   };
 
-  const copyReferenceToClipboard = async ({ silent = false } = {}) => {
-    if (!successReference) {
-      if (!silent) {
-        setMessage("No reference available yet.");
-      }
-      return;
+  const copyOrderDetailsToClipboard = async ({ silent = false } = {}) => {
+    const orderDetailsText = [
+      "Hi Sole Reax, I submitted a reservation.",
+      `Name: ${String(reserve.customerName || "").trim() || "-"}`,
+      `Contact: ${String(reserve.customerContact || "").trim() || "-"}`,
+      `Item: ${String(product?.name || "").trim() || "-"}`,
+      `Color: ${formatColorwayLabel(reserve.colorway || "DEFAULT")}`,
+      `Size: ${selectedSizeLabel || `US ${reserve.size || "-"}`}`,
+      `Quantity: ${Number(reserve.quantity || 0) || 1}`
+    ];
+
+    const trimmedNotes = String(reserve.notes || "").trim();
+    if (trimmedNotes) {
+      orderDetailsText.push(`Notes: ${trimmedNotes}`);
     }
+
+    const payloadText = orderDetailsText.join("\n");
 
     try {
       if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(successReference);
+        await navigator.clipboard.writeText(payloadText);
       } else {
         const tempInput = document.createElement("input");
-        tempInput.value = successReference;
+        tempInput.value = payloadText;
         tempInput.setAttribute("readonly", "true");
         tempInput.style.position = "absolute";
         tempInput.style.left = "-9999px";
@@ -964,11 +972,11 @@ export default function ReservePage() {
         document.body.removeChild(tempInput);
       }
       if (!silent) {
-        setMessage("Order reference copied and ready to send on Facebook.");
+        setMessage("Order details copied and ready to send on Facebook.");
       }
     } catch {
       if (!silent) {
-        setMessage("Unable to copy automatically. Please copy the reference shown in your order.");
+        setMessage("Unable to copy order details automatically. Please copy your details manually.");
       }
     }
   };
@@ -1528,7 +1536,6 @@ export default function ReservePage() {
 
       <ReserveSuccessModal
         isOpen={isSuccessOpen}
-        successReference={successReference}
         onNotifyFacebook={notifyViaFacebook}
         onBackToCollections={() => {
           closeSuccessModal();

@@ -279,14 +279,19 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
       [orders]
     );
 
+   const pendingGiveawayJoinerCount = useMemo(
+      () => giveawayWheelEntries.filter((entry) => String(entry?.status || "").trim().toUpperCase() === "PENDING").length,
+      [giveawayWheelEntries]
+    );
+
    const adminSections = useMemo(
       () => [
         { key: "products", label: "Products" },
         { key: "reservations", label: "Reservations", badgeCount: orderedReservationCount },
-        { key: "gaming", label: "Giveaway Arcade" },
+        { key: "gaming", label: "Giveaway Arcade", badgeCount: pendingGiveawayJoinerCount },
         ...(isSuperAdmin ? [{ key: "promotions", label: "Promotions" }, { key: "users", label: "Admin Users" }] : [])
       ],
-      [isSuperAdmin, orderedReservationCount]
+      [isSuperAdmin, orderedReservationCount, pendingGiveawayJoinerCount]
     );
 
 
