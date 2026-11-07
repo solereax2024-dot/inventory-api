@@ -177,7 +177,7 @@ public class InventoryService {
             );
         }
 
-        Page<Long> idPage = productRepository.findCatalogProductIds(
+        Page<Long> idPage = findCatalogProductIdPage(
                 normalizedBrand,
                 normalizedDepartment,
                 normalizedCategory,
@@ -186,6 +186,7 @@ public class InventoryService {
                 normalizedSize,
                 normalizedStock,
                 searchPattern,
+                sort,
                 pageable
         );
 
@@ -225,7 +226,7 @@ public class InventoryService {
             int pageSize
     ) {
         Pageable allCandidates = PageRequest.of(0, resolveSpecialCatalogCandidateLimit(page, pageSize), resolveCatalogSort(sort));
-        Page<Long> candidateIdPage = productRepository.findCatalogProductIds(
+        Page<Long> candidateIdPage = findCatalogProductIdPage(
                 brand,
                 department,
                 category,
@@ -234,6 +235,7 @@ public class InventoryService {
                 sizeFilter,
                 stockFilter,
                 searchPattern,
+                sort,
                 allCandidates
         );
 
@@ -393,7 +395,7 @@ public class InventoryService {
             int pageSize
     ) {
         Pageable allCandidates = PageRequest.of(0, resolveSpecialCatalogCandidateLimit(page, pageSize), resolveCatalogSort(sort));
-        Page<Long> candidateIdPage = productRepository.findCatalogProductIds(
+        Page<Long> candidateIdPage = findCatalogProductIdPage(
                 brand,
                 department,
                 category,
@@ -402,6 +404,7 @@ public class InventoryService {
                 sizeFilter,
                 stockFilter,
                 searchPattern,
+                sort,
                 allCandidates
         );
 
@@ -464,6 +467,46 @@ public class InventoryService {
     private int resolveSpecialCatalogCandidateLimit(int page, int pageSize) {
         int requestedWindow = Math.max(page, 1) * Math.max(pageSize, 1) * 6;
         return Math.max(MIN_SPECIAL_CATALOG_CANDIDATES, Math.min(requestedWindow, MAX_SPECIAL_CATALOG_CANDIDATES));
+    }
+
+    private Page<Long> findCatalogProductIdPage(
+            String brand,
+            String department,
+            String category,
+            String productType,
+            String colorway,
+            String sizeFilter,
+            String stockFilter,
+            String searchPattern,
+            String sort,
+            Pageable pageable
+    ) {
+        if (isViewsDescSort(sort)) {
+            Pageable pageOnly = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            return productRepository.findCatalogProductIdsOrderByViewsDesc(
+                    brand,
+                    department,
+                    category,
+                    productType,
+                    colorway,
+                    sizeFilter,
+                    stockFilter,
+                    searchPattern,
+                    pageOnly
+            );
+        }
+
+        return productRepository.findCatalogProductIds(
+                brand,
+                department,
+                category,
+                productType,
+                colorway,
+                sizeFilter,
+                stockFilter,
+                searchPattern,
+                pageable
+        );
     }
 
     private List<Product> loadActiveProductsPreservingOrder(List<Long> ids) {
@@ -860,6 +903,9 @@ public class InventoryService {
 
     private Sort resolveCatalogSort(String sort) {
         String normalizedSort = trimToNull(sort);
+        if (isViewsDescSort(normalizedSort)) {
+            return Sort.unsorted();
+        }
         if ("BRAND_DESC".equalsIgnoreCase(normalizedSort)) {
             return Sort.by(Sort.Order.desc("brand"), Sort.Order.asc("name"), Sort.Order.asc("id"));
         }
@@ -870,6 +916,10 @@ public class InventoryService {
             return Sort.by(Sort.Order.desc("name"), Sort.Order.asc("id"));
         }
         return Sort.by(Sort.Order.asc("brand"), Sort.Order.asc("name"), Sort.Order.asc("id"));
+    }
+
+    private boolean isViewsDescSort(String sort) {
+        return "VIEWS_DESC".equalsIgnoreCase(trimToNull(sort));
     }
 
     private String buildSearchPattern(String value) {

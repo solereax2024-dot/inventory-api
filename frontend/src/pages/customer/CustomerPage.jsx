@@ -22,7 +22,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
   const [productTypeFilter, setProductTypeFilter] = useState("ALL");
   const [colorwayFilter, setColorwayFilter] = useState("ALL");
   const [sizeFilter, setSizeFilter] = useState("ALL");
-  const [sortBy, setSortBy] = useState("BRAND_ASC");
+  const [sortBy, setSortBy] = useState("VIEWS_DESC");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -182,7 +182,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     colorwayFilter !== "ALL",
     stockFilter !== "ALL",
     saleFilter,
-    sortBy !== "BRAND_ASC",
+    sortBy !== "VIEWS_DESC",
     Boolean(searchText.trim())
   ].filter(Boolean).length;
   const shouldShowPopularRail = !saleFilter && activeFilterCount === 0 && !searchText.trim();
@@ -204,7 +204,8 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
         if (saleFilter) params.set("sale", "true");
         const keyword = (searchText || searchParams.get("q") || "").trim();
         if (keyword) params.set("q", keyword);
-        if (sortBy !== "BRAND_ASC") params.set("sort", sortBy);
+        if (sortBy !== "VIEWS_DESC") params.set("sort", sortBy);
+        else params.set("sort", "VIEWS_DESC");
         params.set("page", String(currentPage));
         params.set("pageSize", String(catalogPageSize));
         params.set("view", "COLORWAY");
@@ -420,7 +421,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
     setProductTypeFilter("ALL");
     setSizeFilter("ALL");
     setColorwayFilter("ALL");
-    setSortBy("BRAND_ASC");
+    setSortBy("VIEWS_DESC");
   };
 
   const resolveCardColorway = (product) => {
@@ -541,6 +542,7 @@ export default function CustomerPage({ searchText, setSearchText, onCatalogNavCh
               <label className="filter-control">
                 <span className="filter-control-label">Sort</span>
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  <option value="VIEWS_DESC">Most Viewed</option>
                   <option value="BRAND_ASC">Brand A-Z</option>
                   <option value="BRAND_DESC">Brand Z-A</option>
                   <option value="NAME_ASC">Name A-Z</option>

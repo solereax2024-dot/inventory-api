@@ -150,6 +150,177 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             Pageable pageable
     );
 
+    @Query(
+            value = """
+            select p.id from Product p
+            left join ProductViewSession pvs on pvs.product = p
+            where p.active = true
+              and (:brand is null or lower(coalesce(p.brand, '')) = :brand)
+              and (:department is null or upper(coalesce(p.department, '')) = :department)
+              and (:category is null or upper(coalesce(p.category, '')) = :category)
+              and (:productType is null or upper(coalesce(p.productType, '')) = :productType)
+              and (
+                  :searchPattern is null
+                  or lower(coalesce(p.name, '')) like :searchPattern
+                  or lower(coalesce(p.brand, '')) like :searchPattern
+                  or lower(coalesce(p.department, '')) like :searchPattern
+                  or lower(coalesce(p.category, '')) like :searchPattern
+                  or lower(coalesce(p.productType, '')) like :searchPattern
+              )
+              and (
+                  :colorway is null
+                  or exists (
+                      select 1 from ProductStock s
+                      where s.product = p
+                        and upper(coalesce(s.colorway, '')) = :colorway
+                  )
+              )
+              and (
+                  (:sizeLabel is null and :stockFilter is null)
+                  or (
+                      :sizeLabel is not null
+                      and (
+                          (:stockFilter = 'OUT_OF_STOCK' and not exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and upper(coalesce(s.sizeLabel, '')) = :sizeLabel
+                                and s.quantity > 0
+                          ))
+                          or (:stockFilter = 'LOW_STOCK' and exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and upper(coalesce(s.sizeLabel, '')) = :sizeLabel
+                                and s.quantity between 1 and 3
+                          ))
+                          or ((:stockFilter is null or :stockFilter = 'IN_STOCK') and exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and upper(coalesce(s.sizeLabel, '')) = :sizeLabel
+                                and s.quantity > 0
+                          ))
+                      )
+                  )
+                  or (
+                      :sizeLabel is null
+                      and :stockFilter is not null
+                      and (
+                          (:stockFilter = 'OUT_OF_STOCK' and not exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and s.quantity > 0
+                          ))
+                          or (:stockFilter = 'LOW_STOCK' and exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and s.quantity between 1 and 3
+                          ))
+                          or (:stockFilter = 'IN_STOCK' and exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and s.quantity > 0
+                          ))
+                      )
+                  )
+              )
+            group by p.id, p.name
+            order by count(pvs.id) desc, p.name asc, p.id asc
+            """,
+            countQuery = """
+            select count(distinct p.id) from Product p
+            where p.active = true
+              and (:brand is null or lower(coalesce(p.brand, '')) = :brand)
+              and (:department is null or upper(coalesce(p.department, '')) = :department)
+              and (:category is null or upper(coalesce(p.category, '')) = :category)
+              and (:productType is null or upper(coalesce(p.productType, '')) = :productType)
+              and (
+                  :searchPattern is null
+                  or lower(coalesce(p.name, '')) like :searchPattern
+                  or lower(coalesce(p.brand, '')) like :searchPattern
+                  or lower(coalesce(p.department, '')) like :searchPattern
+                  or lower(coalesce(p.category, '')) like :searchPattern
+                  or lower(coalesce(p.productType, '')) like :searchPattern
+              )
+              and (
+                  :colorway is null
+                  or exists (
+                      select 1 from ProductStock s
+                      where s.product = p
+                        and upper(coalesce(s.colorway, '')) = :colorway
+                  )
+              )
+              and (
+                  (:sizeLabel is null and :stockFilter is null)
+                  or (
+                      :sizeLabel is not null
+                      and (
+                          (:stockFilter = 'OUT_OF_STOCK' and not exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and upper(coalesce(s.sizeLabel, '')) = :sizeLabel
+                                and s.quantity > 0
+                          ))
+                          or (:stockFilter = 'LOW_STOCK' and exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and upper(coalesce(s.sizeLabel, '')) = :sizeLabel
+                                and s.quantity between 1 and 3
+                          ))
+                          or ((:stockFilter is null or :stockFilter = 'IN_STOCK') and exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and upper(coalesce(s.sizeLabel, '')) = :sizeLabel
+                                and s.quantity > 0
+                          ))
+                      )
+                  )
+                  or (
+                      :sizeLabel is null
+                      and :stockFilter is not null
+                      and (
+                          (:stockFilter = 'OUT_OF_STOCK' and not exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and s.quantity > 0
+                          ))
+                          or (:stockFilter = 'LOW_STOCK' and exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and s.quantity between 1 and 3
+                          ))
+                          or (:stockFilter = 'IN_STOCK' and exists (
+                              select 1 from ProductStock s
+                              where s.product = p
+                                and (:colorway is null or upper(coalesce(s.colorway, '')) = :colorway)
+                                and s.quantity > 0
+                          ))
+                      )
+                  )
+              )
+            """
+    )
+    Page<Long> findCatalogProductIdsOrderByViewsDesc(
+            @Param("brand") String brand,
+            @Param("department") String department,
+            @Param("category") String category,
+            @Param("productType") String productType,
+            @Param("colorway") String colorway,
+            @Param("sizeLabel") String sizeLabel,
+            @Param("stockFilter") String stockFilter,
+            @Param("searchPattern") String searchPattern,
+            Pageable pageable
+    );
+
     @Query("""
             select distinct p from Product p
             left join fetch p.stocks s
