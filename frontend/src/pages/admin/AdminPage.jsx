@@ -465,6 +465,33 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
     }
   };
 
+  const handleSetGiveawayWheelDummyStatus = async (entryId, isDummy) => {
+    if (!token || !entryId) return null;
+
+    setGiveawayWheelEntryActionKey(`dummy-${entryId}`);
+    setMessage("");
+
+    try {
+      await apiRequest(
+        `/api/admin/settings/gaming/giveaway-wheel/entries/${entryId}/dummy?value=${encodeURIComponent(String(Boolean(isDummy)))}`,
+        "PATCH",
+        undefined,
+        token
+      );
+      await refreshGiveawayWheelEntries();
+      setSuccessModal({
+        isOpen: true,
+        message: `Joiner marked as ${isDummy ? "Dummy: Yes" : "Dummy: No"}.`,
+      });
+      return true;
+    } catch (err) {
+      setMessage(err.message || "Unable to update dummy status.");
+      return null;
+    } finally {
+      setGiveawayWheelEntryActionKey("");
+    }
+  };
+
   const handleShuffleGiveawayWheel = async () => {
     if (!token) return;
 
@@ -2553,6 +2580,7 @@ export default function AdminPage({ onAdminAuthChange = () => {} }) {
            giveawayWheelEntryActionKey={giveawayWheelEntryActionKey}
            onApproveGiveawayWheelProof={handleApproveGiveawayWheelProof}
            onRejectGiveawayWheelProof={handleRejectGiveawayWheelProof}
+            onSetGiveawayWheelDummyStatus={handleSetGiveawayWheelDummyStatus}
            onShuffleGiveawayWheel={handleShuffleGiveawayWheel}
            onDrawGiveawayWheelWinner={handleDrawGiveawayWheelWinner}
            onClearGiveawayWheelEntries={handleClearGiveawayWheelEntries}

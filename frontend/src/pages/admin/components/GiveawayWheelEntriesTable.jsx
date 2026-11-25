@@ -138,6 +138,7 @@ export default function GiveawayWheelEntriesTable({
   actionKey = "",
   onApproveProof,
   onRejectProof,
+  onToggleDummyStatus,
   onClearEntries,
   onResetWinnerStatus,
   onDeleteEntry,
@@ -145,8 +146,10 @@ export default function GiveawayWheelEntriesTable({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [proofFilter, setProofFilter] = useState("ALL");
+  const [dummyFilter, setDummyFilter] = useState("ALL");
   const [imageViewer, setImageViewer] = useState({ isOpen: false, src: "", alt: "" });
   const [approveConfirm, setApproveConfirm] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "" });
+  const [dummyConfirm, setDummyConfirm] = useState({ isOpen: false, entry: null });
   const [rejectModal, setRejectModal] = useState({ isOpen: false, entry: null, proofType: "", proofLabel: "", message: "" });
   const [clearEntriesModal, setClearEntriesModal] = useState({ isOpen: false, challenge: "", error: "" });
   const [deleteEntryModal, setDeleteEntryModal] = useState({ isOpen: false, entry: null, challenge: "", error: "" });
@@ -158,6 +161,7 @@ export default function GiveawayWheelEntriesTable({
   const isClearingEntries = actionKey === "clear-wheel-entries";
   const isResettingWinner = String(actionKey || "").startsWith("reset-winner-");
   const isWheelActionBusy = isDrawingWinner || isShufflingWheel || isResettingWinner;
+  const totalColumns = 10;
 
   const filteredEntries = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -165,9 +169,13 @@ export default function GiveawayWheelEntriesTable({
       const matchesQuery = !keyword || String(entry.fullName || "").toLowerCase().includes(keyword);
       const matchesStatus = statusFilter === "ALL" || String(entry.status || "").toUpperCase() === statusFilter;
       const matchesProof = matchesProofFilter(entry, proofFilter);
-      return matchesQuery && matchesStatus && matchesProof;
+      const isDummy = Boolean(entry?.dummy);
+      const matchesDummy = dummyFilter === "ALL"
+        || (dummyFilter === "YES" && isDummy)
+        || (dummyFilter === "NO" && !isDummy);
+      return matchesQuery && matchesStatus && matchesProof && matchesDummy;
     });
-  }, [entries, query, statusFilter, proofFilter]);
+  }, [dummyFilter, entries, proofFilter, query, statusFilter]);
 
   const stats = useMemo(() => ({
     total: entries.length,
@@ -221,6 +229,22 @@ export default function GiveawayWheelEntriesTable({
     if (!onResetWinnerStatus || !entryId) return;
     await onResetWinnerStatus(entryId);
     setResetWinnerModal({ isOpen: false, entry: null });
+  };
+
+  const handleToggleDummyStatus = async (entry) => {
+    if (!entry?.id || !onToggleDummyStatus) return;
+    if (!entry.dummy) {
+      setDummyConfirm({ isOpen: true, entry });
+      return;
+    }
+    await onToggleDummyStatus(entry.id, !entry.dummy);
+  };
+
+  const confirmEnableDummy = async () => {
+    const entryId = dummyConfirm.entry?.id;
+    if (!entryId || !onToggleDummyStatus) return;
+    setDummyConfirm({ isOpen: false, entry: null });
+    await onToggleDummyStatus(entryId, true);
   };
 
   return (
@@ -310,6 +334,15 @@ export default function GiveawayWheelEntriesTable({
             <option value="MISSING_UPLOAD">May missing upload</option>
           </select>
         </label>
+
+        <label className="field" style={{ minWidth: 180 }}>
+          <span className="field-hint" style={{ display: "block", marginBottom: 6 }}>Filter dummy</span>
+          <select value={dummyFilter} onChange={(event) => setDummyFilter(event.target.value)}>
+            <option value="ALL">All</option>
+            <option value="YES">Dummy Yes</option>
+            <option value="NO">Dummy No</option>
+          </select>
+        </label>
       </div>
 
       <div className="admin-table-wrap">
@@ -318,6 +351,7 @@ export default function GiveawayWheelEntriesTable({
             <tr>
               <th>Full Name</th>
               <th>Total Entry</th>
+              <th>Dummy</th>
               {IMAGE_COLUMNS.map((column) => <th key={column.key}>{column.label}</th>)}
               <th>Rejected Reason</th>
               <th>Updated</th>
@@ -326,11 +360,11 @@ export default function GiveawayWheelEntriesTable({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={10}>Loading giveaway entries...</td>
+                <td colSpan={totalColumns}>Loading giveaway entries...</td>
               </tr>
             ) : filteredEntries.length === 0 ? (
               <tr>
-                <td colSpan={10}>No giveaway entries found for the current filters.</td>
+                <td colSpan={totalColumns}>No giveaway entries found for the current filters.</td>
               </tr>
             ) : filteredEntries.map((entry) => {
               const statusClass = getStatusClassName(entry.status);
@@ -338,7 +372,9 @@ export default function GiveawayWheelEntriesTable({
               const sourceTagLabel = getSourceTagLabel(entry.sourceTag);
               const displayName = formatEntryDisplayName(entry.fullName, entry.sourceTag);
               const deleteBusy = actionKey === `delete-entry-${entry.id}`;
+              const toggleDummyBusy = actionKey === `dummy-${entry.id}`;
               const isDeleteLocked = (Boolean(actionKey) && !deleteBusy) || isWheelActionBusy || isClearingEntries;
+              const isDummyActionLocked = (Boolean(actionKey) && !toggleDummyBusy) || isWheelActionBusy || isClearingEntries;
               return (
                 <tr key={entry.id} className={`giveaway-wheel-admin-row ${statusClass}`}>
                   <td>
@@ -388,6 +424,19 @@ export default function GiveawayWheelEntriesTable({
                           {deleteBusy ? "Deleting..." : "Delete Joiner"}
                         </button>
                       </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <button
+                        type="button"
+                        className={`button-secondary ${entry.dummy ? "btn-delete" : ""}`}
+                        onClick={() => handleToggleDummyStatus(entry)}
+                        disabled={isDummyActionLocked || !onToggleDummyStatus}
+                      >
+                        {toggleDummyBusy ? "Saving..." : entry.dummy ? "Yes" : "No"}
+                      </button>
+                      <small className="field-hint">Status: {entry.dummy ? "Yes" : "No"}</small>
                     </div>
                   </td>
                   {IMAGE_COLUMNS.map((column) => {
@@ -549,6 +598,16 @@ export default function GiveawayWheelEntriesTable({
         confirmLabel="Approve Proof"
         onCancel={() => setApproveConfirm({ isOpen: false, entry: null, proofType: "", proofLabel: "" })}
         onConfirm={confirmApprove}
+      />
+
+      <ConfirmActionModal
+        isOpen={dummyConfirm.isOpen}
+        title="Mark as Dummy"
+        description="This joiner will stay visible on the wheel but cannot win when admin runs the draw."
+        targetLabel={dummyConfirm.entry?.fullName || ""}
+        confirmLabel="Set Dummy Yes"
+        onCancel={() => setDummyConfirm({ isOpen: false, entry: null })}
+        onConfirm={confirmEnableDummy}
       />
 
       {rejectModal.isOpen ? (

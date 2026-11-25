@@ -89,6 +89,7 @@ export default function GamingSettingsSection({
   giveawayWheelEntryActionKey = "",
   onApproveGiveawayWheelProof,
   onRejectGiveawayWheelProof,
+  onSetGiveawayWheelDummyStatus,
   onShuffleGiveawayWheel,
   onDrawGiveawayWheelWinner,
   onClearGiveawayWheelEntries,
@@ -212,6 +213,7 @@ export default function GamingSettingsSection({
                 actionKey={giveawayWheelEntryActionKey}
                 onApproveProof={onApproveGiveawayWheelProof}
                 onRejectProof={onRejectGiveawayWheelProof}
+                onToggleDummyStatus={onSetGiveawayWheelDummyStatus}
                 onShuffleWheel={onShuffleGiveawayWheel}
                 onDrawWinner={onDrawGiveawayWheelWinner}
                 onClearEntries={onClearGiveawayWheelEntries}

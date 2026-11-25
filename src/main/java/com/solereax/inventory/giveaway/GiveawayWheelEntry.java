@@ -87,6 +87,9 @@ public class GiveawayWheelEntry {
     @Column(name = "entry_count", nullable = false)
     private int entryCount;
 
+    @Column(name = "is_dummy", nullable = false)
+    private boolean dummy = false;
+
     @Column(name = "excluded_from_wheel", nullable = false)
     private boolean excludedFromWheel = false;
 

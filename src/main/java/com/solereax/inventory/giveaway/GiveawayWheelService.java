@@ -55,7 +55,7 @@ public class GiveawayWheelService {
         List<GiveawayWheelEntry> approvedEntries = giveawayWheelEntryRepository
                 .findAllByEntryCountGreaterThanAndExcludedFromWheelFalseOrderByWheelDisplayOrderAscUpdatedAtDesc(0)
                 .stream()
-                .filter(entry -> entry.getEntryCount() > 0)
+                .filter(entry -> entry.getEntryCount() > 0 && !entry.isDummy())
                 .toList();
 
         int totalTickets = approvedEntries.stream()
@@ -316,10 +316,18 @@ public class GiveawayWheelService {
     }
 
     @Transactional(readOnly = true)
-    public List<GiveawayWheelEntryResponse> listAdminEntries() {
+    public List<GiveawayWheelAdminEntryResponse> listAdminEntries() {
         return giveawayWheelEntryRepository.findAllByOrderByUpdatedAtDesc().stream()
-                .map(this::toResponse)
+                .map(this::toAdminResponse)
                 .toList();
+    }
+
+    @Transactional
+    public void setDummyStatus(Long entryId, boolean dummy) {
+        GiveawayWheelEntry entry = findEntry(entryId);
+        entry.setDummy(dummy);
+        entry.setUpdatedAt(Instant.now());
+        giveawayWheelEntryRepository.save(entry);
     }
 
     @Transactional
@@ -528,6 +536,36 @@ public class GiveawayWheelService {
                 entry.getStatus(),
                 entry.getRejectionReason(),
                 entry.getSourceTag(),
+                toProofResponse(entry, GiveawayWheelProofType.FOLLOW),
+                toProofResponse(entry, GiveawayWheelProofType.COMMENT),
+                toProofResponse(entry, GiveawayWheelProofType.SHARE),
+                toProofResponse(entry, GiveawayWheelProofType.REVIEW),
+                toProofResponse(entry, GiveawayWheelProofType.FACEBOOK_PROFILE),
+                entry.getCreatedAt(),
+                entry.getUpdatedAt()
+        );
+    }
+
+    private GiveawayWheelAdminEntryResponse toAdminResponse(GiveawayWheelEntry entry) {
+        return new GiveawayWheelAdminEntryResponse(
+                entry.getId(),
+                entry.getFullName(),
+                entry.getFollowProofImagePath(),
+                entry.getCommentProofImagePath(),
+                entry.getShareProofImagePath(),
+                entry.getReviewProofImagePath(),
+                entry.getFacebookProfileImagePath(),
+                entry.getEntryCount(),
+                entry.getSubmittedEntryCount(),
+                entry.isExcludedFromWheel(),
+                entry.isWinner(),
+                entry.getWonAt(),
+                entry.getWinMode(),
+                hasValue(entry.getEntryPasswordHash()),
+                entry.getStatus(),
+                entry.getRejectionReason(),
+                entry.getSourceTag(),
+                entry.isDummy(),
                 toProofResponse(entry, GiveawayWheelProofType.FOLLOW),
                 toProofResponse(entry, GiveawayWheelProofType.COMMENT),
                 toProofResponse(entry, GiveawayWheelProofType.SHARE),

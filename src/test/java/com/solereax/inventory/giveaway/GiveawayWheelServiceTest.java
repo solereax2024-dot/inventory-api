@@ -1,6 +1,7 @@
 package com.solereax.inventory.giveaway;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -111,6 +112,15 @@ class GiveawayWheelServiceTest {
             return storedEntries.stream()
                     .anyMatch(entry -> !entry.getId().equals(excludedId) && entry.getFullName().equalsIgnoreCase(fullName));
         });
+        when(giveawayWheelEntryRepository.existsRegularEntryNameConflict(anyString(), any())).thenAnswer(invocation -> {
+            String fullName = invocation.getArgument(0, String.class);
+            Long currentEntryId = invocation.getArgument(1, Long.class);
+            return storedEntries.stream().anyMatch(entry -> {
+                boolean sameName = entry.getFullName().trim().equalsIgnoreCase(fullName.trim());
+                boolean sameEntry = currentEntryId != null && entry.getId().equals(currentEntryId);
+                return sameName && !sameEntry;
+            });
+        });
         when(giveawayWheelDrawRepository.save(any(GiveawayWheelDraw.class))).thenAnswer(invocation -> {
             GiveawayWheelDraw draw = invocation.getArgument(0, GiveawayWheelDraw.class);
             if (draw.getId() == null) {
@@ -150,6 +160,55 @@ class GiveawayWheelServiceTest {
         assertTrue(draw.winningTicketIndex() >= 0);
         assertTrue(draw.winningTicketIndex() < draw.totalTickets());
         assertTrue(draw.winnerEntryId().equals(first.id()) || draw.winnerEntryId().equals(second.id()));
+    }
+
+    @Test
+    void drawWinner_skipsEntriesMarkedAsDummy() {
+        GiveawayWheelEntryResponse regular = giveawayWheelService.createEntry(
+                "Real Joiner",
+                ENTRY_PASSWORD,
+                image("regular-follow.png"),
+                null,
+                null,
+                null,
+                image("regular-profile.png")
+        );
+        GiveawayWheelEntryResponse dummy = giveawayWheelService.createEntry(
+                "Dummy Joiner",
+                ENTRY_PASSWORD,
+                image("dummy-follow.png"),
+                null,
+                null,
+                null,
+                image("dummy-profile.png")
+        );
+        giveawayWheelService.approveEntry(regular.id());
+        giveawayWheelService.approveEntry(dummy.id());
+        giveawayWheelService.setDummyStatus(dummy.id(), true);
+
+        GiveawayWheelDrawResponse draw = giveawayWheelService.drawWinner(false);
+
+        assertEquals(regular.id(), draw.winnerEntryId());
+        assertEquals(1, draw.eligibleEntryCount());
+    }
+
+    @Test
+    void setDummyStatus_updatesEntryFlag() {
+        GiveawayWheelEntryResponse created = giveawayWheelService.createEntry(
+                "Toggle Dummy",
+                ENTRY_PASSWORD,
+                image("toggle-follow.png"),
+                null,
+                null,
+                null,
+                image("toggle-profile.png")
+        );
+
+        giveawayWheelService.setDummyStatus(created.id(), true);
+        assertTrue(storedEntries.stream().filter(entry -> created.id().equals(entry.getId())).findFirst().orElseThrow().isDummy());
+
+        giveawayWheelService.setDummyStatus(created.id(), false);
+        assertFalse(storedEntries.stream().filter(entry -> created.id().equals(entry.getId())).findFirst().orElseThrow().isDummy());
     }
 
     @Test

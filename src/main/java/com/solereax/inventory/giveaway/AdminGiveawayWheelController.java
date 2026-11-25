@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,10 +25,16 @@ public class AdminGiveawayWheelController {
     }
 
     @GetMapping("/entries")
-    public ResponseEntity<List<GiveawayWheelEntryResponse>> listEntries() {
+    public ResponseEntity<List<GiveawayWheelAdminEntryResponse>> listEntries() {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(giveawayWheelService.listAdminEntries());
+    }
+
+    @PatchMapping("/entries/{entryId}/dummy")
+    public ResponseEntity<Void> setDummyStatus(@PathVariable Long entryId, @RequestParam(name = "value") boolean value) {
+        giveawayWheelService.setDummyStatus(entryId, value);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/draw")
